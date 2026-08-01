@@ -2,7 +2,7 @@ package com.escontrela.lastmove.ui.controller;
 
 import com.escontrela.lastmove.application.service.GameLoadService;
 import com.escontrela.lastmove.application.service.GameReplayService;
-import com.escontrela.lastmove.infrastructure.support.FileChooserFactory;
+import com.escontrela.lastmove.ui.support.FileChooserFactory;
 import com.escontrela.lastmove.ui.model.MainScreenViewModel;
 import javafx.fxml.FXML;
 import javafx.scene.layout.BorderPane;

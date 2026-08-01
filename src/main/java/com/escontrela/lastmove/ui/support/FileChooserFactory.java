@@ -1,4 +1,4 @@
-package com.escontrela.lastmove.infrastructure.support;
+package com.escontrela.lastmove.ui.support;
 
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
