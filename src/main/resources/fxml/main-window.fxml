@@ -67,6 +67,9 @@
                         autoHide="true"
                         buttonMode="ACCEPT_CANCEL"
                         cancelText="Not now"
+                        cardWidth="460.0"
+                        contentPadding="20.0"
+                        contentSpacing="12.0"
                         message="Would you like to open the PGN analysis workspace and replay a recorded game?"
                         title="Welcome to LastMove Chess" />
         </StackPane>

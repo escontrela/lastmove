@@ -8,6 +8,8 @@ import javafx.stage.Stage;
 /** Creates and swaps Spring-managed FXML views in the primary stage. */
 public class UiScreenFactory {
 
+    private static final double INITIAL_X = 87.0;
+    private static final double INITIAL_Y = 42.0;
     private static final double MIN_WIDTH = 1100.0;
     private static final double MIN_HEIGHT = 720.0;
 
@@ -32,7 +34,11 @@ public class UiScreenFactory {
 
         Scene scene = primaryStage.getScene();
         if (scene == null) {
-            scene = new Scene(root, 1280, 800);
+            scene = new Scene(root, screenId.width(), screenId.height());
+            primaryStage.setX(INITIAL_X);
+            primaryStage.setY(INITIAL_Y);
+            primaryStage.setWidth(screenId.width());
+            primaryStage.setHeight(screenId.height());
             primaryStage.setScene(scene);
         } else {
             scene.setRoot(root);

@@ -1,5 +1,7 @@
 package com.escontrela.lastmove.ui.screen;
 
+import java.util.Optional;
+
 /** Coordinates navigation between views hosted by the single primary window. */
 public class UiFlowManager {
 
@@ -17,5 +19,10 @@ public class UiFlowManager {
         }
         nextScreen.show();
         currentScreen = nextScreen;
+    }
+
+    /** Returns the active primary-window view, if one has already been shown. */
+    public Optional<UiScreen> currentScreen() {
+        return Optional.ofNullable(currentScreen);
     }
 }

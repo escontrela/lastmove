@@ -17,4 +17,6 @@ public interface UiScreen {
     void show();
 
     void hide();
+
+    boolean isShowing();
 }

@@ -49,4 +49,9 @@ public final class StageUiScreen implements UiScreen {
         controller.onHide();
         stage.hide();
     }
+
+    @Override
+    public boolean isShowing() {
+        return stage.isShowing();
+    }
 }

@@ -147,7 +147,6 @@
     -fx-border-width: 1;
     -fx-background-radius: 16;
     -fx-border-radius: 16;
-    -fx-padding: 24;
     -fx-effect: dropshadow(gaussian, rgba(20, 27, 36, 0.16), 24, 0.12, 0, 8);
 }
 
@@ -164,6 +163,28 @@
 }
 
 .message-box-actions { -fx-padding: 8 0 0 0; }
+
+.button.message-box-close-button {
+    -fx-min-width: 28;
+    -fx-min-height: 28;
+    -fx-pref-width: 28;
+    -fx-pref-height: 28;
+    -fx-max-width: 28;
+    -fx-max-height: 28;
+    -fx-padding: 0;
+    -fx-background-color: transparent;
+    -fx-background-radius: 9;
+    -fx-text-fill: #65717e;
+    -fx-font-size: 22px;
+    -fx-font-weight: 400;
+}
+
+.button.message-box-close-button:hover {
+    -fx-background-color: #f1f4f7;
+    -fx-text-fill: #1f242a;
+}
+
+.button.message-box-close-button:pressed { -fx-background-color: #e6ecf2; }
 
 .button.message-box-button {
     -fx-background-radius: 12;
@@ -470,6 +491,11 @@
 .night-mode .message-box-cancel-button:hover {
     -fx-background-color: #2b3b4d;
     -fx-border-color: #6ba5f0;
+}
+.night-mode .button.message-box-close-button { -fx-text-fill: #b8c5d3; }
+.night-mode .button.message-box-close-button:hover {
+    -fx-background-color: #2b3b4d;
+    -fx-text-fill: #f1f3f5;
 }
 .night-mode .app-title, .night-mode .card-title { -fx-text-fill: #ffffff; }
 .night-mode .app-brand-name { -fx-text-fill: #ffffff; }
