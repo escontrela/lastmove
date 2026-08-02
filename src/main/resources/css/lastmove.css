@@ -136,6 +136,76 @@
     -fx-padding: 8 0 0 0;
 }
 
+.message-box-overlay {
+    -fx-background-color: rgba(20, 27, 36, 0.18);
+    -fx-padding: 32;
+}
+
+.message-box-card {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #d8dde3;
+    -fx-border-width: 1;
+    -fx-background-radius: 16;
+    -fx-border-radius: 16;
+    -fx-padding: 24;
+    -fx-effect: dropshadow(gaussian, rgba(20, 27, 36, 0.16), 24, 0.12, 0, 8);
+}
+
+.message-box-title {
+    -fx-font-size: 19px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #1f242a;
+}
+
+.message-box-message {
+    -fx-font-size: 14px;
+    -fx-text-fill: #5f6c79;
+    -fx-line-spacing: 2px;
+}
+
+.message-box-actions { -fx-padding: 8 0 0 0; }
+
+.button.message-box-button {
+    -fx-background-radius: 12;
+    -fx-border-radius: 12;
+    -fx-border-width: 1;
+    -fx-padding: 9 15;
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
+}
+
+.message-box-accept-button {
+    -fx-background-color: #1c69d4;
+    -fx-border-color: #1c69d4;
+    -fx-text-fill: #ffffff;
+}
+
+.message-box-accept-button:hover {
+    -fx-background-color: #0653b6;
+    -fx-border-color: #0653b6;
+}
+
+.message-box-accept-button:pressed {
+    -fx-background-color: #004a9f;
+    -fx-border-color: #004a9f;
+}
+
+.message-box-cancel-button {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #d8dde3;
+    -fx-text-fill: #1f242a;
+}
+
+.message-box-cancel-button:hover {
+    -fx-background-color: #f4f7fb;
+    -fx-border-color: #c3d3e8;
+}
+
+.message-box-cancel-button:pressed {
+    -fx-background-color: #eaf1fa;
+    -fx-border-color: #8eb5e8;
+}
+
 .hero-panel {
     -fx-background-color: #1a2129;
     -fx-max-width: 900px;
@@ -384,6 +454,23 @@
 .night-mode .tool-card-button:pressed { -fx-background-color: #343434; }
 .night-mode .tool-card-title { -fx-text-fill: #f1f3f5; }
 .night-mode .tool-card-description, .night-mode .tool-card-state { -fx-text-fill: #b3b3b3; }
+.night-mode .message-box-overlay { -fx-background-color: rgba(0, 0, 0, 0.38); }
+.night-mode .message-box-card {
+    -fx-background-color: #1c2430;
+    -fx-border-color: #465465;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.40), 24, 0.12, 0, 8);
+}
+.night-mode .message-box-title { -fx-text-fill: #f1f3f5; }
+.night-mode .message-box-message { -fx-text-fill: #b8c5d3; }
+.night-mode .message-box-cancel-button {
+    -fx-background-color: #243243;
+    -fx-border-color: #465465;
+    -fx-text-fill: #f1f3f5;
+}
+.night-mode .message-box-cancel-button:hover {
+    -fx-background-color: #2b3b4d;
+    -fx-border-color: #6ba5f0;
+}
 .night-mode .app-title, .night-mode .card-title { -fx-text-fill: #ffffff; }
 .night-mode .app-brand-name { -fx-text-fill: #ffffff; }
 .night-mode .app-brand-edition { -fx-text-fill: #a8b4c1; }

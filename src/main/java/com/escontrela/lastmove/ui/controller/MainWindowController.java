@@ -1,5 +1,6 @@
 package com.escontrela.lastmove.ui.controller;
 
+import com.escontrela.lastmove.ui.component.message.MessageBox;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
 import com.escontrela.lastmove.ui.screen.UiScreenController;
 import com.escontrela.lastmove.ui.screen.UiScreenId;
@@ -31,8 +32,11 @@ public class MainWindowController implements UiScreenController {
     private Label featureStatusLabel;
     @FXML
     private ImageView statusBrandLogo;
+    @FXML
+    private MessageBox startupMessageBox;
 
     private final ListChangeListener<String> themeStyleListener = change -> updateStatusBrandLogo();
+    private boolean startupMessageShown;
 
     public MainWindowController(@Lazy UiFlowManager uiFlowManager) {
         this.uiFlowManager = uiFlowManager;
@@ -43,6 +47,17 @@ public class MainWindowController implements UiScreenController {
         root.getProperties().put("controller", this);
         root.getStyleClass().addListener(themeStyleListener);
         updateStatusBrandLogo();
+        startupMessageBox.setOnAccept(event -> openPgnAnalysis());
+        startupMessageBox.setOnCancel(event ->
+                featureStatusLabel.setText("Welcome to LastMove Chess."));
+    }
+
+    @Override
+    public void onShow() {
+        if (!startupMessageShown) {
+            startupMessageShown = true;
+            startupMessageBox.show();
+        }
     }
 
     @FXML
