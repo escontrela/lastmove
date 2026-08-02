@@ -1,6 +1,5 @@
 package com.escontrela.lastmove.ui.component.board;
 
-import com.escontrela.lastmove.domain.common.ChessConstants;
 import javafx.scene.control.Control;
 import javafx.scene.control.Skin;
 
@@ -13,10 +12,13 @@ import javafx.scene.control.Skin;
  */
 public class ChessBoardControl extends Control {
 
-    private BoardTheme theme = BoardTheme.CLASSIC;
+    private BoardTheme theme = BoardTheme.LASTMOVE;
 
     public ChessBoardControl() {
         getStyleClass().add("chess-board");
+        setMinSize(320, 320);
+        setPrefSize(640, 640);
+        setMaxSize(640, 640);
     }
 
     @Override
@@ -30,7 +32,9 @@ public class ChessBoardControl extends Control {
 
     public void setTheme(BoardTheme theme) {
         this.theme = theme;
-        getSkin().dispose();
-        setSkin(createDefaultSkin());
+        if (getSkin() != null) {
+            getSkin().dispose();
+            setSkin(createDefaultSkin());
+        }
     }
 }

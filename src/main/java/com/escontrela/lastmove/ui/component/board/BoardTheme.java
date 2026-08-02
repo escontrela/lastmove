@@ -3,9 +3,10 @@ package com.escontrela.lastmove.ui.component.board;
 /**
  * Visual theme settings for the chess board, such as square colors and piece set.
  *
- * <p>Placeholder – theming support is planned for a future milestone.
+ * <p>The default palette follows the application's restrained blue visual language.
  */
 public enum BoardTheme {
+    LASTMOVE("#e9ebee", "#9ca3aa"),
     CLASSIC("#f0d9b5", "#b58863"),
     BLUE_GREY("#dee3e6", "#8ca2ad"),
     GREEN("#ffffdd", "#86a666");

@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton?>
+<?import com.escontrela.lastmove.ui.component.message.MessageBox?>
+<?import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<AnchorPane fx:id="root" onContextMenuRequested="#showContextMenu" styleClass="app-shell" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.escontrela.lastmove.ui.controller.MainWindowController">
+<BorderPane styleClass="app-shell" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+    <top>
+        <HBox alignment="CENTER_LEFT" spacing="16.0" styleClass="workspace-header">
+            <VBox spacing="6.0">
+                <Label styleClass="eyebrow-label" text="Chess workspace" />
+                <HBox alignment="BASELINE_LEFT" spacing="8.0" styleClass="app-brand">
+                    <Label styleClass="app-brand-name" text="LastMove" />
+                    <Label styleClass="app-brand-edition" text="Chess" />
+                </HBox>
+            </VBox>
+            <Region HBox.hgrow="ALWAYS" />
+            <ToolbarIconButton accessibleText="Open setup" lightIconResource="/images/settings_35dp_000000.png" darkIconResource="/images/settings_35dp_FFFFFF.png" tooltipText="Setup" onAction="#openSetup" />
+        </HBox>
+    </top>
+    <center>
+        <StackPane>
+            <VBox alignment="TOP_LEFT" spacing="24.0" styleClass="tool-catalog-shell">
+                <padding><Insets bottom="56.0" left="80.0" right="80.0" top="48.0" /></padding>
+                <Label styleClass="catalog-title" text="Chess tools" />
+                <Label styleClass="catalog-support" text="Choose a workspace for playing, studying, and analysing your games." wrapText="true" />
+                <TextField editable="false" focusTraversable="false" promptText="Search chess tools" styleClass="tool-search-field" />
+                <Label styleClass="catalog-section-title" text="Available now" />
+                <HBox spacing="16.0" styleClass="tool-card-row">
+                <Button accessibleText="Analyse a PGN" mnemonicParsing="false" onAction="#openPgnAnalysis" styleClass="tool-card-button" contentDisplay="GRAPHIC_ONLY">
+                    <graphic><HBox alignment="CENTER_LEFT" spacing="16.0"><ImageView fx:id="pgnToolIcon" fitHeight="34.0" fitWidth="34.0" preserveRatio="true" smooth="true"><image><Image url="@../images/history_35dp_000000.png" /></image></ImageView><VBox spacing="5.0"><Label styleClass="tool-card-title" text="Analyse a PGN"/><Label styleClass="tool-card-description" text="Replay a recorded game move by move."/></VBox><Region HBox.hgrow="ALWAYS"/><Label styleClass="tool-card-state tool-card-state-ready" text="›"/></HBox></graphic>
+                </Button>
+                <Button accessibleText="Study a FEN position" mnemonicParsing="false" onAction="#showComingSoon" styleClass="tool-card-button" contentDisplay="GRAPHIC_ONLY">
+                    <graphic><HBox alignment="CENTER_LEFT" spacing="16.0"><ImageView fx:id="fenToolIcon" fitHeight="34.0" fitWidth="34.0" preserveRatio="true" smooth="true"><image><Image url="@../images/structure_35dp_000000.png" /></image></ImageView><VBox spacing="5.0"><Label styleClass="tool-card-title" text="Study a FEN position"/><Label styleClass="tool-card-description" text="Set up and inspect a single position."/></VBox><Region HBox.hgrow="ALWAYS"/><Label styleClass="tool-card-state" text="Coming soon"/></HBox></graphic>
+                </Button>
+                </HBox>
+                <HBox spacing="16.0" styleClass="tool-card-row">
+                <Button accessibleText="Play a local game" mnemonicParsing="false" onAction="#showComingSoon" styleClass="tool-card-button" contentDisplay="GRAPHIC_ONLY">
+                    <graphic><HBox alignment="CENTER_LEFT" spacing="16.0"><ImageView fx:id="localGameToolIcon" fitHeight="34.0" fitWidth="34.0" preserveRatio="true" smooth="true"><image><Image url="@../images/next_35dp_000000.png" /></image></ImageView><VBox spacing="5.0"><Label styleClass="tool-card-title" text="Play a local game"/><Label styleClass="tool-card-description" text="Play over the board with a friend."/></VBox><Region HBox.hgrow="ALWAYS"/><Label styleClass="tool-card-state" text="Coming soon"/></HBox></graphic>
+                </Button>
+                <Button accessibleText="Opening explorer" mnemonicParsing="false" onAction="#showComingSoon" styleClass="tool-card-button" contentDisplay="GRAPHIC_ONLY">
+                    <graphic><HBox alignment="CENTER_LEFT" spacing="16.0"><ImageView fx:id="openingToolIcon" fitHeight="34.0" fitWidth="34.0" preserveRatio="true" smooth="true"><image><Image url="@../images/search_35dp_000000.png" /></image></ImageView><VBox spacing="5.0"><Label styleClass="tool-card-title" text="Opening explorer"/><Label styleClass="tool-card-description" text="Browse your repertoire and lines."/></VBox><Region HBox.hgrow="ALWAYS"/><Label styleClass="tool-card-state" text="Coming soon"/></HBox></graphic>
+                </Button>
+                </HBox>
+                <HBox spacing="16.0" styleClass="tool-card-row">
+                <Button accessibleText="Training drills" mnemonicParsing="false" onAction="#showComingSoon" styleClass="tool-card-button" contentDisplay="GRAPHIC_ONLY">
+                    <graphic><HBox alignment="CENTER_LEFT" spacing="16.0"><ImageView fx:id="trainingToolIcon" fitHeight="34.0" fitWidth="34.0" preserveRatio="true" smooth="true"><image><Image url="@../images/filter_35dp_000000.png" /></image></ImageView><VBox spacing="5.0"><Label styleClass="tool-card-title" text="Training drills"/><Label styleClass="tool-card-description" text="Practise patterns and tactical vision."/></VBox><Region HBox.hgrow="ALWAYS"/><Label styleClass="tool-card-state" text="Coming soon"/></HBox></graphic>
+                </Button>
+                <Button accessibleText="Engine analysis" mnemonicParsing="false" onAction="#showComingSoon" styleClass="tool-card-button" contentDisplay="GRAPHIC_ONLY">
+                    <graphic><HBox alignment="CENTER_LEFT" spacing="16.0"><ImageView fx:id="engineToolIcon" fitHeight="34.0" fitWidth="34.0" preserveRatio="true" smooth="true"><image><Image url="@../images/zoom_35dp_000000.png" /></image></ImageView><VBox spacing="5.0"><Label styleClass="tool-card-title" text="Engine analysis"/><Label styleClass="tool-card-description" text="Evaluate critical moments in a game."/></VBox><Region HBox.hgrow="ALWAYS"/><Label styleClass="tool-card-state" text="Coming soon"/></HBox></graphic>
+                </Button>
+                </HBox>
+                <Label fx:id="featureStatusLabel" styleClass="tool-catalog-status" text="Select Analyse a PGN to start." />
+            </VBox>
+            <MessageBox fx:id="startupMessageBox"
+                        acceptText="Open PGN analysis"
+                        autoHide="true"
+                        buttonMode="ACCEPT_CANCEL"
+                        cancelText="Not now"
+                        cardWidth="460.0"
+                        contentPadding="20.0"
+                        contentSpacing="12.0"
+                        dragEnabled="true"
+                        message="Would you like to open the PGN analysis workspace and replay a recorded game?"
+                        title="Welcome to LastMove Chess" />
+        </StackPane>
+    </center>
+    <bottom>
+        <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="status-rail">
+            <Label styleClass="eyebrow-label" text="Status" />
+            <Label styleClass="status-text" text="Ready to choose a chess workspace" />
+            <Region HBox.hgrow="ALWAYS" />
+            <ImageView fx:id="statusBrandLogo" fitHeight="20.0" fitWidth="96.0" preserveRatio="true" smooth="true" styleClass="status-brand-logo">
+                <image><Image url="@../images/lastmove-chess-logo.png" /></image>
+            </ImageView>
+        </HBox>
+    </bottom>
+</BorderPane>
+    <ContextualMenuPanel fx:id="contextualMenuPanel" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
+</AnchorPane>
