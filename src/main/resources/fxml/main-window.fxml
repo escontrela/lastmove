@@ -15,7 +15,10 @@
         <HBox alignment="CENTER_LEFT" spacing="16.0" styleClass="workspace-header">
             <VBox spacing="6.0">
                 <Label styleClass="eyebrow-label" text="Chess workspace" />
-                <Label styleClass="app-title" text="LastMove" />
+                <HBox alignment="BASELINE_LEFT" spacing="8.0" styleClass="app-brand">
+                    <Label styleClass="app-brand-name" text="LastMove" />
+                    <Label styleClass="app-brand-edition" text="Chess" />
+                </HBox>
                 <Label styleClass="hero-support" text="A focused desktop workspace for replaying, studying, and eventually analysing chess games." wrapText="true" />
             </VBox>
             <Region HBox.hgrow="ALWAYS" />

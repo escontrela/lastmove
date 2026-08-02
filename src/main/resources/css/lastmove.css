@@ -29,6 +29,17 @@
     -fx-text-fill: #262626;
 }
 
+.app-brand { -fx-alignment: baseline-left; }
+
+.app-brand-name,
+.app-brand-edition {
+    -fx-font-size: 30px;
+    -fx-font-weight: 700;
+}
+
+.app-brand-name { -fx-text-fill: #1f242a; }
+.app-brand-edition { -fx-text-fill: #8b939d; }
+
 .hero-support, .card-copy, .status-text {
     -fx-text-fill: #3c3c3c;
     -fx-font-size: 14px;
@@ -199,6 +210,8 @@
     -fx-background-color: #121820;
 }
 .night-mode .app-title, .night-mode .card-title { -fx-text-fill: #ffffff; }
+.night-mode .app-brand-name { -fx-text-fill: #ffffff; }
+.night-mode .app-brand-edition { -fx-text-fill: #a8b4c1; }
 .night-mode .hero-support, .night-mode .card-copy, .night-mode .status-text { -fx-text-fill: #c6ccd3; }
 .night-mode .eyebrow-label { -fx-text-fill: #aeb8c4; }
 .night-mode .feature-card, .night-mode .rail-card, .night-mode .setup-card, .night-mode .board-card {
