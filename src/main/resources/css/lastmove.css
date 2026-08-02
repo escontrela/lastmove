@@ -93,7 +93,8 @@
     -fx-background-color: #ffffff;
     -fx-border-color: #d8dde3;
     -fx-border-width: 1;
-    -fx-background-radius: 0;
+    -fx-background-radius: 14;
+    -fx-border-radius: 14;
     -fx-cursor: hand;
     -fx-padding: 18 20;
     -fx-pref-width: 500px;
@@ -457,26 +458,27 @@
 .night-mode .home-content, .night-mode .setup-content, .night-mode .analysis-workspace {
     -fx-background-color: #121820;
 }
-.night-mode .tool-catalog-shell { -fx-background-color: #171717; }
+.night-mode .tool-catalog-shell { -fx-background-color: #121820; }
 .night-mode .catalog-title, .night-mode .catalog-section-title { -fx-text-fill: #f1f3f5; }
 .night-mode .catalog-support, .night-mode .tool-catalog-status { -fx-text-fill: #a8b4c1; }
 .night-mode .tool-search-field {
-    -fx-background-color: #242424;
-    -fx-border-color: #4b4b4b;
+    -fx-background-color: #1c2430;
+    -fx-border-color: #465465;
     -fx-text-fill: #eef3f8;
     -fx-prompt-text-fill: #a8a8a8;
 }
 .night-mode .tool-card-button {
-    -fx-background-color: #242424;
-    -fx-border-color: #303030;
+    -fx-background-color: #1c2430;
+    -fx-border-color: #354150;
 }
 .night-mode .tool-card-button:hover {
-    -fx-background-color: #2d2d2d;
+    -fx-background-color: #243243;
     -fx-border-color: #5d8fd0;
 }
-.night-mode .tool-card-button:pressed { -fx-background-color: #343434; }
+.night-mode .tool-card-button:pressed { -fx-background-color: #2b3b4d; }
 .night-mode .tool-card-title { -fx-text-fill: #f1f3f5; }
-.night-mode .tool-card-description, .night-mode .tool-card-state { -fx-text-fill: #b3b3b3; }
+.night-mode .tool-card-description, .night-mode .tool-card-state { -fx-text-fill: #b8c5d3; }
+.night-mode .tool-card-state-ready { -fx-text-fill: #79aeef; }
 .night-mode .message-box-overlay { -fx-background-color: rgba(0, 0, 0, 0.38); }
 .night-mode .message-box-card {
     -fx-background-color: #1c2430;

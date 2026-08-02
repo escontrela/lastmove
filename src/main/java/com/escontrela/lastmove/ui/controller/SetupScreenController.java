@@ -44,6 +44,7 @@ public class SetupScreenController implements UiScreenController {
     @FXML
     public void initialize() {
         root.getProperties().put("controller", this);
+        applyButton.getStyleClass().addAll("message-box-button", "message-box-accept-button");
         nightModeCheckBox.selectedProperty().addListener((ignored, oldValue, newValue) ->
                 updateApplyButtonVisibility());
         showSplashCheckBox.selectedProperty().addListener((ignored, oldValue, newValue) ->

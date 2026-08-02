@@ -4,7 +4,9 @@ import com.escontrela.lastmove.ui.component.message.MessageBox;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
 import com.escontrela.lastmove.ui.screen.UiScreenController;
 import com.escontrela.lastmove.ui.screen.UiScreenId;
+import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import javafx.collections.ListChangeListener;
 import javafx.fxml.FXML;
 import javafx.event.ActionEvent;
@@ -23,6 +25,7 @@ public class MainWindowController implements UiScreenController {
     private static final String NIGHT_MODE_STYLE_CLASS = "night-mode";
     private static final String LIGHT_LOGO_RESOURCE = "/images/lastmove-chess-logo.png";
     private static final String DARK_LOGO_RESOURCE = "/images/lastmove-chess-logo-dark.png";
+    private static final Map<String, Image> IMAGE_CACHE = new ConcurrentHashMap<>();
 
     private final UiFlowManager uiFlowManager;
 
@@ -33,9 +36,21 @@ public class MainWindowController implements UiScreenController {
     @FXML
     private ImageView statusBrandLogo;
     @FXML
+    private ImageView pgnToolIcon;
+    @FXML
+    private ImageView fenToolIcon;
+    @FXML
+    private ImageView localGameToolIcon;
+    @FXML
+    private ImageView openingToolIcon;
+    @FXML
+    private ImageView trainingToolIcon;
+    @FXML
+    private ImageView engineToolIcon;
+    @FXML
     private MessageBox startupMessageBox;
 
-    private final ListChangeListener<String> themeStyleListener = change -> updateStatusBrandLogo();
+    private final ListChangeListener<String> themeStyleListener = change -> updateThemeAssets();
     private boolean startupMessageShown;
 
     public MainWindowController(@Lazy UiFlowManager uiFlowManager) {
@@ -46,7 +61,7 @@ public class MainWindowController implements UiScreenController {
     public void initialize() {
         root.getProperties().put("controller", this);
         root.getStyleClass().addListener(themeStyleListener);
-        updateStatusBrandLogo();
+        updateThemeAssets();
         startupMessageBox.setOnAccept(event -> openPgnAnalysis());
         startupMessageBox.setOnCancel(event ->
                 featureStatusLabel.setText("Welcome to LastMove Chess."));
@@ -79,11 +94,34 @@ public class MainWindowController implements UiScreenController {
     }
 
     private void updateStatusBrandLogo() {
-        String resource = root.getStyleClass().contains(NIGHT_MODE_STYLE_CLASS)
+        String resource = isNightMode()
                 ? DARK_LOGO_RESOURCE
                 : LIGHT_LOGO_RESOURCE;
-        statusBrandLogo.setImage(new Image(Objects.requireNonNull(
-                getClass().getResource(resource),
-                () -> "Missing status logo resource: " + resource).toExternalForm()));
+        statusBrandLogo.setImage(loadImage(resource));
+    }
+
+    private void updateThemeAssets() {
+        updateStatusBrandLogo();
+        String iconColor = isNightMode() ? "FFFFFF" : "000000";
+        updateToolIcon(pgnToolIcon, "history", iconColor);
+        updateToolIcon(fenToolIcon, "structure", iconColor);
+        updateToolIcon(localGameToolIcon, "next", iconColor);
+        updateToolIcon(openingToolIcon, "search", iconColor);
+        updateToolIcon(trainingToolIcon, "filter", iconColor);
+        updateToolIcon(engineToolIcon, "zoom", iconColor);
+    }
+
+    private boolean isNightMode() {
+        return root.getStyleClass().contains(NIGHT_MODE_STYLE_CLASS);
+    }
+
+    private void updateToolIcon(ImageView imageView, String iconName, String iconColor) {
+        imageView.setImage(loadImage("/images/" + iconName + "_35dp_" + iconColor + ".png"));
+    }
+
+    private Image loadImage(String resource) {
+        return IMAGE_CACHE.computeIfAbsent(resource, path -> new Image(Objects.requireNonNull(
+                getClass().getResource(path),
+                () -> "Missing image resource: " + path).toExternalForm()));
     }
 }
