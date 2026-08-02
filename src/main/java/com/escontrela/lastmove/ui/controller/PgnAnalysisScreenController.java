@@ -4,8 +4,12 @@ import com.escontrela.lastmove.application.service.GameLoadService;
 import com.escontrela.lastmove.application.service.GameReplayService;
 import com.escontrela.lastmove.ui.support.FileChooserFactory;
 import com.escontrela.lastmove.ui.model.MainScreenViewModel;
+import com.escontrela.lastmove.ui.screen.UiFlowManager;
+import com.escontrela.lastmove.ui.screen.UiScreenController;
+import com.escontrela.lastmove.ui.screen.UiScreenId;
 import javafx.fxml.FXML;
 import javafx.scene.layout.BorderPane;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 /**
@@ -15,7 +19,7 @@ import org.springframework.stereotype.Component;
  * for routing UI events and updating the view model.
  */
 @Component
-public class MainScreenController {
+public class PgnAnalysisScreenController implements UiScreenController {
 
     @FXML
     private BorderPane root;
@@ -24,20 +28,23 @@ public class MainScreenController {
     private final GameReplayService gameReplayService;
     private final FileChooserFactory fileChooserFactory;
     private final MainScreenViewModel viewModel;
+    private final UiFlowManager uiFlowManager;
 
-    public MainScreenController(GameLoadService gameLoadService,
-                                GameReplayService gameReplayService,
-                                FileChooserFactory fileChooserFactory,
-                                MainScreenViewModel viewModel) {
+    public PgnAnalysisScreenController(GameLoadService gameLoadService,
+                                       GameReplayService gameReplayService,
+                                       FileChooserFactory fileChooserFactory,
+                                       MainScreenViewModel viewModel,
+                                       @Lazy UiFlowManager uiFlowManager) {
         this.gameLoadService = gameLoadService;
         this.gameReplayService = gameReplayService;
         this.fileChooserFactory = fileChooserFactory;
         this.viewModel = viewModel;
+        this.uiFlowManager = uiFlowManager;
     }
 
     @FXML
     public void initialize() {
-        // TODO: bind view model properties to FXML controls
+        root.getProperties().put("controller", this);
     }
 
     @FXML
@@ -56,5 +63,15 @@ public class MainScreenController {
     @FXML
     public void onPreviousMove() {
         // TODO: call gameReplayService.previous(currentGame)
+    }
+
+    @FXML
+    public void backToMain() {
+        uiFlowManager.show(UiScreenId.MAIN);
+    }
+
+    @FXML
+    public void openSetup() {
+        uiFlowManager.show(UiScreenId.SETUP);
     }
 }

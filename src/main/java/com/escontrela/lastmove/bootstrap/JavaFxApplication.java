@@ -1,17 +1,16 @@
 package com.escontrela.lastmove.bootstrap;
 
 import javafx.application.Application;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.stage.Stage;
 import org.springframework.context.ConfigurableApplicationContext;
+import com.escontrela.lastmove.ui.screen.UiFlowManager;
+import com.escontrela.lastmove.ui.screen.UiScreenId;
 
 /**
  * JavaFX {@link Application} lifecycle integration for LastMove.
  *
- * <p>Initialises the Spring context during {@link #init()} and loads the main
- * FXML screen during {@link #start(Stage)}.
+ * <p>Initialises the Spring context during {@link #init()} and delegates primary-window
+ * navigation to {@link UiFlowManager} during {@link #start(Stage)}.
  */
 public class JavaFxApplication extends Application {
 
@@ -23,17 +22,10 @@ public class JavaFxApplication extends Application {
     }
 
     @Override
-    public void start(Stage primaryStage) throws Exception {
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-screen.fxml"));
-        loader.setControllerFactory(springContext::getBean);
-        Parent root = loader.load();
-
-        Scene scene = new Scene(root, 1280, 800);
-        scene.getStylesheets().add(getClass().getResource("/css/lastmove.css").toExternalForm());
-
+    public void start(Stage primaryStage) {
+        springContext.getBeanFactory().registerSingleton("primaryStage", primaryStage);
         primaryStage.setTitle("LastMove");
-        primaryStage.setScene(scene);
-        primaryStage.show();
+        springContext.getBean(UiFlowManager.class).show(UiScreenId.MAIN);
     }
 
     @Override

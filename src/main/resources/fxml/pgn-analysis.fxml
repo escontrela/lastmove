@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import com.escontrela.lastmove.ui.component.board.ChessBoardControl?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane fx:id="root" styleClass="app-shell" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.escontrela.lastmove.ui.controller.PgnAnalysisScreenController">
+    <top>
+        <HBox alignment="CENTER_LEFT" spacing="16.0" styleClass="workspace-header">
+            <VBox spacing="6.0">
+                <Label styleClass="eyebrow-label" text="Study workspace" />
+                <Label styleClass="app-title" text="PGN analysis" />
+                <Label styleClass="hero-support" text="Load a recorded game and move through every position at your own pace." wrapText="true" />
+            </VBox>
+            <Region HBox.hgrow="ALWAYS" />
+            <HBox alignment="CENTER_RIGHT" spacing="8.0">
+                <Button mnemonicParsing="false" onAction="#backToMain" styleClass="ghost-button" text="Back" />
+                <Button mnemonicParsing="false" onAction="#openSetup" styleClass="icon-button" contentDisplay="GRAPHIC_ONLY">
+                    <graphic><ImageView fitHeight="20.0" fitWidth="20.0" preserveRatio="true"><image><Image url="@../images/settings_35dp_000000.png" /></image></ImageView></graphic>
+                </Button>
+            </HBox>
+        </HBox>
+    </top>
+    <left>
+        <VBox prefWidth="256.0" spacing="16.0" styleClass="utility-rail">
+            <BorderPane.margin><Insets bottom="24.0" left="24.0" right="12.0" top="24.0" /></BorderPane.margin>
+            <VBox spacing="12.0" styleClass="rail-card">
+                <padding><Insets bottom="20.0" left="20.0" right="20.0" top="20.0" /></padding>
+                <Label styleClass="eyebrow-label" text="Game source" />
+                <Label styleClass="card-title" text="Start a PGN study" />
+                <Label styleClass="card-copy" text="Open a portable game notation file to prepare the replay workspace." wrapText="true" />
+                <Button mnemonicParsing="false" onAction="#onOpenPgn" styleClass="primary-button" text="Open PGN" />
+            </VBox>
+            <VBox spacing="12.0" styleClass="rail-card" VBox.vgrow="ALWAYS">
+                <padding><Insets bottom="20.0" left="20.0" right="20.0" top="20.0" /></padding>
+                <Label styleClass="eyebrow-label" text="Notation" />
+                <Label styleClass="card-title" text="Moves" />
+                <ListView fx:id="moveListView" styleClass="move-list" VBox.vgrow="ALWAYS" />
+            </VBox>
+        </VBox>
+    </left>
+    <center>
+        <StackPane styleClass="analysis-workspace">
+            <padding><Insets bottom="24.0" left="12.0" right="24.0" top="24.0" /></padding>
+            <VBox alignment="CENTER" spacing="20.0" styleClass="board-card">
+                <ChessBoardControl maxHeight="620.0" maxWidth="620.0" />
+                <HBox alignment="CENTER" spacing="8.0" styleClass="board-navigation">
+                    <Button mnemonicParsing="false" onAction="#onPreviousMove" styleClass="secondary-button" text="Previous" />
+                    <Button mnemonicParsing="false" onAction="#onNextMove" styleClass="primary-button" text="Next" />
+                </HBox>
+            </VBox>
+        </StackPane>
+    </center>
+    <bottom>
+        <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="status-rail">
+            <Label styleClass="eyebrow-label" text="Status" />
+            <Label fx:id="statusLabel" styleClass="status-text" text="Ready to open a PGN file" />
+        </HBox>
+    </bottom>
+</BorderPane>
