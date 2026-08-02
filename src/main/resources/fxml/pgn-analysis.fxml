@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import com.escontrela.lastmove.ui.component.board.ChessBoardControl?>
+<?import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
@@ -23,12 +24,8 @@
             </VBox>
             <Region HBox.hgrow="ALWAYS" />
             <HBox alignment="CENTER_RIGHT" spacing="8.0">
-                <Button accessibleText="Back to main window" mnemonicParsing="false" onAction="#backToMain" styleClass="back-image-button" contentDisplay="GRAPHIC_ONLY">
-                    <graphic><ImageView fitHeight="20.0" fitWidth="20.0" preserveRatio="true"><image><Image url="@../images/back_35dp_000000.png" /></image></ImageView></graphic>
-                </Button>
-                <Button accessibleText="Open setup" mnemonicParsing="false" onAction="#openSetup" styleClass="icon-action-button" contentDisplay="GRAPHIC_ONLY">
-                    <graphic><ImageView fitHeight="20.0" fitWidth="20.0" preserveRatio="true"><image><Image url="@../images/settings_35dp_000000.png" /></image></ImageView></graphic>
-                </Button>
+                <ToolbarIconButton accessibleText="Back to main window" lightIconResource="/images/back_35dp_000000.png" darkIconResource="/images/back_35dp_FFFFFF.png" tooltipText="Back" onAction="#backToMain" />
+                <ToolbarIconButton accessibleText="Open setup" lightIconResource="/images/settings_35dp_000000.png" darkIconResource="/images/settings_35dp_FFFFFF.png" tooltipText="Setup" onAction="#openSetup" />
             </HBox>
         </HBox>
     </top>
@@ -48,12 +45,8 @@
                 <Label styleClass="card-title" text="Moves" />
                 <ListView fx:id="moveListView" styleClass="move-list" VBox.vgrow="ALWAYS" />
                 <HBox alignment="CENTER" spacing="8.0" styleClass="move-navigation">
-                    <Button accessibleText="Previous move" mnemonicParsing="false" onAction="#onPreviousMove" styleClass="move-navigation-button" contentDisplay="GRAPHIC_ONLY">
-                        <graphic><ImageView fitHeight="18.0" fitWidth="18.0" preserveRatio="true"><image><Image url="@../images/previous_35dp_000000.png" /></image></ImageView></graphic>
-                    </Button>
-                    <Button accessibleText="Next move" mnemonicParsing="false" onAction="#onNextMove" styleClass="move-navigation-button" contentDisplay="GRAPHIC_ONLY">
-                        <graphic><ImageView fitHeight="18.0" fitWidth="18.0" preserveRatio="true"><image><Image url="@../images/next_35dp_000000.png" /></image></ImageView></graphic>
-                    </Button>
+                    <ToolbarIconButton accessibleText="Previous move" lightIconResource="/images/previous_35dp_000000.png" darkIconResource="/images/previous_35dp_FFFFFF.png" tooltipText="Previous move" onAction="#onPreviousMove" />
+                    <ToolbarIconButton accessibleText="Next move" lightIconResource="/images/next_35dp_000000.png" darkIconResource="/images/next_35dp_FFFFFF.png" tooltipText="Next move" onAction="#onNextMove" />
                 </HBox>
             </VBox>
         </VBox>

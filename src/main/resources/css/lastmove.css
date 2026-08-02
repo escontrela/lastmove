@@ -207,74 +207,36 @@
 .ghost-button:hover { -fx-background-color: #f4f7fb; -fx-border-color: #1c69d4; }
 .ghost-button:pressed { -fx-background-color: #e8edf4; }
 
-.icon-action-button,
-.back-image-button,
-.previous-image-button,
-.next-image-button {
-    -fx-background-color: #ffffff;
-    -fx-border-color: #c7ced7;
-    -fx-border-width: 1;
-    -fx-background-radius: 22;
-    -fx-border-radius: 22;
-    -fx-background-insets: 0;
-    -fx-border-insets: 0;
-    -fx-cursor: hand;
-    -fx-min-width: 44;
-    -fx-pref-width: 44;
-    -fx-max-width: 44;
-    -fx-min-height: 44;
-    -fx-pref-height: 44;
-    -fx-max-height: 44;
-    -fx-padding: 10;
-}
+.move-navigation { -fx-padding: 4 0 0 0; }
 
-.icon-action-button:hover,
-.back-image-button:hover,
-.previous-image-button:hover {
-    -fx-background-color: #f4f7fb;
-    -fx-border-color: #1c69d4;
-}
-
-.icon-action-button:pressed,
-.back-image-button:pressed,
-.previous-image-button:pressed { -fx-background-color: #e8edf4; }
-
-.next-image-button {
-    -fx-background-color: #1c69d4;
-    -fx-border-color: #1c69d4;
-}
-
-.next-image-button:hover { -fx-background-color: #0653b6; -fx-border-color: #0653b6; }
-.next-image-button:pressed { -fx-background-color: #004a9f; -fx-border-color: #004a9f; }
-
-.move-navigation {
-    -fx-padding: 4 0 0 0;
-}
-
-.move-navigation-button {
+.toolbar-icon-button {
     -fx-background-color: #ffffff;
     -fx-border-color: #d8dde3;
     -fx-border-width: 1;
-    -fx-background-radius: 18;
-    -fx-border-radius: 18;
+    -fx-background-radius: 14;
+    -fx-border-radius: 14;
     -fx-background-insets: 0;
     -fx-border-insets: 0;
     -fx-cursor: hand;
-    -fx-min-width: 36;
-    -fx-pref-width: 36;
-    -fx-max-width: 36;
-    -fx-min-height: 36;
-    -fx-pref-height: 36;
-    -fx-max-height: 36;
-    -fx-padding: 8;
+    -fx-padding: 10;
 }
 
-.move-navigation-button:hover {
+.toolbar-icon-button:hover {
     -fx-background-color: #f4f7fb;
+    -fx-border-color: #c3d3e8;
+}
+
+.toolbar-icon-button:pressed {
+    -fx-background-color: #eaf1fa;
+    -fx-border-color: #8eb5e8;
+}
+
+.toolbar-icon-button:disabled { -fx-opacity: 0.46; }
+
+.toolbar-icon-button:toolbar-selected {
+    -fx-background-color: rgba(28, 105, 212, 0.10);
     -fx-border-color: #1c69d4;
 }
-
-.move-navigation-button:pressed { -fx-background-color: #e8edf4; }
 
 .feature-card, .rail-card, .setup-card, .board-card {
     -fx-background-color: #ffffff;
@@ -410,23 +372,20 @@
 }
 .night-mode .move-list .list-cell:filled:hover { -fx-background-color: #3b4654; }
 .night-mode .settings-check-box { -fx-text-fill: #ffffff; }
-.night-mode .icon-action-button,
-.night-mode .back-image-button,
-.night-mode .previous-image-button {
+.night-mode .toolbar-icon-button {
     -fx-background-color: #1c2430;
     -fx-border-color: #334151;
 }
-.night-mode .icon-action-button:hover,
-.night-mode .back-image-button:hover,
-.night-mode .previous-image-button:hover {
+.night-mode .toolbar-icon-button:hover {
     -fx-background-color: #243243;
     -fx-border-color: #5d8fd0;
 }
-.night-mode .move-navigation-button {
-    -fx-background-color: #1c2430;
-    -fx-border-color: #334151;
+.night-mode .toolbar-icon-button:pressed {
+    -fx-background-color: #2b3b4d;
+    -fx-border-color: #6ba5f0;
 }
-.night-mode .move-navigation-button:hover {
-    -fx-background-color: #243243;
-    -fx-border-color: #5d8fd0;
+.night-mode .toolbar-icon-button:disabled { -fx-opacity: 0.46; }
+.night-mode .toolbar-icon-button:toolbar-selected {
+    -fx-background-color: rgba(107, 165, 240, 0.14);
+    -fx-border-color: #6ba5f0;
 }
