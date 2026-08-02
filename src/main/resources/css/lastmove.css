@@ -144,8 +144,8 @@
 }
 
 .chess-board {
-    -fx-border-color: #262626;
-    -fx-border-width: 2px;
+    -fx-border-color: #1a2129;
+    -fx-border-width: 1px;
     -fx-max-width: 620px;
     -fx-max-height: 620px;
 }
@@ -163,6 +163,21 @@
 }
 
 .chess-square-hint { -fx-background-color: rgba(28, 105, 212, 0.30); }
+
+.icon-navigation-button {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #cccccc;
+    -fx-border-width: 1px;
+    -fx-background-radius: 0;
+    -fx-cursor: hand;
+    -fx-min-width: 48px;
+    -fx-min-height: 48px;
+    -fx-padding: 12px;
+}
+
+.icon-navigation-button:hover { -fx-background-color: #ebebeb; }
+.icon-navigation-button-primary { -fx-background-color: #1c69d4; -fx-border-color: #1c69d4; }
+.icon-navigation-button-primary:hover { -fx-background-color: #0653b6; -fx-border-color: #0653b6; }
 
 .move-list {
     -fx-background-color: transparent;
@@ -222,3 +237,6 @@
 }
 .night-mode .move-list .list-cell:filled:hover { -fx-background-color: #3b4654; }
 .night-mode .settings-check-box { -fx-text-fill: #ffffff; }
+.night-mode .icon-navigation-button { -fx-background-color: #262e38; -fx-border-color: #6d7783; }
+.night-mode .icon-navigation-button:hover { -fx-background-color: #3b4654; }
+.night-mode .icon-navigation-button-primary { -fx-background-color: #1c69d4; -fx-border-color: #1c69d4; }
