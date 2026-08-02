@@ -9,14 +9,15 @@
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.image.Image?>
 <?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<StackPane fx:id="root" onContextMenuRequested="#showContextMenu" styleClass="app-shell" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.escontrela.lastmove.ui.controller.MainWindowController">
-<BorderPane styleClass="app-shell">
+<AnchorPane fx:id="root" onContextMenuRequested="#showContextMenu" styleClass="app-shell" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.escontrela.lastmove.ui.controller.MainWindowController">
+<BorderPane styleClass="app-shell" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
     <top>
         <HBox alignment="CENTER_LEFT" spacing="16.0" styleClass="workspace-header">
             <VBox spacing="6.0">
@@ -88,5 +89,5 @@
         </HBox>
     </bottom>
 </BorderPane>
-    <ContextualMenuPanel fx:id="contextualMenuPanel" />
-</StackPane>
+    <ContextualMenuPanel fx:id="contextualMenuPanel" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
+</AnchorPane>
