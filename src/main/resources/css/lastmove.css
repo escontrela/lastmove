@@ -31,6 +31,8 @@
 
 .app-brand { -fx-alignment: baseline-left; }
 
+.app-logo { -fx-opacity: 1; }
+
 .app-brand-name,
 .app-brand-edition {
     -fx-font-size: 30px;
