@@ -16,6 +16,8 @@ import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.Node;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
@@ -46,6 +48,8 @@ public class MessageBox extends StackPane {
             new SimpleBooleanProperty(this, "autoHide", true);
     private final BooleanProperty closeButtonVisible =
             new SimpleBooleanProperty(this, "closeButtonVisible", true);
+    private final BooleanProperty dragEnabled =
+            new SimpleBooleanProperty(this, "dragEnabled", true);
     private final DoubleProperty cardWidth =
             new SimpleDoubleProperty(this, "cardWidth", DEFAULT_CARD_WIDTH);
     private final DoubleProperty contentPadding =
@@ -66,6 +70,11 @@ public class MessageBox extends StackPane {
     private final Button cancelButton = new Button();
     private final HBox actions = new HBox(10);
     private final VBox card = new VBox();
+    private double dragStartSceneX;
+    private double dragStartSceneY;
+    private double dragOriginX;
+    private double dragOriginY;
+    private boolean dragging;
 
     public MessageBox() {
         initialiseView();
@@ -77,6 +86,7 @@ public class MessageBox extends StackPane {
         setAlignment(Pos.CENTER);
         setPickOnBounds(true);
         setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        addEventFilter(MouseEvent.MOUSE_RELEASED, event -> dragging = false);
 
         titleLabel.getStyleClass().add("message-box-title");
         titleLabel.textProperty().bind(titleProperty());
@@ -119,6 +129,8 @@ public class MessageBox extends StackPane {
         card.setMinHeight(Region.USE_PREF_SIZE);
         card.setMaxHeight(Region.USE_PREF_SIZE);
         card.getStyleClass().add("message-box-card");
+        card.addEventFilter(MouseEvent.MOUSE_PRESSED, this::startDrag);
+        card.addEventFilter(MouseEvent.MOUSE_DRAGGED, this::dragCard);
         getChildren().add(card);
 
         setVisible(false);
@@ -247,6 +259,18 @@ public class MessageBox extends StackPane {
         closeButtonVisible.set(value);
     }
 
+    public final BooleanProperty dragEnabledProperty() {
+        return dragEnabled;
+    }
+
+    public final boolean isDragEnabled() {
+        return dragEnabled.get();
+    }
+
+    public final void setDragEnabled(boolean value) {
+        dragEnabled.set(value);
+    }
+
     public final DoubleProperty cardWidthProperty() {
         return cardWidth;
     }
@@ -319,6 +343,12 @@ public class MessageBox extends StackPane {
         onClose.set(value);
     }
 
+    /** Returns the card to the centre of the control's available area. */
+    public void resetPosition() {
+        card.setTranslateX(0.0);
+        card.setTranslateY(0.0);
+    }
+
     private void updateButtonVisibility() {
         MessageBoxButtonMode mode = getButtonMode();
         boolean showAccept = mode == MessageBoxButtonMode.ACCEPT
@@ -342,6 +372,49 @@ public class MessageBox extends StackPane {
     private void updateCardSpacing() {
         card.setPadding(new Insets(getContentPadding()));
         card.setSpacing(getContentSpacing());
+    }
+
+    private void startDrag(MouseEvent event) {
+        if (!isDragEnabled() || !event.isPrimaryButtonDown() || isInteractiveTarget(event)) {
+            return;
+        }
+        dragStartSceneX = event.getSceneX();
+        dragStartSceneY = event.getSceneY();
+        dragOriginX = card.getTranslateX();
+        dragOriginY = card.getTranslateY();
+        dragging = true;
+        event.consume();
+    }
+
+    private void dragCard(MouseEvent event) {
+        if (!dragging || !isDragEnabled()) {
+            return;
+        }
+        double horizontalLimit = Math.max(0.0, (getWidth() - card.getWidth()) / 2.0);
+        double verticalLimit = Math.max(0.0, (getHeight() - card.getHeight()) / 2.0);
+        card.setTranslateX(clamp(dragOriginX + event.getSceneX() - dragStartSceneX,
+                -horizontalLimit, horizontalLimit));
+        card.setTranslateY(clamp(dragOriginY + event.getSceneY() - dragStartSceneY,
+                -verticalLimit, verticalLimit));
+        event.consume();
+    }
+
+    private boolean isInteractiveTarget(MouseEvent event) {
+        Object target = event.getTarget();
+        if (!(target instanceof Node node)) {
+            return false;
+        }
+        while (node != null && node != card) {
+            if (node instanceof Button) {
+                return true;
+            }
+            node = node.getParent();
+        }
+        return false;
+    }
+
+    private static double clamp(double value, double minimum, double maximum) {
+        return Math.max(minimum, Math.min(maximum, value));
     }
 
     private void handleAccept(ActionEvent event) {

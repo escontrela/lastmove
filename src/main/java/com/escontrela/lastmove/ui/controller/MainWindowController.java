@@ -50,6 +50,8 @@ public class MainWindowController implements UiScreenController {
         startupMessageBox.setOnAccept(event -> openPgnAnalysis());
         startupMessageBox.setOnCancel(event ->
                 featureStatusLabel.setText("Welcome to LastMove Chess."));
+        startupMessageBox.setOnClose(event ->
+                featureStatusLabel.setText("Welcome to LastMove Chess."));
     }
 
     @Override

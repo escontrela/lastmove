@@ -148,6 +148,7 @@
     -fx-background-radius: 16;
     -fx-border-radius: 16;
     -fx-effect: dropshadow(gaussian, rgba(20, 27, 36, 0.16), 24, 0.12, 0, 8);
+    -fx-cursor: move;
 }
 
 .message-box-title {
@@ -177,6 +178,7 @@
     -fx-text-fill: #65717e;
     -fx-font-size: 22px;
     -fx-font-weight: 400;
+    -fx-cursor: hand;
 }
 
 .button.message-box-close-button:hover {
