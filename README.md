@@ -20,15 +20,15 @@ Chesspresso is used as the initial technical library for parsing and traversing 
 
 | Technology    |                Version | Purpose                                                |
 | ------------- | ---------------------: | ------------------------------------------------------ |
-| Java          |                     21 | Language and runtime                                   |
-| JavaFX        |                 21.0.9 | Desktop UI, FXML layouts, reusable controls            |
+| Java          |                     22 | Language and runtime                                   |
+| JavaFX        |                 22.0.2 | Desktop UI, FXML layouts, reusable controls            |
 | Spring Boot   |                  3.3.2 | Dependency injection and desktop application lifecycle |
 | Chesspresso   |                  0.9.2 | Chess-game and notation support                        |
 | Maven         |                   3.8+ | Build and dependency management                        |
 | JUnit Jupiter |                 5.10.2 | Automated testing                                      |
 | Jackson       | Managed by Spring Boot | Serialization and future local data support            |
 | Caffeine      | Managed by Spring Boot | Local in-memory caching                                |
-| RichTextFX    |                 0.11.3 | Rich text support for notation and annotations         |
+| RichTextFX    |                 0.11.7 | Rich text support for notation and annotations         |
 
 Spring Boot is used only as a dependency-injection container and lifecycle manager for the desktop application. LastMove does **not** start a web server and does not include `spring-boot-starter-web`.
 
@@ -121,7 +121,7 @@ src/main/java/com/escontrela/lastmove/
 
 ### Prerequisites
 
-* JDK 21
+* JDK 22
 * Maven 3.8 or newer
 
 ### Build and test
