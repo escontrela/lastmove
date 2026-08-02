@@ -214,7 +214,10 @@
     -fx-background-color: #ffffff;
     -fx-border-color: #c7ced7;
     -fx-border-width: 1;
-    -fx-background-radius: 0;
+    -fx-background-radius: 22;
+    -fx-border-radius: 22;
+    -fx-background-insets: 0;
+    -fx-border-insets: 0;
     -fx-cursor: hand;
     -fx-min-width: 44;
     -fx-pref-width: 44;
@@ -243,6 +246,35 @@
 
 .next-image-button:hover { -fx-background-color: #0653b6; -fx-border-color: #0653b6; }
 .next-image-button:pressed { -fx-background-color: #004a9f; -fx-border-color: #004a9f; }
+
+.move-navigation {
+    -fx-padding: 4 0 0 0;
+}
+
+.move-navigation-button {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #d8dde3;
+    -fx-border-width: 1;
+    -fx-background-radius: 18;
+    -fx-border-radius: 18;
+    -fx-background-insets: 0;
+    -fx-border-insets: 0;
+    -fx-cursor: hand;
+    -fx-min-width: 36;
+    -fx-pref-width: 36;
+    -fx-max-width: 36;
+    -fx-min-height: 36;
+    -fx-pref-height: 36;
+    -fx-max-height: 36;
+    -fx-padding: 8;
+}
+
+.move-navigation-button:hover {
+    -fx-background-color: #f4f7fb;
+    -fx-border-color: #1c69d4;
+}
+
+.move-navigation-button:pressed { -fx-background-color: #e8edf4; }
 
 .feature-card, .rail-card, .setup-card, .board-card {
     -fx-background-color: #ffffff;
@@ -278,10 +310,10 @@
 }
 
 .chess-board {
-    -fx-border-color: #1a2129;
+    -fx-border-color: #5f6770;
     -fx-border-width: 1px;
-    -fx-max-width: 620px;
-    -fx-max-height: 620px;
+    -fx-max-width: 640px;
+    -fx-max-height: 640px;
 }
 
 .chess-square {
@@ -387,6 +419,14 @@
 .night-mode .icon-action-button:hover,
 .night-mode .back-image-button:hover,
 .night-mode .previous-image-button:hover {
+    -fx-background-color: #243243;
+    -fx-border-color: #5d8fd0;
+}
+.night-mode .move-navigation-button {
+    -fx-background-color: #1c2430;
+    -fx-border-color: #334151;
+}
+.night-mode .move-navigation-button:hover {
     -fx-background-color: #243243;
     -fx-border-color: #5d8fd0;
 }

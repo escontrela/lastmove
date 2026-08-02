@@ -18,7 +18,7 @@ public class ChessBoardControl extends Control {
         getStyleClass().add("chess-board");
         setMinSize(320, 320);
         setPrefSize(640, 640);
-        setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        setMaxSize(640, 640);
     }
 
     @Override
