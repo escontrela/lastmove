@@ -4,6 +4,9 @@ import com.escontrela.lastmove.ui.screen.UiFlowManager;
 import com.escontrela.lastmove.ui.screen.UiScreenController;
 import com.escontrela.lastmove.ui.screen.UiScreenId;
 import javafx.fxml.FXML;
+import javafx.event.ActionEvent;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -16,6 +19,8 @@ public class MainWindowController implements UiScreenController {
 
     @FXML
     private BorderPane root;
+    @FXML
+    private Label featureStatusLabel;
 
     public MainWindowController(@Lazy UiFlowManager uiFlowManager) {
         this.uiFlowManager = uiFlowManager;
@@ -34,5 +39,11 @@ public class MainWindowController implements UiScreenController {
     @FXML
     public void openSetup() {
         uiFlowManager.show(UiScreenId.SETUP);
+    }
+
+    @FXML
+    public void showComingSoon(ActionEvent event) {
+        String featureName = ((Button) event.getSource()).getAccessibleText();
+        featureStatusLabel.setText(featureName + " is coming soon.");
     }
 }

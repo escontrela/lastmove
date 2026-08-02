@@ -51,6 +51,91 @@
     -fx-background-color: #f7f7f7;
 }
 
+.tool-catalog-shell {
+    -fx-background-color: #f7f7f7;
+    -fx-max-width: Infinity;
+}
+
+.catalog-title {
+    -fx-font-size: 32px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #1f242a;
+}
+
+.catalog-support {
+    -fx-font-size: 17px;
+    -fx-text-fill: #5f6c79;
+    -fx-max-width: 720px;
+}
+
+.tool-search-field {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #c7ced7;
+    -fx-border-width: 1;
+    -fx-background-radius: 999;
+    -fx-border-radius: 999;
+    -fx-padding: 12 18;
+    -fx-font-size: 15px;
+    -fx-pref-height: 48px;
+    -fx-max-width: 860px;
+}
+
+.catalog-section-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #1f242a;
+    -fx-padding: 12 0 0 0;
+}
+
+.tool-card-row { -fx-max-width: 1040px; }
+
+.tool-card-button {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #d8dde3;
+    -fx-border-width: 1;
+    -fx-background-radius: 0;
+    -fx-cursor: hand;
+    -fx-padding: 18 20;
+    -fx-pref-width: 500px;
+    -fx-min-height: 88px;
+    -fx-text-fill: #1f242a;
+}
+
+.tool-card-button:hover {
+    -fx-background-color: #f4f7fb;
+    -fx-border-color: #1c69d4;
+}
+
+.tool-card-button:pressed { -fx-background-color: #e8edf4; }
+
+.tool-card-title {
+    -fx-font-size: 16px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #1f242a;
+}
+
+.tool-card-description {
+    -fx-font-size: 13px;
+    -fx-text-fill: #6a7683;
+}
+
+.tool-card-state {
+    -fx-font-size: 12px;
+    -fx-font-weight: 600;
+    -fx-text-fill: #7e8b98;
+}
+
+.tool-card-state-ready {
+    -fx-font-size: 28px;
+    -fx-text-fill: #1c69d4;
+}
+
+.tool-catalog-status {
+    -fx-font-size: 13px;
+    -fx-text-fill: #6a7683;
+    -fx-padding: 8 0 0 0;
+}
+
 .hero-panel {
     -fx-background-color: #1a2129;
     -fx-max-width: 900px;
@@ -243,6 +328,26 @@
 .night-mode .home-content, .night-mode .setup-content, .night-mode .analysis-workspace {
     -fx-background-color: #121820;
 }
+.night-mode .tool-catalog-shell { -fx-background-color: #171717; }
+.night-mode .catalog-title, .night-mode .catalog-section-title { -fx-text-fill: #f1f3f5; }
+.night-mode .catalog-support, .night-mode .tool-catalog-status { -fx-text-fill: #a8b4c1; }
+.night-mode .tool-search-field {
+    -fx-background-color: #242424;
+    -fx-border-color: #4b4b4b;
+    -fx-text-fill: #eef3f8;
+    -fx-prompt-text-fill: #a8a8a8;
+}
+.night-mode .tool-card-button {
+    -fx-background-color: #242424;
+    -fx-border-color: #303030;
+}
+.night-mode .tool-card-button:hover {
+    -fx-background-color: #2d2d2d;
+    -fx-border-color: #5d8fd0;
+}
+.night-mode .tool-card-button:pressed { -fx-background-color: #343434; }
+.night-mode .tool-card-title { -fx-text-fill: #f1f3f5; }
+.night-mode .tool-card-description, .night-mode .tool-card-state { -fx-text-fill: #b3b3b3; }
 .night-mode .app-title, .night-mode .card-title { -fx-text-fill: #ffffff; }
 .night-mode .app-brand-name { -fx-text-fill: #ffffff; }
 .night-mode .app-brand-edition { -fx-text-fill: #a8b4c1; }
