@@ -30,6 +30,9 @@
                 <Label styleClass="card-title" text="Night mode" />
                 <Label styleClass="card-copy" text="Use the dark LastMove workspace across every screen. This preference is saved for your next session." wrapText="true" />
                 <CheckBox fx:id="nightModeCheckBox" mnemonicParsing="false" styleClass="settings-check-box" text="Enable night mode" />
+                <Label styleClass="card-title" text="Startup" />
+                <Label styleClass="card-copy" text="Show the LastMove welcome screen when the application starts. This preference is saved for your next session." wrapText="true" />
+                <CheckBox fx:id="showSplashCheckBox" mnemonicParsing="false" styleClass="settings-check-box" text="Show splash screen on startup" />
                 <HBox alignment="CENTER_RIGHT" spacing="12.0">
                     <Button mnemonicParsing="false" onAction="#backToMain" styleClass="ghost-button" text="Cancel" />
                     <Button mnemonicParsing="false" onAction="#applySettings" styleClass="primary-button" text="Apply" />

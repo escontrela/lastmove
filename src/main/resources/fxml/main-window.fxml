@@ -17,9 +17,10 @@
         <HBox alignment="CENTER_LEFT" spacing="16.0" styleClass="workspace-header">
             <VBox spacing="6.0">
                 <Label styleClass="eyebrow-label" text="Chess workspace" />
-                <ImageView fx:id="brandLogo" fitHeight="48.0" preserveRatio="true" smooth="true" styleClass="app-logo">
-                    <image><Image url="@../images/lastmove-chess-logo.png" /></image>
-                </ImageView>
+                <HBox alignment="BASELINE_LEFT" spacing="8.0" styleClass="app-brand">
+                    <Label styleClass="app-brand-name" text="LastMove" />
+                    <Label styleClass="app-brand-edition" text="Chess" />
+                </HBox>
             </VBox>
             <Region HBox.hgrow="ALWAYS" />
             <ToolbarIconButton accessibleText="Open setup" lightIconResource="/images/settings_35dp_000000.png" darkIconResource="/images/settings_35dp_FFFFFF.png" tooltipText="Setup" onAction="#openSetup" />

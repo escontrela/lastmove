@@ -63,6 +63,10 @@
         <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="status-rail">
             <Label styleClass="eyebrow-label" text="Status" />
             <Label fx:id="statusLabel" styleClass="status-text" text="Ready to open a PGN file" />
+            <Region HBox.hgrow="ALWAYS" />
+            <ImageView fx:id="statusBrandLogo" fitHeight="20.0" fitWidth="96.0" preserveRatio="true" smooth="true" styleClass="status-brand-logo">
+                <image><Image url="@../images/lastmove-chess-logo.png" /></image>
+            </ImageView>
         </HBox>
     </bottom>
 </BorderPane>

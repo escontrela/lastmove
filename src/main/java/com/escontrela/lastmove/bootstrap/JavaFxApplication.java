@@ -5,6 +5,7 @@ import javafx.stage.Stage;
 import org.springframework.context.ConfigurableApplicationContext;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
 import com.escontrela.lastmove.ui.screen.UiScreenId;
+import com.escontrela.lastmove.ui.service.SplashScreenService;
 
 /**
  * JavaFX {@link Application} lifecycle integration for LastMove.
@@ -25,7 +26,9 @@ public class JavaFxApplication extends Application {
     public void start(Stage primaryStage) {
         springContext.getBeanFactory().registerSingleton("primaryStage", primaryStage);
         primaryStage.setTitle("LastMove");
-        springContext.getBean(UiFlowManager.class).show(UiScreenId.MAIN);
+        UiFlowManager uiFlowManager = springContext.getBean(UiFlowManager.class);
+        springContext.getBean(SplashScreenService.class)
+                .showIfEnabled(() -> uiFlowManager.show(UiScreenId.MAIN));
     }
 
     @Override

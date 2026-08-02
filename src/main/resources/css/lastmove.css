@@ -31,8 +31,6 @@
 
 .app-brand { -fx-alignment: baseline-left; }
 
-.app-logo { -fx-opacity: 1; }
-
 .app-brand-name,
 .app-brand-edition {
     -fx-font-size: 30px;
@@ -239,6 +237,48 @@
     -fx-background-color: rgba(28, 105, 212, 0.10);
     -fx-border-color: #1c69d4;
 }
+
+.splash-shell {
+    -fx-alignment: center;
+    -fx-background-color: #ffffff;
+    -fx-padding: 48;
+}
+
+.splash-tagline {
+    -fx-font-size: 15px;
+    -fx-text-fill: #6a7683;
+}
+
+.splash-loading-status {
+    -fx-font-family: "SF Mono", "Cascadia Code", monospace;
+    -fx-font-size: 13px;
+    -fx-text-fill: #5f6c79;
+}
+
+.splash-loader-cell {
+    -fx-min-width: 9px;
+    -fx-min-height: 9px;
+    -fx-pref-width: 9px;
+    -fx-pref-height: 9px;
+    -fx-max-width: 9px;
+    -fx-max-height: 9px;
+    -fx-background-color: #1c69d4;
+    -fx-background-radius: 3px;
+}
+
+.status-brand-logo { -fx-opacity: 0.82; }
+
+.night-mode.splash-shell {
+    -fx-background-color: #171717;
+}
+
+.night-mode .splash-tagline {
+    -fx-text-fill: #a8b4c1;
+}
+
+.night-mode .splash-loading-status { -fx-text-fill: #b8c5d3; }
+.night-mode .splash-loader-cell { -fx-background-color: #6ba5f0; }
+.night-mode .status-brand-logo { -fx-opacity: 0.9; }
 
 .feature-card, .rail-card, .setup-card, .board-card {
     -fx-background-color: #ffffff;
