@@ -122,8 +122,42 @@
 .ghost-button:hover { -fx-background-color: #f4f7fb; -fx-border-color: #1c69d4; }
 .ghost-button:pressed { -fx-background-color: #e8edf4; }
 
-.graphic-button { -fx-graphic-text-gap: 8px; }
-.navigation-button { -fx-graphic-text-gap: 8px; -fx-padding: 10px 16px; }
+.icon-action-button,
+.back-image-button,
+.previous-image-button,
+.next-image-button {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #c7ced7;
+    -fx-border-width: 1;
+    -fx-background-radius: 0;
+    -fx-cursor: hand;
+    -fx-min-width: 44;
+    -fx-pref-width: 44;
+    -fx-max-width: 44;
+    -fx-min-height: 44;
+    -fx-pref-height: 44;
+    -fx-max-height: 44;
+    -fx-padding: 10;
+}
+
+.icon-action-button:hover,
+.back-image-button:hover,
+.previous-image-button:hover {
+    -fx-background-color: #f4f7fb;
+    -fx-border-color: #1c69d4;
+}
+
+.icon-action-button:pressed,
+.back-image-button:pressed,
+.previous-image-button:pressed { -fx-background-color: #e8edf4; }
+
+.next-image-button {
+    -fx-background-color: #1c69d4;
+    -fx-border-color: #1c69d4;
+}
+
+.next-image-button:hover { -fx-background-color: #0653b6; -fx-border-color: #0653b6; }
+.next-image-button:pressed { -fx-background-color: #004a9f; -fx-border-color: #004a9f; }
 
 .feature-card, .rail-card, .setup-card, .board-card {
     -fx-background-color: #ffffff;
@@ -239,3 +273,15 @@
 }
 .night-mode .move-list .list-cell:filled:hover { -fx-background-color: #3b4654; }
 .night-mode .settings-check-box { -fx-text-fill: #ffffff; }
+.night-mode .icon-action-button,
+.night-mode .back-image-button,
+.night-mode .previous-image-button {
+    -fx-background-color: #1c2430;
+    -fx-border-color: #334151;
+}
+.night-mode .icon-action-button:hover,
+.night-mode .back-image-button:hover,
+.night-mode .previous-image-button:hover {
+    -fx-background-color: #243243;
+    -fx-border-color: #5d8fd0;
+}
