@@ -2,6 +2,7 @@ package com.escontrela.lastmove.ui.controller;
 
 import com.escontrela.lastmove.application.service.GameLoadService;
 import com.escontrela.lastmove.application.service.GameReplayService;
+import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
 import com.escontrela.lastmove.ui.support.FileChooserFactory;
 import com.escontrela.lastmove.ui.model.MainScreenViewModel;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
@@ -10,9 +11,10 @@ import com.escontrela.lastmove.ui.screen.UiScreenId;
 import java.util.Objects;
 import javafx.collections.ListChangeListener;
 import javafx.fxml.FXML;
+import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.StackPane;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
@@ -30,9 +32,11 @@ public class PgnAnalysisScreenController implements UiScreenController {
     private static final String DARK_LOGO_RESOURCE = "/images/lastmove-chess-logo-dark.png";
 
     @FXML
-    private BorderPane root;
+    private StackPane root;
     @FXML
     private ImageView statusBrandLogo;
+    @FXML
+    private ContextualMenuPanel contextualMenuPanel;
 
     private final GameLoadService gameLoadService;
     private final GameReplayService gameReplayService;
@@ -58,6 +62,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
         root.getProperties().put("controller", this);
         root.getStyleClass().addListener(themeStyleListener);
         updateStatusBrandLogo();
+        configureContextMenu();
     }
 
     @FXML
@@ -86,6 +91,23 @@ public class PgnAnalysisScreenController implements UiScreenController {
     @FXML
     public void openSetup() {
         uiFlowManager.show(UiScreenId.SETUP);
+    }
+
+    @FXML
+    public void showContextMenu(ContextMenuEvent event) {
+        contextualMenuPanel.showAtScene(event.getSceneX(), event.getSceneY());
+        event.consume();
+    }
+
+    private void configureContextMenu() {
+        contextualMenuPanel.clearItems();
+        contextualMenuPanel.addItem("Open PGN…", "⌘ O", event -> onOpenPgn());
+        contextualMenuPanel.addSeparator();
+        contextualMenuPanel.addItem("Previous move", "←", event -> onPreviousMove());
+        contextualMenuPanel.addItem("Next move", "→", event -> onNextMove());
+        contextualMenuPanel.addSeparator();
+        contextualMenuPanel.addItem("Back to chess tools", "", event -> backToMain());
+        contextualMenuPanel.addItem("Open setup", "", event -> openSetup());
     }
 
     private void updateStatusBrandLogo() {

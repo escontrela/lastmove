@@ -1,6 +1,7 @@
 package com.escontrela.lastmove.ui.controller;
 
 import com.escontrela.lastmove.ui.component.message.MessageBox;
+import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
 import com.escontrela.lastmove.ui.screen.UiScreenController;
 import com.escontrela.lastmove.ui.screen.UiScreenId;
@@ -10,6 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import javafx.collections.ListChangeListener;
 import javafx.fxml.FXML;
 import javafx.event.ActionEvent;
+import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
@@ -49,6 +51,8 @@ public class MainWindowController implements UiScreenController {
     private ImageView engineToolIcon;
     @FXML
     private MessageBox startupMessageBox;
+    @FXML
+    private ContextualMenuPanel contextualMenuPanel;
 
     private final ListChangeListener<String> themeStyleListener = change -> updateThemeAssets();
     private boolean startupMessageShown;
@@ -62,6 +66,7 @@ public class MainWindowController implements UiScreenController {
         root.getProperties().put("controller", this);
         root.getStyleClass().addListener(themeStyleListener);
         updateThemeAssets();
+        configureContextMenu();
         startupMessageBox.setOnAccept(event -> openPgnAnalysis());
         startupMessageBox.setOnCancel(event ->
                 featureStatusLabel.setText("Welcome to LastMove Chess."));
@@ -91,6 +96,26 @@ public class MainWindowController implements UiScreenController {
     public void showComingSoon(ActionEvent event) {
         String featureName = ((Button) event.getSource()).getAccessibleText();
         featureStatusLabel.setText(featureName + " is coming soon.");
+    }
+
+    @FXML
+    public void showContextMenu(ContextMenuEvent event) {
+        contextualMenuPanel.showAtScene(event.getSceneX(), event.getSceneY());
+        event.consume();
+    }
+
+    private void configureContextMenu() {
+        contextualMenuPanel.clearItems();
+        contextualMenuPanel.addItem("Analyse a PGN", "", event -> openPgnAnalysis());
+        contextualMenuPanel.addSeparator();
+        contextualMenuPanel.addItem("Open setup", "", event -> openSetup());
+        contextualMenuPanel.addItem("Dismiss welcome message", "Esc", event -> {
+            startupMessageBox.hide();
+            featureStatusLabel.setText("Welcome message dismissed.");
+        });
+        contextualMenuPanel.addSeparator();
+        contextualMenuPanel.addItem("About LastMove Chess", "", event ->
+                featureStatusLabel.setText("LastMove Chess — your chess study workspace."));
     }
 
     private void updateStatusBrandLogo() {
