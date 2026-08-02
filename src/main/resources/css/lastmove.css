@@ -1,0 +1,64 @@
+/* LastMove – base stylesheet */
+
+.root {
+    -fx-font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    -fx-font-size: 13px;
+}
+
+.main-screen {
+    -fx-background-color: #1e1e2e;
+}
+
+/* Chess board */
+.chess-board {
+    -fx-border-color: #333;
+    -fx-border-width: 2px;
+}
+
+.chess-square {
+    -fx-min-width: 64px;
+    -fx-min-height: 64px;
+    -fx-pref-width: 64px;
+    -fx-pref-height: 64px;
+}
+
+.chess-square-selected {
+    -fx-border-color: #f6f669;
+    -fx-border-width: 4px;
+}
+
+.chess-square-hint {
+    -fx-background-color: rgba(20, 85, 30, 0.5);
+}
+
+/* Move list */
+.move-list-panel {
+    -fx-background-color: #2a2a3e;
+    -fx-padding: 8px;
+}
+
+.panel-header {
+    -fx-font-weight: bold;
+    -fx-text-fill: #cdd6f4;
+    -fx-padding: 0 0 6px 0;
+}
+
+.move-current {
+    -fx-font-weight: bold;
+    -fx-text-fill: #89b4fa;
+}
+
+.move-variation {
+    -fx-text-fill: #a6adc8;
+    -fx-font-style: italic;
+}
+
+/* Status bar */
+.status-bar {
+    -fx-background-color: #181825;
+    -fx-padding: 4px 8px;
+}
+
+.status-bar .label {
+    -fx-text-fill: #a6adc8;
+}
