@@ -19,7 +19,7 @@
                 <Label styleClass="hero-support" text="A focused desktop workspace for replaying, studying, and eventually analysing chess games." wrapText="true" />
             </VBox>
             <Region HBox.hgrow="ALWAYS" />
-            <Button mnemonicParsing="false" onAction="#openSetup" styleClass="icon-button" contentDisplay="GRAPHIC_ONLY">
+            <Button mnemonicParsing="false" onAction="#openSetup" styleClass="ghost-button graphic-button" text="Setup" contentDisplay="LEFT">
                 <graphic><ImageView fitHeight="22.0" fitWidth="22.0" preserveRatio="true"><image><Image url="@../images/settings_35dp_000000.png" /></image></ImageView></graphic>
             </Button>
         </HBox>
