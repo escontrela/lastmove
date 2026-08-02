@@ -65,7 +65,7 @@ public class ContextualMenuPanel extends StackPane {
                 event.consume();
             }
         });
-        hide();
+        setVisible(false);
     }
 
     /** Removes all configured menu entries. */
@@ -114,14 +114,16 @@ public class ContextualMenuPanel extends StackPane {
 
     /** Shows the panel at coordinates relative to this control. */
     public void showAt(double x, double y) {
-        setManaged(true);
         setVisible(true);
         toFront();
         Platform.runLater(() -> {
             menuCard.applyCss();
-            menuCard.autosize();
-            double maximumX = Math.max(SCREEN_MARGIN, getWidth() - menuCard.getWidth() - SCREEN_MARGIN);
-            double maximumY = Math.max(SCREEN_MARGIN, getHeight() - menuCard.getHeight() - SCREEN_MARGIN);
+            double menuWidth = menuCard.prefWidth(-1.0);
+            double menuHeight = menuCard.prefHeight(menuWidth);
+            double panelWidth = Math.max(getWidth(), getLayoutBounds().getWidth());
+            double panelHeight = Math.max(getHeight(), getLayoutBounds().getHeight());
+            double maximumX = Math.max(SCREEN_MARGIN, panelWidth - menuWidth - SCREEN_MARGIN);
+            double maximumY = Math.max(SCREEN_MARGIN, panelHeight - menuHeight - SCREEN_MARGIN);
             menuCard.setTranslateX(clamp(x, SCREEN_MARGIN, maximumX));
             menuCard.setTranslateY(clamp(y, SCREEN_MARGIN, maximumY));
             requestFocus();
@@ -130,7 +132,6 @@ public class ContextualMenuPanel extends StackPane {
 
     public void hide() {
         setVisible(false);
-        setManaged(false);
     }
 
     private double clamp(double value, double minimum, double maximum) {

@@ -15,7 +15,8 @@
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<BorderPane fx:id="root" onContextMenuRequested="#showContextMenu" styleClass="app-shell" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.escontrela.lastmove.ui.controller.MainWindowController">
+<StackPane fx:id="root" onContextMenuRequested="#showContextMenu" styleClass="app-shell" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.escontrela.lastmove.ui.controller.MainWindowController">
+<BorderPane styleClass="app-shell">
     <top>
         <HBox alignment="CENTER_LEFT" spacing="16.0" styleClass="workspace-header">
             <VBox spacing="6.0">
@@ -74,7 +75,6 @@
                         dragEnabled="true"
                         message="Would you like to open the PGN analysis workspace and replay a recorded game?"
                         title="Welcome to LastMove Chess" />
-            <ContextualMenuPanel fx:id="contextualMenuPanel" />
         </StackPane>
     </center>
     <bottom>
@@ -88,3 +88,5 @@
         </HBox>
     </bottom>
 </BorderPane>
+    <ContextualMenuPanel fx:id="contextualMenuPanel" />
+</StackPane>
