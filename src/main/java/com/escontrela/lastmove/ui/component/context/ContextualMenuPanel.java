@@ -11,6 +11,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.Separator;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.Parent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -65,7 +66,7 @@ public class ContextualMenuPanel extends StackPane {
                 event.consume();
             }
         });
-        setVisible(false);
+        hide();
     }
 
     /** Removes all configured menu entries. */
@@ -114,14 +115,16 @@ public class ContextualMenuPanel extends StackPane {
 
     /** Shows the panel at coordinates relative to this control. */
     public void showAt(double x, double y) {
+        setManaged(true);
         setVisible(true);
         toFront();
+        forceOverlayLayout();
         Platform.runLater(() -> {
             menuCard.applyCss();
             double menuWidth = menuCard.prefWidth(-1.0);
             double menuHeight = menuCard.prefHeight(menuWidth);
-            double panelWidth = Math.max(getWidth(), getLayoutBounds().getWidth());
-            double panelHeight = Math.max(getHeight(), getLayoutBounds().getHeight());
+            double panelWidth = Math.max(Math.max(getWidth(), getLayoutBounds().getWidth()), parentWidth());
+            double panelHeight = Math.max(Math.max(getHeight(), getLayoutBounds().getHeight()), parentHeight());
             double maximumX = Math.max(SCREEN_MARGIN, panelWidth - menuWidth - SCREEN_MARGIN);
             double maximumY = Math.max(SCREEN_MARGIN, panelHeight - menuHeight - SCREEN_MARGIN);
             menuCard.setTranslateX(clamp(x, SCREEN_MARGIN, maximumX));
@@ -132,6 +135,27 @@ public class ContextualMenuPanel extends StackPane {
 
     public void hide() {
         setVisible(false);
+        setManaged(false);
+    }
+
+    private void forceOverlayLayout() {
+        Parent parent = getParent();
+        if (parent != null) {
+            parent.applyCss();
+            parent.layout();
+        }
+        applyCss();
+        layout();
+    }
+
+    private double parentWidth() {
+        Parent parent = getParent();
+        return parent == null ? 0.0 : parent.getLayoutBounds().getWidth();
+    }
+
+    private double parentHeight() {
+        Parent parent = getParent();
+        return parent == null ? 0.0 : parent.getLayoutBounds().getHeight();
     }
 
     private double clamp(double value, double minimum, double maximum) {
