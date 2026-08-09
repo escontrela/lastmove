@@ -57,7 +57,7 @@
         <StackPane styleClass="analysis-workspace">
             <padding><Insets bottom="24.0" left="12.0" right="24.0" top="24.0" /></padding>
             <VBox alignment="CENTER" fillWidth="false" spacing="20.0" styleClass="board-card">
-                <ChessBoardControl maxHeight="640.0" maxWidth="640.0" />
+                <ChessBoardControl fx:id="chessBoard" maxHeight="640.0" maxWidth="640.0" />
             </VBox>
         </StackPane>
     </center>

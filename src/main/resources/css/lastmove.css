@@ -451,8 +451,8 @@
 }
 
 .chess-board {
-    -fx-border-color: #5f6770;
-    -fx-border-width: 1px;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
     -fx-max-width: 640px;
     -fx-max-height: 640px;
 }
