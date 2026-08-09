@@ -9,6 +9,7 @@ import com.escontrela.lastmove.ui.screen.UiScreenController;
 import com.escontrela.lastmove.ui.screen.UiScreenId;
 import com.escontrela.lastmove.ui.support.FileChooserFactory;
 import java.util.Objects;
+import javafx.beans.value.ChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.fxml.FXML;
 import javafx.scene.image.Image;
@@ -31,7 +32,10 @@ public class PgnAnalysisScreenController implements UiScreenController {
   private static final String LIGHT_LOGO_RESOURCE = "/images/lastmove-chess-logo.png";
   private static final String DARK_LOGO_RESOURCE = "/images/lastmove-chess-logo-dark.png";
 
+  private static final double BOARD_MAX_SIZE = 720.0;
+
   @FXML private StackPane root;
+  @FXML private StackPane boardHost;
   @FXML private ImageView statusBrandLogo;
   @FXML private ContextualMenuPanel contextualMenuPanel;
   @FXML private com.escontrela.lastmove.ui.component.board.ChessBoardControl chessBoard;
@@ -72,6 +76,38 @@ public class PgnAnalysisScreenController implements UiScreenController {
             // TODO: Delegar a GameMoveService o ViewModel
           });
     }
+
+    bindResponsiveBoardSize();
+  }
+
+  /**
+   * Hace que el tablero sea responsive: mantiene proporción 1:1, se ajusta al espacio disponible
+   * del host y nunca supera {@link #BOARD_MAX_SIZE} (el tamaño ya validado en pantalla maximizada).
+   *
+   * <p>Calculamos nosotros mismos el lado del tablero cada vez que cambia el tamaño del host, en
+   * lugar de encadenar bindings de JavaFX: así evitamos que casillas y piezas queden mal
+   * redimensionadas cuando la ventana no está maximizada.
+   */
+  private void bindResponsiveBoardSize() {
+    if (boardHost == null || chessBoard == null) {
+      return;
+    }
+
+    ChangeListener<Number> recompute = (observable, oldValue, newValue) -> updateBoardSize();
+    boardHost.widthProperty().addListener(recompute);
+    boardHost.heightProperty().addListener(recompute);
+    updateBoardSize();
+  }
+
+  private void updateBoardSize() {
+    double available = Math.min(boardHost.getWidth(), boardHost.getHeight());
+    if (available <= 0) {
+      return;
+    }
+
+    double side = Math.min(available, BOARD_MAX_SIZE);
+    chessBoard.setPrefWidth(side);
+    chessBoard.setPrefHeight(side);
   }
 
   @FXML

@@ -441,11 +441,25 @@
     -fx-border-width: 1px;
 }
 
-.analysis-workspace { -fx-alignment: center; }
+.analysis-workspace {
+    -fx-alignment: center-left;
+}
 
 .board-card {
-    -fx-padding: 28px;
+    -fx-padding: 0;
     -fx-alignment: center;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+}
+
+.board-side-panel {
+    -fx-min-width: 300px;
+    -fx-max-width: 340px;
+}
+
+.board-side-card {
+    -fx-background-color: #ffffff;
     -fx-border-color: #e6e6e6;
     -fx-border-width: 1px;
 }
@@ -453,16 +467,12 @@
 .chess-board {
     -fx-border-color: transparent;
     -fx-border-width: 0;
-    -fx-max-width: 640px;
-    -fx-max-height: 640px;
 }
 
-.chess-square {
-    -fx-min-width: 64px;
-    -fx-min-height: 64px;
-    -fx-pref-width: 64px;
-    -fx-pref-height: 64px;
-}
+/* El tamaño de .chess-square se calcula y aplica explícitamente en ChessBoardSkin/
+   ChessSquareControl (ver setSquareSize). No fijamos min/pref/max aquí a propósito: un
+   min-width fijo impedía que las casillas (y por tanto el tablero) se encogieran por debajo
+   de ese valor en ventanas no maximizadas. */
 
 .chess-square-selected {
     -fx-border-color: #1c69d4;

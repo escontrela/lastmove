@@ -18,6 +18,9 @@ import javafx.scene.paint.Color;
  */
 public class ChessSquareControl extends StackPane {
 
+  /** Proporción del tamaño de la casilla que ocupa la imagen de la pieza. */
+  private static final double PIECE_SCALE = 0.88;
+
   private static final Border DRAG_TARGET_BORDER =
       new Border(
           new BorderStroke(
@@ -41,12 +44,9 @@ public class ChessSquareControl extends StackPane {
     getStyleClass().add(isLight ? "chess-square-light" : "chess-square-dark");
     applyTheme(theme);
     setSnapToPixel(true);
-    setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
 
     // La ImageView NO debe consumir eventos de mouse -> permitir que pasen a través
     pieceImageView.setPreserveRatio(true);
-    pieceImageView.fitWidthProperty().bind(widthProperty().multiply(0.82));
-    pieceImageView.fitHeightProperty().bind(heightProperty().multiply(0.82));
     pieceImageView.setPickOnBounds(false); // Clave: no interceptar eventos de mouse
 
     getChildren().add(pieceImageView);
@@ -68,6 +68,22 @@ public class ChessSquareControl extends StackPane {
   /** Activa o desactiva el borde sutil usado como destino potencial durante drag-drop. */
   public void setDragTarget(boolean dragTarget) {
     setBorder(dragTarget ? DRAG_TARGET_BORDER : null);
+  }
+
+  /**
+   * Aplica el tamaño exacto de la casilla (en píxeles), calculado por {@link ChessBoardSkin} a
+   * partir del espacio disponible en pantalla. Fijamos min/pref/max al mismo valor para que JavaFX
+   * no decida por su cuenta un tamaño distinto, y calculamos nosotros mismos el tamaño de la pieza
+   * en lugar de dejar que un binding reactivo la redimensione en cada pulso de layout.
+   */
+  public void setSquareSize(double size) {
+    setMinSize(size, size);
+    setPrefSize(size, size);
+    setMaxSize(size, size);
+
+    double pieceSize = Math.floor(size * PIECE_SCALE);
+    pieceImageView.setFitWidth(pieceSize);
+    pieceImageView.setFitHeight(pieceSize);
   }
 
   /** Devuelve la instancia del objeto Image actual (puede ser null si la casilla está vacía). */

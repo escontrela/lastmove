@@ -54,12 +54,28 @@
         </VBox>
     </left>
     <center>
-        <StackPane styleClass="analysis-workspace">
-            <padding><Insets bottom="24.0" left="12.0" right="24.0" top="24.0" /></padding>
-            <VBox alignment="CENTER" fillWidth="false" spacing="20.0" styleClass="board-card">
-                <ChessBoardControl fx:id="chessBoard" maxHeight="640.0" maxWidth="640.0" />
+        <HBox spacing="24.0" styleClass="analysis-workspace">
+            <padding><Insets bottom="24.0" left="24.0" right="24.0" top="24.0" /></padding>
+            <StackPane fx:id="boardHost" alignment="CENTER" HBox.hgrow="ALWAYS">
+                <ChessBoardControl fx:id="chessBoard" />
+            </StackPane>
+
+            <VBox prefWidth="320.0" spacing="16.0" styleClass="board-side-panel">
+                <VBox spacing="12.0" styleClass="rail-card board-side-card">
+                    <padding><Insets bottom="20.0" left="20.0" right="20.0" top="20.0" /></padding>
+                    <Label styleClass="eyebrow-label" text="Position" />
+                    <Label styleClass="card-title" text="Board controls" />
+                    <Label styleClass="card-copy" text="Navigation and board options will live here." wrapText="true" />
+                </VBox>
+
+                <VBox spacing="12.0" styleClass="rail-card board-side-card" VBox.vgrow="ALWAYS">
+                    <padding><Insets bottom="20.0" left="20.0" right="20.0" top="20.0" /></padding>
+                    <Label styleClass="eyebrow-label" text="Status" />
+                    <Label styleClass="card-title" text="Move details" />
+                    <Label styleClass="card-copy" text="Selected square, last move, legal move feedback, and future board actions can be shown here." wrapText="true" />
+                </VBox>
             </VBox>
-        </StackPane>
+        </HBox>
     </center>
     <bottom>
         <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="status-rail">

@@ -306,8 +306,23 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     double side = quantizedSide > 0 ? quantizedSide : rawSide;
     double x = Math.floor(contentX + (contentWidth - side) / 2.0);
     double y = Math.floor(contentY + (contentHeight - side) / 2.0);
+
+    // Calculamos nosotros mismos el tamaño exacto de cada casilla y lo aplicamos
+    // explícitamente, en lugar de dejar que JavaFX (CSS/GridPane) decida el redimensionado.
+    // Esto evita que las casillas se queden ancladas a un tamaño mínimo fijo cuando la ventana
+    // no está maximizada.
+    applySquareSizes(side / ChessConstants.FILES);
+
     grid.resizeRelocate(x, y, side, side);
     dragOverlay.resizeRelocate(x, y, side, side);
+  }
+
+  private void applySquareSizes(double squareSize) {
+    for (int file = 0; file < ChessConstants.FILES; file++) {
+      for (int rank = 0; rank < ChessConstants.RANKS; rank++) {
+        squares[file][rank].setSquareSize(squareSize);
+      }
+    }
   }
 
   private String startingBackRankPiece(int file) {

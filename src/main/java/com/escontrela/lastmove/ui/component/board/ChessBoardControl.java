@@ -23,10 +23,14 @@ public class ChessBoardControl extends Control {
       new SimpleObjectProperty<>(this, "onMoveRequested");
 
   public ChessBoardControl() {
+
     getStyleClass().add("chess-board");
-    setMinSize(320, 320);
-    setPrefSize(640, 640);
-    setMaxSize(640, 640);
+    // Tamaño mínimo pequeño para permitir encogerse en ventanas reducidas;
+    // el tamaño real lo determina el contenedor (ver binding en el controller de pantalla),
+    // manteniendo siempre proporción 1:1 y un techo razonable (720) en pantallas grandes.
+    setMinSize(240, 240);
+    setPrefSize(720, 720);
+    setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
   }
 
   @Override
@@ -63,6 +67,7 @@ public class ChessBoardControl extends Control {
    * Recibe la intención de la skin y la despacha de forma asíncrona hacia el manejador de eventos.
    */
   public void handleBoardMoveInput(BoardMoveInput moveInput) {
+
     System.out.println("Movimiento detectado: " + moveInput);
 
     EventHandler<BoardMoveEvent> handler = getOnMoveRequested();
