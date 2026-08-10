@@ -25,6 +25,7 @@ public class ChessBoardControl extends Control {
   public ChessBoardControl() {
 
     getStyleClass().add("chess-board");
+
     // Tamaño mínimo pequeño para permitir encogerse en ventanas reducidas;
     // el tamaño real lo determina el contenedor (ver binding en el controller de pantalla),
     // manteniendo siempre proporción 1:1 y un techo razonable (720) en pantallas grandes.
@@ -64,15 +65,18 @@ public class ChessBoardControl extends Control {
   }
 
   /**
-   * Recibe la intención de la skin y la despacha de forma asíncrona hacia el manejador de eventos.
+   * This method make the forwarding of the move input event to the subscribed event handler, for
+   * instance the PgnAnalysisScreenController. It is called from the ChessBoardSkin when a move is
+   * detected.
+   *
+   * @param moveInput The move input detected on the board.
    */
   public void handleBoardMoveInput(BoardMoveInput moveInput) {
 
-    System.out.println("Movimiento detectado: " + moveInput);
-
     EventHandler<BoardMoveEvent> handler = getOnMoveRequested();
+
     if (handler != null) {
-      // Disparamos nuestro evento personalizado
+
       handler.handle(new BoardMoveEvent(this, moveInput));
     }
   }
@@ -86,11 +90,13 @@ public class ChessBoardControl extends Control {
     private final BoardMoveInput moveInput;
 
     public BoardMoveEvent(ChessBoardControl source, BoardMoveInput moveInput) {
+
       super(source, NULL_SOURCE_TARGET, MOVE_REQUESTED);
       this.moveInput = moveInput;
     }
 
     public BoardMoveInput getMoveInput() {
+
       return moveInput;
     }
   }

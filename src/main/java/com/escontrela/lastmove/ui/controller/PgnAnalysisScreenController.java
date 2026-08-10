@@ -3,6 +3,7 @@ package com.escontrela.lastmove.ui.controller;
 import com.escontrela.lastmove.application.service.GameLoadService;
 import com.escontrela.lastmove.application.service.GameReplayService;
 import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
+import com.escontrela.lastmove.ui.model.BoardMoveInput;
 import com.escontrela.lastmove.ui.model.MainScreenViewModel;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
 import com.escontrela.lastmove.ui.screen.UiScreenController;
@@ -62,6 +63,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
 
   @FXML
   public void initialize() {
+
     root.getProperties().put("controller", this);
     root.getStyleClass().addListener(themeStyleListener);
     updateStatusBrandLogo();
@@ -71,8 +73,8 @@ public class PgnAnalysisScreenController implements UiScreenController {
     if (chessBoard != null) {
       chessBoard.setOnMoveRequested(
           event -> {
-            com.escontrela.lastmove.ui.model.BoardMoveInput moveInput = event.getMoveInput();
-            System.out.println("Controlador recibió movimiento: " + moveInput);
+            BoardMoveInput moveInput = event.getMoveInput();
+
             // TODO: Delegar a GameMoveService o ViewModel
             // TODO: llamar a GAmeMoveService.attemptMove(from,to);
 
@@ -93,6 +95,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
    * redimensionadas cuando la ventana no está maximizada.
    */
   private void bindResponsiveBoardSize() {
+
     if (boardHost == null || chessBoard == null) {
       return;
     }
@@ -104,6 +107,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
   }
 
   private void updateBoardSize() {
+
     double available = Math.min(boardHost.getWidth(), boardHost.getHeight());
     if (available <= 0) {
       return;
@@ -151,6 +155,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
   }
 
   private void configureContextMenu() {
+
     contextualMenuPanel.clearItems();
     contextualMenuPanel.addItem("Open PGN…", "⌘ O", event -> onOpenPgn());
     contextualMenuPanel.addSeparator();
