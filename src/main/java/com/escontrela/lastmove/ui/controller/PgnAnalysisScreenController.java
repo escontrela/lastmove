@@ -74,6 +74,10 @@ public class PgnAnalysisScreenController implements UiScreenController {
             com.escontrela.lastmove.ui.model.BoardMoveInput moveInput = event.getMoveInput();
             System.out.println("Controlador recibió movimiento: " + moveInput);
             // TODO: Delegar a GameMoveService o ViewModel
+            // TODO: llamar a GAmeMoveService.attemptMove(from,to);
+
+            // TODO: con el resultado llamar a chessBoard.renderPosition() para actualizar el
+            // tablero, o mostrar un mensaje de error si el movimiento no es válido.
           });
     }
 

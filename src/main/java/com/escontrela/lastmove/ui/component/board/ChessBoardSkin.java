@@ -3,7 +3,6 @@ package com.escontrela.lastmove.ui.component.board;
 import com.escontrela.lastmove.domain.common.ChessConstants;
 import com.escontrela.lastmove.domain.common.Square;
 import com.escontrela.lastmove.ui.model.BoardMoveInput;
-import java.util.Optional;
 import javafx.scene.control.SkinBase;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -29,12 +28,17 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
   private final ChessSquareControl[][] squares =
       new ChessSquareControl[ChessConstants.FILES][ChessConstants.RANKS];
 
-  // 2. ESTADO DE CAPTURA DE INPUT: Almacena de forma volátil el origen de la interacción
-  private Square selectedSquare = null;
+  // 2. ESTADO DE CAPTURA DE INPUT: Separado por tipo de interacción para evitar interferencias
+  // Click-click: almacena la primera casilla hasta que se hace clic en la segunda
+  private Square clickClickPendingSquare = null;
+
+  // Drag-drop: almacena el origen del arrastre
+  private Square dragOriginSquare = null;
   private Image draggedPiece = null; // La imagen de la pieza durante el drag
   private Square hoveredDragSquare = null; // Casilla actual bajo el cursor durante drag
 
   public ChessBoardSkin(ChessBoardControl control) {
+
     super(control);
     configureGrid();
     buildGrid(control); // Pasó 1: Construcción estructural del Grid e interacción pura
@@ -55,16 +59,21 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
   }
 
   private void configureGrid() {
+
     grid.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
     grid.setSnapToPixel(true);
     dragOverlay.setSnapToPixel(true);
+
     for (int index = 0; index < ChessConstants.FILES; index++) {
+
       ColumnConstraints column = new ColumnConstraints();
       column.setPercentWidth(100.0 / ChessConstants.FILES);
       column.setFillWidth(true);
       grid.getColumnConstraints().add(column);
     }
+
     for (int index = 0; index < ChessConstants.RANKS; index++) {
+
       RowConstraints row = new RowConstraints();
       row.setPercentHeight(100.0 / ChessConstants.RANKS);
       row.setFillHeight(true);
@@ -77,8 +86,11 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
    * las coordenadas y asienta los Listeners para click-click y drag-drop.
    */
   private void buildGrid(ChessBoardControl control) {
+
     for (int rank = ChessConstants.RANKS - 1; rank >= 0; rank--) {
+
       for (int file = 0; file < ChessConstants.FILES; file++) {
+
         boolean isLight = (file + rank) % 2 != 0;
         ChessSquareControl square = new ChessSquareControl(file, rank, isLight, control.getTheme());
 
@@ -105,16 +117,24 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
    * RENDERIZADO DE ESTADO INICIAL (Aislado de la estructura): Provee las imágenes iniciales para la
    * maqueta. Puede ser reemplazado en el futuro por un cargador FEN genérico sin alterar la
    * cuadrícula de la UI.
+   *
+   * <p>TODO: Esto no me gusta demasiado, tendría que ser el Controller principal a través de un
+   * método público de ChessBoardControl, quien inicializara el estado del tablero a una posición
+   * concreta (FEN) y no la skin. La skin debería ser solo un renderizador de estado.
    */
   private void loadInitialDemoState() {
+
     for (int rank = 0; rank < ChessConstants.RANKS; rank++) {
+
       for (int file = 0; file < ChessConstants.FILES; file++) {
+
         ChessSquareControl square = squares[file][rank];
         String color = rank < 2 ? "white" : rank > 5 ? "black" : null;
 
         if (color != null) {
           String piece = rank == 1 || rank == 6 ? "pawn" : startingBackRankPiece(file);
           square.setPieceImage("/chess-pieces/" + color + "-" + piece + ".png");
+
         } else {
           // CORRECCIÓN: Usamos el método de objeto explícito para evitar la ambigüedad del null
           square.setPieceImageObject(null);
@@ -124,45 +144,106 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
   }
 
   /**
-   * FLUJO DE INTERACCIÓN DE ENTRADA (Manejador de clics): Conduce la máquina de estados lógicos
-   * Origen -> Destino y emite hacia el Control.
+   * Input flow: Handles click-click interaction on the chessboard. On the first click, it registers
+   * the selected square. On the second click, it attempts to move from the selected square to the
+   * clicked square.
+   *
+   * @param control The ChessBoardControl instance that owns this skin.
+   * @param clickedSquare The square that was clicked by the user.
    */
   private void handleSquareClick(ChessBoardControl control, Square clickedSquare) {
-    if (selectedSquare == null) {
-      // Primer clic: Fijamos origen
-      selectedSquare = clickedSquare;
+
+    if (clickClickPendingSquare == null) {
+
+      // First click: Register the selected square for click-click mode
+      clickClickPendingSquare = clickedSquare;
+
     } else {
-      // Segundo clic: Evaluamos destino
-      Square from = selectedSquare;
+
+      // Second click: Attempt to move from the first click to this one
+      Square from = clickClickPendingSquare;
       Square to = clickedSquare;
-      selectedSquare = null; // Reinicio inmediato del estado lógico de captura
+      // Reset immediately for future interactions
+      clickClickPendingSquare = null;
 
       if (from.equals(to)) {
-        return; // Cancelación si pulsa la misma casilla
+        return; // Cancel if same square
       }
 
-      // Despachamos el objeto de datos hacia el control nativo
-      BoardMoveInput moveInput = new BoardMoveInput(from, to, Optional.empty());
-      control.handleBoardMoveInput(moveInput);
+      // Emit the move input to the native control
+      control.handleBoardMoveInput(BoardMoveInput.from(from, to));
     }
   }
 
   /**
-   * Convierte coordenadas de mouse relativas al grid en una Square. Retorna null si están fuera del
-   * tablero.
+   * DRAG-DROP INTERACTION FLOW: Captures mouse pressed events on the grid, determines the square
+   * under the cursor, and initiates a drag operation if a piece is present. It also provides visual
+   * feedback by displaying the dragged piece and highlighting potential target squares.
+   *
+   * @param control The ChessBoardControl instance that owns this skin.
+   * @param event The MouseEvent triggered by the user's interaction.
+   */
+  private void handleGridMousePressed(ChessBoardControl control, MouseEvent event) {
+
+    Square pressedSquare = squareAtCoordinate(event.getX(), event.getY());
+
+    if (pressedSquare != null) {
+
+      dragOriginSquare = pressedSquare;
+
+      // Capturar la imagen de la pieza para el feedback visual
+      draggedPiece = squares[pressedSquare.getFile()][pressedSquare.getRank()].getPieceImage();
+      if (draggedPiece != null) {
+
+        draggedPieceView.setImage(draggedPiece);
+        draggedPieceView.setVisible(true);
+        draggedPieceView.setFitWidth(grid.getWidth() / ChessConstants.FILES * 0.82);
+        draggedPieceView.setFitHeight(grid.getHeight() / ChessConstants.RANKS * 0.82);
+
+        updateDraggedPiecePosition(event.getX(), event.getY());
+        updateDragTargetHighlight(pressedSquare);
+      }
+    }
+  }
+
+  /**
+   * VISUAL FEEDBACK DURING DRAG-DROP: Updates the position of the dragged piece image and
+   * highlights the square under the cursor. This method is called continuously as the user drags
+   * the mouse across the chessboard.
+   *
+   * @param event The MouseEvent triggered by the user's drag action.
+   */
+  private void handleGridMouseDragged(MouseEvent event) {
+
+    if (draggedPiece != null && draggedPieceView.isVisible()) {
+
+      updateDraggedPiecePosition(event.getX(), event.getY());
+      updateDragTargetHighlight(squareAtCoordinate(event.getX(), event.getY()));
+    }
+  }
+
+  /**
+   * Converts grid coordinates to a Square object. Returns null if the coordinates are outside the
+   * board.
+   *
+   * @param gridX The x-coordinate relative to the grid.
+   * @param gridY The y-coordinate relative to the grid.
+   * @return The Square corresponding to the grid coordinates, or null if outside the board.
    */
   private Square squareAtCoordinate(double gridX, double gridY) {
+
     double gridWidth = grid.getWidth();
     double gridHeight = grid.getHeight();
 
     if (gridX < 0 || gridX > gridWidth || gridY < 0 || gridY > gridHeight) {
+
       return null;
     }
 
     int file = (int) (gridX / (gridWidth / ChessConstants.FILES));
     int rank = ChessConstants.RANKS - 1 - (int) (gridY / (gridHeight / ChessConstants.RANKS));
 
-    // Validar que el archivo y rango estén dentro del tablero
+    // Validates that the calculated file and rank are within the valid range of the chessboard
     if (file < 0 || file >= ChessConstants.FILES || rank < 0 || rank >= ChessConstants.RANKS) {
       return null;
     }
@@ -170,136 +251,96 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     return Square.of(file, rank);
   }
 
-  /** FLUJO DE INTERACCIÓN DRAG-DROP: Registro del mouse pressed a nivel de grid. */
-  private void handleGridMousePressed(ChessBoardControl control, MouseEvent event) {
-    Square pressedSquare = squareAtCoordinate(event.getX(), event.getY());
-    if (pressedSquare != null) {
-      System.out.println("[DEBUG] Mouse pressed en: " + pressedSquare);
-      selectedSquare = pressedSquare;
-
-      // Capturar la imagen de la pieza para el feedback visual
-      draggedPiece = squares[pressedSquare.getFile()][pressedSquare.getRank()].getPieceImage();
-      if (draggedPiece != null) {
-        draggedPieceView.setImage(draggedPiece);
-        draggedPieceView.setVisible(true);
-        draggedPieceView.setFitWidth(grid.getWidth() / ChessConstants.FILES * 0.82);
-        draggedPieceView.setFitHeight(grid.getHeight() / ChessConstants.RANKS * 0.82);
-        updateDraggedPiecePosition(event.getX(), event.getY());
-        updateDragTargetHighlight(pressedSquare);
-      }
-
-      System.out.println("[DEBUG] Origen de drag registrado: " + selectedSquare);
-    }
-  }
-
-  /** Feedback visual: Sigue la pieza flotante con el cursor durante el drag. */
-  private void handleGridMouseDragged(MouseEvent event) {
-    if (draggedPiece != null && draggedPieceView.isVisible()) {
-      updateDraggedPiecePosition(event.getX(), event.getY());
-      updateDragTargetHighlight(squareAtCoordinate(event.getX(), event.getY()));
-    }
-  }
-
   private void updateDragTargetHighlight(Square candidateSquare) {
+
     if (hoveredDragSquare != null && !hoveredDragSquare.equals(candidateSquare)) {
+
       squares[hoveredDragSquare.getFile()][hoveredDragSquare.getRank()].setDragTarget(false);
       hoveredDragSquare = null;
     }
 
     if (candidateSquare != null && !candidateSquare.equals(hoveredDragSquare)) {
+
       squares[candidateSquare.getFile()][candidateSquare.getRank()].setDragTarget(true);
       hoveredDragSquare = candidateSquare;
     }
   }
 
   private void clearDragTargetHighlight() {
+
     if (hoveredDragSquare != null) {
+
       squares[hoveredDragSquare.getFile()][hoveredDragSquare.getRank()].setDragTarget(false);
       hoveredDragSquare = null;
     }
   }
 
   private void updateDraggedPiecePosition(double x, double y) {
+
     double offsetX = draggedPieceView.getFitWidth() / 2;
     double offsetY = draggedPieceView.getFitHeight() / 2;
+
     draggedPieceView.setLayoutX(x - offsetX);
     draggedPieceView.setLayoutY(y - offsetY);
   }
 
-  /** FLUJO DE INTERACCIÓN DRAG-DROP: Registro del mouse released a nivel de grid. */
+  /**
+   * DRAG-DROP INTERACTION FLOW: Captures mouse released events on the grid, determines the square
+   * under the cursor, and finalizes the drag operation. Emits a BoardMoveInput event for the
+   * controller/service layer to validate and apply.
+   *
+   * @param control The ChessBoardControl instance that owns this skin.
+   * @param event The MouseEvent triggered by the user's release action.
+   */
   private void handleGridMouseReleased(ChessBoardControl control, MouseEvent event) {
-    Square releasedSquare = squareAtCoordinate(event.getX(), event.getY());
-    System.out.println(
-        "[DEBUG] Mouse released en: " + releasedSquare + " | selectedSquare: " + selectedSquare);
 
-    // Limpiar la pieza flotante
+    Square releasedSquare = squareAtCoordinate(event.getX(), event.getY());
+
+    // Clean up floating piece visual
     draggedPieceView.setVisible(false);
     draggedPiece = null;
     clearDragTargetHighlight();
 
-    if (selectedSquare == null) {
-      return; // No hay drag pendiente
+    if (dragOriginSquare == null) {
+      return; // No active drag operation
     }
 
-    Square from = selectedSquare;
+    Square from = dragOriginSquare;
     Square to = releasedSquare;
-    selectedSquare = null; // Reset del estado de captura
 
-    // Si release está fuera del tablero, cancelar
+    // Reset the drag origin for future interactions
+    dragOriginSquare = null;
+
+    // The release square might be null if the mouse was released outside the board
     if (to == null) {
-      System.out.println("[DEBUG] Movimiento cancelado (release fuera del tablero)");
       return;
     }
 
+    // If the user released on the same square, we do nothing
     if (from.equals(to)) {
-      System.out.println("[DEBUG] Movimiento cancelado (origen == destino)");
-      return; // Cancelación si suelta en la misma casilla
+      return;
     }
 
-    // Validar el movimiento (TODO: conectar con GameMoveService)
-    if (validateMove(from, to)) {
-      System.out.println(
-          "[DEBUG] Movimiento válido, aplicando cambio visual: " + from + " -> " + to);
-      // Actualizar la posición visual de la pieza
-      refreshMove(from, to);
-    } else {
-      System.out.println("[DEBUG] Movimiento rechazado (no es legal)");
-    }
-
-    // Despachamos el objeto de datos hacia el control nativo
-    System.out.println("[DEBUG] Emitiendo BoardMoveInput: " + from + " -> " + to);
-    BoardMoveInput moveInput = new BoardMoveInput(from, to, Optional.empty());
-    control.handleBoardMoveInput(moveInput);
+    // Emit the move input to the native control (validation happens in application layer)
+    control.handleBoardMoveInput(BoardMoveInput.from(from, to));
   }
 
   /**
-   * Valida si un movimiento es legal. TODO: Integrar con GameMoveService + Chesspresso para
-   * validación real. Por ahora, acepta todos los movimientos.
+   * Renders the board from a complete position (FEN). This method is called by the controller after
+   * a move has been validated and applied by GameMoveService. It updates all piece images on the
+   * board according to the provided position.
+   *
+   * @param fen The FEN string representing the board position to render.
    */
-  private boolean validateMove(Square from, Square to) {
-    // TODO: Conectar con GameMoveService y validación a través de Chesspresso
-    return true; // Acepta todos los movimientos por ahora
-  }
-
-  /**
-   * ACTUALIZACIÓN DINÁMICA DE PIEZAS (Lógica de refresco en tiempo real): Desplaza visualmente la
-   * pieza leyendo del índice de componentes.
-   */
-  public void refreshMove(Square from, Square to) {
-    ChessSquareControl fromVisual = squares[from.getFile()][from.getRank()];
-    ChessSquareControl toVisual = squares[to.getFile()][to.getRank()];
-
-    // Extraemos la instancia Image de JavaFX de la casilla origen
-    javafx.scene.image.Image movingPiece = fromVisual.getPieceImage();
-
-    // La inyectamos en el destino y limpiamos el origen de forma segura
-    toVisual.setPieceImage(movingPiece);
-    fromVisual.setPieceImage((javafx.scene.image.Image) null);
+  public void renderPosition(String fen) {
+    // TODO: Parse FEN and update all squares' piece images accordingly.
+    // This will be the single entry point for visual board updates after a move is accepted.
   }
 
   @Override
   protected void layoutChildren(
       double contentX, double contentY, double contentWidth, double contentHeight) {
+
     // Cuantizamos el lado a múltiplos de 8 para que cada casilla tenga tamaño entero.
     double rawSide = Math.floor(Math.min(contentWidth, contentHeight));
     double quantizedSide = Math.floor(rawSide / ChessConstants.FILES) * ChessConstants.FILES;
@@ -318,14 +359,17 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
   }
 
   private void applySquareSizes(double squareSize) {
+
     for (int file = 0; file < ChessConstants.FILES; file++) {
       for (int rank = 0; rank < ChessConstants.RANKS; rank++) {
+
         squares[file][rank].setSquareSize(squareSize);
       }
     }
   }
 
   private String startingBackRankPiece(int file) {
+
     return switch (file) {
       case 0, 7 -> "rook";
       case 1, 6 -> "knight";

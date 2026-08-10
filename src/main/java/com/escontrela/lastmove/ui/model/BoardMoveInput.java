@@ -12,4 +12,10 @@ import java.util.Optional;
  * @param promotionPiece the piece type to which a pawn is promoted, if applicable
  */
 public record BoardMoveInput(
-    Square fromSquare, Square toSquare, Optional<PieceType> promotionPiece) {}
+    Square fromSquare, Square toSquare, Optional<PieceType> promotionPiece) {
+
+  public static BoardMoveInput from(Square fromSquare, Square toSquare) {
+
+    return new BoardMoveInput(fromSquare, toSquare, Optional.empty());
+  }
+}
