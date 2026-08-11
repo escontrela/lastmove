@@ -46,6 +46,18 @@ class GameSessionTest {
   }
 
   @Test
+  void notationLine_includesMovesAheadOfTheCurrentCursor() {
+    GameSession session = new GameSession(SessionId.random(), GameSessionOrigin.INITIAL_POSITION, initial());
+    session.apply(accepted("e2", "e4", "e4", blackToMove()));
+    session.apply(accepted("e7", "e5", "e5", initial()));
+
+    assertTrue(session.previous());
+
+    assertEquals(2, session.notationLine().size());
+    assertEquals("e5", session.notationLine().get(1).move().san().getValue());
+  }
+
+  @Test
   void sessionState_isDerivedFromCurrentSnapshot() {
     PositionSnapshot snapshot = new PositionSnapshot(
         List.of(), PieceColor.BLACK, CastlingRights.initial(), Optional.of(Square.of("e3")), 7, 12,

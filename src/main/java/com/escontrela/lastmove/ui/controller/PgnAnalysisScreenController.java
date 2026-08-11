@@ -27,6 +27,8 @@ import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.control.ListView;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextInputDialog;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.Dialog;
 import javafx.scene.layout.StackPane;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -195,6 +197,38 @@ public class PgnAnalysisScreenController implements UiScreenController {
         });
   }
 
+  /** Opens a modal picker for every session retained in the in-memory catalog. */
+  @FXML
+  public void onShowSessions() {
+    List<GameSessionSummary> sessions = gameSessionService.listSessions();
+    Dialog<SessionId> dialog = new Dialog<>();
+    dialog.setTitle("Open sessions");
+    dialog.setHeaderText("Return to an in-memory study");
+    ListView<String> choices = new ListView<>();
+    choices.getItems().setAll(sessions.stream().map(GameSessionSummary::title).toList());
+    choices.setPrefHeight(240);
+    for (int index = 0; index < sessions.size(); index++) {
+      if (sessions.get(index).sessionId().equals(boardSessionId)) {
+        choices.getSelectionModel().select(index);
+        break;
+      }
+    }
+    dialog.getDialogPane().setContent(choices);
+    ButtonType select = new ButtonType("Open", ButtonType.OK.getButtonData());
+    dialog.getDialogPane().getButtonTypes().addAll(select, ButtonType.CANCEL);
+    dialog.setResultConverter(
+        button ->
+            button == select && choices.getSelectionModel().getSelectedIndex() >= 0
+                ? sessions.get(choices.getSelectionModel().getSelectedIndex()).sessionId()
+                : null);
+    dialog.showAndWait().ifPresent(
+        sessionId -> {
+          boardSessionId = sessionId;
+          gameSessionService.activate(sessionId);
+          refreshWorkspace();
+        });
+  }
+
   @FXML
   public void onNextMove() {
     chessBoard.renderPosition(gameSessionService.next(boardSessionId));
@@ -229,6 +263,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
     contextualMenuPanel.addItem("Open PGN…", "⌘ O", event -> onOpenPgn());
     contextualMenuPanel.addItem("Initial position", "", event -> onReset());
     contextualMenuPanel.addItem("Start from FEN…", "", event -> onFen());
+    contextualMenuPanel.addItem("Open sessions…", "", event -> onShowSessions());
     contextualMenuPanel.addSeparator();
     contextualMenuPanel.addItem("Previous move", "←", event -> onPreviousMove());
     contextualMenuPanel.addItem("Next move", "→", event -> onNextMove());
@@ -278,12 +313,19 @@ public class PgnAnalysisScreenController implements UiScreenController {
   }
 
   private void refreshMoveList() {
+    int currentPlyIndex = gameSessionService.moveHistory(boardSessionId).size() - 1;
     moveListView
         .getItems()
         .setAll(
-            gameSessionService.moveHistory(boardSessionId).stream()
+            gameSessionService.notationLine(boardSessionId).stream()
                 .map(ply -> ply.moveNumber() + (ply.movingColor().name().equals("WHITE") ? ". " : "... ") + ply.move().san().getValue())
                 .toList());
+    if (currentPlyIndex >= 0) {
+      moveListView.getSelectionModel().select(currentPlyIndex);
+      moveListView.scrollTo(currentPlyIndex);
+    } else {
+      moveListView.getSelectionModel().clearSelection();
+    }
   }
 
   private void updateStatusBrandLogo() {

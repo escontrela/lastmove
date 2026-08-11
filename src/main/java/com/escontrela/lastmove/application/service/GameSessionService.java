@@ -117,6 +117,11 @@ public final class GameSessionService {
     return session(sessionId).moveHistory();
   }
 
+  /** Returns the complete notation line around the current cursor for the move-list view. */
+  public List<Ply> notationLine(SessionId sessionId) {
+    return session(sessionId).notationLine();
+  }
+
   /** Validates and applies a move to the specified open session. */
   public MoveExecutionResult attemptMove(SessionId sessionId, MoveCommand command) {
     GameSession session = session(sessionId);

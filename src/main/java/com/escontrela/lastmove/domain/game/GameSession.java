@@ -80,6 +80,23 @@ public final class GameSession {
     return currentLine();
   }
 
+  /**
+   * Returns the full notation line selected by the current cursor, including moves ahead of it.
+   *
+   * <p>At each branch this follows the first continuation. When the user creates or selects an
+   * alternative, that branch becomes the prefix and continuation shown to the notation view.
+   */
+  public List<Ply> notationLine() {
+    List<Ply> line = new ArrayList<>(currentLine());
+    List<Ply> candidates = currentPly().map(Ply::variations).orElseGet(this::rootVariations);
+    while (!candidates.isEmpty()) {
+      Ply next = candidates.getFirst();
+      line.add(next);
+      candidates = next.variations();
+    }
+    return List.copyOf(line);
+  }
+
   /** Applies a validated result, adding it to the history and moving the cursor. */
   public void apply(MoveExecutionResult result) {
     Objects.requireNonNull(result, "result must not be null");
