@@ -3,6 +3,7 @@ package com.escontrela.lastmove.infrastructure.chesspresso;
 import chesspresso.game.Game;
 import com.escontrela.lastmove.domain.game.GameResult;
 import com.escontrela.lastmove.domain.game.MoveTree;
+import com.escontrela.lastmove.domain.notation.Fen;
 import com.escontrela.lastmove.domain.notation.PgnGame;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -37,7 +38,8 @@ public final class ChesspressoGameMapper {
 
     GameResult result = GameResult.fromPgn(game.getResultStr() != null ? game.getResultStr() : "*");
 
-    return new PgnGame(headers, "", result, null);
+    String fen = game.getTag("FEN");
+    return new PgnGame(headers, "", result, fen == null || fen.isBlank() ? null : Fen.of(fen));
   }
 
   /**

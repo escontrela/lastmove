@@ -39,17 +39,17 @@
                 <Label styleClass="eyebrow-label" text="Game source" />
                 <Label styleClass="card-title" text="Start a PGN study" />
                 <Label styleClass="card-copy" text="Open a portable game notation file to prepare the replay workspace." wrapText="true" />
-                <Button mnemonicParsing="false" onAction="#onOpenPgn" styleClass="primary-button" text="Open PGN" />
+                <HBox alignment="CENTER_LEFT" spacing="8.0">
+                    <Button mnemonicParsing="false" onAction="#onOpenPgn" styleClass="primary-button" text="Open PGN" />
+                    <ToolbarIconButton accessibleText="Start initial position" lightIconResource="/images/clear_35dp_000000.png" darkIconResource="/images/clear_35dp_FFFFFF.png" tooltipText="Start initial position" onAction="#onReset" />
+                    <ToolbarIconButton accessibleText="Start from FEN" lightIconResource="/images/raw_on_35dp_000000.png" darkIconResource="/images/raw_on_35dp_FFFFFF.png" tooltipText="Start from FEN" onAction="#onFen" />
+                </HBox>
             </VBox>
             <VBox spacing="12.0" styleClass="rail-card" VBox.vgrow="ALWAYS">
                 <padding><Insets bottom="20.0" left="20.0" right="20.0" top="20.0" /></padding>
-                <Label styleClass="eyebrow-label" text="Notation" />
-                <Label styleClass="card-title" text="Moves" />
-                <ListView fx:id="moveListView" styleClass="move-list" VBox.vgrow="ALWAYS" />
-                <HBox alignment="CENTER" spacing="8.0" styleClass="move-navigation">
-                    <ToolbarIconButton accessibleText="Previous move" lightIconResource="/images/previous_35dp_000000.png" darkIconResource="/images/previous_35dp_FFFFFF.png" tooltipText="Previous move" onAction="#onPreviousMove" />
-                    <ToolbarIconButton accessibleText="Next move" lightIconResource="/images/next_35dp_000000.png" darkIconResource="/images/next_35dp_FFFFFF.png" tooltipText="Next move" onAction="#onNextMove" />
-                </HBox>
+                <Label styleClass="eyebrow-label" text="Open sessions" />
+                <Label styleClass="card-title" text="Sessions" />
+                <ListView fx:id="sessionListView" styleClass="move-list" VBox.vgrow="ALWAYS" />
             </VBox>
         </VBox>
     </left>
@@ -64,15 +64,18 @@
                 <VBox spacing="12.0" styleClass="rail-card board-side-card">
                     <padding><Insets bottom="20.0" left="20.0" right="20.0" top="20.0" /></padding>
                     <Label styleClass="eyebrow-label" text="Position" />
-                    <Label styleClass="card-title" text="Board controls" />
-                    <Label styleClass="card-copy" text="Navigation and board options will live here." wrapText="true" />
+                    <Label styleClass="card-title" text="Navigation" />
+                    <HBox alignment="CENTER_LEFT" spacing="8.0" styleClass="move-navigation">
+                        <ToolbarIconButton accessibleText="Previous move" lightIconResource="/images/previous_35dp_000000.png" darkIconResource="/images/previous_35dp_FFFFFF.png" tooltipText="Previous move" onAction="#onPreviousMove" />
+                        <ToolbarIconButton accessibleText="Next move" lightIconResource="/images/next_35dp_000000.png" darkIconResource="/images/next_35dp_FFFFFF.png" tooltipText="Next move" onAction="#onNextMove" />
+                    </HBox>
                 </VBox>
 
                 <VBox spacing="12.0" styleClass="rail-card board-side-card" VBox.vgrow="ALWAYS">
                     <padding><Insets bottom="20.0" left="20.0" right="20.0" top="20.0" /></padding>
-                    <Label styleClass="eyebrow-label" text="Status" />
-                    <Label styleClass="card-title" text="Move details" />
-                    <Label styleClass="card-copy" text="Selected square, last move, legal move feedback, and future board actions can be shown here." wrapText="true" />
+                    <Label styleClass="eyebrow-label" text="Notation" />
+                    <Label styleClass="card-title" text="Moves" />
+                    <ListView fx:id="moveListView" styleClass="move-list" VBox.vgrow="ALWAYS" />
                 </VBox>
             </VBox>
         </HBox>

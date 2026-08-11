@@ -1,10 +1,12 @@
 package com.escontrela.lastmove.ui.controller;
 
-import com.escontrela.lastmove.application.dto.MoveRequest;
 import com.escontrela.lastmove.application.service.GameLoadService;
-import com.escontrela.lastmove.application.service.GameMoveService;
 import com.escontrela.lastmove.application.service.GameReplayService;
+import com.escontrela.lastmove.application.service.GameSessionService;
+import com.escontrela.lastmove.application.dto.GameSessionSummary;
+import com.escontrela.lastmove.application.dto.PgnImportRequest;
 import com.escontrela.lastmove.domain.common.SessionId;
+import com.escontrela.lastmove.domain.game.MoveCommand;
 import com.escontrela.lastmove.domain.game.MoveExecutionResult;
 import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
 import com.escontrela.lastmove.ui.model.BoardMoveInput;
@@ -15,12 +17,16 @@ import com.escontrela.lastmove.ui.screen.UiScreenId;
 import com.escontrela.lastmove.ui.service.ChessSoundService;
 import com.escontrela.lastmove.ui.support.FileChooserFactory;
 import java.util.Objects;
+import java.util.List;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.fxml.FXML;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.ContextMenuEvent;
+import javafx.scene.control.ListView;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.layout.StackPane;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -44,29 +50,33 @@ public class PgnAnalysisScreenController implements UiScreenController {
   @FXML private StackPane boardHost;
   @FXML private ImageView statusBrandLogo;
   @FXML private ContextualMenuPanel contextualMenuPanel;
+  @FXML private ListView<String> sessionListView;
+  @FXML private ListView<String> moveListView;
+  @FXML private Label statusLabel;
   @FXML private com.escontrela.lastmove.ui.component.board.ChessBoardControl chessBoard;
 
   private final GameLoadService gameLoadService;
-  private final GameMoveService gameMoveService;
+  private final GameSessionService gameSessionService;
   private final GameReplayService gameReplayService;
   private final FileChooserFactory fileChooserFactory;
   private final MainScreenViewModel viewModel;
   private final UiFlowManager uiFlowManager;
   private final ChessSoundService chessSoundService;
   private final ListChangeListener<String> themeStyleListener = change -> updateStatusBrandLogo();
-  // Temporary local session identity. It must remain stable for the screen lifetime.
-  private final SessionId boardSessionId = SessionId.random();
+  /** Identity of the session currently rendered by this screen. */
+  private SessionId boardSessionId;
+  private List<GameSessionSummary> visibleSessions = List.of();
 
   public PgnAnalysisScreenController(
       GameLoadService gameLoadService,
-      GameMoveService gameMoveService,
+      GameSessionService gameSessionService,
       GameReplayService gameReplayService,
       FileChooserFactory fileChooserFactory,
       MainScreenViewModel viewModel,
       ChessSoundService chessSoundService,
       @Lazy UiFlowManager uiFlowManager) {
     this.gameLoadService = gameLoadService;
-    this.gameMoveService = gameMoveService;
+    this.gameSessionService = gameSessionService;
     this.gameReplayService = gameReplayService;
     this.fileChooserFactory = fileChooserFactory;
     this.viewModel = viewModel;
@@ -83,7 +93,10 @@ public class PgnAnalysisScreenController implements UiScreenController {
     updateStatusBrandLogo();
     configureContextMenu();
     chessBoard.setSoundService(chessSoundService);
-    chessBoard.renderPosition(gameMoveService.currentSnapshot(boardSessionId));
+    boardSessionId = gameSessionService.createInitialSession().sessionId();
+    chessBoard.renderPosition(gameSessionService.currentPosition(boardSessionId));
+    configureSessionPicker();
+    refreshWorkspace();
 
     // Suscribirse a los eventos de movimiento desde el tablero
     if (chessBoard != null) {
@@ -91,15 +104,14 @@ public class PgnAnalysisScreenController implements UiScreenController {
           event -> {
             BoardMoveInput moveInput = event.getMoveInput();
             MoveExecutionResult moveResult =
-                gameMoveService.attemptMove(
-                    new MoveRequest(
-                        boardSessionId,
-                        moveInput.fromSquare(),
-                        moveInput.toSquare(),
-                        moveInput.promotionPiece()));
+                gameSessionService.attemptMove(
+                    boardSessionId,
+                    new MoveCommand(
+                        moveInput.fromSquare(), moveInput.toSquare(), moveInput.promotionPiece()));
 
             if (moveResult.accepted()) {
               chessBoard.renderPosition(moveResult.newSnapshot());
+              refreshMoveList();
             } else {
               // A dedicated status/message component can render this later without changing flow.
               moveResult.rejectionReason().ifPresent(reason -> root.setAccessibleHelp(reason));
@@ -148,18 +160,51 @@ public class PgnAnalysisScreenController implements UiScreenController {
         .choosePgnFile(root.getScene().getWindow())
         .ifPresent(
             file -> {
-              // TODO: call gameLoadService.load(PgnImportRequest.fromFile(file.toPath()))
+              try {
+                boardSessionId =
+                    gameLoadService.openSession(PgnImportRequest.fromFile(file.toPath())).sessionId();
+                refreshWorkspace();
+              } catch (IllegalArgumentException exception) {
+                statusLabel.setText(exception.getMessage());
+              }
             });
+  }
+
+  /** Starts and activates a fresh study at the normal initial position. */
+  @FXML
+  public void onReset() {
+    boardSessionId = gameSessionService.createInitialSession().sessionId();
+    refreshWorkspace();
+  }
+
+  /** Prompts for a FEN and starts a new session from the accepted position. */
+  @FXML
+  public void onFen() {
+    TextInputDialog dialog = new TextInputDialog();
+    dialog.setTitle("Start from FEN");
+    dialog.setHeaderText("Create a study from a FEN position");
+    dialog.setContentText("FEN:");
+    dialog.showAndWait().filter(value -> !value.isBlank()).ifPresent(
+        value -> {
+          try {
+            boardSessionId = gameSessionService.createFenSession(com.escontrela.lastmove.domain.notation.Fen.of(value.trim())).sessionId();
+            refreshWorkspace();
+          } catch (IllegalArgumentException exception) {
+            statusLabel.setText(exception.getMessage());
+          }
+        });
   }
 
   @FXML
   public void onNextMove() {
-    // TODO: call gameReplayService.next(currentGame)
+    chessBoard.renderPosition(gameSessionService.next(boardSessionId));
+    refreshMoveList();
   }
 
   @FXML
   public void onPreviousMove() {
-    // TODO: call gameReplayService.previous(currentGame)
+    chessBoard.renderPosition(gameSessionService.previous(boardSessionId));
+    refreshMoveList();
   }
 
   @FXML
@@ -182,12 +227,63 @@ public class PgnAnalysisScreenController implements UiScreenController {
 
     contextualMenuPanel.clearItems();
     contextualMenuPanel.addItem("Open PGN…", "⌘ O", event -> onOpenPgn());
+    contextualMenuPanel.addItem("Initial position", "", event -> onReset());
+    contextualMenuPanel.addItem("Start from FEN…", "", event -> onFen());
     contextualMenuPanel.addSeparator();
     contextualMenuPanel.addItem("Previous move", "←", event -> onPreviousMove());
     contextualMenuPanel.addItem("Next move", "→", event -> onNextMove());
     contextualMenuPanel.addSeparator();
     contextualMenuPanel.addItem("Back to chess tools", "", event -> backToMain());
     contextualMenuPanel.addItem("Open setup", "", event -> openSetup());
+  }
+
+  private void configureSessionPicker() {
+    sessionListView
+        .getSelectionModel()
+        .selectedIndexProperty()
+        .addListener(
+            (observable, previous, selected) -> {
+              if (selected == null || selected.intValue() < 0 || selected.intValue() >= visibleSessions.size()) {
+                return;
+              }
+              boardSessionId = visibleSessions.get(selected.intValue()).sessionId();
+              gameSessionService.activate(boardSessionId);
+              chessBoard.renderPosition(gameSessionService.currentPosition(boardSessionId));
+              refreshMoveList();
+              statusLabel.setText("Switched to " + visibleSessions.get(selected.intValue()).title());
+            });
+  }
+
+  private void refreshWorkspace() {
+    chessBoard.renderPosition(gameSessionService.currentPosition(boardSessionId));
+    refreshSessionList();
+    refreshMoveList();
+    statusLabel.setText("Ready: " + gameSessionService.activeSession().title());
+  }
+
+  private void refreshSessionList() {
+    visibleSessions = gameSessionService.listSessions();
+    sessionListView
+        .getItems()
+        .setAll(
+            visibleSessions.stream()
+                .map(summary -> (summary.active() ? "● " : "") + summary.title())
+                .toList());
+    for (int index = 0; index < visibleSessions.size(); index++) {
+      if (visibleSessions.get(index).sessionId().equals(boardSessionId)) {
+        sessionListView.getSelectionModel().select(index);
+        break;
+      }
+    }
+  }
+
+  private void refreshMoveList() {
+    moveListView
+        .getItems()
+        .setAll(
+            gameSessionService.moveHistory(boardSessionId).stream()
+                .map(ply -> ply.moveNumber() + (ply.movingColor().name().equals("WHITE") ? ". " : "... ") + ply.move().san().getValue())
+                .toList());
   }
 
   private void updateStatusBrandLogo() {
