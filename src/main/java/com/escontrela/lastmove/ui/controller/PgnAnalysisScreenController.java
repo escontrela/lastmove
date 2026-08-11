@@ -1,13 +1,18 @@
 package com.escontrela.lastmove.ui.controller;
 
+import com.escontrela.lastmove.application.dto.MoveRequest;
 import com.escontrela.lastmove.application.service.GameLoadService;
+import com.escontrela.lastmove.application.service.GameMoveService;
 import com.escontrela.lastmove.application.service.GameReplayService;
+import com.escontrela.lastmove.domain.common.SessionId;
+import com.escontrela.lastmove.domain.game.MoveExecutionResult;
 import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
 import com.escontrela.lastmove.ui.model.BoardMoveInput;
 import com.escontrela.lastmove.ui.model.MainScreenViewModel;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
 import com.escontrela.lastmove.ui.screen.UiScreenController;
 import com.escontrela.lastmove.ui.screen.UiScreenId;
+import com.escontrela.lastmove.ui.service.ChessSoundService;
 import com.escontrela.lastmove.ui.support.FileChooserFactory;
 import java.util.Objects;
 import javafx.beans.value.ChangeListener;
@@ -42,22 +47,30 @@ public class PgnAnalysisScreenController implements UiScreenController {
   @FXML private com.escontrela.lastmove.ui.component.board.ChessBoardControl chessBoard;
 
   private final GameLoadService gameLoadService;
+  private final GameMoveService gameMoveService;
   private final GameReplayService gameReplayService;
   private final FileChooserFactory fileChooserFactory;
   private final MainScreenViewModel viewModel;
   private final UiFlowManager uiFlowManager;
+  private final ChessSoundService chessSoundService;
   private final ListChangeListener<String> themeStyleListener = change -> updateStatusBrandLogo();
+  // Temporary local session identity. It must remain stable for the screen lifetime.
+  private final SessionId boardSessionId = SessionId.random();
 
   public PgnAnalysisScreenController(
       GameLoadService gameLoadService,
+      GameMoveService gameMoveService,
       GameReplayService gameReplayService,
       FileChooserFactory fileChooserFactory,
       MainScreenViewModel viewModel,
+      ChessSoundService chessSoundService,
       @Lazy UiFlowManager uiFlowManager) {
     this.gameLoadService = gameLoadService;
+    this.gameMoveService = gameMoveService;
     this.gameReplayService = gameReplayService;
     this.fileChooserFactory = fileChooserFactory;
     this.viewModel = viewModel;
+    this.chessSoundService = chessSoundService;
     this.uiFlowManager = uiFlowManager;
   }
 
@@ -65,21 +78,32 @@ public class PgnAnalysisScreenController implements UiScreenController {
   public void initialize() {
 
     root.getProperties().put("controller", this);
+    chessSoundService.preload();
     root.getStyleClass().addListener(themeStyleListener);
     updateStatusBrandLogo();
     configureContextMenu();
+    chessBoard.setSoundService(chessSoundService);
+    chessBoard.renderPosition(gameMoveService.currentSnapshot(boardSessionId));
 
     // Suscribirse a los eventos de movimiento desde el tablero
     if (chessBoard != null) {
       chessBoard.setOnMoveRequested(
           event -> {
             BoardMoveInput moveInput = event.getMoveInput();
+            MoveExecutionResult moveResult =
+                gameMoveService.attemptMove(
+                    new MoveRequest(
+                        boardSessionId,
+                        moveInput.fromSquare(),
+                        moveInput.toSquare(),
+                        moveInput.promotionPiece()));
 
-            // TODO: Delegar a GameMoveService o ViewModel
-            // TODO: llamar a GAmeMoveService.attemptMove(from,to);
-
-            // TODO: con el resultado llamar a chessBoard.renderPosition() para actualizar el
-            // tablero, o mostrar un mensaje de error si el movimiento no es válido.
+            if (moveResult.accepted()) {
+              chessBoard.renderPosition(moveResult.newSnapshot());
+            } else {
+              // A dedicated status/message component can render this later without changing flow.
+              moveResult.rejectionReason().ifPresent(reason -> root.setAccessibleHelp(reason));
+            }
           });
     }
 

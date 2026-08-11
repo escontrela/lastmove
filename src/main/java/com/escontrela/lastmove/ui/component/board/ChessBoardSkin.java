@@ -2,7 +2,11 @@ package com.escontrela.lastmove.ui.component.board;
 
 import com.escontrela.lastmove.domain.common.ChessConstants;
 import com.escontrela.lastmove.domain.common.Square;
+import com.escontrela.lastmove.domain.game.PositionPiece;
+import com.escontrela.lastmove.domain.game.PositionSnapshot;
 import com.escontrela.lastmove.ui.model.BoardMoveInput;
+import com.escontrela.lastmove.ui.service.ChessSound;
+import javafx.beans.value.ChangeListener;
 import javafx.scene.control.SkinBase;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -36,13 +40,21 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
   private Square dragOriginSquare = null;
   private Image draggedPiece = null; // La imagen de la pieza durante el drag
   private Square hoveredDragSquare = null; // Casilla actual bajo el cursor durante drag
+  private final ChangeListener<PositionSnapshot> positionListener =
+      (observable, oldPosition, newPosition) -> {
+        renderPosition(newPosition);
+        playMoveSoundIfNeeded(oldPosition, newPosition);
+      };
 
   public ChessBoardSkin(ChessBoardControl control) {
 
     super(control);
     configureGrid();
     buildGrid(control); // Pasó 1: Construcción estructural del Grid e interacción pura
-    loadInitialDemoState(); // Pasó 2: Inyección y renderizado del estado inicial aislado
+    control.positionProperty().addListener(positionListener);
+    if (control.getPosition() != null) {
+      renderPosition(control.getPosition());
+    }
 
     // Configurar overlay para pieza flotante
     dragOverlay.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
@@ -111,36 +123,6 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     grid.setOnMousePressed(event -> handleGridMousePressed(control, event));
     grid.setOnMouseDragged(this::handleGridMouseDragged);
     grid.setOnMouseReleased(event -> handleGridMouseReleased(control, event));
-  }
-
-  /**
-   * RENDERIZADO DE ESTADO INICIAL (Aislado de la estructura): Provee las imágenes iniciales para la
-   * maqueta. Puede ser reemplazado en el futuro por un cargador FEN genérico sin alterar la
-   * cuadrícula de la UI.
-   *
-   * <p>TODO: Esto no me gusta demasiado, tendría que ser el Controller principal a través de un
-   * método público de ChessBoardControl, quien inicializara el estado del tablero a una posición
-   * concreta (FEN) y no la skin. La skin debería ser solo un renderizador de estado.
-   */
-  private void loadInitialDemoState() {
-
-    for (int rank = 0; rank < ChessConstants.RANKS; rank++) {
-
-      for (int file = 0; file < ChessConstants.FILES; file++) {
-
-        ChessSquareControl square = squares[file][rank];
-        String color = rank < 2 ? "white" : rank > 5 ? "black" : null;
-
-        if (color != null) {
-          String piece = rank == 1 || rank == 6 ? "pawn" : startingBackRankPiece(file);
-          square.setPieceImage("/chess-pieces/" + color + "-" + piece + ".png");
-
-        } else {
-          // CORRECCIÓN: Usamos el método de objeto explícito para evitar la ambigüedad del null
-          square.setPieceImageObject(null);
-        }
-      }
-    }
   }
 
   /**
@@ -326,15 +308,51 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
   }
 
   /**
-   * Renders the board from a complete position (FEN). This method is called by the controller after
-   * a move has been validated and applied by GameMoveService. It updates all piece images on the
-   * board according to the provided position.
+   * Renders the board from an engine-independent position snapshot. This is called by the
+   * controller after a move has been applied by GameMoveService.
    *
-   * @param fen The FEN string representing the board position to render.
+   * @param snapshot the complete board state to render.
    */
-  public void renderPosition(String fen) {
-    // TODO: Parse FEN and update all squares' piece images accordingly.
-    // This will be the single entry point for visual board updates after a move is accepted.
+  private void renderPosition(PositionSnapshot snapshot) {
+    for (int file = 0; file < ChessConstants.FILES; file++) {
+      for (int rank = 0; rank < ChessConstants.RANKS; rank++) {
+        squares[file][rank].setPieceImageObject(null);
+      }
+    }
+    for (PositionPiece piece : snapshot.pieces()) {
+      squares[piece.square().getFile()][piece.square().getRank()]
+          .setPieceImage(pieceResource(piece));
+    }
+  }
+
+  private String pieceResource(PositionPiece piece) {
+    String color = piece.color().name().toLowerCase();
+    String type = piece.type().name().toLowerCase();
+    return "/chess-pieces/" + color + "-" + type + ".png";
+  }
+
+  private void playMoveSoundIfNeeded(PositionSnapshot previous, PositionSnapshot current) {
+    if (previous == null
+        || current.lastMove().isEmpty()
+        || current.lastMove().equals(previous.lastMove())) {
+      return;
+    }
+    var move = current.lastMove().orElseThrow();
+    ChessSound sound =
+        current.check()
+            ? ChessSound.MOVE_CHECK
+            : move.promotion().isPresent()
+                ? ChessSound.PROMOTE
+                : move.castling()
+                    ? ChessSound.CASTLE
+                    : move.capture() ? ChessSound.CAPTURE : ChessSound.MOVE_SELF;
+    getSkinnable().playSound(sound);
+  }
+
+  @Override
+  public void dispose() {
+    getSkinnable().positionProperty().removeListener(positionListener);
+    super.dispose();
   }
 
   @Override
@@ -368,15 +386,4 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     }
   }
 
-  private String startingBackRankPiece(int file) {
-
-    return switch (file) {
-      case 0, 7 -> "rook";
-      case 1, 6 -> "knight";
-      case 2, 5 -> "bishop";
-      case 3 -> "queen";
-      case 4 -> "king";
-      default -> throw new IllegalArgumentException("Invalid chess file: " + file);
-    };
-  }
 }

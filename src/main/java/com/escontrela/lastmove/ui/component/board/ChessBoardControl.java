@@ -1,6 +1,9 @@
 package com.escontrela.lastmove.ui.component.board;
 
+import com.escontrela.lastmove.domain.game.PositionSnapshot;
 import com.escontrela.lastmove.ui.model.BoardMoveInput;
+import com.escontrela.lastmove.ui.service.ChessSound;
+import com.escontrela.lastmove.ui.service.ChessSoundService;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.event.EventHandler;
@@ -17,6 +20,9 @@ import javafx.scene.control.Skin;
 public class ChessBoardControl extends Control {
 
   private BoardTheme theme = BoardTheme.LASTMOVE;
+  private ChessSoundService soundService;
+  private final ObjectProperty<PositionSnapshot> position =
+      new SimpleObjectProperty<>(this, "position");
 
   // 1. PROPIEDAD DEL EVENTO: Permite suscribir controladores externos
   private final ObjectProperty<EventHandler<BoardMoveEvent>> onMoveRequested =
@@ -41,6 +47,30 @@ public class ChessBoardControl extends Control {
 
   public BoardTheme getTheme() {
     return theme;
+  }
+
+  /** Updates the complete board state that the skin must render. */
+  public final void renderPosition(PositionSnapshot positionSnapshot) {
+    position.set(positionSnapshot);
+  }
+
+  public final ObjectProperty<PositionSnapshot> positionProperty() {
+    return position;
+  }
+
+  public final PositionSnapshot getPosition() {
+    return position.get();
+  }
+
+  /** Installs the presentation service used by this control's skin for move feedback. */
+  public final void setSoundService(ChessSoundService soundService) {
+    this.soundService = soundService;
+  }
+
+  void playSound(ChessSound sound) {
+    if (soundService != null) {
+      soundService.play(sound);
+    }
   }
 
   public void setTheme(BoardTheme theme) {

@@ -5,6 +5,8 @@ import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
 import com.escontrela.lastmove.ui.screen.UiScreenController;
 import com.escontrela.lastmove.ui.screen.UiScreenId;
+import com.escontrela.lastmove.ui.service.ChessSound;
+import com.escontrela.lastmove.ui.service.ChessSoundService;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -30,6 +32,7 @@ public class MainWindowController implements UiScreenController {
     private static final Map<String, Image> IMAGE_CACHE = new ConcurrentHashMap<>();
 
     private final UiFlowManager uiFlowManager;
+    private final ChessSoundService chessSoundService;
 
     @FXML
     private AnchorPane root;
@@ -57,13 +60,16 @@ public class MainWindowController implements UiScreenController {
     private final ListChangeListener<String> themeStyleListener = change -> updateThemeAssets();
     private boolean startupMessageShown;
 
-    public MainWindowController(@Lazy UiFlowManager uiFlowManager) {
+    public MainWindowController(
+            @Lazy UiFlowManager uiFlowManager, ChessSoundService chessSoundService) {
         this.uiFlowManager = uiFlowManager;
+        this.chessSoundService = chessSoundService;
     }
 
     @FXML
     public void initialize() {
         root.getProperties().put("controller", this);
+        chessSoundService.preload();
         root.getStyleClass().addListener(themeStyleListener);
         updateThemeAssets();
         configureContextMenu();
@@ -78,6 +84,7 @@ public class MainWindowController implements UiScreenController {
     public void onShow() {
         if (!startupMessageShown) {
             startupMessageShown = true;
+            chessSoundService.play(ChessSound.NOTIFY);
             startupMessageBox.show();
         }
     }
