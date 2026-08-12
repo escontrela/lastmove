@@ -17,9 +17,11 @@ public record MoveDescriptor(
     Optional<PieceType> promotion) {
 
   public MoveDescriptor {
+
     Objects.requireNonNull(from, "from must not be null");
     Objects.requireNonNull(to, "to must not be null");
     Objects.requireNonNull(san, "san must not be null");
+    
     promotion = Objects.requireNonNull(promotion, "promotion must not be null");
   }
 }
