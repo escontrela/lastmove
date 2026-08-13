@@ -1,34 +1,32 @@
 package com.escontrela.lastmove.ui.controller;
 
-import com.escontrela.lastmove.application.service.GameLoadService;
-import com.escontrela.lastmove.application.service.GameReplayService;
-import com.escontrela.lastmove.application.service.GameSessionService;
 import com.escontrela.lastmove.application.dto.GameSessionSummary;
 import com.escontrela.lastmove.application.dto.PgnImportRequest;
+import com.escontrela.lastmove.application.service.GameLoadService;
+import com.escontrela.lastmove.application.service.GameSessionService;
 import com.escontrela.lastmove.domain.common.SessionId;
 import com.escontrela.lastmove.domain.game.MoveCommand;
 import com.escontrela.lastmove.domain.game.MoveExecutionResult;
 import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
 import com.escontrela.lastmove.ui.model.BoardMoveInput;
-import com.escontrela.lastmove.ui.model.MainScreenViewModel;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
 import com.escontrela.lastmove.ui.screen.UiScreenController;
 import com.escontrela.lastmove.ui.screen.UiScreenId;
 import com.escontrela.lastmove.ui.service.ChessSoundService;
 import com.escontrela.lastmove.ui.support.FileChooserFactory;
-import java.util.Objects;
 import java.util.List;
+import java.util.Objects;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.fxml.FXML;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.Dialog;
+import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.ContextMenuEvent;
-import javafx.scene.control.ListView;
-import javafx.scene.control.Label;
-import javafx.scene.control.TextInputDialog;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.Dialog;
 import javafx.scene.layout.StackPane;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -59,29 +57,25 @@ public class PgnAnalysisScreenController implements UiScreenController {
 
   private final GameLoadService gameLoadService;
   private final GameSessionService gameSessionService;
-  private final GameReplayService gameReplayService;
   private final FileChooserFactory fileChooserFactory;
-  private final MainScreenViewModel viewModel;
   private final UiFlowManager uiFlowManager;
   private final ChessSoundService chessSoundService;
   private final ListChangeListener<String> themeStyleListener = change -> updateStatusBrandLogo();
+
   /** Identity of the session currently rendered by this screen. */
   private SessionId boardSessionId;
+
   private List<GameSessionSummary> visibleSessions = List.of();
 
   public PgnAnalysisScreenController(
       GameLoadService gameLoadService,
       GameSessionService gameSessionService,
-      GameReplayService gameReplayService,
       FileChooserFactory fileChooserFactory,
-      MainScreenViewModel viewModel,
       ChessSoundService chessSoundService,
       @Lazy UiFlowManager uiFlowManager) {
     this.gameLoadService = gameLoadService;
     this.gameSessionService = gameSessionService;
-    this.gameReplayService = gameReplayService;
     this.fileChooserFactory = fileChooserFactory;
-    this.viewModel = viewModel;
     this.chessSoundService = chessSoundService;
     this.uiFlowManager = uiFlowManager;
   }
@@ -164,7 +158,10 @@ public class PgnAnalysisScreenController implements UiScreenController {
             file -> {
               try {
                 boardSessionId =
-                    gameLoadService.openSession(PgnImportRequest.fromFile(file.toPath())).sessionId();
+                    gameSessionService
+                        .createPgnSession(
+                            gameLoadService.importPgn(PgnImportRequest.fromFile(file.toPath())))
+                        .sessionId();
                 refreshWorkspace();
               } catch (IllegalArgumentException exception) {
                 statusLabel.setText(exception.getMessage());
@@ -186,15 +183,22 @@ public class PgnAnalysisScreenController implements UiScreenController {
     dialog.setTitle("Start from FEN");
     dialog.setHeaderText("Create a study from a FEN position");
     dialog.setContentText("FEN:");
-    dialog.showAndWait().filter(value -> !value.isBlank()).ifPresent(
-        value -> {
-          try {
-            boardSessionId = gameSessionService.createFenSession(com.escontrela.lastmove.domain.notation.Fen.of(value.trim())).sessionId();
-            refreshWorkspace();
-          } catch (IllegalArgumentException exception) {
-            statusLabel.setText(exception.getMessage());
-          }
-        });
+    dialog
+        .showAndWait()
+        .filter(value -> !value.isBlank())
+        .ifPresent(
+            value -> {
+              try {
+                boardSessionId =
+                    gameSessionService
+                        .createFenSession(
+                            com.escontrela.lastmove.domain.notation.Fen.of(value.trim()))
+                        .sessionId();
+                refreshWorkspace();
+              } catch (IllegalArgumentException exception) {
+                statusLabel.setText(exception.getMessage());
+              }
+            });
   }
 
   /** Opens a modal picker for every session retained in the in-memory catalog. */
@@ -221,11 +225,13 @@ public class PgnAnalysisScreenController implements UiScreenController {
             button == select && choices.getSelectionModel().getSelectedIndex() >= 0
                 ? sessions.get(choices.getSelectionModel().getSelectedIndex()).sessionId()
                 : null);
-    dialog.showAndWait().ifPresent(
-        sessionId -> {
-          boardSessionId = sessionId;
-          refreshWorkspace();
-        });
+    dialog
+        .showAndWait()
+        .ifPresent(
+            sessionId -> {
+              boardSessionId = sessionId;
+              refreshWorkspace();
+            });
   }
 
   @FXML
@@ -277,13 +283,16 @@ public class PgnAnalysisScreenController implements UiScreenController {
         .selectedIndexProperty()
         .addListener(
             (observable, previous, selected) -> {
-              if (selected == null || selected.intValue() < 0 || selected.intValue() >= visibleSessions.size()) {
+              if (selected == null
+                  || selected.intValue() < 0
+                  || selected.intValue() >= visibleSessions.size()) {
                 return;
               }
               boardSessionId = visibleSessions.get(selected.intValue()).sessionId();
               chessBoard.renderPosition(gameSessionService.currentPosition(boardSessionId));
               refreshMoveList();
-              statusLabel.setText("Switched to " + visibleSessions.get(selected.intValue()).title());
+              statusLabel.setText(
+                  "Switched to " + visibleSessions.get(selected.intValue()).title());
             });
   }
 
@@ -300,7 +309,9 @@ public class PgnAnalysisScreenController implements UiScreenController {
         .getItems()
         .setAll(
             visibleSessions.stream()
-                .map(summary -> (summary.sessionId().equals(boardSessionId) ? "● " : "") + summary.title())
+                .map(
+                    summary ->
+                        (summary.sessionId().equals(boardSessionId) ? "● " : "") + summary.title())
                 .toList());
     for (int index = 0; index < visibleSessions.size(); index++) {
       if (visibleSessions.get(index).sessionId().equals(boardSessionId)) {
@@ -316,7 +327,11 @@ public class PgnAnalysisScreenController implements UiScreenController {
         .getItems()
         .setAll(
             gameSessionService.notationLine(boardSessionId).stream()
-                .map(ply -> ply.moveNumber() + (ply.movingColor().name().equals("WHITE") ? ". " : "... ") + ply.move().san().getValue())
+                .map(
+                    ply ->
+                        ply.moveNumber()
+                            + (ply.movingColor().name().equals("WHITE") ? ". " : "... ")
+                            + ply.move().san().getValue())
                 .toList());
     if (currentPlyIndex >= 0) {
       moveListView.getSelectionModel().select(currentPlyIndex);

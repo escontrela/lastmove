@@ -7,7 +7,8 @@ partida desde la posición inicial o un FEN, recorrer jugadas y mantener varias 
 
 ```text
 PgnAnalysisScreenController
-  -> GameLoadService / GameSessionService
+  -> GameLoadService -> ImportedPgnGame
+  -> GameSessionService
   -> GameSessionRepository
     -> InMemoryGameSessionRepository
       -> GameSession
@@ -168,10 +169,12 @@ No conoce `SessionId`, no consulta el catálogo y no modifica `GameSession`.
 
 Caso de uso de entrada de un PGN desde archivo o texto.
 
-**Dependencias**: `ChesspressoPgnReader`, `GameSessionService`.
+**Dependencia**: `ChesspressoPgnReader`.
 
-- `openSession(PgnImportRequest)`: lee el PGN, lo transforma a `ImportedPgnGame` y crea/activa la
-  sesión correspondiente.
+- `importPgn(PgnImportRequest)`: lee el PGN y lo transforma a `ImportedPgnGame`.
+
+El controlador PGN decide después crear la sesión mediante `GameSessionService.createPgnSession`;
+importar un archivo y abrirlo como sesión son responsabilidades independientes.
 
 ## Infraestructura Chesspresso
 
