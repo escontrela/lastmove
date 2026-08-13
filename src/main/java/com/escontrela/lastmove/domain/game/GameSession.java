@@ -19,6 +19,7 @@ import java.util.UUID;
 public final class GameSession {
 
   private final SessionId id;
+  private final String title;
   private final GameSessionOrigin origin;
   private final PositionSnapshot initialPosition;
   private final Map<UUID, Ply> pliesById = new LinkedHashMap<>();
@@ -26,14 +27,19 @@ public final class GameSession {
   private UUID currentPlyId;
   private GameResult result;
 
-  public GameSession(SessionId id, GameSessionOrigin origin, PositionSnapshot initialPosition) {
+  public GameSession(
+      SessionId id, String title, GameSessionOrigin origin, PositionSnapshot initialPosition) {
     this.id = Objects.requireNonNull(id, "id must not be null");
+    this.title = Objects.requireNonNull(title, "title must not be null");
     this.origin = Objects.requireNonNull(origin, "origin must not be null");
     this.initialPosition = Objects.requireNonNull(initialPosition, "initialPosition must not be null");
     this.currentPosition = initialPosition;
   }
 
   public SessionId id() { return id; }
+
+  /** Returns the user-facing title assigned when this session was created. */
+  public String title() { return title; }
 
   public GameSessionOrigin origin() { return origin; }
 

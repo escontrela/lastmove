@@ -17,7 +17,7 @@ class GameSessionTest {
 
   @Test
   void apply_keepsExistingLineAndCreatesVariationAfterGoingBack() {
-    GameSession session = new GameSession(SessionId.random(), GameSessionOrigin.INITIAL_POSITION, initial());
+    GameSession session = new GameSession(SessionId.random(), "Test", GameSessionOrigin.INITIAL_POSITION, initial());
 
     session.apply(accepted("e2", "e4", "e4", blackToMove()));
     Ply first = session.currentPly().orElseThrow();
@@ -36,7 +36,7 @@ class GameSessionTest {
 
   @Test
   void rejectedResult_preservesPositionAndHistory() {
-    GameSession session = new GameSession(SessionId.random(), GameSessionOrigin.FEN, initial());
+    GameSession session = new GameSession(SessionId.random(), "Test", GameSessionOrigin.FEN, initial());
 
     session.apply(MoveExecutionResult.rejected(initial(), "Illegal move"));
 
@@ -47,7 +47,7 @@ class GameSessionTest {
 
   @Test
   void notationLine_includesMovesAheadOfTheCurrentCursor() {
-    GameSession session = new GameSession(SessionId.random(), GameSessionOrigin.INITIAL_POSITION, initial());
+    GameSession session = new GameSession(SessionId.random(), "Test", GameSessionOrigin.INITIAL_POSITION, initial());
     session.apply(accepted("e2", "e4", "e4", blackToMove()));
     session.apply(accepted("e7", "e5", "e5", initial()));
 
@@ -62,7 +62,7 @@ class GameSessionTest {
     PositionSnapshot snapshot = new PositionSnapshot(
         List.of(), PieceColor.BLACK, CastlingRights.initial(), Optional.of(Square.of("e3")), 7, 12,
         Optional.empty(), true, false, false);
-    GameSession session = new GameSession(SessionId.random(), GameSessionOrigin.FEN, snapshot);
+    GameSession session = new GameSession(SessionId.random(), "Test", GameSessionOrigin.FEN, snapshot);
 
     assertEquals(PieceColor.BLACK, session.gameState().whoseTurn());
     assertEquals(7, session.gameState().halfmoveClock());

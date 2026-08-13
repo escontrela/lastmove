@@ -1,7 +1,7 @@
 package com.escontrela.lastmove.application.service;
 
 import com.escontrela.lastmove.application.dto.GameSessionSummary;
-import com.escontrela.lastmove.application.session.InMemoryGameSessionCatalog;
+import com.escontrela.lastmove.application.session.GameSessionRepository;
 import com.escontrela.lastmove.domain.common.SessionId;
 import com.escontrela.lastmove.domain.game.GameSession;
 import com.escontrela.lastmove.domain.game.GameSessionOrigin;
@@ -13,7 +13,6 @@ import com.escontrela.lastmove.domain.game.Ply;
 import com.escontrela.lastmove.domain.game.PositionSnapshot;
 import com.escontrela.lastmove.domain.notation.Fen;
 import com.escontrela.lastmove.domain.notation.PgnGame;
-import com.escontrela.lastmove.domain.service.PgnService;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
@@ -22,25 +21,23 @@ import org.springframework.stereotype.Service;
 /**
  * Application use case for the lifecycle of in-memory chess-analysis sessions.
  *
- * <p>It creates and activates sessions, delegates move validation to {@link GameMoveService},
- * applies accepted outcomes to the domain aggregate, and exposes session navigation. The catalog
- * is intentionally in memory only; persistence is outside this use case.
+ * <p>It creates sessions, delegates move validation to {@link GameMoveService}, applies accepted
+ * outcomes to the domain aggregate, and exposes session navigation. UI workflows decide which
+ * stored session is currently selected.
  */
 @Service
 public final class GameSessionService {
 
-  private final InMemoryGameSessionCatalog catalog;
+  private final GameSessionRepository sessionRepository;
   private final GameMoveService moveService;
-  private final PgnService pgnService;
 
   public GameSessionService(
-      InMemoryGameSessionCatalog catalog, GameMoveService moveService, PgnService pgnService) {
-    this.catalog = Objects.requireNonNull(catalog, "catalog must not be null");
+      GameSessionRepository sessionRepository, GameMoveService moveService) {
+    this.sessionRepository = Objects.requireNonNull(sessionRepository, "sessionRepository must not be null");
     this.moveService = Objects.requireNonNull(moveService, "moveService must not be null");
-    this.pgnService = Objects.requireNonNull(pgnService, "pgnService must not be null");
   }
 
-  /** Creates and activates a session at the standard chess initial position. */
+  /** Creates a session at the standard chess initial position. */
   public GameSessionSummary createInitialSession() {
     return register(
         "New game",
@@ -48,14 +45,14 @@ public final class GameSessionService {
         moveService.startingPosition());
   }
 
-  /** Creates and activates a session at the supplied FEN position. */
+  /** Creates a session at the supplied FEN position. */
   public GameSessionSummary createFenSession(Fen fen) {
     Objects.requireNonNull(fen, "fen must not be null");
     return register("FEN position", GameSessionOrigin.FEN, moveService.snapshotFor(fen));
   }
 
   /**
-   * Creates and activates a session for a parsed PGN game.
+   * Creates a session for a parsed PGN game.
    *
    * <p>The session starts at the PGN's declared FEN, or the normal initial position when the PGN
    * has none. Importing the PGN move tree itself is deliberately the next vertical slice.
@@ -65,46 +62,38 @@ public final class GameSessionService {
     return createPgnSession(new ImportedPgnGame(game, List.of()));
   }
 
-  /** Creates, activates and populates a session from an imported PGN move tree. */
+  /** Creates and populates a session from an imported PGN move tree. */
   public GameSessionSummary createPgnSession(ImportedPgnGame importedGame) {
     Objects.requireNonNull(importedGame, "importedGame must not be null");
     PgnGame game = importedGame.game();
     PositionSnapshot initialPosition =
         game.getStartingFen().map(moveService::snapshotFor).orElseGet(moveService::startingPosition);
-    GameSession session = registerSession(pgnService.title(game), GameSessionOrigin.PGN, initialPosition);
+    GameSession session = registerSession(game.displayTitle(), GameSessionOrigin.PGN, initialPosition);
     importVariations(session, importedGame.rootVariations());
     session.first();
     if (!importedGame.rootVariations().isEmpty()) {
       session.next();
     }
-    return summary(session, true);
+    sessionRepository.save(session);
+    return summary(session);
   }
 
-  /** Lists every currently open session for the in-memory session picker. */
+  /** Lists every stored session for a screen-specific session picker. */
   public List<GameSessionSummary> listSessions() {
-    return catalog.all().stream()
+    return sessionRepository.findAllByMostRecent().stream()
         .map(
             session ->
                 new GameSessionSummary(
                     session.id(),
-                    titleFor(session),
+                    session.title(),
                     session.origin(),
-                    catalog.active().map(GameSession::id).filter(session.id()::equals).isPresent(),
                     session.currentPosition()))
         .toList();
   }
 
-  /** Activates an existing session. */
-  public GameSessionSummary activate(SessionId sessionId) {
-    if (!catalog.activate(sessionId)) {
-      throw unknownSession(sessionId);
-    }
-    return summary(session(sessionId), true);
-  }
-
-  /** Returns the current active session summary. */
-  public GameSessionSummary activeSession() {
-    return catalog.active().map(session -> summary(session, true)).orElseThrow(() -> new NoSuchElementException("No active session"));
+  /** Returns one stored session as a UI-safe summary. */
+  public GameSessionSummary sessionSummary(SessionId sessionId) {
+    return summary(session(sessionId));
   }
 
   /** Returns the current renderable position for one open session. */
@@ -127,6 +116,7 @@ public final class GameSessionService {
     GameSession session = session(sessionId);
     MoveExecutionResult result = moveService.validate(session.currentPosition(), command);
     session.apply(result);
+    sessionRepository.save(session);
     return result;
   }
 
@@ -134,6 +124,7 @@ public final class GameSessionService {
   public PositionSnapshot previous(SessionId sessionId) {
     GameSession session = session(sessionId);
     session.previous();
+    sessionRepository.save(session);
     return session.currentPosition();
   }
 
@@ -141,6 +132,7 @@ public final class GameSessionService {
   public PositionSnapshot next(SessionId sessionId) {
     GameSession session = session(sessionId);
     session.next();
+    sessionRepository.save(session);
     return session.currentPosition();
   }
 
@@ -148,6 +140,7 @@ public final class GameSessionService {
   public PositionSnapshot first(SessionId sessionId) {
     GameSession session = session(sessionId);
     session.first();
+    sessionRepository.save(session);
     return session.currentPosition();
   }
 
@@ -157,19 +150,20 @@ public final class GameSessionService {
     if (!session.select(ply)) {
       throw new IllegalArgumentException("The ply does not belong to session " + sessionId.value());
     }
+    sessionRepository.save(session);
     return session.currentPosition();
   }
 
   private GameSessionSummary register(
       String title, GameSessionOrigin origin, PositionSnapshot initialPosition) {
-    return summary(registerSession(title, origin, initialPosition), true);
+    GameSession session = registerSession(title, origin, initialPosition);
+    sessionRepository.save(session);
+    return summary(session);
   }
 
   private GameSession registerSession(
       String title, GameSessionOrigin origin, PositionSnapshot initialPosition) {
-    GameSession session = new GameSession(SessionId.random(), origin, initialPosition);
-    catalog.addAndActivate(session, title);
-    return session;
+    return new GameSession(SessionId.random(), title, origin, initialPosition);
   }
 
   private void importVariations(GameSession session, List<ImportedPly> variations) {
@@ -181,23 +175,15 @@ public final class GameSessionService {
   }
 
   private GameSession session(SessionId sessionId) {
-    return catalog.find(sessionId).orElseThrow(() -> unknownSession(sessionId));
+    return sessionRepository.findById(sessionId).orElseThrow(() -> unknownSession(sessionId));
   }
 
   private NoSuchElementException unknownSession(SessionId sessionId) {
     return new NoSuchElementException("No open session with id " + sessionId.value());
   }
 
-  private GameSessionSummary summary(GameSession session, boolean active) {
-    return summary(session, active, titleFor(session));
-  }
-
-  private GameSessionSummary summary(GameSession session, boolean active, String title) {
+  private GameSessionSummary summary(GameSession session) {
     return new GameSessionSummary(
-        session.id(), title, session.origin(), active, session.currentPosition());
-  }
-
-  private String titleFor(GameSession session) {
-    return catalog.titleOf(session.id()).orElseThrow();
+        session.id(), session.title(), session.origin(), session.currentPosition());
   }
 }

@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.escontrela.lastmove.application.dto.GameSessionSummary;
-import com.escontrela.lastmove.application.session.InMemoryGameSessionCatalog;
+import com.escontrela.lastmove.infrastructure.session.InMemoryGameSessionRepository;
 import com.escontrela.lastmove.domain.common.PieceColor;
 import com.escontrela.lastmove.domain.common.Square;
 import com.escontrela.lastmove.domain.game.GameResult;
@@ -12,7 +12,6 @@ import com.escontrela.lastmove.domain.game.GameSessionOrigin;
 import com.escontrela.lastmove.domain.game.MoveCommand;
 import com.escontrela.lastmove.domain.notation.Fen;
 import com.escontrela.lastmove.domain.notation.PgnGame;
-import com.escontrela.lastmove.domain.service.PgnService;
 import com.escontrela.lastmove.infrastructure.chesspresso.ChesspressoMoveValidator;
 import java.util.Map;
 import java.util.Optional;
@@ -22,22 +21,17 @@ class GameSessionServiceTest {
 
   private final GameSessionService service =
       new GameSessionService(
-          new InMemoryGameSessionCatalog(),
-          new GameMoveService(new ChesspressoMoveValidator()),
-          new PgnService());
+          new InMemoryGameSessionRepository(), new GameMoveService(new ChesspressoMoveValidator()));
 
   @Test
-  void createsListsAndActivatesIndependentInitialAndFenSessions() {
+  void createsAndListsIndependentInitialAndFenSessions() {
     GameSessionSummary initial = service.createInitialSession();
     GameSessionSummary fen = service.createFenSession(Fen.of("8/8/8/8/8/8/8/K6k b - - 7 42"));
 
     assertEquals(GameSessionOrigin.INITIAL_POSITION, initial.origin());
     assertEquals(GameSessionOrigin.FEN, fen.origin());
     assertEquals(2, service.listSessions().size());
-    assertTrue(service.listSessions().stream().anyMatch(summary -> summary.sessionId().equals(fen.sessionId()) && summary.active()));
-
-    service.activate(initial.sessionId());
-    assertEquals(initial.sessionId(), service.activeSession().sessionId());
+    assertEquals(fen.sessionId(), service.listSessions().getFirst().sessionId());
     assertEquals(PieceColor.WHITE, service.currentPosition(initial.sessionId()).activeColor());
     assertEquals(PieceColor.BLACK, service.currentPosition(fen.sessionId()).activeColor());
   }

@@ -12,7 +12,6 @@ public record GameSessionSummary(
     SessionId sessionId,
     String title,
     GameSessionOrigin origin,
-    boolean active,
     PositionSnapshot currentPosition) {
 
   public GameSessionSummary {

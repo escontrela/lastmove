@@ -224,7 +224,6 @@ public class PgnAnalysisScreenController implements UiScreenController {
     dialog.showAndWait().ifPresent(
         sessionId -> {
           boardSessionId = sessionId;
-          gameSessionService.activate(sessionId);
           refreshWorkspace();
         });
   }
@@ -282,7 +281,6 @@ public class PgnAnalysisScreenController implements UiScreenController {
                 return;
               }
               boardSessionId = visibleSessions.get(selected.intValue()).sessionId();
-              gameSessionService.activate(boardSessionId);
               chessBoard.renderPosition(gameSessionService.currentPosition(boardSessionId));
               refreshMoveList();
               statusLabel.setText("Switched to " + visibleSessions.get(selected.intValue()).title());
@@ -293,7 +291,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
     chessBoard.renderPosition(gameSessionService.currentPosition(boardSessionId));
     refreshSessionList();
     refreshMoveList();
-    statusLabel.setText("Ready: " + gameSessionService.activeSession().title());
+    statusLabel.setText("Ready: " + gameSessionService.sessionSummary(boardSessionId).title());
   }
 
   private void refreshSessionList() {
@@ -302,7 +300,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
         .getItems()
         .setAll(
             visibleSessions.stream()
-                .map(summary -> (summary.active() ? "● " : "") + summary.title())
+                .map(summary -> (summary.sessionId().equals(boardSessionId) ? "● " : "") + summary.title())
                 .toList());
     for (int index = 0; index < visibleSessions.size(); index++) {
       if (visibleSessions.get(index).sessionId().equals(boardSessionId)) {
