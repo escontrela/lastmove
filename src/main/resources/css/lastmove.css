@@ -207,6 +207,32 @@
     -fx-line-spacing: 2px;
 }
 
+.text-input-modal-card { -fx-cursor: default; }
+
+.text-input-modal-field {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #aeb8c4;
+    -fx-border-width: 1px;
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-padding: 11px 12px;
+    -fx-font-size: 14px;
+    -fx-text-fill: #1f242a;
+    -fx-prompt-text-fill: #8894a0;
+}
+
+.text-input-modal-field:focused {
+    -fx-border-color: #1c69d4;
+    -fx-border-width: 2px;
+    -fx-padding: 10px 11px;
+}
+
+.text-input-modal-validation {
+    -fx-font-size: 12px;
+    -fx-font-weight: 600;
+    -fx-text-fill: #a72e3e;
+}
+
 .message-box-actions { -fx-padding: 8 0 0 0; }
 
 .button.message-box-close-button {
@@ -786,6 +812,14 @@
 }
 .night-mode .message-box-title { -fx-text-fill: #f1f3f5; }
 .night-mode .message-box-message { -fx-text-fill: #b8c5d3; }
+.night-mode .text-input-modal-field {
+    -fx-background-color: #151d26;
+    -fx-border-color: #5c6a79;
+    -fx-text-fill: #f1f3f5;
+    -fx-prompt-text-fill: #8e9ba8;
+}
+.night-mode .text-input-modal-field:focused { -fx-border-color: #6ba5f0; }
+.night-mode .text-input-modal-validation { -fx-text-fill: #ff9aa6; }
 .night-mode .message-box-cancel-button {
     -fx-background-color: #243243;
     -fx-border-color: #465465;

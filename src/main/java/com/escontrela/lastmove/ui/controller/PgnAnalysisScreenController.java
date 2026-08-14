@@ -10,6 +10,7 @@ import com.escontrela.lastmove.domain.common.PieceColor;
 import com.escontrela.lastmove.domain.game.MoveCommand;
 import com.escontrela.lastmove.domain.game.MoveExecutionResult;
 import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
+import com.escontrela.lastmove.ui.component.message.TextInputModal;
 import com.escontrela.lastmove.ui.component.notation.MoveNotationControl;
 import com.escontrela.lastmove.ui.component.notation.MoveNotationEntry;
 import com.escontrela.lastmove.ui.component.session.SessionSelectorControl;
@@ -29,7 +30,6 @@ import javafx.beans.value.ChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
-import javafx.scene.control.TextInputDialog;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.ContextMenuEvent;
@@ -57,6 +57,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
   @FXML private StackPane boardHost;
   @FXML private ImageView statusBrandLogo;
   @FXML private ContextualMenuPanel contextualMenuPanel;
+  @FXML private TextInputModal textInputModal;
   @FXML private SessionSelectorControl sessionSelector;
   @FXML private MoveNotationControl moveNotation;
   @FXML private Label statusLabel;
@@ -198,26 +199,13 @@ public class PgnAnalysisScreenController implements UiScreenController {
   /** Prompts for a FEN and starts a new session from the accepted position. */
   @FXML
   public void onFen() {
-    TextInputDialog dialog = new TextInputDialog();
-    dialog.setTitle("Start from FEN");
-    dialog.setHeaderText("Create a study from a FEN position");
-    dialog.setContentText("FEN:");
-    dialog
-        .showAndWait()
-        .filter(value -> !value.isBlank())
-        .ifPresent(
-            value -> {
-              try {
-                activeAnalysisSessionId =
-                    analysisSessionService
-                        .createFenSession(
-                            com.escontrela.lastmove.domain.notation.Fen.of(value.trim()))
-                        .sessionId();
-                refreshWorkspace();
-              } catch (IllegalArgumentException exception) {
-                statusLabel.setText(exception.getMessage());
-              }
-            });
+    configureTextInput(
+        "Start from FEN",
+        "Create a study from a Forsyth-Edwards Notation position.",
+        "Paste a FEN position",
+        "",
+        "Create study",
+        this::createFenSession);
   }
 
   /** Opens the LastMove session-management screen without creating a native modal window. */
@@ -308,7 +296,9 @@ public class PgnAnalysisScreenController implements UiScreenController {
   private void configureSessionContextMenu(AnalysisSessionSummary selected) {
     contextualMenuPanel.clearItems();
     contextualMenuPanel.addItem(
-        "Rename session…", "", event -> renameSession(selected.sessionId(), selected.title()));
+        "Rename session…",
+        "",
+        event -> showRenameSessionModal(selected.sessionId(), selected.title()));
     contextualMenuPanel.addItem(
         "Delete session", "", event -> deleteSession(selected.sessionId()));
     contextualMenuPanel.addSeparator();
@@ -330,22 +320,64 @@ public class PgnAnalysisScreenController implements UiScreenController {
     statusLabel.setText("Deleted session: " + deleted.title());
   }
 
-  private void renameSession(AnalysisSessionId sessionId, String currentTitle) {
-    TextInputDialog dialog = new TextInputDialog(currentTitle);
-    dialog.setTitle("Rename session");
-    dialog.setHeaderText("Choose a recognizable study title");
-    dialog.setContentText("Title:");
-    dialog
-        .showAndWait()
-        .map(String::trim)
-        .filter(value -> !value.isEmpty())
-        .ifPresent(
-            value -> {
-              AnalysisSessionSummary renamed =
-                  analysisSessionService.renameSession(sessionId, value);
-              refreshSessionList();
-              statusLabel.setText("Renamed session to " + renamed.title());
-            });
+  private void showRenameSessionModal(AnalysisSessionId sessionId, String currentTitle) {
+    configureTextInput(
+        "Rename session",
+        "Choose a recognizable title for this analysis session.",
+        "Session title",
+        currentTitle,
+        "Rename",
+        value -> applySessionRename(sessionId, value));
+  }
+
+  private void createFenSession(String rawFen) {
+    String fen = rawFen.trim();
+    if (fen.isEmpty()) {
+      textInputModal.setValidationMessage("Enter a FEN position.");
+      return;
+    }
+    try {
+      activeAnalysisSessionId =
+          analysisSessionService
+              .createFenSession(com.escontrela.lastmove.domain.notation.Fen.of(fen))
+              .sessionId();
+      textInputModal.hide();
+      refreshWorkspace();
+    } catch (IllegalArgumentException exception) {
+      String message = exception.getMessage();
+      textInputModal.setValidationMessage(
+          message == null || message.isBlank() ? "The FEN position is invalid." : message);
+    }
+  }
+
+  private void applySessionRename(AnalysisSessionId sessionId, String requestedTitle) {
+    String title = requestedTitle.trim();
+    if (title.isEmpty()) {
+      textInputModal.setValidationMessage("Enter a session title.");
+      return;
+    }
+    AnalysisSessionSummary renamed = analysisSessionService.renameSession(sessionId, title);
+    textInputModal.hide();
+    refreshSessionList();
+    statusLabel.setText("Renamed session to " + renamed.title());
+  }
+
+  private void configureTextInput(
+      String title,
+      String message,
+      String prompt,
+      String initialValue,
+      String acceptText,
+      java.util.function.Consumer<String> onAccepted) {
+    textInputModal.setTitle(title);
+    textInputModal.setMessage(message);
+    textInputModal.setPromptText(prompt);
+    textInputModal.setText(initialValue);
+    textInputModal.setAcceptText(acceptText);
+    textInputModal.setCancelText("Cancel");
+    textInputModal.setOnAccept(event -> onAccepted.accept(textInputModal.getText()));
+    textInputModal.setOnCancel(event -> statusLabel.setText(title + " cancelled"));
+    textInputModal.show();
   }
 
   private void configureMoveNotation() {

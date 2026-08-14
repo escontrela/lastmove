@@ -4,6 +4,7 @@ import com.escontrela.lastmove.application.dto.AnalysisSessionSummary;
 import com.escontrela.lastmove.application.service.AnalysisSessionService;
 import com.escontrela.lastmove.domain.analysis.AnalysisOrigin;
 import com.escontrela.lastmove.domain.analysis.AnalysisSessionId;
+import com.escontrela.lastmove.ui.component.message.TextInputModal;
 import com.escontrela.lastmove.ui.event.OpenSessionManagementEvent;
 import com.escontrela.lastmove.ui.event.ReturnToAnalysisSessionEvent;
 import com.escontrela.lastmove.ui.event.UiEventBus;
@@ -21,13 +22,12 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
-import javafx.scene.control.TextInputDialog;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.context.event.EventListener;
@@ -47,7 +47,8 @@ public final class AnalysisSessionsScreenController implements UiScreenControlle
   private static final String LIGHT_LOGO_RESOURCE = "/images/lastmove-chess-logo.png";
   private static final String DARK_LOGO_RESOURCE = "/images/lastmove-chess-logo-dark.png";
 
-  @FXML private BorderPane root;
+  @FXML private StackPane root;
+  @FXML private TextInputModal textInputModal;
   @FXML private ListView<AnalysisSessionSummary> sessionList;
   @FXML private Label emptyStateLabel;
   @FXML private Label sessionCountLabel;
@@ -104,22 +105,29 @@ public final class AnalysisSessionsScreenController implements UiScreenControlle
   }
 
   private void renameSession(AnalysisSessionSummary session) {
-    TextInputDialog dialog = new TextInputDialog(session.title());
-    dialog.setTitle("Rename session");
-    dialog.setHeaderText("Choose a recognizable study title");
-    dialog.setContentText("Title:");
-    dialog
-        .showAndWait()
-        .map(String::trim)
-        .filter(value -> !value.isEmpty())
-        .ifPresent(
-            value -> {
-              AnalysisSessionSummary renamed =
-                  analysisSessionService.renameSession(session.sessionId(), value);
-              returnStatusMessage = "Renamed session to " + renamed.title();
-              statusLabel.setText(returnStatusMessage);
-              refreshSessions();
-            });
+    textInputModal.setTitle("Rename session");
+    textInputModal.setMessage("Choose a recognizable title for this analysis session.");
+    textInputModal.setPromptText("Session title");
+    textInputModal.setText(session.title());
+    textInputModal.setAcceptText("Rename");
+    textInputModal.setCancelText("Cancel");
+    textInputModal.setOnAccept(
+        event -> applySessionRename(session.sessionId(), textInputModal.getText()));
+    textInputModal.setOnCancel(event -> statusLabel.setText("Rename cancelled"));
+    textInputModal.show();
+  }
+
+  private void applySessionRename(AnalysisSessionId sessionId, String requestedTitle) {
+    String title = requestedTitle.trim();
+    if (title.isEmpty()) {
+      textInputModal.setValidationMessage("Enter a session title.");
+      return;
+    }
+    AnalysisSessionSummary renamed = analysisSessionService.renameSession(sessionId, title);
+    textInputModal.hide();
+    returnStatusMessage = "Renamed session to " + renamed.title();
+    statusLabel.setText(returnStatusMessage);
+    refreshSessions();
   }
 
   private void deleteSession(AnalysisSessionSummary session) {
