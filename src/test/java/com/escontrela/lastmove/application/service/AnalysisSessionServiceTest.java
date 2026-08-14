@@ -18,6 +18,7 @@ import com.escontrela.lastmove.domain.game.Player;
 import com.escontrela.lastmove.domain.game.TimeControl;
 import com.escontrela.lastmove.domain.notation.Fen;
 import com.escontrela.lastmove.domain.notation.PgnGame;
+import com.escontrela.lastmove.domain.service.FenService;
 import com.escontrela.lastmove.infrastructure.chesspresso.ChesspressoRulesEngine;
 import com.escontrela.lastmove.infrastructure.chesspresso.ChesspressoPgnReader;
 import com.escontrela.lastmove.infrastructure.session.InMemoryAnalysisSessionRepository;
@@ -32,7 +33,8 @@ class AnalysisSessionServiceTest {
       new AnalysisSessionService(
           new InMemoryAnalysisSessionRepository(),
           new ChessGameFactory(new ChesspressoRulesEngine()),
-          new AnalysisSessionFactory());
+          new AnalysisSessionFactory(),
+          new FenService());
 
   @Test
   void createsAndListsIndependentInitialAndFenSessions() {
@@ -132,6 +134,9 @@ class AnalysisSessionServiceTest {
             .attemptMove(session.sessionId(), move("e2", "e4"))
             .accepted());
     assertEquals(PieceColor.BLACK, service.currentPosition(session.sessionId()).activeColor());
+    assertEquals(
+        "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+        service.currentFen(session.sessionId()));
 
     service.previous(session.sessionId());
     assertEquals(PieceColor.WHITE, service.currentPosition(session.sessionId()).activeColor());

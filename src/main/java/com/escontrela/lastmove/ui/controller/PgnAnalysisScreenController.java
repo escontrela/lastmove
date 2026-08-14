@@ -23,6 +23,7 @@ import com.escontrela.lastmove.ui.screen.UiFlowManager;
 import com.escontrela.lastmove.ui.screen.UiScreenController;
 import com.escontrela.lastmove.ui.screen.UiScreenId;
 import com.escontrela.lastmove.ui.service.ChessSoundService;
+import com.escontrela.lastmove.ui.service.ClipboardService;
 import com.escontrela.lastmove.ui.support.FileChooserFactory;
 import java.util.List;
 import java.util.Objects;
@@ -69,6 +70,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
   private final UiFlowManager uiFlowManager;
   private final UiEventBus uiEventBus;
   private final ChessSoundService chessSoundService;
+  private final ClipboardService clipboardService;
   private final ListChangeListener<String> themeStyleListener = change -> updateStatusBrandLogo();
 
   /** Identity of the session currently rendered by this screen. */
@@ -83,12 +85,14 @@ public class PgnAnalysisScreenController implements UiScreenController {
       AnalysisSessionService analysisSessionService,
       FileChooserFactory fileChooserFactory,
       ChessSoundService chessSoundService,
+      ClipboardService clipboardService,
       UiEventBus uiEventBus,
       @Lazy UiFlowManager uiFlowManager) {
     this.gameLoadService = gameLoadService;
     this.analysisSessionService = analysisSessionService;
     this.fileChooserFactory = fileChooserFactory;
     this.chessSoundService = chessSoundService;
+    this.clipboardService = clipboardService;
     this.uiEventBus = uiEventBus;
     this.uiFlowManager = uiFlowManager;
   }
@@ -234,6 +238,17 @@ public class PgnAnalysisScreenController implements UiScreenController {
     refreshMoveList();
   }
 
+  /** Copies the complete FEN represented by the board's active analysis position. */
+  @FXML
+  public void onCopyFen() {
+    String fen = analysisSessionService.currentFen(activeAnalysisSessionId);
+    if (clipboardService.copyText(fen)) {
+      statusLabel.setText("FEN copied to clipboard");
+    } else {
+      statusLabel.setText("Unable to copy FEN to clipboard");
+    }
+  }
+
   @FXML
   public void backToMain() {
     uiFlowManager.show(UiScreenId.MAIN);
@@ -258,6 +273,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
     contextualMenuPanel.addItem("Initial position", "", event -> onReset());
     contextualMenuPanel.addItem("Start from FEN…", "", event -> onFen());
     contextualMenuPanel.addItem("Open sessions…", "", event -> onShowSessions());
+    contextualMenuPanel.addItem("Copy position as FEN", "", event -> onCopyFen());
     contextualMenuPanel.addSeparator();
     contextualMenuPanel.addItem("Previous move", "←", event -> onPreviousMove());
     contextualMenuPanel.addItem("Next move", "→", event -> onNextMove());

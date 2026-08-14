@@ -22,6 +22,7 @@ import com.escontrela.lastmove.domain.game.Ply;
 import com.escontrela.lastmove.domain.game.PositionSnapshot;
 import com.escontrela.lastmove.domain.notation.Fen;
 import com.escontrela.lastmove.domain.notation.PgnGame;
+import com.escontrela.lastmove.domain.service.FenService;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
@@ -41,16 +42,19 @@ public final class AnalysisSessionService {
   private final AnalysisSessionRepository sessionRepository;
   private final ChessGameFactory gameFactory;
   private final AnalysisSessionFactory analysisSessionFactory;
+  private final FenService fenService;
 
   public AnalysisSessionService(
       AnalysisSessionRepository sessionRepository,
       ChessGameFactory gameFactory,
-      AnalysisSessionFactory analysisSessionFactory) {
+      AnalysisSessionFactory analysisSessionFactory,
+      FenService fenService) {
     this.sessionRepository =
         Objects.requireNonNull(sessionRepository, "sessionRepository must not be null");
     this.gameFactory = Objects.requireNonNull(gameFactory, "gameFactory must not be null");
     this.analysisSessionFactory =
         Objects.requireNonNull(analysisSessionFactory, "analysisSessionFactory must not be null");
+    this.fenService = Objects.requireNonNull(fenService, "fenService must not be null");
   }
 
   /** Creates an analysis session at the standard chess initial position. */
@@ -144,6 +148,11 @@ public final class AnalysisSessionService {
   /** Returns the position currently selected by the session cursor. */
   public PositionSnapshot currentPosition(AnalysisSessionId sessionId) {
     return session(sessionId).currentPosition();
+  }
+
+  /** Returns the selected session position encoded as complete FEN text for export workflows. */
+  public String currentFen(AnalysisSessionId sessionId) {
+    return fenService.fromSnapshot(session(sessionId).currentPosition()).getValue();
   }
 
   /** Returns the rules state derived from the session's current position. */
