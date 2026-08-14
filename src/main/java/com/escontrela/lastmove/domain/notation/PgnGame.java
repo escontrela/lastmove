@@ -64,4 +64,10 @@ public class PgnGame {
     public Optional<String> getDate() {
         return getHeader("Date");
     }
+
+    /** Returns a concise user-facing title derived from this PGN game's own headers. */
+    public String displayTitle() {
+        return getWhite().orElse("?") + " vs. " + getBlack().orElse("?")
+                + " – " + getEvent().orElse("?");
+    }
 }

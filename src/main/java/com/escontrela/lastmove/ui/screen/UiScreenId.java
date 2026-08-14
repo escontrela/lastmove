@@ -4,6 +4,7 @@ package com.escontrela.lastmove.ui.screen;
 public enum UiScreenId {
     MAIN("/fxml/main-window.fxml", 1280.0, 800.0),
     PGN_ANALYSIS("/fxml/pgn-analysis.fxml", 1280.0, 800.0),
+    ANALYSIS_SESSIONS("/fxml/analysis-sessions.fxml", 1280.0, 800.0),
     SETUP("/fxml/setup.fxml", 1100.0, 720.0);
 
     private final String fxmlPath;

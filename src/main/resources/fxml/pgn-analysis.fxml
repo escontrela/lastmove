@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import com.escontrela.lastmove.ui.component.board.ChessBoardControl?>
-<?import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton?>
 <?import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel?>
+<?import com.escontrela.lastmove.ui.component.message.TextInputModal?>
+<?import com.escontrela.lastmove.ui.component.notation.MoveNotationControl?>
+<?import com.escontrela.lastmove.ui.component.session.SessionSelectorControl?>
+<?import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton?>
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
-<?import javafx.scene.control.ListView?>
 <?import javafx.scene.image.Image?>
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.BorderPane?>
@@ -15,7 +16,7 @@
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<StackPane fx:id="root" onContextMenuRequested="#showContextMenu" styleClass="app-shell" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.escontrela.lastmove.ui.controller.PgnAnalysisScreenController">
+<StackPane fx:id="root" onContextMenuRequested="#showContextMenu" styleClass="app-shell" stylesheets="@../css/lastmove.css" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.escontrela.lastmove.ui.controller.PgnAnalysisScreenController">
 <BorderPane styleClass="app-shell">
     <top>
         <HBox alignment="CENTER_LEFT" spacing="16.0" styleClass="workspace-header">
@@ -26,8 +27,8 @@
             </VBox>
             <Region HBox.hgrow="ALWAYS" />
             <HBox alignment="CENTER_RIGHT" spacing="8.0">
-                <ToolbarIconButton accessibleText="Back to main window" lightIconResource="/images/back_35dp_000000.png" darkIconResource="/images/back_35dp_FFFFFF.png" tooltipText="Back" onAction="#backToMain" />
-                <ToolbarIconButton accessibleText="Open setup" lightIconResource="/images/settings_35dp_000000.png" darkIconResource="/images/settings_35dp_FFFFFF.png" tooltipText="Setup" onAction="#openSetup" />
+                <ToolbarIconButton accessibleText="Back to main window" darkIconResource="/images/back_35dp_FFFFFF.png" lightIconResource="/images/back_35dp_000000.png" onAction="#backToMain" tooltipText="Back" />
+                <ToolbarIconButton accessibleText="Open setup" darkIconResource="/images/settings_35dp_FFFFFF.png" lightIconResource="/images/settings_35dp_000000.png" onAction="#openSetup" tooltipText="Setup" />
             </HBox>
         </HBox>
     </top>
@@ -39,17 +40,18 @@
                 <Label styleClass="eyebrow-label" text="Game source" />
                 <Label styleClass="card-title" text="Start a PGN study" />
                 <Label styleClass="card-copy" text="Open a portable game notation file to prepare the replay workspace." wrapText="true" />
-                <Button mnemonicParsing="false" onAction="#onOpenPgn" styleClass="primary-button" text="Open PGN" />
+                <HBox alignment="CENTER_LEFT" spacing="8.0">
+                    <ToolbarIconButton accessibleText="Open PGN file" darkIconResource="/images/file_open_35dp_FFFFFF.png" lightIconResource="/images/file_open_35dp_000000.png" onAction="#onOpenPgn" tooltipText="Open PGN" />
+                    <ToolbarIconButton accessibleText="Start initial position" darkIconResource="/images/clear_35dp_FFFFFF.png" lightIconResource="/images/clear_35dp_000000.png" onAction="#onReset" tooltipText="Start initial position" />
+                    <ToolbarIconButton accessibleText="Start from FEN" darkIconResource="/images/code_xml_35dp_FFFFFF.png" lightIconResource="/images/code_xml_35dp_000000.png" onAction="#onFen" tooltipText="Start from FEN" />
+                    <ToolbarIconButton accessibleText="Open sessions" darkIconResource="/images/history_35dp_FFFFFF.png" lightIconResource="/images/history_35dp_000000.png" onAction="#onShowSessions" tooltipText="Open sessions" />
+                </HBox>
             </VBox>
             <VBox spacing="12.0" styleClass="rail-card" VBox.vgrow="ALWAYS">
                 <padding><Insets bottom="20.0" left="20.0" right="20.0" top="20.0" /></padding>
-                <Label styleClass="eyebrow-label" text="Notation" />
-                <Label styleClass="card-title" text="Moves" />
-                <ListView fx:id="moveListView" styleClass="move-list" VBox.vgrow="ALWAYS" />
-                <HBox alignment="CENTER" spacing="8.0" styleClass="move-navigation">
-                    <ToolbarIconButton accessibleText="Previous move" lightIconResource="/images/previous_35dp_000000.png" darkIconResource="/images/previous_35dp_FFFFFF.png" tooltipText="Previous move" onAction="#onPreviousMove" />
-                    <ToolbarIconButton accessibleText="Next move" lightIconResource="/images/next_35dp_000000.png" darkIconResource="/images/next_35dp_FFFFFF.png" tooltipText="Next move" onAction="#onNextMove" />
-                </HBox>
+                <Label styleClass="eyebrow-label" text="Open sessions" />
+                <Label styleClass="card-title" text="Sessions" />
+                <SessionSelectorControl fx:id="sessionSelector" VBox.vgrow="ALWAYS" />
             </VBox>
         </VBox>
     </left>
@@ -64,15 +66,20 @@
                 <VBox spacing="12.0" styleClass="rail-card board-side-card">
                     <padding><Insets bottom="20.0" left="20.0" right="20.0" top="20.0" /></padding>
                     <Label styleClass="eyebrow-label" text="Position" />
-                    <Label styleClass="card-title" text="Board controls" />
-                    <Label styleClass="card-copy" text="Navigation and board options will live here." wrapText="true" />
+                    <Label styleClass="card-title" text="Navigation" />
+                    <HBox alignment="CENTER_LEFT" spacing="8.0" styleClass="move-navigation">
+                        <ToolbarIconButton accessibleText="First move" darkIconResource="/images/first_page_35dp_FFFFFF.png" lightIconResource="/images/first_page_35dp_000000.png" onAction="#onFirstMove" tooltipText="First move" />
+                        <ToolbarIconButton accessibleText="Previous move" darkIconResource="/images/arrow_left_alt_35dp_FFFFFF.png" lightIconResource="/images/arrow_left_alt_35dp_000000.png" onAction="#onPreviousMove" tooltipText="Previous move" />
+                        <ToolbarIconButton accessibleText="Next move" darkIconResource="/images/arrow_right_alt_35dp_FFFFFF.png" lightIconResource="/images/arrow_right_alt_35dp_000000.png" onAction="#onNextMove" tooltipText="Next move" />
+                        <ToolbarIconButton accessibleText="Last move" darkIconResource="/images/last_page_35dp_FFFFFF.png" lightIconResource="/images/last_page_35dp_000000.png" onAction="#onLastMove" tooltipText="Last move" />
+                    </HBox>
+                    <ToolbarIconButton accessibleText="Copy position as FEN" darkIconResource="/images/copy_35dp_FFFFFF.png" lightIconResource="/images/copy_35dp_000000.png" onAction="#onCopyFen" tooltipText="Copy position as FEN" />
                 </VBox>
 
                 <VBox spacing="12.0" styleClass="rail-card board-side-card" VBox.vgrow="ALWAYS">
                     <padding><Insets bottom="20.0" left="20.0" right="20.0" top="20.0" /></padding>
-                    <Label styleClass="eyebrow-label" text="Status" />
-                    <Label styleClass="card-title" text="Move details" />
-                    <Label styleClass="card-copy" text="Selected square, last move, legal move feedback, and future board actions can be shown here." wrapText="true" />
+                    <Label styleClass="card-title" text="Moves" />
+                    <MoveNotationControl fx:id="moveNotation" VBox.vgrow="ALWAYS" />
                 </VBox>
             </VBox>
         </HBox>
@@ -89,4 +96,5 @@
     </bottom>
 </BorderPane>
     <ContextualMenuPanel fx:id="contextualMenuPanel" />
+    <TextInputModal fx:id="textInputModal" />
 </StackPane>

@@ -7,14 +7,24 @@ import com.escontrela.lastmove.domain.game.PositionSnapshot;
 import com.escontrela.lastmove.ui.model.BoardMoveInput;
 import com.escontrela.lastmove.ui.service.ChessSound;
 import javafx.beans.value.ChangeListener;
+import javafx.collections.ListChangeListener;
+import javafx.event.EventHandler;
+import javafx.scene.Group;
 import javafx.scene.control.SkinBase;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.ContextMenuEvent;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.RowConstraints;
 import javafx.scene.layout.StackPane;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Line;
+import javafx.scene.shape.Polygon;
+import javafx.scene.shape.StrokeLineCap;
 
 /**
  * Default skin for {@link ChessBoardControl}.
@@ -25,6 +35,7 @@ import javafx.scene.layout.StackPane;
 public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
 
   private final GridPane grid = new GridPane();
+  private final Pane arrowOverlay = new Pane();
   private final StackPane dragOverlay = new StackPane(); // Overlay para pieza flotante durante drag
   private final ImageView draggedPieceView = new ImageView(); // Pieza que sigue al cursor
 
@@ -40,8 +51,15 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
   private Square dragOriginSquare = null;
   private Image draggedPiece = null; // La imagen de la pieza durante el drag
   private Square hoveredDragSquare = null; // Casilla actual bajo el cursor durante drag
+  private Square arrowOriginSquare = null;
+  private BoardArrow previewArrow = null;
+  private final ListChangeListener<BoardArrow> arrowsListener = change -> renderArrows();
+  private final EventHandler<ContextMenuEvent> contextMenuFilter = event -> event.consume();
   private final ChangeListener<PositionSnapshot> positionListener =
       (observable, oldPosition, newPosition) -> {
+        if (oldPosition != null && !oldPosition.equals(newPosition)) {
+          getSkinnable().clearArrows();
+        }
         renderPosition(newPosition);
         playMoveSoundIfNeeded(oldPosition, newPosition);
       };
@@ -52,6 +70,8 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     configureGrid();
     buildGrid(control); // Pasó 1: Construcción estructural del Grid e interacción pura
     control.positionProperty().addListener(positionListener);
+    control.observableArrows().addListener(arrowsListener);
+    control.addEventFilter(ContextMenuEvent.CONTEXT_MENU_REQUESTED, contextMenuFilter);
     if (control.getPosition() != null) {
       renderPosition(control.getPosition());
     }
@@ -65,8 +85,13 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     draggedPieceView.setVisible(false);
     dragOverlay.getChildren().add(draggedPieceView);
 
-    // Agregar grid y overlay a la piel
+    arrowOverlay.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+    arrowOverlay.setMouseTransparent(true);
+    arrowOverlay.setSnapToPixel(true);
+
+    // Arrows sit above squares and pieces, while the drag feedback remains the topmost overlay.
     getChildren().add(grid);
+    getChildren().add(arrowOverlay);
     getChildren().add(dragOverlay);
   }
 
@@ -113,16 +138,94 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
         final Square currentSquare = Square.of(file, rank);
 
         // Soporte para click-click
-        square.setOnMouseClicked(event -> handleSquareClick(control, currentSquare));
+        square.setOnMouseClicked(
+            event -> {
+              if (event.getButton() == MouseButton.PRIMARY) {
+                handleSquareClick(control, currentSquare);
+              }
+            });
 
         grid.add(square, file, ChessConstants.RANKS - 1 - rank);
       }
     }
 
     // Manejadores de drag-drop a nivel de grid para permitir arrastres entre casillas
-    grid.setOnMousePressed(event -> handleGridMousePressed(control, event));
-    grid.setOnMouseDragged(this::handleGridMouseDragged);
-    grid.setOnMouseReleased(event -> handleGridMouseReleased(control, event));
+    grid.setOnMousePressed(
+        event -> {
+          if (event.getButton() == MouseButton.SECONDARY) {
+            handleArrowPressed(control, event);
+          } else if (event.getButton() == MouseButton.PRIMARY) {
+            handleGridMousePressed(control, event);
+          }
+        });
+    grid.setOnMouseDragged(
+        event -> {
+          if (event.isSecondaryButtonDown()) {
+            handleArrowDragged(event);
+          } else if (event.isPrimaryButtonDown()) {
+            handleGridMouseDragged(event);
+          }
+        });
+    grid.setOnMouseReleased(
+        event -> {
+          if (event.getButton() == MouseButton.SECONDARY) {
+            handleArrowReleased(control, event);
+          } else if (event.getButton() == MouseButton.PRIMARY) {
+            handleGridMouseReleased(control, event);
+          }
+        });
+    grid.setOnMouseClicked(
+        event -> {
+          if (event.getButton() == MouseButton.SECONDARY && event.getClickCount() >= 2) {
+            arrowOriginSquare = null;
+            previewArrow = null;
+            control.clearArrows();
+            renderArrows();
+            event.consume();
+          }
+        });
+  }
+
+  private void handleArrowPressed(ChessBoardControl control, MouseEvent event) {
+    if (event.getClickCount() >= 2) {
+      arrowOriginSquare = null;
+      previewArrow = null;
+      control.clearArrows();
+      renderArrows();
+      event.consume();
+      return;
+    }
+    arrowOriginSquare = squareAtCoordinate(event.getX(), event.getY());
+    previewArrow = null;
+    event.consume();
+  }
+
+  private void handleArrowDragged(MouseEvent event) {
+    if (arrowOriginSquare == null) {
+      return;
+    }
+    Square target = squareAtCoordinate(event.getX(), event.getY());
+    previewArrow =
+        target == null || target.equals(arrowOriginSquare)
+            ? null
+            : new BoardArrow(arrowOriginSquare, target);
+    renderArrows();
+    event.consume();
+  }
+
+  private void handleArrowReleased(ChessBoardControl control, MouseEvent event) {
+    if (arrowOriginSquare == null) {
+      event.consume();
+      return;
+    }
+    Square target = squareAtCoordinate(event.getX(), event.getY());
+    if (target != null && !target.equals(arrowOriginSquare)) {
+      control.toggleArrow(new BoardArrow(arrowOriginSquare, target));
+    }
+    arrowOriginSquare = null;
+    previewArrow = null;
+    renderArrows();
+    event.consume();
   }
 
   /**
@@ -309,7 +412,7 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
 
   /**
    * Renders the board from an engine-independent position snapshot. This is called by the
-   * controller after a move has been applied by GameMoveService.
+   * controller after a move has been applied by the analysis-session use case.
    *
    * @param snapshot the complete board state to render.
    */
@@ -349,9 +452,61 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     getSkinnable().playSound(sound);
   }
 
+  private void renderArrows() {
+    arrowOverlay.getChildren().clear();
+    if (arrowOverlay.getWidth() <= 0 || arrowOverlay.getHeight() <= 0) {
+      return;
+    }
+    for (BoardArrow arrow : getSkinnable().getArrows()) {
+      arrowOverlay.getChildren().add(createArrowGraphic(arrow, 0.74));
+    }
+    if (previewArrow != null) {
+      arrowOverlay.getChildren().add(createArrowGraphic(previewArrow, 0.48));
+    }
+  }
+
+  private Group createArrowGraphic(BoardArrow arrow, double opacity) {
+    double squareSize = arrowOverlay.getWidth() / ChessConstants.FILES;
+    double startX = (arrow.from().getFile() + 0.5) * squareSize;
+    double startY = (ChessConstants.RANKS - arrow.from().getRank() - 0.5) * squareSize;
+    double targetX = (arrow.to().getFile() + 0.5) * squareSize;
+    double targetY = (ChessConstants.RANKS - arrow.to().getRank() - 0.5) * squareSize;
+    double deltaX = targetX - startX;
+    double deltaY = targetY - startY;
+    double distance = Math.hypot(deltaX, deltaY);
+    double unitX = deltaX / distance;
+    double unitY = deltaY / distance;
+    double headLength = squareSize * 0.34;
+    double headHalfWidth = squareSize * 0.22;
+    double baseX = targetX - unitX * headLength;
+    double baseY = targetY - unitY * headLength;
+
+    Color color = Color.web("#4f9b3d", opacity);
+    Line shaft = new Line(startX, startY, baseX + unitX * squareSize * 0.08, baseY + unitY * squareSize * 0.08);
+    shaft.setStroke(color);
+    shaft.setStrokeWidth(squareSize * 0.13);
+    shaft.setStrokeLineCap(StrokeLineCap.ROUND);
+
+    double perpendicularX = -unitY;
+    double perpendicularY = unitX;
+    Polygon head = new Polygon();
+    head.getPoints()
+        .addAll(
+            targetX,
+            targetY,
+            baseX + perpendicularX * headHalfWidth,
+            baseY + perpendicularY * headHalfWidth,
+            baseX - perpendicularX * headHalfWidth,
+            baseY - perpendicularY * headHalfWidth);
+    head.setFill(color);
+    return new Group(shaft, head);
+  }
+
   @Override
   public void dispose() {
     getSkinnable().positionProperty().removeListener(positionListener);
+    getSkinnable().observableArrows().removeListener(arrowsListener);
+    getSkinnable().removeEventFilter(ContextMenuEvent.CONTEXT_MENU_REQUESTED, contextMenuFilter);
     super.dispose();
   }
 
@@ -373,7 +528,9 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     applySquareSizes(side / ChessConstants.FILES);
 
     grid.resizeRelocate(x, y, side, side);
+    arrowOverlay.resizeRelocate(x, y, side, side);
     dragOverlay.resizeRelocate(x, y, side, side);
+    renderArrows();
   }
 
   private void applySquareSizes(double squareSize) {

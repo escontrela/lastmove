@@ -13,7 +13,11 @@ public final class SanMove {
     private final String value;
 
     private SanMove(String value) {
-        this.value = Objects.requireNonNull(value, "SAN value must not be null");
+        String required = Objects.requireNonNull(value, "SAN value must not be null").trim();
+        if (required.isEmpty()) {
+            throw new IllegalArgumentException("SAN value must not be blank");
+        }
+        this.value = required;
     }
 
     /** Creates a {@link SanMove} from a raw SAN string. */

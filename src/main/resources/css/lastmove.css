@@ -47,7 +47,7 @@
 
 .hero-support { -fx-max-width: 640px; }
 
-.home-content, .setup-content, .analysis-workspace {
+.home-content, .setup-content, .analysis-workspace, .sessions-workspace {
     -fx-background-color: #f7f7f7;
 }
 
@@ -205,6 +205,32 @@
     -fx-font-size: 14px;
     -fx-text-fill: #5f6c79;
     -fx-line-spacing: 2px;
+}
+
+.text-input-modal-card { -fx-cursor: default; }
+
+.text-input-modal-field {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #aeb8c4;
+    -fx-border-width: 1px;
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-padding: 11px 12px;
+    -fx-font-size: 14px;
+    -fx-text-fill: #1f242a;
+    -fx-prompt-text-fill: #8894a0;
+}
+
+.text-input-modal-field:focused {
+    -fx-border-color: #1c69d4;
+    -fx-border-width: 2px;
+    -fx-padding: 10px 11px;
+}
+
+.text-input-modal-validation {
+    -fx-font-size: 12px;
+    -fx-font-weight: 600;
+    -fx-text-fill: #a72e3e;
 }
 
 .message-box-actions { -fx-padding: 8 0 0 0; }
@@ -490,6 +516,256 @@
 .move-list .list-cell { -fx-background-color: #ffffff; -fx-text-fill: #262626; }
 .move-list .list-cell:filled:hover { -fx-background-color: #f7f7f7; }
 
+.session-selector,
+.session-selector-list,
+.session-selector-list .virtual-flow,
+.session-selector-list .viewport {
+    -fx-background-color: #ffffff;
+}
+
+.session-selector {
+    -fx-border-color: #e6e6e6;
+    -fx-border-width: 1px;
+}
+
+.session-selector-list .session-selector-cell {
+    -fx-background-color: #ffffff;
+    -fx-padding: 0;
+}
+
+.session-selector-row {
+    -fx-min-height: 46px;
+    -fx-pref-height: 46px;
+    -fx-padding: 0 12px;
+    -fx-alignment: center-left;
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 0;
+    -fx-border-color: transparent transparent #eeeeee transparent;
+    -fx-border-width: 0 0 1px 0;
+    -fx-cursor: hand;
+}
+
+.session-selector-row:hover {
+    -fx-background-color: #edf4fc;
+}
+
+.session-selector-row:focused {
+    -fx-border-color: #7aa9e6;
+    -fx-border-width: 2px;
+}
+
+.session-selector-row:current {
+    -fx-background-color: #e5f0fc;
+    -fx-border-color: transparent transparent transparent #1c69d4;
+    -fx-border-width: 0 0 0 4px;
+}
+
+.session-active-marker {
+    -fx-min-width: 20px;
+    -fx-pref-width: 20px;
+    -fx-max-width: 20px;
+    -fx-alignment: center;
+    -fx-font-size: 15px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #1c69d4;
+}
+
+.session-title {
+    -fx-font-size: 15px;
+    -fx-text-fill: #262626;
+    -fx-text-overrun: ellipsis;
+}
+
+/* Dedicated session-management screen. */
+.sessions-section-title {
+    -fx-font-size: 24px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #262626;
+}
+
+.sessions-section-copy {
+    -fx-font-size: 14px;
+    -fx-text-fill: #6a7683;
+}
+
+.session-management-list,
+.session-management-list .virtual-flow,
+.session-management-list .viewport {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #d8dde3;
+    -fx-border-width: 1px;
+}
+
+.session-management-list .session-management-cell {
+    -fx-background-color: #ffffff;
+    -fx-padding: 0;
+}
+
+.session-management-row {
+    -fx-min-height: 76px;
+    -fx-pref-height: 76px;
+    -fx-padding: 0 20px;
+    -fx-background-color: #ffffff;
+    -fx-border-color: transparent transparent #e7ebef transparent;
+    -fx-border-width: 0 0 1px 0;
+}
+
+.session-management-row:hover { -fx-background-color: #f5f8fc; }
+
+.session-management-row:current {
+    -fx-background-color: #edf4fc;
+    -fx-border-color: transparent transparent transparent #1c69d4;
+    -fx-border-width: 0 0 0 4px;
+}
+
+.session-management-marker {
+    -fx-min-width: 24px;
+    -fx-font-size: 17px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #1c69d4;
+}
+
+.session-management-title {
+    -fx-font-size: 16px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #262626;
+}
+
+.session-management-origin {
+    -fx-font-size: 12px;
+    -fx-text-fill: #6a7683;
+}
+
+.session-action-button {
+    -fx-background-radius: 5px;
+    -fx-border-radius: 5px;
+    -fx-border-width: 1px;
+    -fx-padding: 8px 14px;
+    -fx-font-weight: 600;
+    -fx-cursor: hand;
+}
+
+.session-order-button {
+    -fx-min-width: 34px;
+    -fx-pref-width: 34px;
+    -fx-padding: 8px 0;
+    -fx-background-color: #ffffff;
+    -fx-border-color: #aeb8c4;
+    -fx-text-fill: #262626;
+}
+
+.session-order-button:hover {
+    -fx-background-color: #eef3f8;
+    -fx-border-color: #1c69d4;
+}
+
+.session-order-button:disabled {
+    -fx-opacity: 0.38;
+}
+
+.session-open-button {
+    -fx-background-color: #1c69d4;
+    -fx-border-color: #1c69d4;
+    -fx-text-fill: #ffffff;
+}
+
+.session-open-button:hover { -fx-background-color: #0653b6; }
+
+.session-rename-button {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #aeb8c4;
+    -fx-text-fill: #262626;
+}
+
+.session-rename-button:hover { -fx-background-color: #eef3f8; }
+
+.session-delete-button {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #d1495b;
+    -fx-text-fill: #a72e3e;
+}
+
+.session-delete-button:hover {
+    -fx-background-color: #fff1f3;
+    -fx-border-color: #a72e3e;
+}
+
+.session-empty-state {
+    -fx-font-size: 16px;
+    -fx-text-fill: #6a7683;
+}
+
+/* Reusable two-column chess notation. One virtualized row represents a full move. */
+.move-notation {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #e6e6e6;
+    -fx-border-width: 1px;
+}
+
+.move-notation-list,
+.move-notation-list .virtual-flow,
+.move-notation-list .viewport {
+    -fx-background-color: #ffffff;
+}
+
+.move-notation-list .move-notation-cell {
+    -fx-background-color: #ffffff;
+    -fx-padding: 0;
+}
+
+.move-notation-row {
+    -fx-min-height: 44px;
+    -fx-pref-height: 44px;
+    -fx-border-color: transparent transparent #eeeeee transparent;
+    -fx-border-width: 0 0 1px 0;
+}
+
+.move-notation-row .move-number {
+    -fx-min-width: 44px;
+    -fx-pref-width: 44px;
+    -fx-max-width: 44px;
+    -fx-alignment: center;
+    -fx-font-size: 14px;
+    -fx-text-fill: #8a8a8a;
+    -fx-background-color: #f7f7f7;
+}
+
+.move-notation-row .notation-move {
+    -fx-min-height: 44px;
+    -fx-pref-height: 44px;
+    -fx-alignment: center-left;
+    -fx-padding: 0 14px;
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 0;
+    -fx-border-color: transparent transparent transparent #eeeeee;
+    -fx-border-width: 0 0 0 1px;
+    -fx-font-size: 17px;
+    -fx-font-weight: 600;
+    -fx-text-fill: #262626;
+    -fx-cursor: hand;
+}
+
+.move-notation-row .notation-move:hover {
+    -fx-background-color: #edf4fc;
+}
+
+.move-notation-row .notation-move:focused {
+    -fx-border-color: #7aa9e6;
+    -fx-border-width: 2px;
+}
+
+.move-notation-row .notation-move:current {
+    -fx-background-color: #1c69d4;
+    -fx-text-fill: #ffffff;
+}
+
+.move-notation-row .notation-move.empty,
+.move-notation-row .notation-move.empty:disabled {
+    -fx-background-color: #fbfbfb;
+    -fx-cursor: default;
+    -fx-opacity: 1;
+}
+
 .status-rail {
     -fx-background-color: #ffffff;
     -fx-padding: 14px 32px;
@@ -508,7 +784,8 @@
     -fx-background-color: #1a2129;
     -fx-border-color: transparent transparent #3b4654 transparent;
 }
-.night-mode .home-content, .night-mode .setup-content, .night-mode .analysis-workspace {
+.night-mode .home-content, .night-mode .setup-content, .night-mode .analysis-workspace,
+.night-mode .sessions-workspace {
     -fx-background-color: #121820;
 }
 .night-mode .tool-catalog-shell { -fx-background-color: #121820; }
@@ -553,6 +830,14 @@
 }
 .night-mode .message-box-title { -fx-text-fill: #f1f3f5; }
 .night-mode .message-box-message { -fx-text-fill: #b8c5d3; }
+.night-mode .text-input-modal-field {
+    -fx-background-color: #151d26;
+    -fx-border-color: #5c6a79;
+    -fx-text-fill: #f1f3f5;
+    -fx-prompt-text-fill: #8e9ba8;
+}
+.night-mode .text-input-modal-field:focused { -fx-border-color: #6ba5f0; }
+.night-mode .text-input-modal-validation { -fx-text-fill: #ff9aa6; }
 .night-mode .message-box-cancel-button {
     -fx-background-color: #243243;
     -fx-border-color: #465465;
@@ -596,6 +881,98 @@
     -fx-text-fill: #ffffff;
 }
 .night-mode .move-list .list-cell:filled:hover { -fx-background-color: #3b4654; }
+.night-mode .session-selector,
+.night-mode .session-selector-list,
+.night-mode .session-selector-list .virtual-flow,
+.night-mode .session-selector-list .viewport,
+.night-mode .session-selector-list .session-selector-cell {
+    -fx-background-color: #262e38;
+    -fx-border-color: #3b4654;
+}
+.night-mode .session-selector-row {
+    -fx-background-color: #262e38;
+    -fx-border-color: transparent transparent #3b4654 transparent;
+}
+.night-mode .session-selector-row:hover { -fx-background-color: #334151; }
+.night-mode .session-selector-row:current {
+    -fx-background-color: #2d4056;
+    -fx-border-color: transparent transparent transparent #6ba5f0;
+}
+.night-mode .session-active-marker { -fx-text-fill: #6ba5f0; }
+.night-mode .session-title { -fx-text-fill: #f1f3f5; }
+.night-mode .sessions-section-title { -fx-text-fill: #f1f3f5; }
+.night-mode .sessions-section-copy, .night-mode .session-empty-state { -fx-text-fill: #a8b4c1; }
+.night-mode .session-management-list,
+.night-mode .session-management-list .virtual-flow,
+.night-mode .session-management-list .viewport,
+.night-mode .session-management-list .session-management-cell {
+    -fx-background-color: #262e38;
+    -fx-border-color: #3b4654;
+}
+.night-mode .session-management-row {
+    -fx-background-color: #262e38;
+    -fx-border-color: transparent transparent #3b4654 transparent;
+}
+.night-mode .session-management-row:hover { -fx-background-color: #334151; }
+.night-mode .session-management-row:current {
+    -fx-background-color: #2d4056;
+    -fx-border-color: transparent transparent transparent #6ba5f0;
+}
+.night-mode .session-management-marker { -fx-text-fill: #6ba5f0; }
+.night-mode .session-management-title { -fx-text-fill: #f1f3f5; }
+.night-mode .session-management-origin { -fx-text-fill: #aeb8c4; }
+.night-mode .session-rename-button {
+    -fx-background-color: #262e38;
+    -fx-border-color: #6d7783;
+    -fx-text-fill: #ffffff;
+}
+.night-mode .session-order-button {
+    -fx-background-color: #262e38;
+    -fx-border-color: #6d7783;
+    -fx-text-fill: #ffffff;
+}
+.night-mode .session-order-button:hover {
+    -fx-background-color: #3b4654;
+    -fx-border-color: #6ba5f0;
+}
+.night-mode .session-rename-button:hover { -fx-background-color: #3b4654; }
+.night-mode .session-delete-button {
+    -fx-background-color: #262e38;
+    -fx-border-color: #e06a78;
+    -fx-text-fill: #ff9aa6;
+}
+.night-mode .session-delete-button:hover { -fx-background-color: #442932; }
+.night-mode .move-notation,
+.night-mode .move-notation-list,
+.night-mode .move-notation-list .virtual-flow,
+.night-mode .move-notation-list .viewport,
+.night-mode .move-notation-list .move-notation-cell {
+    -fx-background-color: #262e38;
+    -fx-border-color: #3b4654;
+}
+.night-mode .move-notation-row {
+    -fx-border-color: transparent transparent #3b4654 transparent;
+}
+.night-mode .move-notation-row .move-number {
+    -fx-background-color: #1f2731;
+    -fx-text-fill: #93a0ae;
+}
+.night-mode .move-notation-row .notation-move {
+    -fx-background-color: #262e38;
+    -fx-border-color: transparent transparent transparent #3b4654;
+    -fx-text-fill: #f1f3f5;
+}
+.night-mode .move-notation-row .notation-move:hover {
+    -fx-background-color: #334151;
+}
+.night-mode .move-notation-row .notation-move:current {
+    -fx-background-color: #4389df;
+    -fx-text-fill: #ffffff;
+}
+.night-mode .move-notation-row .notation-move.empty,
+.night-mode .move-notation-row .notation-move.empty:disabled {
+    -fx-background-color: #232b35;
+}
 .night-mode .settings-check-box { -fx-text-fill: #ffffff; }
 .night-mode .toolbar-icon-button {
     -fx-background-color: #1c2430;

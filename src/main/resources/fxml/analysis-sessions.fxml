@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton?>
+<?import com.escontrela.lastmove.ui.component.message.TextInputModal?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<StackPane fx:id="root" styleClass="app-shell" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.escontrela.lastmove.ui.controller.AnalysisSessionsScreenController">
+<BorderPane styleClass="app-shell">
+    <top>
+        <HBox alignment="CENTER_LEFT" spacing="16.0" styleClass="workspace-header">
+            <VBox spacing="6.0">
+                <Label styleClass="eyebrow-label" text="Study workspace" />
+                <Label styleClass="app-title" text="Analysis sessions" />
+                <Label styleClass="hero-support" text="Return to a study in memory, give it a clearer title or remove it." wrapText="true" />
+            </VBox>
+            <Region HBox.hgrow="ALWAYS" />
+            <ToolbarIconButton accessibleText="Back to PGN analysis" lightIconResource="/images/back_35dp_000000.png" darkIconResource="/images/back_35dp_FFFFFF.png" tooltipText="Back to analysis" onAction="#backToAnalysis" />
+        </HBox>
+    </top>
+    <center>
+        <VBox spacing="20.0" styleClass="sessions-workspace">
+            <padding><Insets bottom="48.0" left="80.0" right="80.0" top="48.0" /></padding>
+            <VBox maxWidth="1040.0" spacing="8.0">
+                <Label styleClass="eyebrow-label" text="Open sessions" />
+                <Label styleClass="sessions-section-title" text="Studies retained in memory" />
+                <Label fx:id="sessionCountLabel" styleClass="sessions-section-copy" text="0 sessions in memory" />
+            </VBox>
+            <StackPane maxWidth="1040.0" VBox.vgrow="ALWAYS">
+                <ListView fx:id="sessionList" styleClass="session-management-list" />
+                <Label fx:id="emptyStateLabel" styleClass="session-empty-state" text="There are no analysis sessions in memory." wrapText="true" />
+            </StackPane>
+        </VBox>
+    </center>
+    <bottom>
+        <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="status-rail">
+            <Label styleClass="eyebrow-label" text="Status" />
+            <Label fx:id="statusLabel" styleClass="status-text" text="Choose a session to continue" />
+            <Region HBox.hgrow="ALWAYS" />
+            <ImageView fx:id="statusBrandLogo" fitHeight="20.0" fitWidth="96.0" preserveRatio="true" smooth="true" styleClass="status-brand-logo">
+                <image><Image url="@../images/lastmove-chess-logo.png" /></image>
+            </ImageView>
+        </HBox>
+    </bottom>
+</BorderPane>
+    <TextInputModal fx:id="textInputModal" />
+</StackPane>

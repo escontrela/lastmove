@@ -6,6 +6,8 @@ import com.escontrela.lastmove.ui.service.ChessSound;
 import com.escontrela.lastmove.ui.service.ChessSoundService;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.scene.control.Control;
 import javafx.scene.control.Skin;
@@ -14,8 +16,9 @@ import javafx.scene.control.Skin;
  * A reusable JavaFX control that renders a chess board.
  *
  * <p>The control receives a position (as a FEN string or a view model) and renders it using {@link
- * ChessBoardSkin}. It owns only rendering and user interaction – it does not validate chess rules
- * or parse PGN.
+ * ChessBoardSkin}. It also owns temporary visual calculation arrows drawn with the secondary mouse
+ * button. It owns only rendering and user interaction – it does not validate chess rules or parse
+ * PGN.
  */
 public class ChessBoardControl extends Control {
 
@@ -23,6 +26,7 @@ public class ChessBoardControl extends Control {
   private ChessSoundService soundService;
   private final ObjectProperty<PositionSnapshot> position =
       new SimpleObjectProperty<>(this, "position");
+  private final ObservableList<BoardArrow> arrows = FXCollections.observableArrayList();
 
   // 1. PROPIEDAD DEL EVENTO: Permite suscribir controladores externos
   private final ObjectProperty<EventHandler<BoardMoveEvent>> onMoveRequested =
@@ -60,6 +64,31 @@ public class ChessBoardControl extends Control {
 
   public final PositionSnapshot getPosition() {
     return position.get();
+  }
+
+  /** Replaces the visual calculation arrows without changing the rendered chess position. */
+  public final void setArrows(java.util.List<BoardArrow> values) {
+    arrows.setAll(java.util.List.copyOf(values));
+  }
+
+  /** Returns an immutable copy of the current visual calculation arrows. */
+  public final java.util.List<BoardArrow> getArrows() {
+    return java.util.List.copyOf(arrows);
+  }
+
+  /** Removes every visual calculation arrow from the board. */
+  public final void clearArrows() {
+    arrows.clear();
+  }
+
+  ObservableList<BoardArrow> observableArrows() {
+    return arrows;
+  }
+
+  void toggleArrow(BoardArrow arrow) {
+    if (!arrows.remove(arrow)) {
+      arrows.add(arrow);
+    }
   }
 
   /** Installs the presentation service used by this control's skin for move feedback. */
