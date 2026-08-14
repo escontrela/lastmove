@@ -9,7 +9,9 @@ import com.escontrela.lastmove.ui.service.ChessSound;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.event.EventHandler;
+import javafx.geometry.Pos;
 import javafx.scene.Group;
+import javafx.scene.control.Label;
 import javafx.scene.control.SkinBase;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -34,10 +36,17 @@ import javafx.scene.shape.StrokeLineCap;
  */
 public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
 
+  private static final double COORDINATE_GUTTER_RATIO = 0.035;
+  private static final double MIN_COORDINATE_GUTTER = 12.0;
+  private static final double MAX_COORDINATE_GUTTER = 22.0;
+
   private final GridPane grid = new GridPane();
   private final Pane arrowOverlay = new Pane();
+  private final Pane coordinateOverlay = new Pane();
   private final StackPane dragOverlay = new StackPane(); // Overlay para pieza flotante durante drag
   private final ImageView draggedPieceView = new ImageView(); // Pieza que sigue al cursor
+  private final Label[] fileLabels = new Label[ChessConstants.FILES];
+  private final Label[] rankLabels = new Label[ChessConstants.RANKS];
 
   // 1. ESTADO DE RENDERIZADO: Matriz fija para indexar y acceder a los nodos visuales
   private final ChessSquareControl[][] squares =
@@ -70,6 +79,7 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
 
     super(control);
     configureGrid();
+    configureCoordinateOverlay();
     buildGrid(control); // Pasó 1: Construcción estructural del Grid e interacción pura
     control.positionProperty().addListener(positionListener);
     control.flippedProperty().addListener(orientationListener);
@@ -96,6 +106,7 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     getChildren().add(grid);
     getChildren().add(arrowOverlay);
     getChildren().add(dragOverlay);
+    getChildren().add(coordinateOverlay);
   }
 
   private void configureGrid() {
@@ -119,6 +130,25 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
       row.setFillHeight(true);
       grid.getRowConstraints().add(row);
     }
+  }
+
+  private void configureCoordinateOverlay() {
+    coordinateOverlay.setMouseTransparent(true);
+    coordinateOverlay.setSnapToPixel(true);
+    coordinateOverlay.getStyleClass().add("board-coordinate-overlay");
+    for (int index = 0; index < ChessConstants.FILES; index++) {
+      fileLabels[index] = createCoordinateLabel();
+      rankLabels[index] = createCoordinateLabel();
+      coordinateOverlay.getChildren().addAll(fileLabels[index], rankLabels[index]);
+    }
+  }
+
+  private Label createCoordinateLabel() {
+    Label label = new Label();
+    label.setAlignment(Pos.CENTER);
+    label.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+    label.getStyleClass().add("board-coordinate-label");
+    return label;
   }
 
   /**
@@ -208,7 +238,16 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
       }
     }
     clearDragTargetHighlight();
+    updateCoordinateLabels();
     renderArrows();
+  }
+
+  private void updateCoordinateLabels() {
+    boolean flipped = getSkinnable().isFlipped();
+    for (int index = 0; index < ChessConstants.FILES; index++) {
+      fileLabels[index].setText(fileLabelAt(index, flipped));
+      rankLabels[index].setText(rankLabelAt(index, flipped));
+    }
   }
 
   private void handleArrowPressed(ChessBoardControl control, MouseEvent event) {
@@ -544,23 +583,35 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
   protected void layoutChildren(
       double contentX, double contentY, double contentWidth, double contentHeight) {
 
-    // Cuantizamos el lado a múltiplos de 8 para que cada casilla tenga tamaño entero.
-    double rawSide = Math.floor(Math.min(contentWidth, contentHeight));
-    double quantizedSide = Math.floor(rawSide / ChessConstants.FILES) * ChessConstants.FILES;
-    double side = quantizedSide > 0 ? quantizedSide : rawSide;
-    double x = Math.floor(contentX + (contentWidth - side) / 2.0);
-    double y = Math.floor(contentY + (contentHeight - side) / 2.0);
+    // El gutter vive dentro del cuadrado asignado al control. Así las coordenadas nunca empujan
+    // al resto de la pantalla y el tablero interior sigue compuesto por ocho casillas exactas.
+    double availableSide = Math.floor(Math.min(contentWidth, contentHeight));
+    double gutter = coordinateGutter(availableSide);
+    double boardSide = boardSideFor(availableSide, gutter);
+    double usedSide = boardSide + gutter;
+    double x = Math.floor(contentX + (contentWidth - usedSide) / 2.0);
+    double y = Math.floor(contentY + (contentHeight - usedSide) / 2.0);
 
     // Calculamos nosotros mismos el tamaño exacto de cada casilla y lo aplicamos
     // explícitamente, en lugar de dejar que JavaFX (CSS/GridPane) decida el redimensionado.
     // Esto evita que las casillas se queden ancladas a un tamaño mínimo fijo cuando la ventana
     // no está maximizada.
-    applySquareSizes(side / ChessConstants.FILES);
+    double squareSize = boardSide / ChessConstants.FILES;
+    applySquareSizes(squareSize);
 
-    grid.resizeRelocate(x, y, side, side);
-    arrowOverlay.resizeRelocate(x, y, side, side);
-    dragOverlay.resizeRelocate(x, y, side, side);
+    grid.resizeRelocate(x, y, boardSide, boardSide);
+    arrowOverlay.resizeRelocate(x, y, boardSide, boardSide);
+    dragOverlay.resizeRelocate(x, y, boardSide, boardSide);
+    coordinateOverlay.resizeRelocate(x, y, usedSide, usedSide);
+    layoutCoordinateLabels(boardSide, gutter, squareSize);
     renderArrows();
+  }
+
+  private void layoutCoordinateLabels(double boardSide, double gutter, double squareSize) {
+    for (int index = 0; index < ChessConstants.FILES; index++) {
+      fileLabels[index].resizeRelocate(index * squareSize, boardSide, squareSize, gutter);
+      rankLabels[index].resizeRelocate(boardSide, index * squareSize, gutter, squareSize);
+    }
   }
 
   private void applySquareSizes(double squareSize) {
@@ -585,6 +636,34 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     int file = flipped ? ChessConstants.FILES - 1 - displayColumn : displayColumn;
     int rank = flipped ? displayRow : ChessConstants.RANKS - 1 - displayRow;
     return Square.of(file, rank);
+  }
+
+  static String fileLabelAt(int displayColumn, boolean flipped) {
+    int file = flipped ? ChessConstants.FILES - 1 - displayColumn : displayColumn;
+    return String.valueOf((char) ('a' + file));
+  }
+
+  static String rankLabelAt(int displayRow, boolean flipped) {
+    int rank = flipped ? displayRow : ChessConstants.RANKS - 1 - displayRow;
+    return Integer.toString(rank + 1);
+  }
+
+  static double coordinateGutter(double availableSide) {
+    if (availableSide <= 0.0) {
+      return 0.0;
+    }
+    double preferred =
+        Math.max(
+            MIN_COORDINATE_GUTTER,
+            Math.min(MAX_COORDINATE_GUTTER, Math.floor(availableSide * COORDINATE_GUTTER_RATIO)));
+    return Math.min(availableSide, preferred);
+  }
+
+  static double boardSideFor(double availableSide, double gutter) {
+    double rawBoardSide = Math.max(0.0, availableSide - gutter);
+    double quantized =
+        Math.floor(rawBoardSide / ChessConstants.FILES) * ChessConstants.FILES;
+    return quantized > 0.0 ? quantized : rawBoardSide;
   }
 
 }

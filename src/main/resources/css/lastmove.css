@@ -495,6 +495,14 @@
     -fx-border-width: 0;
 }
 
+.board-coordinate-overlay { -fx-background-color: transparent; }
+
+.board-coordinate-label {
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #65717e;
+}
+
 /* El tamaño de .chess-square se calcula y aplica explícitamente en ChessBoardSkin/
    ChessSquareControl (ver setSquareSize). No fijamos min/pref/max aquí a propósito: un
    min-width fijo impedía que las casillas (y por tanto el tablero) se encogieran por debajo
@@ -991,3 +999,4 @@
     -fx-background-color: rgba(107, 165, 240, 0.14);
     -fx-border-color: #6ba5f0;
 }
+.night-mode .board-coordinate-label { -fx-text-fill: #b8c5d3; }
