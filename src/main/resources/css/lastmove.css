@@ -596,16 +596,23 @@
     -fx-text-fill: #6a7683;
 }
 
-.session-management-list,
-.session-management-list .virtual-flow,
-.session-management-list .viewport {
+.session-management-list {
     -fx-background-color: #ffffff;
     -fx-border-color: #d8dde3;
     -fx-border-width: 1px;
 }
 
+.session-management-list .virtual-flow,
+.session-management-list .viewport {
+    -fx-background-color: #ffffff;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+}
+
 .session-management-list .session-management-cell {
     -fx-background-color: #ffffff;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
     -fx-padding: 0;
 }
 
@@ -883,19 +890,29 @@
     -fx-background-color: #1a2129;
     -fx-border-color: #3b4654 transparent transparent transparent;
 }
-.night-mode .move-list, .night-mode .move-list .list-cell {
+.night-mode .move-list {
     -fx-background-color: #262e38;
     -fx-border-color: #3b4654;
     -fx-text-fill: #ffffff;
 }
+.night-mode .move-list .list-cell {
+    -fx-background-color: #262e38;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-text-fill: #ffffff;
+}
 .night-mode .move-list .list-cell:filled:hover { -fx-background-color: #3b4654; }
-.night-mode .session-selector,
+.night-mode .session-selector {
+    -fx-background-color: #262e38;
+    -fx-border-color: #3b4654;
+}
 .night-mode .session-selector-list,
 .night-mode .session-selector-list .virtual-flow,
 .night-mode .session-selector-list .viewport,
 .night-mode .session-selector-list .session-selector-cell {
     -fx-background-color: #262e38;
-    -fx-border-color: #3b4654;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
 }
 .night-mode .session-selector-row {
     -fx-background-color: #262e38;
@@ -910,12 +927,16 @@
 .night-mode .session-title { -fx-text-fill: #f1f3f5; }
 .night-mode .sessions-section-title { -fx-text-fill: #f1f3f5; }
 .night-mode .sessions-section-copy, .night-mode .session-empty-state { -fx-text-fill: #a8b4c1; }
-.night-mode .session-management-list,
+.night-mode .session-management-list {
+    -fx-background-color: #262e38;
+    -fx-border-color: #3b4654;
+}
 .night-mode .session-management-list .virtual-flow,
 .night-mode .session-management-list .viewport,
 .night-mode .session-management-list .session-management-cell {
     -fx-background-color: #262e38;
-    -fx-border-color: #3b4654;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
 }
 .night-mode .session-management-row {
     -fx-background-color: #262e38;
@@ -950,13 +971,17 @@
     -fx-text-fill: #ff9aa6;
 }
 .night-mode .session-delete-button:hover { -fx-background-color: #442932; }
-.night-mode .move-notation,
+.night-mode .move-notation {
+    -fx-background-color: #262e38;
+    -fx-border-color: #3b4654;
+}
 .night-mode .move-notation-list,
 .night-mode .move-notation-list .virtual-flow,
 .night-mode .move-notation-list .viewport,
 .night-mode .move-notation-list .move-notation-cell {
     -fx-background-color: #262e38;
-    -fx-border-color: #3b4654;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
 }
 .night-mode .move-notation-row {
     -fx-border-color: transparent transparent #3b4654 transparent;
