@@ -1,6 +1,7 @@
 package com.escontrela.lastmove.application.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -66,6 +67,23 @@ class AnalysisSessionServiceTest {
     assertThrows(
         java.util.NoSuchElementException.class,
         () -> service.sessionSummary(deleted.sessionId()));
+  }
+
+  @Test
+  void movesSessionsUpAndDownInTheirVisibleOrder() {
+    AnalysisSessionSummary first = service.createInitialSession();
+    AnalysisSessionSummary second = service.createInitialSession();
+    AnalysisSessionSummary third = service.createInitialSession();
+
+    assertTrue(service.moveSessionDown(third.sessionId()));
+    assertEquals(
+        List.of(second.sessionId(), third.sessionId(), first.sessionId()),
+        service.listSessions().stream().map(AnalysisSessionSummary::sessionId).toList());
+    assertTrue(service.moveSessionUp(first.sessionId()));
+    assertEquals(
+        List.of(second.sessionId(), first.sessionId(), third.sessionId()),
+        service.listSessions().stream().map(AnalysisSessionSummary::sessionId).toList());
+    assertFalse(service.moveSessionUp(second.sessionId()));
   }
 
   @Test

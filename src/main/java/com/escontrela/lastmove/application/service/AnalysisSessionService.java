@@ -120,7 +120,17 @@ public final class AnalysisSessionService {
 
   /** Lists all retained sessions for a screen-specific session picker. */
   public List<AnalysisSessionSummary> listSessions() {
-    return sessionRepository.findAllByMostRecent().stream().map(this::summary).toList();
+    return sessionRepository.findAllInDisplayOrder().stream().map(this::summary).toList();
+  }
+
+  /** Moves one retained session one place toward the start of the visible session list. */
+  public boolean moveSessionUp(AnalysisSessionId sessionId) {
+    return moveSession(sessionId, -1);
+  }
+
+  /** Moves one retained session one place toward the end of the visible session list. */
+  public boolean moveSessionDown(AnalysisSessionId sessionId) {
+    return moveSession(sessionId, 1);
   }
 
   /** Returns one retained session as a UI-safe summary. */
@@ -227,6 +237,14 @@ public final class AnalysisSessionService {
     return session.currentPosition();
   }
 
+  /** Advances to the final position of the cursor's preferred continuation. */
+  public PositionSnapshot last(AnalysisSessionId sessionId) {
+    AnalysisSession session = session(sessionId);
+    session.last();
+    sessionRepository.save(session);
+    return session.currentPosition();
+  }
+
   /** Selects a structural analysis node as the session cursor. */
   public PositionSnapshot select(AnalysisSessionId sessionId, AnalysisNodeId nodeId) {
     AnalysisSession session = session(sessionId);
@@ -243,6 +261,21 @@ public final class AnalysisSessionService {
         new AnalysisSession(AnalysisSessionId.random(), title, origin, initialPosition);
     sessionRepository.save(session);
     return summary(session);
+  }
+
+  private boolean moveSession(AnalysisSessionId sessionId, int offset) {
+    AnalysisSessionId required = Objects.requireNonNull(sessionId, "sessionId must not be null");
+    List<AnalysisSession> ordered = sessionRepository.findAllInDisplayOrder();
+    int currentIndex =
+        java.util.stream.IntStream.range(0, ordered.size())
+            .filter(index -> ordered.get(index).id().equals(required))
+            .findFirst()
+            .orElseThrow(() -> unknownSession(required));
+    int targetIndex = currentIndex + offset;
+    if (targetIndex < 0 || targetIndex >= ordered.size()) {
+      return false;
+    }
+    return sessionRepository.moveToIndex(required, targetIndex);
   }
 
   private void importVariations(AnalysisSession session, List<ImportedPly> variations) {

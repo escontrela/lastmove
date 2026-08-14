@@ -223,6 +223,13 @@ public final class AnalysisSession {
     refreshCurrentState();
   }
 
+  /** Advances to the final node of the preferred continuation from the current cursor. */
+  public void last() {
+    while (next()) {
+      // next() selects the preferred continuation until the branch has no more nodes.
+    }
+  }
+
   /** Selects a node belonging to this session. */
   public boolean select(AnalysisNodeId nodeId) {
     Optional<AnalysisNode> node = tree.find(Objects.requireNonNull(nodeId, "nodeId must not be null"));

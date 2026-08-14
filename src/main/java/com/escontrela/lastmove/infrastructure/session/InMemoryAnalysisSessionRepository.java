@@ -4,7 +4,6 @@ import com.escontrela.lastmove.application.repository.AnalysisSessionRepository;
 import com.escontrela.lastmove.domain.analysis.AnalysisSession;
 import com.escontrela.lastmove.domain.analysis.AnalysisSessionId;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,10 +21,14 @@ import org.springframework.stereotype.Repository;
 public final class InMemoryAnalysisSessionRepository implements AnalysisSessionRepository {
 
   private final Map<AnalysisSessionId, AnalysisSession> sessions = new LinkedHashMap<>();
+  private final List<AnalysisSessionId> displayOrder = new ArrayList<>();
 
   @Override
   public synchronized void save(AnalysisSession session) {
     AnalysisSession required = Objects.requireNonNull(session, "session must not be null");
+    if (!sessions.containsKey(required.id())) {
+      displayOrder.addFirst(required.id());
+    }
     sessions.put(required.id(), required);
   }
 
@@ -37,15 +40,30 @@ public final class InMemoryAnalysisSessionRepository implements AnalysisSessionR
 
   @Override
   public synchronized boolean deleteById(AnalysisSessionId sessionId) {
-    return sessions.remove(
-            Objects.requireNonNull(sessionId, "sessionId must not be null"))
-        != null;
+    AnalysisSessionId required =
+        Objects.requireNonNull(sessionId, "sessionId must not be null");
+    displayOrder.remove(required);
+    return sessions.remove(required) != null;
   }
 
   @Override
-  public synchronized List<AnalysisSession> findAllByMostRecent() {
-    List<AnalysisSession> newestFirst = new ArrayList<>(sessions.values());
-    Collections.reverse(newestFirst);
-    return List.copyOf(newestFirst);
+  public synchronized List<AnalysisSession> findAllInDisplayOrder() {
+    return displayOrder.stream().map(sessions::get).toList();
+  }
+
+  @Override
+  public synchronized boolean moveToIndex(AnalysisSessionId sessionId, int targetIndex) {
+    AnalysisSessionId required =
+        Objects.requireNonNull(sessionId, "sessionId must not be null");
+    int currentIndex = displayOrder.indexOf(required);
+    if (currentIndex < 0 || targetIndex < 0 || targetIndex >= displayOrder.size()) {
+      return false;
+    }
+    if (currentIndex == targetIndex) {
+      return true;
+    }
+    displayOrder.remove(currentIndex);
+    displayOrder.add(targetIndex, required);
+    return true;
   }
 }

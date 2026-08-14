@@ -144,6 +144,19 @@ public final class AnalysisSessionsScreenController implements UiScreenControlle
     refreshSessions();
   }
 
+  private void moveSession(AnalysisSessionSummary session, boolean up) {
+    boolean moved =
+        up
+            ? analysisSessionService.moveSessionUp(session.sessionId())
+            : analysisSessionService.moveSessionDown(session.sessionId());
+    returnStatusMessage =
+        moved
+            ? "Moved session " + (up ? "up: " : "down: ") + session.title()
+            : "Session is already at the " + (up ? "top" : "bottom");
+    statusLabel.setText(returnStatusMessage);
+    refreshSessions();
+  }
+
   private void refreshSessions() {
     List<AnalysisSessionSummary> sessions = analysisSessionService.listSessions();
     sessionList.getItems().setAll(sessions);
@@ -184,7 +197,7 @@ public final class AnalysisSessionsScreenController implements UiScreenControlle
     };
   }
 
-  /** Virtualized row with explicit open, rename and delete actions. */
+  /** Virtualized row with explicit ordering, open, rename and delete actions. */
   private final class SessionManagementCell extends ListCell<AnalysisSessionSummary> {
 
     private static final PseudoClass CURRENT = PseudoClass.getPseudoClass("current");
@@ -193,6 +206,8 @@ public final class AnalysisSessionsScreenController implements UiScreenControlle
     private final Label marker = new Label("✓");
     private final Label title = new Label();
     private final Label origin = new Label();
+    private final Button moveUp = new Button("↑");
+    private final Button moveDown = new Button("↓");
     private final Button open = new Button("Open");
     private final Button rename = new Button("Rename");
     private final Button delete = new Button("Delete");
@@ -207,10 +222,16 @@ public final class AnalysisSessionsScreenController implements UiScreenControlle
       VBox description = new VBox(4, title, origin);
       description.setMaxWidth(Double.MAX_VALUE);
       HBox.setHgrow(description, Priority.ALWAYS);
+      moveUp.getStyleClass().addAll("session-action-button", "session-order-button");
+      moveDown.getStyleClass().addAll("session-action-button", "session-order-button");
+      moveUp.setAccessibleText("Move session up");
+      moveDown.setAccessibleText("Move session down");
       open.getStyleClass().addAll("session-action-button", "session-open-button");
       rename.getStyleClass().addAll("session-action-button", "session-rename-button");
       delete.getStyleClass().addAll("session-action-button", "session-delete-button");
-      row.getChildren().setAll(marker, description, open, rename, delete);
+      row.getChildren().setAll(marker, description, moveUp, moveDown, open, rename, delete);
+      moveUp.setOnAction(event -> moveSession(getItem(), true));
+      moveDown.setOnAction(event -> moveSession(getItem(), false));
       open.setOnAction(event -> openSession(getItem()));
       rename.setOnAction(event -> renameSession(getItem()));
       delete.setOnAction(event -> deleteSession(getItem()));
@@ -233,6 +254,9 @@ public final class AnalysisSessionsScreenController implements UiScreenControlle
       marker.setVisible(current);
       title.setText(item.title());
       origin.setText(originLabel(item.origin()) + (current ? " • current" : ""));
+      int sessionIndex = sessionList.getItems().indexOf(item);
+      moveUp.setDisable(sessionIndex <= 0);
+      moveDown.setDisable(sessionIndex < 0 || sessionIndex >= sessionList.getItems().size() - 1);
       row.pseudoClassStateChanged(CURRENT, current);
       setGraphic(row);
     }

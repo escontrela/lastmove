@@ -27,7 +27,7 @@ class InMemoryAnalysisSessionRepositoryTest {
     repository.save(second);
 
     assertSame(first, repository.findById(first.id()).orElseThrow());
-    assertEquals(List.of(second, first), repository.findAllByMostRecent());
+    assertEquals(List.of(second, first), repository.findAllInDisplayOrder());
   }
 
   @Test
@@ -40,7 +40,22 @@ class InMemoryAnalysisSessionRepositoryTest {
 
     assertTrue(repository.deleteById(deleted.id()));
     assertFalse(repository.deleteById(deleted.id()));
-    assertEquals(List.of(retained), repository.findAllByMostRecent());
+    assertEquals(List.of(retained), repository.findAllInDisplayOrder());
+  }
+
+  @Test
+  void movesSessionsWithinTheirDisplayOrder() {
+    InMemoryAnalysisSessionRepository repository = new InMemoryAnalysisSessionRepository();
+    AnalysisSession first = session("First");
+    AnalysisSession second = session("Second");
+    AnalysisSession third = session("Third");
+    repository.save(first);
+    repository.save(second);
+    repository.save(third);
+
+    assertTrue(repository.moveToIndex(first.id(), 0));
+    assertEquals(List.of(first, third, second), repository.findAllInDisplayOrder());
+    assertFalse(repository.moveToIndex(second.id(), 3));
   }
 
   private static AnalysisSession session(String title) {

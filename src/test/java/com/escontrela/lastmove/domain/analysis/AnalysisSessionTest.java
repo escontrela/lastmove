@@ -72,6 +72,19 @@ class AnalysisSessionTest {
   }
 
   @Test
+  void firstAndLastReachThePreferredLineBoundaries() {
+    AnalysisSession session = newSession();
+    session.apply(accepted("e2", "e4", "e4", blackToMove()));
+    session.apply(accepted("e7", "e5", "e5", initial()));
+
+    session.first();
+    assertTrue(session.currentPly().isEmpty());
+    session.last();
+
+    assertEquals("e5", session.currentPly().orElseThrow().move().san().getValue());
+  }
+
+  @Test
   void renamesTheSessionWithoutChangingItsTreeOrCursor() {
     AnalysisSession session = newSession();
     session.apply(accepted("e2", "e4", "e4", blackToMove()));

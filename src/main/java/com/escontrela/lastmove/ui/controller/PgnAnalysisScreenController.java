@@ -238,6 +238,22 @@ public class PgnAnalysisScreenController implements UiScreenController {
     refreshMoveList();
   }
 
+  /** Returns to the initial position preceding the first move of the visible line. */
+  @FXML
+  public void onFirstMove() {
+    chessBoard.renderPosition(analysisSessionService.first(activeAnalysisSessionId));
+    refreshMoveList();
+    statusLabel.setText("Moved to the initial position");
+  }
+
+  /** Advances to the final move of the current preferred continuation. */
+  @FXML
+  public void onLastMove() {
+    chessBoard.renderPosition(analysisSessionService.last(activeAnalysisSessionId));
+    refreshMoveList();
+    statusLabel.setText("Moved to the last move");
+  }
+
   /** Copies the complete FEN represented by the board's active analysis position. */
   @FXML
   public void onCopyFen() {
@@ -275,8 +291,10 @@ public class PgnAnalysisScreenController implements UiScreenController {
     contextualMenuPanel.addItem("Open sessions…", "", event -> onShowSessions());
     contextualMenuPanel.addItem("Copy position as FEN", "", event -> onCopyFen());
     contextualMenuPanel.addSeparator();
+    contextualMenuPanel.addItem("First move", "⇤", event -> onFirstMove());
     contextualMenuPanel.addItem("Previous move", "←", event -> onPreviousMove());
     contextualMenuPanel.addItem("Next move", "→", event -> onNextMove());
+    contextualMenuPanel.addItem("Last move", "⇥", event -> onLastMove());
     contextualMenuPanel.addSeparator();
     contextualMenuPanel.addItem("Back to chess tools", "", event -> backToMain());
     contextualMenuPanel.addItem("Open setup", "", event -> openSetup());
@@ -318,7 +336,24 @@ public class PgnAnalysisScreenController implements UiScreenController {
     contextualMenuPanel.addItem(
         "Delete session", "", event -> deleteSession(selected.sessionId()));
     contextualMenuPanel.addSeparator();
+    contextualMenuPanel.addItem(
+        "Move session up", "↑", event -> moveSession(selected, true));
+    contextualMenuPanel.addItem(
+        "Move session down", "↓", event -> moveSession(selected, false));
+    contextualMenuPanel.addSeparator();
     contextualMenuPanel.addItem("Open sessions…", "", event -> onShowSessions());
+  }
+
+  private void moveSession(AnalysisSessionSummary session, boolean up) {
+    boolean moved =
+        up
+            ? analysisSessionService.moveSessionUp(session.sessionId())
+            : analysisSessionService.moveSessionDown(session.sessionId());
+    refreshSessionList();
+    statusLabel.setText(
+        moved
+            ? "Moved session " + (up ? "up: " : "down: ") + session.title()
+            : "Session is already at the " + (up ? "top" : "bottom"));
   }
 
   private void deleteSession(AnalysisSessionId sessionId) {

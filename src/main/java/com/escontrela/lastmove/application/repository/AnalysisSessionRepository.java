@@ -22,6 +22,9 @@ public interface AnalysisSessionRepository {
   /** Deletes one retained session, returning whether it existed. */
   boolean deleteById(AnalysisSessionId sessionId);
 
-  /** Lists retained sessions from most recently created to least recently created. */
-  List<AnalysisSession> findAllByMostRecent();
+  /** Lists retained sessions in their user-controlled display order. */
+  List<AnalysisSession> findAllInDisplayOrder();
+
+  /** Moves one retained session to a zero-based position in the display order. */
+  boolean moveToIndex(AnalysisSessionId sessionId, int targetIndex);
 }

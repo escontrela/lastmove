@@ -7,7 +7,6 @@
 <?import com.escontrela.lastmove.ui.component.session.SessionSelectorControl?>
 <?import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton?>
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.image.Image?>
 <?import javafx.scene.image.ImageView?>
@@ -42,9 +41,9 @@
                 <Label styleClass="card-title" text="Start a PGN study" />
                 <Label styleClass="card-copy" text="Open a portable game notation file to prepare the replay workspace." wrapText="true" />
                 <HBox alignment="CENTER_LEFT" spacing="8.0">
-                    <Button mnemonicParsing="false" onAction="#onOpenPgn" styleClass="primary-button" text="Open PGN" />
+                    <ToolbarIconButton accessibleText="Open PGN file" darkIconResource="/images/file_open_35dp_FFFFFF.png" lightIconResource="/images/file_open_35dp_000000.png" onAction="#onOpenPgn" tooltipText="Open PGN" />
                     <ToolbarIconButton accessibleText="Start initial position" darkIconResource="/images/clear_35dp_FFFFFF.png" lightIconResource="/images/clear_35dp_000000.png" onAction="#onReset" tooltipText="Start initial position" />
-                    <ToolbarIconButton accessibleText="Start from FEN" darkIconResource="/images/raw_on_35dp_FFFFFF.png" lightIconResource="/images/raw_on_35dp_000000.png" onAction="#onFen" tooltipText="Start from FEN" />
+                    <ToolbarIconButton accessibleText="Start from FEN" darkIconResource="/images/code_xml_35dp_FFFFFF.png" lightIconResource="/images/code_xml_35dp_000000.png" onAction="#onFen" tooltipText="Start from FEN" />
                     <ToolbarIconButton accessibleText="Open sessions" darkIconResource="/images/history_35dp_FFFFFF.png" lightIconResource="/images/history_35dp_000000.png" onAction="#onShowSessions" tooltipText="Open sessions" />
                 </HBox>
             </VBox>
@@ -69,15 +68,16 @@
                     <Label styleClass="eyebrow-label" text="Position" />
                     <Label styleClass="card-title" text="Navigation" />
                     <HBox alignment="CENTER_LEFT" spacing="8.0" styleClass="move-navigation">
-                        <ToolbarIconButton accessibleText="Previous move" darkIconResource="/images/previous_35dp_FFFFFF.png" lightIconResource="/images/previous_35dp_000000.png" onAction="#onPreviousMove" tooltipText="Previous move" />
-                        <ToolbarIconButton accessibleText="Next move" darkIconResource="/images/next_35dp_FFFFFF.png" lightIconResource="/images/next_35dp_000000.png" onAction="#onNextMove" tooltipText="Next move" />
-                        <ToolbarIconButton accessibleText="Copy position as FEN" darkIconResource="/images/copy_35dp_FFFFFF.png" lightIconResource="/images/copy_35dp_000000.png" onAction="#onCopyFen" tooltipText="Copy position as FEN" />
+                        <ToolbarIconButton accessibleText="First move" darkIconResource="/images/first_page_35dp_FFFFFF.png" lightIconResource="/images/first_page_35dp_000000.png" onAction="#onFirstMove" tooltipText="First move" />
+                        <ToolbarIconButton accessibleText="Previous move" darkIconResource="/images/arrow_left_alt_35dp_FFFFFF.png" lightIconResource="/images/arrow_left_alt_35dp_000000.png" onAction="#onPreviousMove" tooltipText="Previous move" />
+                        <ToolbarIconButton accessibleText="Next move" darkIconResource="/images/arrow_right_alt_35dp_FFFFFF.png" lightIconResource="/images/arrow_right_alt_35dp_000000.png" onAction="#onNextMove" tooltipText="Next move" />
+                        <ToolbarIconButton accessibleText="Last move" darkIconResource="/images/last_page_35dp_FFFFFF.png" lightIconResource="/images/last_page_35dp_000000.png" onAction="#onLastMove" tooltipText="Last move" />
                     </HBox>
+                    <ToolbarIconButton accessibleText="Copy position as FEN" darkIconResource="/images/copy_35dp_FFFFFF.png" lightIconResource="/images/copy_35dp_000000.png" onAction="#onCopyFen" tooltipText="Copy position as FEN" />
                 </VBox>
 
                 <VBox spacing="12.0" styleClass="rail-card board-side-card" VBox.vgrow="ALWAYS">
                     <padding><Insets bottom="20.0" left="20.0" right="20.0" top="20.0" /></padding>
-                    <Label styleClass="eyebrow-label" text="Notation" />
                     <Label styleClass="card-title" text="Moves" />
                     <MoveNotationControl fx:id="moveNotation" VBox.vgrow="ALWAYS" />
                 </VBox>

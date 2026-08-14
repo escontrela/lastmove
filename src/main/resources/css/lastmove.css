@@ -645,6 +645,24 @@
     -fx-cursor: hand;
 }
 
+.session-order-button {
+    -fx-min-width: 34px;
+    -fx-pref-width: 34px;
+    -fx-padding: 8px 0;
+    -fx-background-color: #ffffff;
+    -fx-border-color: #aeb8c4;
+    -fx-text-fill: #262626;
+}
+
+.session-order-button:hover {
+    -fx-background-color: #eef3f8;
+    -fx-border-color: #1c69d4;
+}
+
+.session-order-button:disabled {
+    -fx-opacity: 0.38;
+}
+
 .session-open-button {
     -fx-background-color: #1c69d4;
     -fx-border-color: #1c69d4;
@@ -907,6 +925,15 @@
     -fx-background-color: #262e38;
     -fx-border-color: #6d7783;
     -fx-text-fill: #ffffff;
+}
+.night-mode .session-order-button {
+    -fx-background-color: #262e38;
+    -fx-border-color: #6d7783;
+    -fx-text-fill: #ffffff;
+}
+.night-mode .session-order-button:hover {
+    -fx-background-color: #3b4654;
+    -fx-border-color: #6ba5f0;
 }
 .night-mode .session-rename-button:hover { -fx-background-color: #3b4654; }
 .night-mode .session-delete-button {
