@@ -1,7 +1,9 @@
 package com.escontrela.lastmove.infrastructure.session;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.escontrela.lastmove.domain.analysis.AnalysisOrigin;
 import com.escontrela.lastmove.domain.analysis.AnalysisSession;
@@ -26,6 +28,19 @@ class InMemoryAnalysisSessionRepositoryTest {
 
     assertSame(first, repository.findById(first.id()).orElseThrow());
     assertEquals(List.of(second, first), repository.findAllByMostRecent());
+  }
+
+  @Test
+  void deletesOnlyTheRequestedSession() {
+    InMemoryAnalysisSessionRepository repository = new InMemoryAnalysisSessionRepository();
+    AnalysisSession retained = session("Retained");
+    AnalysisSession deleted = session("Deleted");
+    repository.save(retained);
+    repository.save(deleted);
+
+    assertTrue(repository.deleteById(deleted.id()));
+    assertFalse(repository.deleteById(deleted.id()));
+    assertEquals(List.of(retained), repository.findAllByMostRecent());
   }
 
   private static AnalysisSession session(String title) {

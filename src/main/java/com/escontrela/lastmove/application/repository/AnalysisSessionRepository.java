@@ -19,6 +19,9 @@ public interface AnalysisSessionRepository {
   /** Finds one analysis session by its stable identity. */
   Optional<AnalysisSession> findById(AnalysisSessionId sessionId);
 
+  /** Deletes one retained session, returning whether it existed. */
+  boolean deleteById(AnalysisSessionId sessionId);
+
   /** Lists retained sessions from most recently created to least recently created. */
   List<AnalysisSession> findAllByMostRecent();
 }

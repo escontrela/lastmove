@@ -3,6 +3,7 @@ package com.escontrela.lastmove.domain.analysis;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.escontrela.lastmove.domain.common.PieceColor;
 import com.escontrela.lastmove.domain.common.PieceType;
@@ -65,8 +66,23 @@ class AnalysisSessionTest {
 
     assertEquals(List.of("e4"), plySans(session.currentLine()));
     assertEquals(List.of("e4", "e5"), plySans(session.notationLine()));
+    assertEquals(List.of("e4", "e5"), nodeSans(session.notationNodes()));
     assertTrue(session.next());
     assertEquals("e5", session.currentPly().orElseThrow().move().san().getValue());
+  }
+
+  @Test
+  void renamesTheSessionWithoutChangingItsTreeOrCursor() {
+    AnalysisSession session = newSession();
+    session.apply(accepted("e2", "e4", "e4", blackToMove()));
+    AnalysisNode selected = session.currentNode().orElseThrow();
+
+    session.rename("  Sicilian ideas  ");
+
+    assertEquals("Sicilian ideas", session.title());
+    assertEquals(selected.id(), session.currentNode().orElseThrow().id());
+    assertEquals(List.of("e4"), plySans(session.notationLine()));
+    assertThrows(IllegalArgumentException.class, () -> session.rename("   "));
   }
 
   private AnalysisSession newSession() {

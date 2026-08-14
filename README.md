@@ -38,15 +38,18 @@ Spring Boot is used only as a dependency-injection container and lifecycle manag
 
 * Import a PGN file.
 * Build the complete PGN move tree before navigation and display the preferred line immediately.
+* Render notation in reusable, selectable White/Black rows similar to online chess boards.
 * Start an analysis session from the standard initial position or a FEN.
 * Move forward and backward without deleting the loaded line.
 * Create and select non-destructive variations.
 * Render the current position in a reusable JavaFX board control.
 * Retain multiple analysis sessions in memory and switch between them from the screen or modal.
+* Clearly mark and rename the active analysis session from its contextual menu.
 * Execute progressive games through `ChessGame.move(...)` using an injected rules engine.
 * Submit progressive moves either by board coordinates (`MoveCommand`) or SAN (`"Nf3"`).
 * Track clocks and apply opponent-approved takebacks.
 * Convert a progressive game into an independent `AnalysisSession` through `GameRecord`.
+* Draw calculation arrows by dragging with the secondary mouse button; double-click it to clear.
 
 ### Planned
 
@@ -107,6 +110,8 @@ src/main/java/com/escontrela/lastmove/
 └── ui/
     ├── controller/                     # FXML screen controllers
     ├── component/board/                # Reusable ChessBoardControl and square controls
+    ├── component/notation/             # Reusable selectable White/Black move notation
+    ├── component/session/              # Reusable active-session selector and contextual events
     ├── event/                          # UI-only events
     ├── model/                          # Board and presentation view models
     ├── screen/                         # Screen lifecycle and navigation

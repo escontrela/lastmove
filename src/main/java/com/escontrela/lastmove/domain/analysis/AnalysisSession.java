@@ -23,7 +23,7 @@ import java.util.UUID;
 public final class AnalysisSession {
 
   private final AnalysisSessionId id;
-  private final String title;
+  private String title;
   private final AnalysisOrigin origin;
   private final PositionSnapshot initialPosition;
   private final Optional<GameResult> sourceResult;
@@ -58,7 +58,7 @@ public final class AnalysisSession {
       Optional<GameResult> sourceResult,
       AnalysisTree tree) {
     this.id = Objects.requireNonNull(id, "id must not be null");
-    this.title = Objects.requireNonNull(title, "title must not be null");
+    this.title = requireTitle(title);
     this.origin = Objects.requireNonNull(origin, "origin must not be null");
     this.initialPosition =
         Objects.requireNonNull(initialPosition, "initialPosition must not be null");
@@ -74,6 +74,11 @@ public final class AnalysisSession {
 
   public String title() {
     return title;
+  }
+
+  /** Renames this study while preserving its identity, tree and navigation cursor. */
+  public void rename(String newTitle) {
+    title = requireTitle(newTitle);
   }
 
   public AnalysisOrigin origin() {
@@ -128,20 +133,27 @@ public final class AnalysisSession {
 
   /** Returns the selected line from the initial position through the cursor. */
   public List<Ply> currentLine() {
-    if (currentNodeId == null) {
-      return List.of();
-    }
-    return tree.lineTo(currentNodeId).stream().map(AnalysisNode::ply).toList();
+    return currentNodeLine().stream().map(AnalysisNode::ply).toList();
   }
 
   /** Returns the selected line plus its preferred continuation ahead of the cursor. */
   public List<Ply> notationLine() {
-    List<Ply> line = new ArrayList<>(currentLine());
+    return notationNodes().stream().map(AnalysisNode::ply).toList();
+  }
+
+  /**
+   * Returns the selectable structural nodes shown in notation order.
+   *
+   * <p>The result contains the path through the cursor followed by the preferred continuation, so
+   * a UI can render the complete visible line and select any displayed ply by node identity.
+   */
+  public List<AnalysisNode> notationNodes() {
+    List<AnalysisNode> line = new ArrayList<>(currentNodeLine());
     List<AnalysisNode> candidates =
         currentNodeId == null ? tree.roots() : tree.children(currentNodeId);
     while (!candidates.isEmpty()) {
       AnalysisNode next = candidates.getFirst();
-      line.add(next.ply());
+      line.add(next);
       candidates = tree.children(next.id());
     }
     return List.copyOf(line);
@@ -226,6 +238,10 @@ public final class AnalysisSession {
     return currentNodeId == null ? tree.roots() : tree.children(currentNodeId);
   }
 
+  private List<AnalysisNode> currentNodeLine() {
+    return currentNodeId == null ? List.of() : tree.lineTo(currentNodeId);
+  }
+
   private void refreshCurrentState() {
     currentPosition = currentNode().map(node -> node.ply().resultingPosition()).orElse(initialPosition);
     result = terminalResult(currentPosition).orElse(null);
@@ -248,5 +264,13 @@ public final class AnalysisSession {
               : GameResult.WHITE_WINS);
     }
     return position.stalemate() ? Optional.of(GameResult.DRAW) : Optional.empty();
+  }
+
+  private String requireTitle(String value) {
+    String required = Objects.requireNonNull(value, "title must not be null").trim();
+    if (required.isEmpty()) {
+      throw new IllegalArgumentException("title must not be blank");
+    }
+    return required;
   }
 }

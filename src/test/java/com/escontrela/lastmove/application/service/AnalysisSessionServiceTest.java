@@ -1,6 +1,7 @@
 package com.escontrela.lastmove.application.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.escontrela.lastmove.application.dto.AnalysisSessionSummary;
@@ -45,6 +46,24 @@ class AnalysisSessionServiceTest {
     assertEquals(fen.sessionId(), service.listSessions().getFirst().sessionId());
     assertEquals(PieceColor.WHITE, service.currentPosition(initial.sessionId()).activeColor());
     assertEquals(PieceColor.BLACK, service.currentPosition(fen.sessionId()).activeColor());
+
+    AnalysisSessionSummary renamed = service.renameSession(initial.sessionId(), "Opening draft");
+    assertEquals("Opening draft", renamed.title());
+    assertEquals(
+        "Opening draft",
+        service.sessionSummary(initial.sessionId()).title());
+  }
+
+  @Test
+  void deletesOneSessionWithoutChangingTheOthers() {
+    AnalysisSessionSummary retained = service.createInitialSession();
+    AnalysisSessionSummary deleted = service.createFenSession(Fen.startingPosition());
+
+    assertEquals(deleted, service.deleteSession(deleted.sessionId()));
+    assertEquals(List.of(retained), service.listSessions());
+    assertThrows(
+        java.util.NoSuchElementException.class,
+        () -> service.sessionSummary(deleted.sessionId()));
   }
 
   @Test
@@ -78,6 +97,11 @@ class AnalysisSessionServiceTest {
         service.notationLine(session.sessionId()).stream()
             .map(ply -> ply.move().san().getValue())
             .toList());
+
+    var visibleNodes = service.notationNodes(session.sessionId());
+    assertEquals(4, visibleNodes.size());
+    service.select(session.sessionId(), visibleNodes.get(2).nodeId());
+    assertEquals("Nf3", service.moveHistory(session.sessionId()).getLast().move().san().getValue());
   }
 
   @Test

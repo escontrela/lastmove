@@ -266,6 +266,7 @@ Operaciones principales:
 - `select(AnalysisNodeId)`.
 - `currentLine()`: desde la raíz hasta el cursor.
 - `notationLine()`: línea actual más la continuación preferida por delante del cursor.
+- `notationNodes()`: la misma línea con identidades seleccionables para controles de UI.
 - `rootVariations()` y `continuations(AnalysisNodeId)`.
 - `currentPosition()`, `currentState()`, `currentPly()` y `sourceResult()`.
 
@@ -345,6 +346,21 @@ escapa de `infrastructure/chesspresso`.
 y FEN, cambia entre sesiones, delega movimientos y navegación, y renderiza tablero y notación. La
 lista de sesiones en memoria y el modal usan `listSessions()`. El controlador no manipula el árbol
 ni valida reglas.
+
+Las sesiones pueden renombrarse mediante `AnalysisSession.rename(...)` y
+`AnalysisSessionService.renameSession(...)`. La lista lateral utiliza `SessionSelectorControl`, que
+marca la selección activa y emite una solicitud contextual neutral para que el controlador ofrezca
+el cambio de título sin introducir servicios de aplicación dentro del control.
+
+La notación se renderiza con `MoveNotationControl`, un control JavaFX reutilizable basado en una
+lista virtualizada de `MoveNotationRow`. Agrupa los plies como `número | blancas | negras`, resalta
+el ply actual y emite una selección sin conocer `AnalysisSession`. Esto permite reutilizarlo con la
+línea oficial de un `ChessGame` en una pantalla de partida regular.
+
+`ChessBoardControl` mantiene además `BoardArrow` como anotaciones visuales efímeras. La piel dibuja
+las flechas con el botón secundario, consume el menú contextual sobre el tablero y limpia los
+trazos con doble clic secundario o al cambiar de posición. Este estado no pertenece a ninguno de
+los agregados de ajedrez.
 
 ## Ejemplo de partida progresiva
 

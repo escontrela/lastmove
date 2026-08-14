@@ -100,6 +100,9 @@ destruir la línea anterior.
 `currentLine()` devuelve los plies hasta el cursor. `notationLine()` añade después la continuación
 preferida, lo que permite mostrar la línea completa aunque el usuario esté al principio.
 
+`notationNodes()` conserva además la identidad estructural de cada nodo visible. La UI utiliza esa
+identidad para seleccionar cualquier SAN de la línea y saltar directamente a su posición.
+
 ## Partida progresiva
 
 `ChessGame` mantiene:
@@ -167,6 +170,33 @@ sesiones obtienen `AnalysisSessionSummary` mediante `listSessions()` y pueden ca
 identificador seleccionado. Otra pantalla puede mantener simultáneamente otra selección sin
 interferencias.
 
+`SessionSelectorControl` reemplaza la antigua lista de strings. Renderiza cada sesión mediante una
+cell virtualizada, reserva una columna estable para la marca `✓` de la sesión activa y emite eventos
+neutrales de selección y solicitud de contexto. Al pedir contexto sobre una fila, el controlador la
+activa y reconstruye `ContextualMenuPanel` con acciones específicas de sesión.
+
+`Rename session…` abre la edición del título y delega en
+`AnalysisSessionService.renameSession(...)`. El agregado valida y aplica el nuevo título mediante
+`AnalysisSession.rename(...)`; identidad, árbol, posición y cursor permanecen intactos. El
+repositorio sólo guarda después el agregado actualizado.
+
+### Control reutilizable de notación
+
+`MoveNotationControl` sustituye la antigua lista vertical de strings. Internamente mantiene un
+único `ListView<MoveNotationRow>` virtualizado: cada fila representa un número de movimiento y
+contiene columnas independientes para blancas y negras. Cada SAN es un botón accesible y
+seleccionable, con estados hover, focus y current definidos mediante CSS para modo claro y oscuro.
+
+El control recibe `MoveNotationEntry`, que sólo contiene índice visible, número, color y SAN, y
+emite `PlySelectedEvent`. No conoce sesiones, árboles ni reglas, por lo que también puede utilizarse
+en una futura pantalla de partida progresiva. El controlador traduce el índice visible a
+`AnalysisNodeSummary` y delega la navegación en `AnalysisSessionService.select(...)`.
+
+Se eligió una lista virtualizada con cells compuestas frente a dos listas sincronizadas o
+RichTextFX. Para una línea de jugadas en dos columnas ofrece selección y teclado nativos, scroll
+único y coste constante al mostrar PGN largos. RichTextFX sigue disponible para un futuro editor de
+PGN con comentarios, NAG y variantes inline, donde el texto enriquecido sí aporta más valor.
+
 ## Responsabilidades del controlador
 
 El controlador:
@@ -179,6 +209,22 @@ El controlador:
 
 No valida movimientos, no importa PGN directamente, no modifica `AnalysisTree` y no conoce tipos
 Chesspresso.
+
+## Flechas de cálculo del tablero
+
+`ChessBoardControl` conserva una lista exclusivamente visual de `BoardArrow`. La piel añade un
+overlay transparente sobre las casillas y piezas:
+
+- press y drag con botón secundario define origen, preview y destino;
+- release alterna la flecha, permitiendo retirar un trazo repetido;
+- doble clic secundario elimina todas las flechas;
+- cambiar el `PositionSnapshot` también las limpia;
+- el evento `CONTEXT_MENU_REQUESTED` se consume dentro del tablero, por lo que no abre el menú
+  contextual de la pantalla.
+
+Las flechas no forman parte de `ChessGame`, `AnalysisSession` ni del PGN. Son una ayuda efímera de
+presentación y, por tanto, el mismo control puede utilizarlas tanto en análisis como en una partida
+regular.
 
 ## Verificación
 

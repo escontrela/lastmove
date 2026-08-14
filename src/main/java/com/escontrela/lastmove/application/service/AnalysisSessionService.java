@@ -124,6 +124,23 @@ public final class AnalysisSessionService {
     return summary(session(sessionId));
   }
 
+  /** Renames one retained study without changing its identity or active cursor. */
+  public AnalysisSessionSummary renameSession(AnalysisSessionId sessionId, String newTitle) {
+    AnalysisSession session = session(sessionId);
+    session.rename(newTitle);
+    sessionRepository.save(session);
+    return summary(session);
+  }
+
+  /** Deletes one retained study and returns the summary that identified it. */
+  public AnalysisSessionSummary deleteSession(AnalysisSessionId sessionId) {
+    AnalysisSession session = session(sessionId);
+    if (!sessionRepository.deleteById(session.id())) {
+      throw unknownSession(session.id());
+    }
+    return summary(session);
+  }
+
   /** Returns the position currently selected by the session cursor. */
   public PositionSnapshot currentPosition(AnalysisSessionId sessionId) {
     return session(sessionId).currentPosition();
@@ -142,6 +159,12 @@ public final class AnalysisSessionService {
   /** Returns the selected line plus its preferred continuation ahead of the cursor. */
   public List<Ply> notationLine(AnalysisSessionId sessionId) {
     return session(sessionId).notationLine();
+  }
+
+  /** Returns the complete visible notation line with selectable analysis-node identities. */
+  public List<AnalysisNodeSummary> notationNodes(AnalysisSessionId sessionId) {
+    AnalysisSession session = session(sessionId);
+    return session.notationNodes().stream().map(node -> nodeSummary(session, node)).toList();
   }
 
   /** Returns the selectable variations that begin at the initial position. */

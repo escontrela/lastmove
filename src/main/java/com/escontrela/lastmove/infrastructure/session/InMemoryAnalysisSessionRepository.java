@@ -36,6 +36,13 @@ public final class InMemoryAnalysisSessionRepository implements AnalysisSessionR
   }
 
   @Override
+  public synchronized boolean deleteById(AnalysisSessionId sessionId) {
+    return sessions.remove(
+            Objects.requireNonNull(sessionId, "sessionId must not be null"))
+        != null;
+  }
+
+  @Override
   public synchronized List<AnalysisSession> findAllByMostRecent() {
     List<AnalysisSession> newestFirst = new ArrayList<>(sessions.values());
     Collections.reverse(newestFirst);

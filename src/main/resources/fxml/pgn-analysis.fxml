@@ -3,10 +3,11 @@
 <?import com.escontrela.lastmove.ui.component.board.ChessBoardControl?>
 <?import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton?>
 <?import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel?>
+<?import com.escontrela.lastmove.ui.component.notation.MoveNotationControl?>
+<?import com.escontrela.lastmove.ui.component.session.SessionSelectorControl?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
-<?import javafx.scene.control.ListView?>
 <?import javafx.scene.image.Image?>
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.BorderPane?>
@@ -50,7 +51,7 @@
                 <padding><Insets bottom="20.0" left="20.0" right="20.0" top="20.0" /></padding>
                 <Label styleClass="eyebrow-label" text="Open sessions" />
                 <Label styleClass="card-title" text="Sessions" />
-                <ListView fx:id="sessionListView" styleClass="move-list" VBox.vgrow="ALWAYS" />
+                <SessionSelectorControl fx:id="sessionSelector" VBox.vgrow="ALWAYS" />
             </VBox>
         </VBox>
     </left>
@@ -76,7 +77,7 @@
                     <padding><Insets bottom="20.0" left="20.0" right="20.0" top="20.0" /></padding>
                     <Label styleClass="eyebrow-label" text="Notation" />
                     <Label styleClass="card-title" text="Moves" />
-                    <ListView fx:id="moveListView" styleClass="move-list" VBox.vgrow="ALWAYS" />
+                    <MoveNotationControl fx:id="moveNotation" VBox.vgrow="ALWAYS" />
                 </VBox>
             </VBox>
         </HBox>

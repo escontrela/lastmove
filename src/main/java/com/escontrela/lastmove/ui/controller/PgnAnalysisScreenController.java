@@ -1,13 +1,22 @@
 package com.escontrela.lastmove.ui.controller;
 
 import com.escontrela.lastmove.application.dto.AnalysisSessionSummary;
+import com.escontrela.lastmove.application.dto.AnalysisNodeSummary;
 import com.escontrela.lastmove.application.dto.PgnImportRequest;
 import com.escontrela.lastmove.application.service.GameLoadService;
 import com.escontrela.lastmove.application.service.AnalysisSessionService;
 import com.escontrela.lastmove.domain.analysis.AnalysisSessionId;
+import com.escontrela.lastmove.domain.common.PieceColor;
 import com.escontrela.lastmove.domain.game.MoveCommand;
 import com.escontrela.lastmove.domain.game.MoveExecutionResult;
 import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
+import com.escontrela.lastmove.ui.component.notation.MoveNotationControl;
+import com.escontrela.lastmove.ui.component.notation.MoveNotationEntry;
+import com.escontrela.lastmove.ui.component.session.SessionSelectorControl;
+import com.escontrela.lastmove.ui.component.session.SessionSelectorEntry;
+import com.escontrela.lastmove.ui.event.OpenSessionManagementEvent;
+import com.escontrela.lastmove.ui.event.ReturnToAnalysisSessionEvent;
+import com.escontrela.lastmove.ui.event.UiEventBus;
 import com.escontrela.lastmove.ui.model.BoardMoveInput;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
 import com.escontrela.lastmove.ui.screen.UiScreenController;
@@ -19,16 +28,14 @@ import java.util.Objects;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.fxml.FXML;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
-import javafx.scene.control.ListView;
 import javafx.scene.control.TextInputDialog;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.layout.StackPane;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 /**
@@ -50,8 +57,8 @@ public class PgnAnalysisScreenController implements UiScreenController {
   @FXML private StackPane boardHost;
   @FXML private ImageView statusBrandLogo;
   @FXML private ContextualMenuPanel contextualMenuPanel;
-  @FXML private ListView<String> sessionListView;
-  @FXML private ListView<String> moveListView;
+  @FXML private SessionSelectorControl sessionSelector;
+  @FXML private MoveNotationControl moveNotation;
   @FXML private Label statusLabel;
   @FXML private com.escontrela.lastmove.ui.component.board.ChessBoardControl chessBoard;
 
@@ -59,24 +66,29 @@ public class PgnAnalysisScreenController implements UiScreenController {
   private final AnalysisSessionService analysisSessionService;
   private final FileChooserFactory fileChooserFactory;
   private final UiFlowManager uiFlowManager;
+  private final UiEventBus uiEventBus;
   private final ChessSoundService chessSoundService;
   private final ListChangeListener<String> themeStyleListener = change -> updateStatusBrandLogo();
 
   /** Identity of the session currently rendered by this screen. */
   private AnalysisSessionId activeAnalysisSessionId;
+  private String pendingStatusMessage;
 
   private List<AnalysisSessionSummary> visibleSessions = List.of();
+  private List<AnalysisNodeSummary> visibleNotationNodes = List.of();
 
   public PgnAnalysisScreenController(
       GameLoadService gameLoadService,
       AnalysisSessionService analysisSessionService,
       FileChooserFactory fileChooserFactory,
       ChessSoundService chessSoundService,
+      UiEventBus uiEventBus,
       @Lazy UiFlowManager uiFlowManager) {
     this.gameLoadService = gameLoadService;
     this.analysisSessionService = analysisSessionService;
     this.fileChooserFactory = fileChooserFactory;
     this.chessSoundService = chessSoundService;
+    this.uiEventBus = uiEventBus;
     this.uiFlowManager = uiFlowManager;
   }
 
@@ -89,10 +101,17 @@ public class PgnAnalysisScreenController implements UiScreenController {
     updateStatusBrandLogo();
     configureContextMenu();
     chessBoard.setSoundService(chessSoundService);
-    activeAnalysisSessionId = analysisSessionService.createInitialSession().sessionId();
+    if (activeAnalysisSessionId == null) {
+      activeAnalysisSessionId = analysisSessionService.createInitialSession().sessionId();
+    }
     chessBoard.renderPosition(analysisSessionService.currentPosition(activeAnalysisSessionId));
     configureSessionPicker();
+    configureMoveNotation();
     refreshWorkspace();
+    if (pendingStatusMessage != null && !pendingStatusMessage.isBlank()) {
+      statusLabel.setText(pendingStatusMessage);
+      pendingStatusMessage = null;
+    }
 
     // Suscribirse a los eventos de movimiento desde el tablero
     if (chessBoard != null) {
@@ -201,37 +220,18 @@ public class PgnAnalysisScreenController implements UiScreenController {
             });
   }
 
-  /** Opens a modal picker for every session retained in the in-memory catalog. */
+  /** Opens the LastMove session-management screen without creating a native modal window. */
   @FXML
   public void onShowSessions() {
-    List<AnalysisSessionSummary> sessions = analysisSessionService.listSessions();
-    Dialog<AnalysisSessionId> dialog = new Dialog<>();
-    dialog.setTitle("Open sessions");
-    dialog.setHeaderText("Return to an in-memory study");
-    ListView<String> choices = new ListView<>();
-    choices.getItems().setAll(sessions.stream().map(AnalysisSessionSummary::title).toList());
-    choices.setPrefHeight(240);
-    for (int index = 0; index < sessions.size(); index++) {
-      if (sessions.get(index).sessionId().equals(activeAnalysisSessionId)) {
-        choices.getSelectionModel().select(index);
-        break;
-      }
-    }
-    dialog.getDialogPane().setContent(choices);
-    ButtonType select = new ButtonType("Open", ButtonType.OK.getButtonData());
-    dialog.getDialogPane().getButtonTypes().addAll(select, ButtonType.CANCEL);
-    dialog.setResultConverter(
-        button ->
-            button == select && choices.getSelectionModel().getSelectedIndex() >= 0
-                ? sessions.get(choices.getSelectionModel().getSelectedIndex()).sessionId()
-                : null);
-    dialog
-        .showAndWait()
-        .ifPresent(
-            sessionId -> {
-              activeAnalysisSessionId = sessionId;
-              refreshWorkspace();
-            });
+    uiEventBus.publish(new OpenSessionManagementEvent(activeAnalysisSessionId));
+    uiFlowManager.show(UiScreenId.ANALYSIS_SESSIONS);
+  }
+
+  /** Receives the selection made by the dedicated session-management screen. */
+  @EventListener
+  public void onReturnToAnalysisSession(ReturnToAnalysisSessionEvent event) {
+    activeAnalysisSessionId = event.activeSessionId().orElse(null);
+    pendingStatusMessage = event.statusMessage();
   }
 
   @FXML
@@ -258,6 +258,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
 
   @FXML
   public void showContextMenu(ContextMenuEvent event) {
+    configureContextMenu();
     contextualMenuPanel.showAtScene(event.getSceneX(), event.getSceneY());
     event.consume();
   }
@@ -278,23 +279,88 @@ public class PgnAnalysisScreenController implements UiScreenController {
   }
 
   private void configureSessionPicker() {
-    sessionListView
-        .getSelectionModel()
-        .selectedIndexProperty()
-        .addListener(
-            (observable, previous, selected) -> {
-              if (selected == null
-                  || selected.intValue() < 0
-                  || selected.intValue() >= visibleSessions.size()) {
-                return;
-              }
-              activeAnalysisSessionId = visibleSessions.get(selected.intValue()).sessionId();
-              chessBoard.renderPosition(
-                  analysisSessionService.currentPosition(activeAnalysisSessionId));
-              refreshMoveList();
-              statusLabel.setText(
-                  "Switched to " + visibleSessions.get(selected.intValue()).title());
+    sessionSelector.setOnSessionSelected(
+        event -> activateSession(event.getEntry().sessionIndex()));
+    sessionSelector.setOnContextRequested(
+        event -> {
+          int sessionIndex = event.getEntry().sessionIndex();
+          if (sessionIndex < 0 || sessionIndex >= visibleSessions.size()) {
+            return;
+          }
+          AnalysisSessionSummary selected = visibleSessions.get(sessionIndex);
+          configureSessionContextMenu(selected);
+          contextualMenuPanel.showAtScene(event.getSceneX(), event.getSceneY());
+        });
+  }
+
+  private void activateSession(int sessionIndex) {
+    if (sessionIndex < 0 || sessionIndex >= visibleSessions.size()) {
+      return;
+    }
+    AnalysisSessionSummary selected = visibleSessions.get(sessionIndex);
+    activeAnalysisSessionId = selected.sessionId();
+    chessBoard.renderPosition(analysisSessionService.currentPosition(activeAnalysisSessionId));
+    refreshMoveList();
+    refreshSessionList();
+    statusLabel.setText("Switched to " + selected.title());
+  }
+
+  private void configureSessionContextMenu(AnalysisSessionSummary selected) {
+    contextualMenuPanel.clearItems();
+    contextualMenuPanel.addItem(
+        "Rename session…", "", event -> renameSession(selected.sessionId(), selected.title()));
+    contextualMenuPanel.addItem(
+        "Delete session", "", event -> deleteSession(selected.sessionId()));
+    contextualMenuPanel.addSeparator();
+    contextualMenuPanel.addItem("Open sessions…", "", event -> onShowSessions());
+  }
+
+  private void deleteSession(AnalysisSessionId sessionId) {
+    AnalysisSessionSummary deleted = analysisSessionService.deleteSession(sessionId);
+    if (sessionId.equals(activeAnalysisSessionId)) {
+      List<AnalysisSessionSummary> remaining = analysisSessionService.listSessions();
+      activeAnalysisSessionId =
+          remaining.isEmpty()
+              ? analysisSessionService.createInitialSession().sessionId()
+              : remaining.getFirst().sessionId();
+      chessBoard.renderPosition(analysisSessionService.currentPosition(activeAnalysisSessionId));
+      refreshMoveList();
+    }
+    refreshSessionList();
+    statusLabel.setText("Deleted session: " + deleted.title());
+  }
+
+  private void renameSession(AnalysisSessionId sessionId, String currentTitle) {
+    TextInputDialog dialog = new TextInputDialog(currentTitle);
+    dialog.setTitle("Rename session");
+    dialog.setHeaderText("Choose a recognizable study title");
+    dialog.setContentText("Title:");
+    dialog
+        .showAndWait()
+        .map(String::trim)
+        .filter(value -> !value.isEmpty())
+        .ifPresent(
+            value -> {
+              AnalysisSessionSummary renamed =
+                  analysisSessionService.renameSession(sessionId, value);
+              refreshSessionList();
+              statusLabel.setText("Renamed session to " + renamed.title());
             });
+  }
+
+  private void configureMoveNotation() {
+    moveNotation.setOnPlySelected(
+        event -> {
+          int plyIndex = event.getEntry().plyIndex();
+          if (plyIndex < 0 || plyIndex >= visibleNotationNodes.size()) {
+            return;
+          }
+          AnalysisNodeSummary selected = visibleNotationNodes.get(plyIndex);
+          chessBoard.renderPosition(
+              analysisSessionService.select(activeAnalysisSessionId, selected.nodeId()));
+          refreshMoveList();
+          statusLabel.setText("Selected " + selected.ply().move().san().getValue());
+        });
   }
 
   private void refreshWorkspace() {
@@ -307,42 +373,40 @@ public class PgnAnalysisScreenController implements UiScreenController {
 
   private void refreshSessionList() {
     visibleSessions = analysisSessionService.listSessions();
-    sessionListView
-        .getItems()
-        .setAll(
-            visibleSessions.stream()
-                .map(
-                    summary ->
-                        (summary.sessionId().equals(activeAnalysisSessionId) ? "● " : "")
-                            + summary.title())
-                .toList());
+    sessionSelector.setEntries(
+        java.util.stream.IntStream.range(0, visibleSessions.size())
+            .mapToObj(
+                sessionIndex ->
+                    new SessionSelectorEntry(
+                        sessionIndex, visibleSessions.get(sessionIndex).title()))
+            .toList());
+    int selectedIndex = -1;
     for (int index = 0; index < visibleSessions.size(); index++) {
       if (visibleSessions.get(index).sessionId().equals(activeAnalysisSessionId)) {
-        sessionListView.getSelectionModel().select(index);
+        selectedIndex = index;
         break;
       }
     }
+    sessionSelector.setSelectedSessionIndex(selectedIndex);
   }
 
   private void refreshMoveList() {
     int currentPlyIndex =
         analysisSessionService.moveHistory(activeAnalysisSessionId).size() - 1;
-    moveListView
-        .getItems()
-        .setAll(
-            analysisSessionService.notationLine(activeAnalysisSessionId).stream()
-                .map(
-                    ply ->
-                        ply.moveNumber()
-                            + (ply.movingColor().name().equals("WHITE") ? ". " : "... ")
-                            + ply.move().san().getValue())
-                .toList());
-    if (currentPlyIndex >= 0) {
-      moveListView.getSelectionModel().select(currentPlyIndex);
-      moveListView.scrollTo(currentPlyIndex);
-    } else {
-      moveListView.getSelectionModel().clearSelection();
-    }
+    visibleNotationNodes = analysisSessionService.notationNodes(activeAnalysisSessionId);
+    moveNotation.setEntries(
+        java.util.stream.IntStream.range(0, visibleNotationNodes.size())
+            .mapToObj(
+                plyIndex -> {
+                  var ply = visibleNotationNodes.get(plyIndex).ply();
+                  return new MoveNotationEntry(
+                      plyIndex,
+                      ply.moveNumber(),
+                      ply.movingColor() == PieceColor.WHITE,
+                      ply.move().san().getValue());
+                })
+            .toList());
+    moveNotation.setSelectedPlyIndex(currentPlyIndex);
   }
 
   private void updateStatusBrandLogo() {
