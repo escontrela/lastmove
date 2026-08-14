@@ -63,6 +63,8 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
         renderPosition(newPosition);
         playMoveSoundIfNeeded(oldPosition, newPosition);
       };
+  private final ChangeListener<Boolean> orientationListener =
+      (observable, oldValue, flipped) -> applyOrientation();
 
   public ChessBoardSkin(ChessBoardControl control) {
 
@@ -70,6 +72,7 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     configureGrid();
     buildGrid(control); // Pasó 1: Construcción estructural del Grid e interacción pura
     control.positionProperty().addListener(positionListener);
+    control.flippedProperty().addListener(orientationListener);
     control.observableArrows().addListener(arrowsListener);
     control.addEventFilter(ContextMenuEvent.CONTEXT_MENU_REQUESTED, contextMenuFilter);
     if (control.getPosition() != null) {
@@ -184,6 +187,28 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
             event.consume();
           }
         });
+    applyOrientation();
+  }
+
+  private void applyOrientation() {
+    clickClickPendingSquare = null;
+    dragOriginSquare = null;
+    draggedPiece = null;
+    draggedPieceView.setVisible(false);
+    arrowOriginSquare = null;
+    previewArrow = null;
+    for (int file = 0; file < ChessConstants.FILES; file++) {
+      for (int rank = 0; rank < ChessConstants.RANKS; rank++) {
+        ChessSquareControl square = squares[file][rank];
+        Square logicalSquare = Square.of(file, rank);
+        GridPane.setColumnIndex(
+            square, displayFile(logicalSquare, getSkinnable().isFlipped()));
+        GridPane.setRowIndex(
+            square, displayRow(logicalSquare, getSkinnable().isFlipped()));
+      }
+    }
+    clearDragTargetHighlight();
+    renderArrows();
   }
 
   private void handleArrowPressed(ChessBoardControl control, MouseEvent event) {
@@ -325,15 +350,18 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
       return null;
     }
 
-    int file = (int) (gridX / (gridWidth / ChessConstants.FILES));
-    int rank = ChessConstants.RANKS - 1 - (int) (gridY / (gridHeight / ChessConstants.RANKS));
+    int displayColumn = (int) (gridX / (gridWidth / ChessConstants.FILES));
+    int displayRow = (int) (gridY / (gridHeight / ChessConstants.RANKS));
 
     // Validates that the calculated file and rank are within the valid range of the chessboard
-    if (file < 0 || file >= ChessConstants.FILES || rank < 0 || rank >= ChessConstants.RANKS) {
+    if (displayColumn < 0
+        || displayColumn >= ChessConstants.FILES
+        || displayRow < 0
+        || displayRow >= ChessConstants.RANKS) {
       return null;
     }
 
-    return Square.of(file, rank);
+    return logicalSquareAt(displayColumn, displayRow, getSkinnable().isFlipped());
   }
 
   private void updateDragTargetHighlight(Square candidateSquare) {
@@ -467,10 +495,11 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
 
   private Group createArrowGraphic(BoardArrow arrow, double opacity) {
     double squareSize = arrowOverlay.getWidth() / ChessConstants.FILES;
-    double startX = (arrow.from().getFile() + 0.5) * squareSize;
-    double startY = (ChessConstants.RANKS - arrow.from().getRank() - 0.5) * squareSize;
-    double targetX = (arrow.to().getFile() + 0.5) * squareSize;
-    double targetY = (ChessConstants.RANKS - arrow.to().getRank() - 0.5) * squareSize;
+    boolean flipped = getSkinnable().isFlipped();
+    double startX = (displayFile(arrow.from(), flipped) + 0.5) * squareSize;
+    double startY = (displayRow(arrow.from(), flipped) + 0.5) * squareSize;
+    double targetX = (displayFile(arrow.to(), flipped) + 0.5) * squareSize;
+    double targetY = (displayRow(arrow.to(), flipped) + 0.5) * squareSize;
     double deltaX = targetX - startX;
     double deltaY = targetY - startY;
     double distance = Math.hypot(deltaX, deltaY);
@@ -505,6 +534,7 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
   @Override
   public void dispose() {
     getSkinnable().positionProperty().removeListener(positionListener);
+    getSkinnable().flippedProperty().removeListener(orientationListener);
     getSkinnable().observableArrows().removeListener(arrowsListener);
     getSkinnable().removeEventFilter(ContextMenuEvent.CONTEXT_MENU_REQUESTED, contextMenuFilter);
     super.dispose();
@@ -541,6 +571,20 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
         squares[file][rank].setSquareSize(squareSize);
       }
     }
+  }
+
+  static int displayFile(Square square, boolean flipped) {
+    return flipped ? ChessConstants.FILES - 1 - square.getFile() : square.getFile();
+  }
+
+  static int displayRow(Square square, boolean flipped) {
+    return flipped ? square.getRank() : ChessConstants.RANKS - 1 - square.getRank();
+  }
+
+  static Square logicalSquareAt(int displayColumn, int displayRow, boolean flipped) {
+    int file = flipped ? ChessConstants.FILES - 1 - displayColumn : displayColumn;
+    int rank = flipped ? displayRow : ChessConstants.RANKS - 1 - displayRow;
+    return Square.of(file, rank);
   }
 
 }

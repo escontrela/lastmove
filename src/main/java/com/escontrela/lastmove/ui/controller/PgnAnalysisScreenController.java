@@ -265,6 +265,13 @@ public class PgnAnalysisScreenController implements UiScreenController {
     }
   }
 
+  /** Rotates only the reusable board presentation, leaving the active session untouched. */
+  @FXML
+  public void onRotateBoard() {
+    boolean flipped = chessBoard.toggleOrientation();
+    statusLabel.setText(flipped ? "Board rotated: Black at bottom" : "Board rotated: White at bottom");
+  }
+
   @FXML
   public void backToMain() {
     uiFlowManager.show(UiScreenId.MAIN);

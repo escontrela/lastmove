@@ -4,6 +4,8 @@ import com.escontrela.lastmove.domain.game.PositionSnapshot;
 import com.escontrela.lastmove.ui.model.BoardMoveInput;
 import com.escontrela.lastmove.ui.service.ChessSound;
 import com.escontrela.lastmove.ui.service.ChessSoundService;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
@@ -27,6 +29,7 @@ public class ChessBoardControl extends Control {
   private final ObjectProperty<PositionSnapshot> position =
       new SimpleObjectProperty<>(this, "position");
   private final ObservableList<BoardArrow> arrows = FXCollections.observableArrayList();
+  private final BooleanProperty flipped = new SimpleBooleanProperty(this, "flipped", false);
 
   // 1. PROPIEDAD DEL EVENTO: Permite suscribir controladores externos
   private final ObjectProperty<EventHandler<BoardMoveEvent>> onMoveRequested =
@@ -64,6 +67,26 @@ public class ChessBoardControl extends Control {
 
   public final PositionSnapshot getPosition() {
     return position.get();
+  }
+
+  /** Presentation-only orientation flag; {@code false} keeps White at the bottom. */
+  public final BooleanProperty flippedProperty() {
+    return flipped;
+  }
+
+  public final boolean isFlipped() {
+    return flipped.get();
+  }
+
+  /** Sets the visual board orientation without modifying its position or chess state. */
+  public final void setFlipped(boolean value) {
+    flipped.set(value);
+  }
+
+  /** Rotates the rendered board by 180 degrees and returns the new orientation. */
+  public final boolean toggleOrientation() {
+    setFlipped(!isFlipped());
+    return isFlipped();
   }
 
   /** Replaces the visual calculation arrows without changing the rendered chess position. */
