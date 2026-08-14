@@ -1,10 +1,10 @@
 package com.escontrela.lastmove.ui.controller;
 
-import com.escontrela.lastmove.application.dto.GameSessionSummary;
+import com.escontrela.lastmove.application.dto.AnalysisSessionSummary;
 import com.escontrela.lastmove.application.dto.PgnImportRequest;
 import com.escontrela.lastmove.application.service.GameLoadService;
-import com.escontrela.lastmove.application.service.GameSessionService;
-import com.escontrela.lastmove.domain.common.SessionId;
+import com.escontrela.lastmove.application.service.AnalysisSessionService;
+import com.escontrela.lastmove.domain.analysis.AnalysisSessionId;
 import com.escontrela.lastmove.domain.game.MoveCommand;
 import com.escontrela.lastmove.domain.game.MoveExecutionResult;
 import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
@@ -56,25 +56,25 @@ public class PgnAnalysisScreenController implements UiScreenController {
   @FXML private com.escontrela.lastmove.ui.component.board.ChessBoardControl chessBoard;
 
   private final GameLoadService gameLoadService;
-  private final GameSessionService gameSessionService;
+  private final AnalysisSessionService analysisSessionService;
   private final FileChooserFactory fileChooserFactory;
   private final UiFlowManager uiFlowManager;
   private final ChessSoundService chessSoundService;
   private final ListChangeListener<String> themeStyleListener = change -> updateStatusBrandLogo();
 
   /** Identity of the session currently rendered by this screen. */
-  private SessionId boardSessionId;
+  private AnalysisSessionId activeAnalysisSessionId;
 
-  private List<GameSessionSummary> visibleSessions = List.of();
+  private List<AnalysisSessionSummary> visibleSessions = List.of();
 
   public PgnAnalysisScreenController(
       GameLoadService gameLoadService,
-      GameSessionService gameSessionService,
+      AnalysisSessionService analysisSessionService,
       FileChooserFactory fileChooserFactory,
       ChessSoundService chessSoundService,
       @Lazy UiFlowManager uiFlowManager) {
     this.gameLoadService = gameLoadService;
-    this.gameSessionService = gameSessionService;
+    this.analysisSessionService = analysisSessionService;
     this.fileChooserFactory = fileChooserFactory;
     this.chessSoundService = chessSoundService;
     this.uiFlowManager = uiFlowManager;
@@ -89,8 +89,8 @@ public class PgnAnalysisScreenController implements UiScreenController {
     updateStatusBrandLogo();
     configureContextMenu();
     chessBoard.setSoundService(chessSoundService);
-    boardSessionId = gameSessionService.createInitialSession().sessionId();
-    chessBoard.renderPosition(gameSessionService.currentPosition(boardSessionId));
+    activeAnalysisSessionId = analysisSessionService.createInitialSession().sessionId();
+    chessBoard.renderPosition(analysisSessionService.currentPosition(activeAnalysisSessionId));
     configureSessionPicker();
     refreshWorkspace();
 
@@ -100,8 +100,8 @@ public class PgnAnalysisScreenController implements UiScreenController {
           event -> {
             BoardMoveInput moveInput = event.getMoveInput();
             MoveExecutionResult moveResult =
-                gameSessionService.attemptMove(
-                    boardSessionId,
+                analysisSessionService.attemptMove(
+                    activeAnalysisSessionId,
                     new MoveCommand(
                         moveInput.fromSquare(), moveInput.toSquare(), moveInput.promotionPiece()));
 
@@ -157,8 +157,8 @@ public class PgnAnalysisScreenController implements UiScreenController {
         .ifPresent(
             file -> {
               try {
-                boardSessionId =
-                    gameSessionService
+                activeAnalysisSessionId =
+                    analysisSessionService
                         .createPgnSession(
                             gameLoadService.importPgn(PgnImportRequest.fromFile(file.toPath())))
                         .sessionId();
@@ -172,7 +172,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
   /** Starts and activates a fresh study at the normal initial position. */
   @FXML
   public void onReset() {
-    boardSessionId = gameSessionService.createInitialSession().sessionId();
+    activeAnalysisSessionId = analysisSessionService.createInitialSession().sessionId();
     refreshWorkspace();
   }
 
@@ -189,8 +189,8 @@ public class PgnAnalysisScreenController implements UiScreenController {
         .ifPresent(
             value -> {
               try {
-                boardSessionId =
-                    gameSessionService
+                activeAnalysisSessionId =
+                    analysisSessionService
                         .createFenSession(
                             com.escontrela.lastmove.domain.notation.Fen.of(value.trim()))
                         .sessionId();
@@ -204,15 +204,15 @@ public class PgnAnalysisScreenController implements UiScreenController {
   /** Opens a modal picker for every session retained in the in-memory catalog. */
   @FXML
   public void onShowSessions() {
-    List<GameSessionSummary> sessions = gameSessionService.listSessions();
-    Dialog<SessionId> dialog = new Dialog<>();
+    List<AnalysisSessionSummary> sessions = analysisSessionService.listSessions();
+    Dialog<AnalysisSessionId> dialog = new Dialog<>();
     dialog.setTitle("Open sessions");
     dialog.setHeaderText("Return to an in-memory study");
     ListView<String> choices = new ListView<>();
-    choices.getItems().setAll(sessions.stream().map(GameSessionSummary::title).toList());
+    choices.getItems().setAll(sessions.stream().map(AnalysisSessionSummary::title).toList());
     choices.setPrefHeight(240);
     for (int index = 0; index < sessions.size(); index++) {
-      if (sessions.get(index).sessionId().equals(boardSessionId)) {
+      if (sessions.get(index).sessionId().equals(activeAnalysisSessionId)) {
         choices.getSelectionModel().select(index);
         break;
       }
@@ -229,20 +229,20 @@ public class PgnAnalysisScreenController implements UiScreenController {
         .showAndWait()
         .ifPresent(
             sessionId -> {
-              boardSessionId = sessionId;
+              activeAnalysisSessionId = sessionId;
               refreshWorkspace();
             });
   }
 
   @FXML
   public void onNextMove() {
-    chessBoard.renderPosition(gameSessionService.next(boardSessionId));
+    chessBoard.renderPosition(analysisSessionService.next(activeAnalysisSessionId));
     refreshMoveList();
   }
 
   @FXML
   public void onPreviousMove() {
-    chessBoard.renderPosition(gameSessionService.previous(boardSessionId));
+    chessBoard.renderPosition(analysisSessionService.previous(activeAnalysisSessionId));
     refreshMoveList();
   }
 
@@ -288,8 +288,9 @@ public class PgnAnalysisScreenController implements UiScreenController {
                   || selected.intValue() >= visibleSessions.size()) {
                 return;
               }
-              boardSessionId = visibleSessions.get(selected.intValue()).sessionId();
-              chessBoard.renderPosition(gameSessionService.currentPosition(boardSessionId));
+              activeAnalysisSessionId = visibleSessions.get(selected.intValue()).sessionId();
+              chessBoard.renderPosition(
+                  analysisSessionService.currentPosition(activeAnalysisSessionId));
               refreshMoveList();
               statusLabel.setText(
                   "Switched to " + visibleSessions.get(selected.intValue()).title());
@@ -297,24 +298,26 @@ public class PgnAnalysisScreenController implements UiScreenController {
   }
 
   private void refreshWorkspace() {
-    chessBoard.renderPosition(gameSessionService.currentPosition(boardSessionId));
+    chessBoard.renderPosition(analysisSessionService.currentPosition(activeAnalysisSessionId));
     refreshSessionList();
     refreshMoveList();
-    statusLabel.setText("Ready: " + gameSessionService.sessionSummary(boardSessionId).title());
+    statusLabel.setText(
+        "Ready: " + analysisSessionService.sessionSummary(activeAnalysisSessionId).title());
   }
 
   private void refreshSessionList() {
-    visibleSessions = gameSessionService.listSessions();
+    visibleSessions = analysisSessionService.listSessions();
     sessionListView
         .getItems()
         .setAll(
             visibleSessions.stream()
                 .map(
                     summary ->
-                        (summary.sessionId().equals(boardSessionId) ? "● " : "") + summary.title())
+                        (summary.sessionId().equals(activeAnalysisSessionId) ? "● " : "")
+                            + summary.title())
                 .toList());
     for (int index = 0; index < visibleSessions.size(); index++) {
-      if (visibleSessions.get(index).sessionId().equals(boardSessionId)) {
+      if (visibleSessions.get(index).sessionId().equals(activeAnalysisSessionId)) {
         sessionListView.getSelectionModel().select(index);
         break;
       }
@@ -322,11 +325,12 @@ public class PgnAnalysisScreenController implements UiScreenController {
   }
 
   private void refreshMoveList() {
-    int currentPlyIndex = gameSessionService.moveHistory(boardSessionId).size() - 1;
+    int currentPlyIndex =
+        analysisSessionService.moveHistory(activeAnalysisSessionId).size() - 1;
     moveListView
         .getItems()
         .setAll(
-            gameSessionService.notationLine(boardSessionId).stream()
+            analysisSessionService.notationLine(activeAnalysisSessionId).stream()
                 .map(
                     ply ->
                         ply.moveNumber()

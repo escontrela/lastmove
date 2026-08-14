@@ -309,7 +309,7 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
 
   /**
    * Renders the board from an engine-independent position snapshot. This is called by the
-   * controller after a move has been applied by GameMoveService.
+   * controller after a move has been applied by the analysis-session use case.
    *
    * @param snapshot the complete board state to render.
    */

@@ -1,7 +1,9 @@
 package com.escontrela.lastmove.infrastructure.config;
 
+import com.escontrela.lastmove.domain.analysis.AnalysisSessionFactory;
+import com.escontrela.lastmove.domain.game.ChessGameFactory;
+import com.escontrela.lastmove.domain.game.ChessRulesEngine;
 import com.escontrela.lastmove.domain.service.FenService;
-import com.escontrela.lastmove.domain.service.GameNavigationService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -14,13 +16,21 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class LastMoveConfiguration {
 
+    /** Creates analysis sessions from immutable records of played games. */
+    @Bean
+    public AnalysisSessionFactory analysisSessionFactory() {
+        return new AnalysisSessionFactory();
+    }
+
+    /** Creates domain chess games with the configured rules-engine implementation. */
+    @Bean
+    public ChessGameFactory chessGameFactory(ChessRulesEngine rulesEngine) {
+        return new ChessGameFactory(rulesEngine);
+    }
+
     @Bean
     public FenService fenService() {
         return new FenService();
     }
 
-    @Bean
-    public GameNavigationService gameNavigationService() {
-        return new GameNavigationService();
-    }
 }

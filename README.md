@@ -2,7 +2,7 @@
 
 **Open-source chess suite for playing, studying, analyzing, and replaying games.**
 
-LastMove is a desktop chess application built around a reusable JavaFX board. Its first milestone is deliberately focused: open a PGN game, navigate its main line and variations, and show every position on the board. The same foundation will later support study tools, analysis engines, puzzles, game management, online play, and community features.
+LastMove is a desktop chess application built around a reusable JavaFX board. The current analysis workspace can import a complete PGN tree, start a study from the standard position or a FEN, navigate moves, create non-destructive variations, and switch between studies retained in memory. The domain also models progressive linear games, consent-based takebacks, clocks, and conversion of a played game into an independent study.
 
 LastMove follows a pragmatic DDD-inspired structure: domain models chess concepts and rules, application coordinates workflows, infrastructure hosts technical integrations such as Chesspresso, and ui contains JavaFX presentation code. The project intentionally avoids port-and-adapter abstractions at this stage.
 
@@ -14,7 +14,7 @@ LastMove treats a chess game as structured data rather than only a visual board.
 * **FEN** for a precise board position.
 * **SAN** for human-readable move notation.
 
-Chesspresso is used as the initial technical library for parsing and traversing games. Its code is isolated from the core model so that the application can evolve without binding every layer to a third-party API.
+Chesspresso is the current rules and PGN integration. It is isolated behind engine-neutral domain types and `ChessRulesEngine`, allowing a future native implementation without changing the game or analysis aggregates.
 
 ## Technology Stack
 
@@ -34,22 +34,27 @@ Spring Boot is used only as a dependency-injection container and lifecycle manag
 
 ## Features
 
-### First milestone
+### Implemented foundation
 
 * Import a PGN file.
-* Display its game metadata and move list.
-* Move forward and backward through the game.
-* Navigate variations.
+* Build the complete PGN move tree before navigation and display the preferred line immediately.
+* Start an analysis session from the standard initial position or a FEN.
+* Move forward and backward without deleting the loaded line.
+* Create and select non-destructive variations.
 * Render the current position in a reusable JavaFX board control.
-* Show FEN and SAN for the selected move.
+* Retain multiple analysis sessions in memory and switch between them from the screen or modal.
+* Execute progressive games through `ChessGame.move(...)` using an injected rules engine.
+* Submit progressive moves either by board coordinates (`MoveCommand`) or SAN (`"Nf3"`).
+* Track clocks and apply opponent-approved takebacks.
+* Convert a progressive game into an independent `AnalysisSession` through `GameRecord`.
 
 ### Planned
 
 * PGN editing and export.
-* Position setup from FEN.
 * Training exercises and puzzles.
 * UCI engine analysis.
 * Opening explorer and game collections.
+* Persistent repositories for studies and played games.
 * Online play, profiles, and community features.
 
 ## Project Structure
@@ -68,8 +73,8 @@ src/main/java/com/escontrela/lastmove/
 | Package          | Responsibility                                                                                                                           |
 | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | `bootstrap`      | Starts JavaFX, creates the Spring context, and handles application shutdown.                                                             |
-| `domain`         | Represents chess concepts such as games, moves, positions, players, variations, FEN, SAN, and PGN. It contains no JavaFX or Spring code. |
-| `application`    | Coordinates workflows such as loading a game, navigating a move tree, and exporting a PGN.                                               |
+| `domain`         | Represents progressive games, analysis trees, positions, players, FEN, SAN, and PGN. It contains no JavaFX or Spring code.             |
+| `application`    | Coordinates PGN loading, creation/navigation of analysis sessions, conversion from played games, and repository access.                  |
 | `infrastructure` | Contains technical implementations: Spring configuration, local files, and the Chesspresso integration.                                  |
 | `ui`             | Contains JavaFX-only code: FXML controllers, screen navigation, CSS, visual controls, and presentation state.                            |
 
@@ -86,23 +91,24 @@ src/main/java/com/escontrela/lastmove/
 │   └── JavaFxSpringContext.java        # Controlled Spring context access
 ├── domain/
 │   ├── common/                         # Square, piece color/type, shared chess values
-│   ├── game/                           # Game, GameState, Move, MoveTree, Variation, Player
+│   ├── game/                           # ChessGame, clocks, takebacks, GameRecord and rules contract
+│   ├── analysis/                       # AnalysisSession, its tree and played-game conversion
 │   ├── notation/                       # Fen, SanMove, PgnGame
-│   └── service/                        # FenService, PgnService, GameNavigationService
+│   └── service/                        # Stateless domain services such as FenService
 ├── application/
-│   ├── service/                        # GameLoadService, GameReplayService, GameExportService
-│   ├── dto/                            # Input and output data for UI workflows
-│   └── event/                          # GameLoadedEvent, CurrentMoveChangedEvent
+│   ├── service/                        # GameLoadService and AnalysisSessionService
+│   ├── repository/                     # Analysis-session persistence contract
+│   └── dto/                            # Input and output data for UI workflows
 ├── infrastructure/
 │   ├── config/                         # Spring beans and application configuration
-│   ├── chesspresso/                    # Chesspresso readers and mappers
-│   ├── persistence/                    # Future local persistence
-│   └── support/                        # File and platform utilities
+│   ├── chesspresso/                    # ChesspressoRulesEngine, readers and mappers
+│   ├── session/                        # In-memory analysis-session repository
+│   └── persistence/                    # Reserved for future local persistence
 └── ui/
     ├── controller/                     # FXML screen controllers
     ├── component/board/                # Reusable ChessBoardControl and square controls
     ├── event/                          # UI-only events
-    ├── model/                          # Board and move-list view models
+    ├── model/                          # Board and presentation view models
     ├── screen/                         # Screen lifecycle and navigation
     └── support/                        # CSS, icon, and JavaFX-thread utilities
 ```
@@ -111,8 +117,8 @@ src/main/java/com/escontrela/lastmove/
 
 | Format | Use in LastMove                                                            |
 | ------ | -------------------------------------------------------------------------- |
-| PGN    | Import and export full games, tags, comments, annotations, and variations. |
-| FEN    | Restore, display, copy, and share an exact board position.                 |
+| PGN    | Import game headers, main line, result, starting position, and variations.  |
+| FEN    | Create a study from an exact position and all rule-relevant state.          |
 | SAN    | Display moves in the standard notation familiar to chess players.          |
 
 `infrastructure/chesspresso` is the only package that depends directly on Chesspresso. Domain and UI classes use LastMove's own model rather than exposing Chesspresso classes across the application.
@@ -137,15 +143,33 @@ mvn clean package
 mvn javafx:run
 ```
 
-## UI Foundation
+## Analysis Workspace
 
-The first screen contains three reusable areas:
+The PGN analysis screen contains three working areas:
 
-* A central `ChessBoardControl` to render the current position and user interaction states.
-* A move-list panel for the main line and variations of the loaded PGN.
-* An information panel for headers, comments, FEN, SAN, and future engine output.
+* A left session list ordered from most recently created to oldest.
+* A central `ChessBoardControl` that renders the active session and emits neutral move requests.
+* A right notation list with the complete preferred line and previous/next navigation.
+
+Open PGN, RESET, and FEN each create a new analysis session. The controller stores only the active
+session identifier for this screen; the repository and application service have no global active
+selection.
 
 Visual controls own rendering and interaction only. A board control receives a view model or a game position; it does not parse PGN, validate chess rules, or call persistence services.
+
+## Domain Model
+
+`ChessGame` is a progressive, single-line aggregate. It owns its current position, official plies,
+players, clocks, and terminal result. `AnalysisSession` owns a cursor and an `AnalysisTree`, where
+each `AnalysisNode` wraps a tree-neutral `Ply`.
+
+Moves are validated through `ChessRulesEngine`. The current infrastructure implementation is
+`ChesspressoRulesEngine`; domain, application, and UI never receive Chesspresso objects.
+
+For a detailed class inventory and flows, see:
+
+* [Architecture summary](docs/pgn-analysis-session-architecture.md)
+* [Current ChessGame and AnalysisSession model](docs/proposed-chess-game-analysis-model.md)
 
 ## Development Guidelines
 
@@ -153,19 +177,22 @@ Visual controls own rendering and interaction only. A board control receives a v
 * Keep JavaFX imports inside `bootstrap` and `ui` whenever possible.
 * Keep Chesspresso imports inside `infrastructure/chesspresso`.
 * Keep controllers small: coordinate UI events and delegate work to `application/service`.
-* Add unit tests for notation, move navigation, and mappers before adding new UI behavior.
+* Add domain and application tests for game invariants, move navigation, and mappings before adding new UI behavior.
 * Prefer immutable value objects and records where they make the domain clearer.
 
 ## Roadmap
 
-* [ ] Import and replay PGN games.
-* [ ] Reusable `ChessBoardControl` JavaFX component.
-* [ ] Move list with variation navigation.
-* [ ] FEN viewer and position setup.
+* [x] Import and replay PGN games.
+* [x] Reusable `ChessBoardControl` JavaFX component.
+* [x] Complete move list with non-destructive variations.
+* [x] Analysis sessions from initial position and FEN.
+* [x] In-memory session switching.
+* [x] Progressive `ChessGame`, takebacks, and conversion to analysis.
 * [ ] PGN editing and export.
+* [ ] Persistent study and played-game repositories.
 * [ ] UCI engine analysis.
 * [ ] Training, puzzles, online play, and community features.
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the MIT License.

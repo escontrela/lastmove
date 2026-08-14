@@ -8,7 +8,7 @@ import java.util.Optional;
  * Immutable outcome of validating one requested move against a position.
  *
  * <p>An accepted result describes the resulting position and all observable effects. Applying it
- * to a {@link GameSession} is a separate aggregate operation.
+ * to a {@link ChessGame} or analysis session is a separate aggregate operation.
  */
 public record MoveExecutionResult(
     boolean accepted,

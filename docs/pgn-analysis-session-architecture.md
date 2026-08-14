@@ -1,207 +1,201 @@
-# Arquitectura de sesiones y análisis PGN
+# Arquitectura de partidas y sesiones de análisis
 
-Este documento resume las clases introducidas para el flujo de análisis: abrir un PGN, crear una
-partida desde la posición inicial o un FEN, recorrer jugadas y mantener varias sesiones en memoria.
+Resumen operativo de la arquitectura actual de LastMove. Para el inventario completo de clases,
+atributos y métodos, consulta [Modelo actual: ChessGame y AnalysisSession](proposed-chess-game-analysis-model.md).
 
-## Flujo principal
+## Principios
 
-```text
-PgnAnalysisScreenController
-  -> GameLoadService -> ImportedPgnGame
-  -> GameSessionService
-  -> GameSessionRepository
-    -> InMemoryGameSessionRepository
-      -> GameSession
-        -> Ply tree + PositionSnapshot
+- `ChessGame` representa una partida progresiva y una única línea oficial.
+- `AnalysisSession` representa un estudio navegable con variantes.
+- `ChessRulesEngine` desacopla ambos agregados de Chesspresso.
+- `AnalysisSessionRepository` es un contrato de aplicación; la implementación en memoria está en
+  infraestructura.
+- La sesión activa pertenece a `PgnAnalysisScreenController`, no al servicio ni al repositorio.
+- El dominio no depende de JavaFX, Spring ni Chesspresso.
 
-GameSessionService.attemptMove(...)
-  -> GameMoveService.validate(...)
-    -> ChesspressoMoveValidator
-  -> GameSession.apply(result)
+## Dependencias por capa
+
+```mermaid
+flowchart LR
+  UI["ui<br/>PgnAnalysisScreenController"] --> APP["application<br/>GameLoadService<br/>AnalysisSessionService"]
+  APP --> DOMAIN["domain<br/>ChessGame<br/>AnalysisSession"]
+  INFRA["infrastructure<br/>Chesspresso<br/>repositorio en memoria"] --> DOMAIN
+  INFRA -. implementa .-> REPO["AnalysisSessionRepository"]
+  APP --> REPO
+  BOOT["bootstrap/config"] --> UI
+  BOOT --> APP
+  BOOT --> INFRA
 ```
 
-La UI no contiene reglas de ajedrez ni utiliza tipos de Chesspresso. Sólo conserva el `SessionId`
-de la sesión renderizada y delega en los servicios de aplicación.
+Sólo `infrastructure/chesspresso` puede importar `chesspresso.*`.
 
-## Dominio
+## Las cuatro fuentes de una sesión de análisis
 
-### `GameSession`
+| Origen | Entrada | Creación | Resultado |
+| --- | --- | --- | --- |
+| PGN | `ImportedPgnGame` | `createPgnSession(...)` | Árbol completo importado antes de navegar |
+| Posición inicial | — | `createInitialSession()` | Estudio vacío desde la posición estándar |
+| FEN | `Fen` | `createFenSession(...)` | Estudio vacío desde el snapshot reconstruido |
+| Partida jugada | `GameRecord` | `createFromGame(...)` | Línea oficial copiada como línea principal |
 
-Agregado mutable que representa una sesión de análisis abierta. Es la fuente de verdad del estado
-vivo de una partida y de su árbol de variantes.
+Aunque la UI presenta tres entradas directas —Open PGN, RESET y FEN— el dominio también admite
+crear un estudio desde una partida progresiva terminada o en curso.
 
-**Atributos principales**
+## Flujo PGN
 
-- `id: SessionId`: identidad estable de la sesión.
-- `title: String`: nombre visible que se persiste junto con el agregado.
-- `origin: GameSessionOrigin`: origen (`PGN`, `INITIAL_POSITION` o `FEN`).
-- `initialPosition: PositionSnapshot`: posición raíz, anterior al primer ply.
-- `currentPosition: PositionSnapshot`: posición que está viendo y editando el usuario.
-- `pliesById: Map<UUID, Ply>`: índice del árbol completo de jugadas.
-- `currentPlyId: UUID?`: cursor de navegación; vacío cuando se está en la posición inicial.
-- `result: GameResult?`: resultado derivado cuando hay mate o ahogado.
+```mermaid
+sequenceDiagram
+  participant UI as PgnAnalysisScreenController
+  participant Load as GameLoadService
+  participant Reader as ChesspressoPgnReader
+  participant Sessions as AnalysisSessionService
+  participant Study as AnalysisSession
+  participant Repo as AnalysisSessionRepository
 
-**Métodos principales**
+  UI->>Load: importPgn(PgnImportRequest)
+  Load->>Reader: readImportedFirst(...)
+  Reader-->>Load: ImportedPgnGame
+  Load-->>UI: ImportedPgnGame
+  UI->>Sessions: createPgnSession(importedGame)
+  Sessions->>Study: importa raíces y continuaciones
+  Sessions->>Repo: save(session)
+  Sessions-->>UI: AnalysisSessionSummary
+  UI->>Sessions: notationLine(sessionId)
+  Sessions-->>UI: línea completa preferida
+```
 
-- `apply(MoveExecutionResult)`: añade un movimiento aceptado como hijo del cursor. Si se había
-  vuelto hacia atrás, crea una variante y nunca borra la continuación existente.
-- `previous()`, `next()`, `first()`: navegación de la línea seleccionada.
-- `select(Ply)`: coloca el cursor en una rama concreta ya existente.
-- `currentLine()`: línea desde la raíz hasta el cursor.
-- `notationLine()`: línea completa para la lista de Moves; incluye los plies futuros de la rama
-  elegida.
-- `gameState()`: devuelve el estado de lectura derivado del snapshot vigente.
+`GameLoadService` no conoce `AnalysisSessionService`. Importa y devuelve un modelo neutral; el
+controlador encadena ambos casos de uso. El PGN se carga completo, incluidas variaciones, antes del
+primer render. Por ello la lista de movimientos muestra toda la línea preferida y la selección
+avanza sobre elementos ya existentes.
 
-### `Ply`
+El título vive en `PgnGame.displayTitle()` y se deriva de White, Black y Event. No existe un
+`PgnService` sin otra responsabilidad.
 
-Nodo de un medio-movimiento dentro del árbol de una `GameSession`.
+## Ejecución de movimientos y variantes
 
-**Atributos principales**
+```mermaid
+sequenceDiagram
+  participant UI as Controller
+  participant Service as AnalysisSessionService
+  participant Game as ChessGame temporal
+  participant Rules as ChessRulesEngine
+  participant Session as AnalysisSession
 
-- `id` y `parentId`: identidad del nodo y relación con el ply padre.
-- `move: MoveDescriptor`: descripción semántica del movimiento (origen, destino, SAN, captura,
-  enroque, promoción, etc.).
-- `resultingPosition: PositionSnapshot`: estado completo inmediatamente después de la jugada.
-- `moveNumber`, `movingColor`: datos para notación y presentación.
-- `variations: List<Ply>`: continuaciones alternativas desde esa posición.
+  UI->>Service: attemptMove(sessionId, command)
+  Service->>Game: createAnalysisGame(currentPosition)
+  Service->>Game: move(command)
+  Game->>Rules: execute(snapshot, command)
+  Rules-->>Game: MoveExecutionResult
+  Game-->>Service: MoveExecutionResult
+  Service->>Session: apply(result)
+  Session-->>Session: selecciona continuación existente<br/>o añade variante nueva
+  Service-->>UI: MoveExecutionResult
+```
 
-`Ply` conserva el snapshot resultante para navegar sin recalcular todas las jugadas anteriores.
+Un resultado rechazado conserva posición, cursor y árbol. Si desde el cursor ya existe la misma
+jugada, se selecciona. Si existe otra continuación, la jugada nueva se añade como variante sin
+destruir la línea anterior.
 
-### `PositionSnapshot`
+`currentLine()` devuelve los plies hasta el cursor. `notationLine()` añade después la continuación
+preferida, lo que permite mostrar la línea completa aunque el usuario esté al principio.
 
-Value object inmutable y neutral respecto al motor. Describe completamente una posición que la UI
-puede renderizar y que el validador puede reconstruir.
+## Partida progresiva
 
-**Atributos principales**
+`ChessGame` mantiene:
 
-- `pieces: List<PositionPiece>`.
-- `activeColor: PieceColor`.
-- `castlingRights: CastlingRights`.
-- `enPassantTarget: Optional<Square>`.
-- `halfmoveClock`, `fullmoveNumber`.
-- `lastMove: Optional<MoveDescriptor>`.
-- `check`, `mate`, `stalemate`.
+- identidad, posición inicial y posición vigente;
+- jugadores y control de tiempo opcionales;
+- historial oficial `List<Ply>`;
+- snapshots de reloj anteriores a cada ply y reloj actual;
+- resultado terminal;
+- referencia inyectada a `ChessRulesEngine`.
 
-### `MoveExecutionResult`
+`move(MoveCommand)` sigue siendo la entrada utilizada por el tablero. Como alternativa,
+`move(SanMove)` y el atajo `move(String)` permiten jugar con notación algebraica estándar. Ambas
+entradas delegan en `ChessRulesEngine` y convergen en la misma transición: sólo mutan el agregado
+cuando el resultado es aceptado. Las variantes con `Duration` actualizan el mismo reloj.
 
-Resultado inmutable de validar una petición de movimiento. La validación y la mutación de la sesión
-son pasos separados.
+`GameStateSnapshot` es una vista derivada; no existe un segundo estado vivo independiente de
+`PositionSnapshot`.
 
-**Atributos principales**
+## Rectificación consentida
 
-- `accepted` y `rejectionReason`.
-- `newSnapshot`: posición resultante; en un rechazo es la posición vigente sin cambios.
-- `move` y `capturedPiece` opcionales.
-- `check`, `mate`, `stalemate`.
-- `legalDestinationsNextTurn`: destinos legales disponibles tras el movimiento.
+```mermaid
+sequenceDiagram
+  participant A as Jugador solicitante
+  participant Game as ChessGame
+  participant B as Rival
 
-`GameSession.apply(result)` exige un resultado aceptado y protege las invariantes del agregado.
+  A->>Game: requestTakeback(color, plies)
+  Game-->>A: TakebackRequest(PENDING, lastPlyId)
+  B->>TakebackRequest: accept(opponentColor)
+  A->>Game: takeBack(request)
+  Game-->>Game: elimina plies<br/>restaura posición, resultado y reloj
+  Game-->>A: PositionSnapshot restaurado
+```
 
-### `GameSessionState` y `CastlingRights`
+Sólo el rival puede aceptar o rechazar. La solicitud queda anclada a la última jugada existente al
+crearla; si la partida avanza, ya no se puede aplicar. La rectificación no crea una variante porque
+la partida conserva una única línea oficial.
 
-- `GameSessionState` es una vista de lectura derivada de `currentPosition`: turno, enroques,
-  en-passant, relojes, jaque, mate, ahogado y resultado. No duplica estado mutable.
-- `CastlingRights` contiene los cuatro permisos de enroque y ofrece `none()` e `initial()`.
+## Conversión de partida a estudio
 
-### Importación PGN: `ImportedPgnGame` e `ImportedPly`
+```text
+ChessGame
+  -> toRecord()
+GameRecord inmutable
+  -> AnalysisSessionFactory.fromGame(record)
+AnalysisSession(PLAYED_GAME)
+  -> AnalysisSessionRepository.save(...)
+```
 
-- `ImportedPgnGame` agrupa los metadatos `PgnGame` y las variantes raíz.
-- `ImportedPly` agrupa un `MoveExecutionResult` aceptado y sus continuaciones.
+`GameRecord` contiene posición inicial, participantes, control de tiempo, resultado y
+`RecordedPly`, con reloj antes y después de cada jugada. Excluye el motor de reglas y la mutabilidad
+del agregado.
 
-Son el formato de transición neutral entre el lector PGN de infraestructura y el agregado
-`GameSession`. Así un PGN se carga como árbol, no como una lista plana.
+La sesión resultante es una copia independiente. Continuar o rectificar la partida no cambia el
+estudio, y añadir variantes al estudio no altera el historial oficial.
 
-## Servicios de aplicación
+## Sesiones en memoria y selección UI
 
-### `GameSessionService`
+`InMemoryAnalysisSessionRepository` conserva sesiones por identidad y las lista de creación más
+reciente a más antigua. No guarda una sesión activa.
 
-Caso de uso principal para la vida de las sesiones de análisis.
+`PgnAnalysisScreenController` conserva `activeAnalysisSessionId`. La lista lateral y el modal de
+sesiones obtienen `AnalysisSessionSummary` mediante `listSessions()` y pueden cambiar el
+identificador seleccionado. Otra pantalla puede mantener simultáneamente otra selección sin
+interferencias.
 
-**Dependencias**: `GameSessionRepository`, `GameMoveService`.
+## Responsabilidades del controlador
 
-**Métodos principales**
+El controlador:
 
-- `createInitialSession()`: crea y activa una sesión desde la posición estándar.
-- `createFenSession(Fen)`: crea y activa una sesión desde FEN.
-- `createPgnSession(PgnGame | ImportedPgnGame)`: crea, activa e importa el árbol PGN.
-- `listSessions()`, `sessionSummary(SessionId)`: soporte para selectores de sesión propios de
-  cada pantalla.
-- `attemptMove(SessionId, MoveCommand)`: valida el movimiento y aplica el resultado a esa sesión.
-- `previous`, `next`, `first`, `select`: navegación.
-- `currentPosition`, `moveHistory`, `notationLine`: datos para renderizar tablero y notación.
+- abre PGN y conecta importación con creación de sesión;
+- crea sesiones RESET y FEN;
+- conserva la selección exclusiva de la pantalla;
+- envía movimientos y navegación al servicio;
+- renderiza snapshot, notación y sesiones en memoria.
 
-Devuelve `GameSessionSummary` al exponer sesiones a la UI, de modo que no entrega el agregado
-mutable directamente.
+No valida movimientos, no importa PGN directamente, no modifica `AnalysisTree` y no conoce tipos
+Chesspresso.
 
-### `GameSessionRepository` e `InMemoryGameSessionRepository`
+## Verificación
 
-`GameSessionRepository` es el contrato de aplicación para guardar y recuperar sesiones.
-`InMemoryGameSessionRepository`, en infraestructura, es la implementación actual limitada al
-proceso; una implementación PostgreSQL futura sustituirá sólo esta clase.
+La suite automatizada cubre:
 
-**Atributos principales**
+- creación desde posición inicial, FEN, PGN y `GameRecord`;
+- carga completa de la línea PGN antes de navegar;
+- variantes importadas y creadas desde el tablero;
+- navegación y aislamiento entre sesiones;
+- movimientos ilegales, captura, enroque, promoción y en passant;
+- jaque, mate y ahogado;
+- rectificación, consentimiento, solicitudes obsoletas y restauración de relojes;
+- conversión independiente de partida a estudio;
+- orden de sesiones en el repositorio y arranque Spring.
 
-- `sessions: Map<SessionId, GameSession>` en la implementación en memoria.
+Comando de referencia:
 
-**Métodos principales**
-
-- `save(session)`.
-- `findById(sessionId)`.
-- `findAllByMostRecent()`.
-
-No existe una sesión activa global. Cada pantalla mantiene su propio `SessionId` seleccionado.
-
-### `GameMoveService`
-
-Servicio de aplicación sin estado para la validación de movimientos.
-
-**Dependencia**: `ChesspressoMoveValidator`.
-
-**Métodos principales**
-
-- `startingPosition()`.
-- `snapshotFor(Fen)`.
-- `validate(PositionSnapshot, MoveCommand)`.
-
-No conoce `SessionId`, no consulta el catálogo y no modifica `GameSession`.
-
-### `GameLoadService`
-
-Caso de uso de entrada de un PGN desde archivo o texto.
-
-**Dependencia**: `ChesspressoPgnReader`.
-
-- `importPgn(PgnImportRequest)`: lee el PGN y lo transforma a `ImportedPgnGame`.
-
-El controlador PGN decide después crear la sesión mediante `GameSessionService.createPgnSession`;
-importar un archivo y abrirlo como sesión son responsabilidades independientes.
-
-## Infraestructura Chesspresso
-
-### `ChesspressoMoveValidator`
-
-Adaptador sin estado para reglas de ajedrez. Recibe un snapshot, reconstruye una posición temporal
-de Chesspresso, busca y aplica un movimiento legal sólo en esa instancia y devuelve
-`MoveExecutionResult` neutral.
-
-Gestiona captura, enroque, promoción, en-passant, jaque, mate, ahogado y destinos legales. No
-mantiene sesiones ni expone tipos `chesspresso.*` fuera de infraestructura.
-
-### `ChesspressoPgnReader`
-
-Adaptador de importación PGN.
-
-- `readImportedFirst(...)`: analiza el primer juego desde texto, stream o fichero y recorre sus
-  continuaciones para producir `ImportedPgnGame` / `ImportedPly`.
-- `readFirst(...)`: versión que devuelve únicamente los metadatos `PgnGame`.
-
-## Presentación
-
-`PgnAnalysisScreenController` conserva `boardSessionId`, sin escribir ningún estado global, llama a los casos de uso y renderiza:
-
-- el tablero con `currentPosition`;
-- la línea completa con `notationLine` y el ply actual seleccionado;
-- sesiones abiertas en el rail izquierdo y en el modal de sesiones;
-- las entradas Open PGN, RESET y FEN.
-
-No valida movimientos, no analiza PGN y no almacena partidas por sí mismo.
+```bash
+mvn clean test
+```
