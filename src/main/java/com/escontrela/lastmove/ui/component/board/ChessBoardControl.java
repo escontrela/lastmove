@@ -1,5 +1,8 @@
 package com.escontrela.lastmove.ui.component.board;
 
+import com.escontrela.lastmove.domain.common.PieceColor;
+import com.escontrela.lastmove.domain.common.PieceType;
+import com.escontrela.lastmove.domain.game.PositionPiece;
 import com.escontrela.lastmove.domain.game.PositionSnapshot;
 import com.escontrela.lastmove.ui.model.BoardMoveInput;
 import com.escontrela.lastmove.ui.service.ChessSound;
@@ -13,6 +16,8 @@ import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.scene.control.Control;
 import javafx.scene.control.Skin;
+import java.util.Objects;
+import java.util.Optional;
 
 /**
  * A reusable JavaFX control that renders a chess board.
@@ -34,6 +39,8 @@ public class ChessBoardControl extends Control {
   // 1. PROPIEDAD DEL EVENTO: Permite suscribir controladores externos
   private final ObjectProperty<EventHandler<BoardMoveEvent>> onMoveRequested =
       new SimpleObjectProperty<>(this, "onMoveRequested");
+  private final ObjectProperty<EventHandler<BoardPromotionEvent>> onPromotionRequested =
+      new SimpleObjectProperty<>(this, "onPromotionRequested");
 
   public ChessBoardControl() {
 
@@ -146,6 +153,20 @@ public class ChessBoardControl extends Control {
     return onMoveRequested.get();
   }
 
+  /** Property notified when a board gesture needs an explicit promotion piece before submission. */
+  public final ObjectProperty<EventHandler<BoardPromotionEvent>> onPromotionRequestedProperty() {
+    return onPromotionRequested;
+  }
+
+  /** Registers the UI handler that displays a promotion chooser for an eligible pawn move. */
+  public final void setOnPromotionRequested(EventHandler<BoardPromotionEvent> value) {
+    onPromotionRequested.set(value);
+  }
+
+  public final EventHandler<BoardPromotionEvent> getOnPromotionRequested() {
+    return onPromotionRequested.get();
+  }
+
   /**
    * This method make the forwarding of the move input event to the subscribed event handler, for
    * instance the PgnAnalysisScreenController. It is called from the ChessBoardSkin when a move is
@@ -155,12 +176,49 @@ public class ChessBoardControl extends Control {
    */
   public void handleBoardMoveInput(BoardMoveInput moveInput) {
 
+    BoardMoveInput requiredMoveInput = Objects.requireNonNull(moveInput, "moveInput must not be null");
+    Optional<PieceColor> promotionColor = promotionColorFor(requiredMoveInput);
+    EventHandler<BoardPromotionEvent> promotionHandler = getOnPromotionRequested();
+    if (promotionColor.isPresent()
+        && requiredMoveInput.promotionPiece().isEmpty()
+        && promotionHandler != null) {
+      promotionHandler.handle(
+          new BoardPromotionEvent(this, requiredMoveInput, promotionColor.orElseThrow()));
+      return;
+    }
+
     EventHandler<BoardMoveEvent> handler = getOnMoveRequested();
 
     if (handler != null) {
 
-      handler.handle(new BoardMoveEvent(this, moveInput));
+      handler.handle(new BoardMoveEvent(this, requiredMoveInput));
     }
+  }
+
+  /**
+   * Detects only the presentation condition for displaying a promotion chooser.
+   *
+   * <p>The rules engine remains authoritative: this method merely observes that the active pawn
+   * represented on the board is being moved to its final rank. Illegal moves still reach the
+   * application flow after the user has made a choice.
+   */
+  private Optional<PieceColor> promotionColorFor(BoardMoveInput moveInput) {
+    PositionSnapshot currentPosition = getPosition();
+    if (currentPosition == null || moveInput.promotionPiece().isPresent()) {
+      return Optional.empty();
+    }
+    return currentPosition.pieces().stream()
+        .filter(piece -> piece.square().equals(moveInput.fromSquare()))
+        .filter(piece -> piece.type() == PieceType.PAWN)
+        .filter(piece -> piece.color() == currentPosition.activeColor())
+        .filter(piece -> reachesPromotionRank(piece, moveInput))
+        .map(PositionPiece::color)
+        .findFirst();
+  }
+
+  private boolean reachesPromotionRank(PositionPiece pawn, BoardMoveInput moveInput) {
+    return (pawn.color() == PieceColor.WHITE && moveInput.toSquare().getRank() == 7)
+        || (pawn.color() == PieceColor.BLACK && moveInput.toSquare().getRank() == 0);
   }
 
   /** 3. EVENTO DE DOMINIO UI: Estructura inmutable para el transporte de eventos en JavaFX */
@@ -180,6 +238,33 @@ public class ChessBoardControl extends Control {
     public BoardMoveInput getMoveInput() {
 
       return moveInput;
+    }
+  }
+
+  /** UI event requesting a target piece before a pawn move to the final rank is submitted. */
+  public static class BoardPromotionEvent extends javafx.event.Event {
+
+    public static final javafx.event.EventType<BoardPromotionEvent> PROMOTION_REQUESTED =
+        new javafx.event.EventType<>(javafx.event.Event.ANY, "PROMOTION_REQUESTED");
+
+    private final BoardMoveInput moveInput;
+    private final PieceColor promotingColor;
+
+    public BoardPromotionEvent(
+        ChessBoardControl source, BoardMoveInput moveInput, PieceColor promotingColor) {
+      super(source, NULL_SOURCE_TARGET, PROMOTION_REQUESTED);
+      this.moveInput = Objects.requireNonNull(moveInput, "moveInput must not be null");
+      this.promotingColor = Objects.requireNonNull(promotingColor, "promotingColor must not be null");
+    }
+
+    /** Returns the incomplete board gesture that must be completed with a promotion piece. */
+    public BoardMoveInput getMoveInput() {
+      return moveInput;
+    }
+
+    /** Returns the colour whose pawn is promoting. */
+    public PieceColor getPromotingColor() {
+      return promotingColor;
     }
   }
 }

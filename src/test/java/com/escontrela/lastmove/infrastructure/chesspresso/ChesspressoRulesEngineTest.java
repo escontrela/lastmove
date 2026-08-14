@@ -10,6 +10,7 @@ import com.escontrela.lastmove.domain.game.MoveCommand;
 import com.escontrela.lastmove.domain.game.MoveExecutionResult;
 import com.escontrela.lastmove.domain.game.PositionSnapshot;
 import com.escontrela.lastmove.domain.notation.Fen;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
@@ -60,6 +61,35 @@ class ChesspressoRulesEngineTest {
     assertTrue(enPassant.accepted());
     assertTrue(enPassant.move().orElseThrow().enPassant());
     assertEquals("d5", enPassant.capturedPiece().orElseThrow().square().toAlgebraic());
+  }
+
+  @Test
+  void requiresAnExplicitPromotionPieceInsteadOfDefaultingToAQueen() {
+    PositionSnapshot promotionPosition =
+        engine.positionFrom(Fen.of("8/P7/8/8/8/8/8/k6K w - - 0 1"));
+
+    MoveExecutionResult rejected =
+        engine.execute(promotionPosition, command("a7", "a8", Optional.empty()));
+
+    assertFalse(rejected.accepted());
+    assertEquals(promotionPosition, rejected.newSnapshot());
+    assertTrue(rejected.rejectionReason().orElseThrow().contains("Promotion piece is required"));
+  }
+
+  @Test
+  void executesEachExplicitLegalPromotionChoice() {
+    for (PieceType promotion :
+        List.of(PieceType.QUEEN, PieceType.ROOK, PieceType.BISHOP, PieceType.KNIGHT)) {
+      MoveExecutionResult result =
+          attempt(
+              "8/P7/8/8/8/8/8/k6K w - - 0 1",
+              "a7",
+              "a8",
+              Optional.of(promotion));
+
+      assertTrue(result.accepted(), () -> "Expected " + promotion + " promotion to be accepted");
+      assertEquals(promotion, result.move().orElseThrow().promotion().orElseThrow());
+    }
   }
 
   @Test

@@ -92,12 +92,21 @@ public final class ChesspressoRulesEngine implements ChessRulesEngine {
     int to = Chess.coorToSqi(command.to().getFile(), command.to().getRank());
     int requestedPromotion =
         command.promotion().map(piece -> (int) toChesspressoPiece(piece)).orElse((int) Chess.NO_PIECE);
+    boolean promotionAvailable = false;
     for (short candidate : position.getAllMoves()) {
-      if (Move.getFromSqi(candidate) == from
-          && Move.getToSqi(candidate) == to
-          && promotionMatches(candidate, requestedPromotion)) {
+      if (Move.getFromSqi(candidate) != from || Move.getToSqi(candidate) != to) {
+        continue;
+      }
+      if (Move.isPromotion(candidate)) {
+        promotionAvailable = true;
+      }
+      if (promotionMatches(candidate, requestedPromotion)) {
         return candidate;
       }
+    }
+    if (promotionAvailable && requestedPromotion == Chess.NO_PIECE) {
+      throw new IllegalArgumentException(
+          "Promotion piece is required: queen, rook, bishop, or knight");
     }
     throw new IllegalArgumentException(
         "Illegal move: " + command.from().toAlgebraic() + "-" + command.to().toAlgebraic());
@@ -166,8 +175,8 @@ public final class ChesspressoRulesEngine implements ChessRulesEngine {
     if (!Move.isPromotion(move)) {
       return requestedPromotion == Chess.NO_PIECE;
     }
-    return Move.getPromotionPiece(move)
-        == (requestedPromotion == Chess.NO_PIECE ? Chess.QUEEN : requestedPromotion);
+    return requestedPromotion != Chess.NO_PIECE
+        && Move.getPromotionPiece(move) == requestedPromotion;
   }
 
   private int toChesspressoPiece(PieceType pieceType) {
