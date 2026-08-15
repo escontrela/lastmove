@@ -928,6 +928,10 @@
     -fx-text-fill: #1c69d4;
 }
 .progressive-status-card { -fx-min-height: 86px; }
+
+.progressive-thinking-indicator {
+    -fx-progress-color: #0879e8;
+}
 .progressive-moves-card { -fx-min-height: 220px; }
 .progressive-action-button {
     -fx-min-height: 42px;
@@ -1263,6 +1267,7 @@
 }
 .night-mode .progressive-player-name { -fx-text-fill: #f1f3f5; }
 .night-mode .progressive-player-clock { -fx-text-fill: #79aeef; }
+.night-mode .progressive-thinking-indicator { -fx-progress-color: #79aeef; }
 .night-mode .computer-game-setup-card {
     -fx-background-color: #1c2430;
     -fx-border-color: #465465;

@@ -115,6 +115,22 @@ public final class ComputerGameService {
         .toList();
   }
 
+  /**
+   * Replaces a progressive game with a fresh one using the same players, engine and time control.
+   *
+   * <p>The returned state belongs to a new game identifier. Callers that own the active selection
+   * must replace the old identifier only after this asynchronous creation completes.
+   */
+  public CompletionStage<ComputerGameState> restartGame(GameId gameId) {
+    RuntimeContext context = runtime(gameId);
+    ComputerGameConfiguration configuration;
+    synchronized (context) {
+      configuration = context.configuration;
+    }
+    closeGame(gameId);
+    return createGame(configuration);
+  }
+
   /** Applies a human move and, when accepted, completes after the computer has replied. */
   public CompletionStage<ComputerGameState> playHumanMove(GameId gameId, MoveCommand command) {
     ChessGame game = game(gameId);

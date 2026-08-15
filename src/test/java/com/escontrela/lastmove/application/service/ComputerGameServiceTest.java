@@ -2,6 +2,8 @@ package com.escontrela.lastmove.application.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.escontrela.lastmove.application.computer.ComputerEngineDescriptor;
@@ -115,6 +117,21 @@ class ComputerGameServiceTest {
     assertEquals(GameTerminationReason.RESIGNATION, resigned.terminationReason().orElseThrow());
     assertEquals(ComputerGamePhase.FINISHED, resigned.phase());
     assertFalse(resigned.canMove());
+  }
+
+  @Test
+  void restartReplacesTheGameAndPreservesItsConfiguration() {
+    var created = service.createGame(configuration(PieceColor.WHITE)).toCompletableFuture().join();
+    var previousEngine = engineProvider.lastEngine;
+
+    var restarted = service.restartGame(created.gameId()).toCompletableFuture().join();
+
+    assertNotEquals(created.gameId(), restarted.gameId());
+    assertEquals(PieceColor.WHITE, restarted.humanColor());
+    assertEquals(ComputerGamePhase.WAITING_FOR_HUMAN, restarted.phase());
+    assertTrue(restarted.moves().isEmpty());
+    assertFalse(previousEngine.running);
+    assertThrows(java.util.NoSuchElementException.class, () -> service.state(created.gameId()));
   }
 
   @Test

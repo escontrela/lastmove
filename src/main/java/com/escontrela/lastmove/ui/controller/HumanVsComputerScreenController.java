@@ -33,6 +33,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.ProgressIndicator;
 import javafx.scene.layout.StackPane;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -66,7 +67,9 @@ public final class HumanVsComputerScreenController implements UiScreenController
   @FXML private Label humanClockLabel;
   @FXML private Label turnLabel;
   @FXML private Label statusLabel;
+  @FXML private ProgressIndicator thinkingIndicator;
   @FXML private Button takeBackButton;
+  @FXML private Button restartButton;
   @FXML private Button resignButton;
 
   private GameId activeGameId;
@@ -91,6 +94,7 @@ public final class HumanVsComputerScreenController implements UiScreenController
             new KeyFrame(javafx.util.Duration.millis(200), event -> refreshClockState()));
     clockRefresh.setCycleCount(Animation.INDEFINITE);
     root.getProperties().put("controller", this);
+    chessSoundService.preload();
     chessBoard.setSoundService(chessSoundService);
     configureBoardInput();
     configurePromotionPicker();
@@ -142,6 +146,49 @@ public final class HumanVsComputerScreenController implements UiScreenController
     }
   }
 
+  /** Restarts the current game with the same opponent, colour and time control. */
+  @FXML
+  public void restart() {
+    if (activeGameId == null) {
+      return;
+    }
+    GameId previousGameId = activeGameId;
+    activeGameId = null;
+    resultMessageBox.hide();
+    resultShown = false;
+    showTransitionState("Restarting game…");
+    final CompletionStage<ComputerGameState> restart;
+    try {
+      restart = computerGameService.restartGame(previousGameId);
+    } catch (RuntimeException exception) {
+      showRestartFailure(exception);
+      return;
+    }
+    restart.whenComplete(
+        (state, failure) ->
+            Platform.runLater(
+                () -> {
+                  if (!screenVisible) {
+                    if (state != null) {
+                      computerGameService.closeGame(state.gameId());
+                    }
+                    return;
+                  }
+                  if (failure != null) {
+                    showRestartFailure(failure);
+                    return;
+                  }
+                  if (state.phase() == ComputerGamePhase.ENGINE_ERROR) {
+                    computerGameService.closeGame(state.gameId());
+                    showRestartFailure(
+                        new IllegalStateException(
+                            state.message().orElse("Unable to restart the engine")));
+                    return;
+                  }
+                  activateGame(state);
+                }));
+  }
+
   private void configureSetupOverlay() {
     setupOverlay.setOnCancel(event -> backToMain());
     setupOverlay.setOnStartGame(event -> startGame(event.configuration()));
@@ -175,12 +222,8 @@ public final class HumanVsComputerScreenController implements UiScreenController
                     setupOverlay.showError(state.message().orElse("Unable to start the engine"));
                     return;
                   }
-                  activeGameId = state.gameId();
-                  resultShown = false;
                   setupOverlay.hide();
-                  chessBoard.setFlipped(state.humanColor() == PieceColor.BLACK);
-                  applyState(state);
-                  clockRefresh.play();
+                  activateGame(state);
                 }));
   }
 
@@ -200,14 +243,15 @@ public final class HumanVsComputerScreenController implements UiScreenController
     if (!canAcceptHumanInput()) {
       return;
     }
+    GameId submittedGameId = activeGameId;
     CompletionStage<ComputerGameState> reply;
     try {
       reply =
           computerGameService.playHumanMove(
-              activeGameId,
+              submittedGameId,
               new MoveCommand(
                   moveInput.fromSquare(), moveInput.toSquare(), moveInput.promotionPiece()));
-      applyState(computerGameService.state(activeGameId));
+      applyState(computerGameService.state(submittedGameId));
     } catch (RuntimeException exception) {
       statusLabel.setText(exception.getMessage());
       return;
@@ -216,7 +260,7 @@ public final class HumanVsComputerScreenController implements UiScreenController
         (state, failure) ->
             Platform.runLater(
                 () -> {
-                  if (!screenVisible || activeGameId == null) {
+                  if (!screenVisible || !submittedGameId.equals(activeGameId)) {
                     return;
                   }
                   if (failure != null) {
@@ -251,9 +295,7 @@ public final class HumanVsComputerScreenController implements UiScreenController
     resultMessageBox.setOnAccept(
         event -> {
           resultMessageBox.hide();
-          closeActiveGame();
-          showEmptyWorkspace();
-          setupOverlay.show(computerGameService.availableEngines());
+          restart();
         });
     resultMessageBox.setOnCancel(event -> backToMain());
     resultMessageBox.setOnClose(event -> backToMain());
@@ -288,7 +330,11 @@ public final class HumanVsComputerScreenController implements UiScreenController
     turnLabel.setText(turnText(state));
     statusLabel.setText(state.message().orElseGet(() -> turnText(state)));
     takeBackButton.setDisable(!state.canTakeBack());
+    restartButton.setDisable(false);
     resignButton.setDisable(state.result().isPresent());
+    boolean engineThinking = state.phase() == ComputerGamePhase.ENGINE_THINKING;
+    thinkingIndicator.setVisible(engineThinking);
+    thinkingIndicator.setManaged(engineThinking);
     refreshNotation(state.moves());
     if (state.result().isPresent()) {
       clockRefresh.stop();
@@ -345,7 +391,10 @@ public final class HumanVsComputerScreenController implements UiScreenController
     statusLabel.setText("Choose an opponent, colour and time control");
     moveNotation.setTree(List.of());
     takeBackButton.setDisable(true);
+    restartButton.setDisable(true);
     resignButton.setDisable(true);
+    thinkingIndicator.setVisible(false);
+    thinkingIndicator.setManaged(false);
   }
 
   private boolean canAcceptHumanInput() {
@@ -377,6 +426,32 @@ public final class HumanVsComputerScreenController implements UiScreenController
       activeGameId = null;
     }
     renderedState = null;
+  }
+
+  private void activateGame(ComputerGameState state) {
+    activeGameId = state.gameId();
+    resultShown = false;
+    chessBoard.setFlipped(state.humanColor() == PieceColor.BLACK);
+    applyState(state);
+    clockRefresh.play();
+  }
+
+  private void showTransitionState(String message) {
+    clockRefresh.stop();
+    turnLabel.setText(message);
+    statusLabel.setText(message);
+    takeBackButton.setDisable(true);
+    restartButton.setDisable(true);
+    resignButton.setDisable(true);
+    thinkingIndicator.setVisible(true);
+    thinkingIndicator.setManaged(true);
+  }
+
+  private void showRestartFailure(Throwable failure) {
+    showEmptyWorkspace();
+    statusLabel.setText(rootCauseMessage(failure));
+    setupOverlay.show(computerGameService.availableEngines());
+    setupOverlay.showError(rootCauseMessage(failure));
   }
 
   private void bindResponsiveBoardSize() {
