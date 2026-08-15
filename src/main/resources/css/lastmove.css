@@ -813,6 +813,24 @@
     -fx-border-width: 0 0 1px 0;
 }
 
+.move-notation-row:variation {
+    -fx-background-color: #f8fbff;
+}
+
+.move-notation-row:active-line {
+    -fx-border-color: transparent transparent #d9e8fa transparent;
+}
+
+.move-notation-row .variation-marker {
+    -fx-min-width: 24px;
+    -fx-pref-width: 24px;
+    -fx-max-width: 24px;
+    -fx-alignment: center;
+    -fx-font-size: 16px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #6a7683;
+}
+
 .move-notation-row .move-number {
     -fx-min-width: 44px;
     -fx-pref-width: 44px;
@@ -1105,6 +1123,15 @@
 }
 .night-mode .move-notation-row {
     -fx-border-color: transparent transparent #3b4654 transparent;
+}
+.night-mode .move-notation-row:variation {
+    -fx-background-color: #1f2934;
+}
+.night-mode .move-notation-row:active-line {
+    -fx-border-color: transparent transparent #40566d transparent;
+}
+.night-mode .move-notation-row .variation-marker {
+    -fx-text-fill: #93a0ae;
 }
 .night-mode .move-notation-row .move-number {
     -fx-background-color: #1f2731;

@@ -2,10 +2,12 @@ package com.escontrela.lastmove.ui.component.notation;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.css.PseudoClass;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -19,60 +21,63 @@ import javafx.scene.layout.Priority;
 public final class MoveNotationSkin extends SkinBase<MoveNotationControl> {
 
   private final ListView<MoveNotationRow> rowList = new ListView<>();
-  private final ListChangeListener<MoveNotationEntry> entriesListener = change -> rebuildRows();
-  private final ChangeListener<Number> selectionListener =
-      (observable, previous, current) -> refreshSelection(current.intValue());
+  private final ListChangeListener<MoveNotationNode> rootsListener = change -> rebuildRows();
+  private final ChangeListener<UUID> selectionListener =
+      (observable, previous, current) -> refreshSelection(current);
 
   public MoveNotationSkin(MoveNotationControl control) {
     super(control);
     rowList.getStyleClass().add("move-notation-list");
     rowList.setFocusTraversable(false);
     rowList.setCellFactory(ignored -> new MoveRowCell(control));
-    control.observableEntries().addListener(entriesListener);
-    control.selectedPlyIndexProperty().addListener(selectionListener);
+    control.observableRoots().addListener(rootsListener);
+    control.selectedNodeIdProperty().addListener(selectionListener);
     rebuildRows();
     getChildren().add(rowList);
   }
 
   @Override
   public void dispose() {
-    getSkinnable().observableEntries().removeListener(entriesListener);
-    getSkinnable().selectedPlyIndexProperty().removeListener(selectionListener);
+    getSkinnable().observableRoots().removeListener(rootsListener);
+    getSkinnable().selectedNodeIdProperty().removeListener(selectionListener);
     super.dispose();
   }
 
   private void rebuildRows() {
     rowList.setItems(
-        FXCollections.observableArrayList(MoveNotationRow.group(getSkinnable().getEntries())));
-    refreshSelection(getSkinnable().getSelectedPlyIndex());
+        FXCollections.observableArrayList(MoveNotationRow.flatten(getSkinnable().getTree())));
+    refreshSelection(getSkinnable().getSelectedNodeId());
   }
 
-  private void refreshSelection(int selectedPlyIndex) {
+  private void refreshSelection(UUID selectedNodeId) {
     rowList.refresh();
-    if (selectedPlyIndex < 0) {
+    if (selectedNodeId == null) {
       return;
     }
     List<MoveNotationRow> rows = rowList.getItems();
     for (int rowIndex = 0; rowIndex < rows.size(); rowIndex++) {
       MoveNotationRow row = rows.get(rowIndex);
-      if (containsPly(row.whiteMove(), selectedPlyIndex)
-          || containsPly(row.blackMove(), selectedPlyIndex)) {
+      if (containsNode(row.whiteMove(), selectedNodeId)
+          || containsNode(row.blackMove(), selectedNodeId)) {
         rowList.scrollTo(rowIndex);
         return;
       }
     }
   }
 
-  private boolean containsPly(Optional<MoveNotationEntry> move, int plyIndex) {
-    return move.map(entry -> entry.plyIndex() == plyIndex).orElse(false);
+  private boolean containsNode(Optional<MoveNotationEntry> move, UUID nodeId) {
+    return move.map(entry -> entry.nodeId().equals(nodeId)).orElse(false);
   }
 
   private static final class MoveRowCell extends ListCell<MoveNotationRow> {
 
     private static final PseudoClass CURRENT = PseudoClass.getPseudoClass("current");
+    private static final PseudoClass VARIATION = PseudoClass.getPseudoClass("variation");
+    private static final PseudoClass ACTIVE_LINE = PseudoClass.getPseudoClass("active-line");
 
     private final MoveNotationControl control;
     private final HBox row = new HBox();
+    private final Label variationMarker = new Label();
     private final Label moveNumber = new Label();
     private final Button whiteMove = new Button();
     private final Button blackMove = new Button();
@@ -84,6 +89,7 @@ public final class MoveNotationSkin extends SkinBase<MoveNotationControl> {
       row.setAlignment(Pos.CENTER_LEFT);
       row.setMaxWidth(Double.MAX_VALUE);
       row.prefWidthProperty().bind(widthProperty().subtract(2));
+      variationMarker.getStyleClass().add("variation-marker");
       moveNumber.getStyleClass().add("move-number");
       whiteMove.getStyleClass().add("notation-move");
       blackMove.getStyleClass().add("notation-move");
@@ -91,20 +97,32 @@ public final class MoveNotationSkin extends SkinBase<MoveNotationControl> {
       blackMove.setMaxWidth(Double.MAX_VALUE);
       HBox.setHgrow(whiteMove, Priority.ALWAYS);
       HBox.setHgrow(blackMove, Priority.ALWAYS);
-      row.getChildren().addAll(moveNumber, whiteMove, blackMove);
+      row.getChildren().addAll(variationMarker, moveNumber, whiteMove, blackMove);
     }
 
     @Override
     protected void updateItem(MoveNotationRow item, boolean empty) {
       super.updateItem(item, empty);
       if (empty || item == null) {
+        row.pseudoClassStateChanged(VARIATION, false);
+        row.pseudoClassStateChanged(ACTIVE_LINE, false);
         setGraphic(null);
         return;
       }
+      row.setPadding(new Insets(0, 0, 0, Math.min(item.depth(), 4) * 16.0));
+      row.pseudoClassStateChanged(VARIATION, item.depth() > 0);
+      row.pseudoClassStateChanged(ACTIVE_LINE, containsActiveMove(item));
+      variationMarker.setText(item.variationStart() ? "↳" : "");
+      variationMarker.setAccessibleText(item.variationStart() ? "Variation" : "");
       moveNumber.setText(Integer.toString(item.moveNumber()));
       configureMove(whiteMove, item.whiteMove(), "White");
       configureMove(blackMove, item.blackMove(), "Black");
       setGraphic(row);
+    }
+
+    private boolean containsActiveMove(MoveNotationRow row) {
+      return row.whiteMove().map(MoveNotationEntry::activeLine).orElse(false)
+          || row.blackMove().map(MoveNotationEntry::activeLine).orElse(false);
     }
 
     private void configureMove(
@@ -129,7 +147,7 @@ public final class MoveNotationSkin extends SkinBase<MoveNotationControl> {
       button.setAccessibleText(
           "Move " + move.moveNumber() + ", " + colorName + ", " + move.san());
       button.pseudoClassStateChanged(
-          CURRENT, move.plyIndex() == control.getSelectedPlyIndex());
+          CURRENT, move.nodeId().equals(control.getSelectedNodeId()));
       button.setOnAction(event -> control.requestSelection(move));
     }
   }

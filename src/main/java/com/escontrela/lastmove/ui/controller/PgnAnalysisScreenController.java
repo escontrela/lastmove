@@ -1,18 +1,19 @@
 package com.escontrela.lastmove.ui.controller;
 
 import com.escontrela.lastmove.application.dto.AnalysisSessionSummary;
-import com.escontrela.lastmove.application.dto.AnalysisNodeSummary;
+import com.escontrela.lastmove.application.dto.AnalysisNotationNode;
+import com.escontrela.lastmove.application.dto.AnalysisNotationTree;
 import com.escontrela.lastmove.application.dto.PgnImportRequest;
 import com.escontrela.lastmove.application.service.GameLoadService;
 import com.escontrela.lastmove.application.service.AnalysisSessionService;
 import com.escontrela.lastmove.domain.analysis.AnalysisSessionId;
-import com.escontrela.lastmove.domain.common.PieceColor;
 import com.escontrela.lastmove.domain.game.MoveCommand;
 import com.escontrela.lastmove.domain.game.MoveExecutionResult;
 import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
 import com.escontrela.lastmove.ui.component.message.TextInputModal;
 import com.escontrela.lastmove.ui.component.notation.MoveNotationControl;
 import com.escontrela.lastmove.ui.component.notation.MoveNotationEntry;
+import com.escontrela.lastmove.ui.component.notation.MoveNotationNode;
 import com.escontrela.lastmove.ui.component.promotion.PromotionPickerControl;
 import com.escontrela.lastmove.ui.component.session.SessionSelectorControl;
 import com.escontrela.lastmove.ui.component.session.SessionSelectorEntry;
@@ -84,7 +85,6 @@ public class PgnAnalysisScreenController implements UiScreenController {
   private BoardMoveInput pendingPromotionMove;
 
   private List<AnalysisSessionSummary> visibleSessions = List.of();
-  private List<AnalysisNodeSummary> visibleNotationNodes = List.of();
 
   public PgnAnalysisScreenController(
       GameLoadService gameLoadService,
@@ -495,15 +495,13 @@ public class PgnAnalysisScreenController implements UiScreenController {
   private void configureMoveNotation() {
     moveNotation.setOnPlySelected(
         event -> {
-          int plyIndex = event.getEntry().plyIndex();
-          if (plyIndex < 0 || plyIndex >= visibleNotationNodes.size()) {
-            return;
-          }
-          AnalysisNodeSummary selected = visibleNotationNodes.get(plyIndex);
+          var selectedNodeId =
+              new com.escontrela.lastmove.domain.analysis.AnalysisNodeId(
+                  event.getEntry().nodeId());
           chessBoard.renderPosition(
-              analysisSessionService.select(activeAnalysisSessionId, selected.nodeId()));
+              analysisSessionService.select(activeAnalysisSessionId, selectedNodeId));
           refreshMoveList();
-          statusLabel.setText("Selected " + selected.ply().move().san().getValue());
+          statusLabel.setText("Selected " + event.getEntry().san());
         });
   }
 
@@ -535,22 +533,23 @@ public class PgnAnalysisScreenController implements UiScreenController {
   }
 
   private void refreshMoveList() {
-    int currentPlyIndex =
-        analysisSessionService.moveHistory(activeAnalysisSessionId).size() - 1;
-    visibleNotationNodes = analysisSessionService.notationNodes(activeAnalysisSessionId);
-    moveNotation.setEntries(
-        java.util.stream.IntStream.range(0, visibleNotationNodes.size())
-            .mapToObj(
-                plyIndex -> {
-                  var ply = visibleNotationNodes.get(plyIndex).ply();
-                  return new MoveNotationEntry(
-                      plyIndex,
-                      ply.moveNumber(),
-                      ply.movingColor() == PieceColor.WHITE,
-                      ply.move().san().getValue());
-                })
-            .toList());
-    moveNotation.setSelectedPlyIndex(currentPlyIndex);
+    AnalysisNotationTree notationTree =
+        analysisSessionService.notationTree(activeAnalysisSessionId);
+    moveNotation.setTree(notationTree.roots().stream().map(this::toNotationNode).toList());
+    moveNotation.setSelectedNodeId(
+        notationTree.currentNodeId().map(nodeId -> nodeId.value()).orElse(null));
+  }
+
+  private MoveNotationNode toNotationNode(AnalysisNotationNode node) {
+    var ply = node.ply();
+    return new MoveNotationNode(
+        new MoveNotationEntry(
+            node.nodeId().value(),
+            ply.moveNumber(),
+            ply.movingColor() == com.escontrela.lastmove.domain.common.PieceColor.WHITE,
+            ply.move().san().getValue(),
+            node.activeLine()),
+        node.continuations().stream().map(this::toNotationNode).toList());
   }
 
   private void updateStatusBrandLogo() {

@@ -139,6 +139,17 @@ class AnalysisSessionServiceTest {
         List.of("Nf3", "Bc4"),
         alternatives.stream().map(node -> node.ply().move().san().getValue()).toList());
 
+    var notationTree = service.notationTree(session.sessionId());
+    var projectedAlternatives =
+        notationTree.roots().getFirst().continuations().getFirst().continuations();
+    assertEquals(
+        List.of("Nf3", "Bc4"),
+        projectedAlternatives.stream().map(node -> node.ply().move().san().getValue()).toList());
+    assertTrue(projectedAlternatives.getFirst().mainContinuation());
+    assertTrue(projectedAlternatives.getFirst().activeLine());
+    assertFalse(projectedAlternatives.getLast().mainContinuation());
+    assertFalse(projectedAlternatives.getLast().activeLine());
+
     service.select(session.sessionId(), alternatives.get(1).nodeId());
     assertEquals("Bc4", service.moveHistory(session.sessionId()).getLast().move().san().getValue());
   }
