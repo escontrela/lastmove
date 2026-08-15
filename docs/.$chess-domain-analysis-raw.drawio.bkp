@@ -1,6 +1,6 @@
-<mxfile host="Electron" modified="2026-08-14T15:00:28.158Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/24.5.3 Chrome/124.0.6367.207 Electron/30.0.6 Safari/537.36" version="24.5.3" etag="fNPU-41mNI3nwTytjsfG" type="device">
+<mxfile host="Electron" modified="2026-08-15T22:29:55.027Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/24.5.3 Chrome/124.0.6367.207 Electron/30.0.6 Safari/537.36" version="24.5.3" etag="kYIzq39yTY4jxA75E1UB" type="device" pages="2">
   <diagram id="chess-domain-analysis-raw" name="Chess domain · analysis and raw game">
-    <mxGraphModel dx="2890" dy="679" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1000" math="0" shadow="0">
+    <mxGraphModel dx="2871" dy="557" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1000" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -28,6 +28,12 @@
         <mxCell id="importedPly" value="&lt;b&gt;ImportedPly&lt;/b&gt;&lt;br&gt;&lt;hr&gt;− execution: MoveExecutionResult&lt;br&gt;− variations: List&lt;ImportedPly&gt;&lt;br&gt;&lt;br&gt;Representa un ply importado y sus continuaciones PGN." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff7e6;strokeColor=#ed7d31;fontColor=#1f2937;align=left;spacingLeft=10;spacingTop=7;" parent="analysisPanel" vertex="1">
           <mxGeometry x="390" y="550" width="310" height="120" as="geometry" />
         </mxCell>
+        <mxCell id="analysisFactory" value="&lt;b&gt;AnalysisSessionFactory&lt;/b&gt;&lt;br&gt;&lt;hr&gt;+ fromGame(record: GameRecord): AnalysisSession&lt;br&gt;&lt;br&gt;Copia la línea oficial de una partida RAW a un árbol de análisis independiente." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#eaf2f8;strokeColor=#4472c4;fontColor=#1f2937;align=left;spacingLeft=10;spacingTop=7;" parent="analysisPanel" vertex="1">
+          <mxGeometry x="25" y="375" width="320" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" value="creates" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;endArrow=open;strokeColor=#4472c4;" parent="analysisPanel" source="analysisFactory" target="analysisSession" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
         <mxCell id="rawPanel" value="PARTIDA RAW / PROGRESIVA" style="swimlane;html=1;rounded=1;horizontal=1;startSize=34;fillColor=#f3f8f1;strokeColor=#70ad47;fontStyle=1;fontColor=#375623;" parent="1" vertex="1">
           <mxGeometry x="810" y="115" width="750" height="690" as="geometry" />
         </mxCell>
@@ -52,9 +58,6 @@
         <mxCell id="position" value="&lt;b&gt;PositionSnapshot&lt;/b&gt;&lt;br&gt;&lt;hr&gt;pieces: List&lt;PositionPiece&gt;&lt;br&gt;activeColor: PieceColor&lt;br&gt;castlingRights: CastlingRights&lt;br&gt;enPassantTarget: Optional&lt;Square&gt;&lt;br&gt;halfmoveClock / fullmoveNumber: int&lt;br&gt;lastMove: Optional&lt;MoveDescriptor&gt;&lt;br&gt;check / mate / stalemate: boolean" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7f7f7f;fontColor=#1f2937;align=left;spacingLeft=10;spacingTop=7;" parent="commonPanel" vertex="1">
           <mxGeometry x="25" y="55" width="300" height="155" as="geometry" />
         </mxCell>
-        <mxCell id="ply" value="&lt;b&gt;Ply&lt;/b&gt;&lt;br&gt;&lt;hr&gt;id: UUID&lt;br&gt;move: MoveDescriptor&lt;br&gt;resultingPosition: PositionSnapshot&lt;br&gt;moveNumber: int&lt;br&gt;movingColor: PieceColor&lt;br&gt;&lt;br&gt;Neutro respecto a árbol o lista." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7f7f7f;fontColor=#1f2937;align=left;spacingLeft=10;spacingTop=7;" parent="commonPanel" vertex="1">
-          <mxGeometry x="355" y="55" width="280" height="155" as="geometry" />
-        </mxCell>
         <mxCell id="moveResult" value="&lt;b&gt;MoveExecutionResult&lt;/b&gt;&lt;br&gt;&lt;hr&gt;accepted: boolean&lt;br&gt;rejectionReason: Optional&lt;br&gt;newSnapshot: PositionSnapshot&lt;br&gt;move: Optional&lt;MoveDescriptor&gt;&lt;br&gt;capturedPiece: Optional&lt;PositionPiece&gt;&lt;br&gt;check / mate / stalemate&lt;br&gt;legalDestinationsNextTurn: List&lt;Square&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7f7f7f;fontColor=#1f2937;align=left;spacingLeft=10;spacingTop=7;" parent="commonPanel" vertex="1">
           <mxGeometry x="665" y="55" width="300" height="155" as="geometry" />
         </mxCell>
@@ -71,9 +74,6 @@
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="e3" value="wraps" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;endArrow=none;strokeColor=#4472c4;" parent="1" source="analysisNode" target="ply" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="e4" value="creates" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;endArrow=open;strokeColor=#4472c4;" parent="1" source="analysisFactory" target="analysisSession" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="e5" value="imports" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;endArrow=open;strokeColor=#ed7d31;" parent="1" source="importedPgn" target="importedPly" edge="1">
@@ -112,9 +112,22 @@
         <mxCell id="e16" value="contains" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;endArrow=none;strokeColor=#7f7f7f;" parent="1" source="position" target="moveDescriptor" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="analysisFactory" value="&lt;b&gt;AnalysisSessionFactory&lt;/b&gt;&lt;br&gt;&lt;hr&gt;+ fromGame(record: GameRecord): AnalysisSession&lt;br&gt;&lt;br&gt;Copia la línea oficial de una partida RAW a un árbol de análisis independiente." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#eaf2f8;strokeColor=#4472c4;fontColor=#1f2937;align=left;spacingLeft=10;spacingTop=7;" parent="1" vertex="1">
-          <mxGeometry x="-150" y="490" width="320" height="150" as="geometry" />
+        <mxCell id="ply" value="&lt;b&gt;Ply&lt;/b&gt;&lt;br&gt;&lt;hr&gt;id: UUID&lt;br&gt;move: MoveDescriptor&lt;br&gt;resultingPosition: PositionSnapshot&lt;br&gt;moveNumber: int&lt;br&gt;movingColor: PieceColor&lt;br&gt;&lt;br&gt;Neutro respecto a árbol o lista." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7f7f7f;fontColor=#1f2937;align=left;spacingLeft=10;spacingTop=7;" parent="1" vertex="1">
+          <mxGeometry x="480" y="1110" width="280" height="155" as="geometry" />
         </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="iRrv-bRVk0bY_k_lP68y" name="Página-2">
+    <mxGraphModel dx="1335" dy="585" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <UserObject label="src/main/java/com/escontrela/lastmove&#xa;│&#xa;├── domain&#xa;│   └── game&#xa;│       ├── ChessGame                              (existente)&#xa;│       ├── ChessGameFactory                       (existente)&#xa;│       ├── GameRecord                             (existente)&#xa;│       ├── TimeControl                            (existente)&#xa;│       ├── GameClockSnapshot                      (existente)&#xa;│       ├── TakebackRequest                        (existente)&#xa;│       ├── GameTerminationReason                  [P]&#xa;│       └── ProgressiveGameRepository contract     [P, probablemente application]&#xa;│&#xa;├── application&#xa;│   ├── computer&#xa;│   │   ├── ComputerMoveEngine                     [✓]&#xa;│   │   ├── ComputerEngineDescriptor               [✓]&#xa;│   │   ├── ComputerMoveRequest                    [✓]&#xa;│   │   ├── ComputerEngineException                [✓]&#xa;│   │   ├── ComputerGameConfiguration              [P]&#xa;│   │   ├── ComputerGameState                      [P]&#xa;│   │   └── ComputerDifficulty                     [P]&#xa;│   │&#xa;│   ├── repository&#xa;│   │   └── ProgressiveGameRepository              [P]&#xa;│   │&#xa;│   └── service&#xa;│       └── ComputerGameService                    [P]&#xa;│&#xa;├── infrastructure&#xa;│   ├── engine&#xa;│   │   ├── uci&#xa;│   │   │   ├── UciProcessEngine                   [✓]&#xa;│   │   │   ├── UciEngineConfiguration             [✓]&#xa;│   │   │   └── UciMoveParser                      [✓]&#xa;│   │   │&#xa;│   │   └── sunfish&#xa;│   │       ├── SunfishEngineConfiguration         [P]&#xa;│   │       ├── SunfishExecutableResolver          [P]&#xa;│   │       └── SunfishHealthCheck                 [P]&#xa;│   │&#xa;│   └── game&#xa;│       └── InMemoryProgressiveGameRepository      [P]&#xa;│&#xa;└── ui&#xa;    ├── component&#xa;    │   └── game&#xa;    │       ├── HumanVsComputerSetupOverlay        [P]&#xa;    │       ├── PlayerClockControl                 [P]&#xa;    │       └── GameStatusControl                  [P]&#xa;    │&#xa;    ├── controller&#xa;    │   └── HumanVsComputerScreenController        [P]&#xa;    │&#xa;    └── screen&#xa;        └── UiScreenId.HUMAN_VS_COMPUTER           [P]&#xa;&#xa;src/main/resources&#xa;├── fxml&#xa;│   └── human-vs-computer.fxml                     [P]&#xa;└── engines&#xa;    └── sunfish                                    [P]&#xa;&#xa;src/test/java/com/escontrela/lastmove&#xa;├── infrastructure/engine/uci&#xa;│   ├── FakeUciEngineMain                          [✓]&#xa;│   ├── UciProcessEngineTest                       [✓]&#xa;│   └── UciMoveParserTest                          [✓]&#xa;└── application/service&#xa;    └── ComputerGameServiceTest                    [P]" link="src/main/java/com/escontrela/lastmove&#xa;│&#xa;├── domain&#xa;│   └── game&#xa;│       ├── ChessGame                              (existente)&#xa;│       ├── ChessGameFactory                       (existente)&#xa;│       ├── GameRecord                             (existente)&#xa;│       ├── TimeControl                            (existente)&#xa;│       ├── GameClockSnapshot                      (existente)&#xa;│       ├── TakebackRequest                        (existente)&#xa;│       ├── GameTerminationReason                  [P]&#xa;│       └── ProgressiveGameRepository contract     [P, probablemente application]&#xa;│&#xa;├── application&#xa;│   ├── computer&#xa;│   │   ├── ComputerMoveEngine                     [✓]&#xa;│   │   ├── ComputerEngineDescriptor               [✓]&#xa;│   │   ├── ComputerMoveRequest                    [✓]&#xa;│   │   ├── ComputerEngineException                [✓]&#xa;│   │   ├── ComputerGameConfiguration              [P]&#xa;│   │   ├── ComputerGameState                      [P]&#xa;│   │   └── ComputerDifficulty                     [P]&#xa;│   │&#xa;│   ├── repository&#xa;│   │   └── ProgressiveGameRepository              [P]&#xa;│   │&#xa;│   └── service&#xa;│       └── ComputerGameService                    [P]&#xa;│&#xa;├── infrastructure&#xa;│   ├── engine&#xa;│   │   ├── uci&#xa;│   │   │   ├── UciProcessEngine                   [✓]&#xa;│   │   │   ├── UciEngineConfiguration             [✓]&#xa;│   │   │   └── UciMoveParser                      [✓]&#xa;│   │   │&#xa;│   │   └── sunfish&#xa;│   │       ├── SunfishEngineConfiguration         [P]&#xa;│   │       ├── SunfishExecutableResolver          [P]&#xa;│   │       └── SunfishHealthCheck                 [P]&#xa;│   │&#xa;│   └── game&#xa;│       └── InMemoryProgressiveGameRepository      [P]&#xa;│&#xa;└── ui&#xa;    ├── component&#xa;    │   └── game&#xa;    │       ├── HumanVsComputerSetupOverlay        [P]&#xa;    │       ├── PlayerClockControl                 [P]&#xa;    │       └── GameStatusControl                  [P]&#xa;    │&#xa;    ├── controller&#xa;    │   └── HumanVsComputerScreenController        [P]&#xa;    │&#xa;    └── screen&#xa;        └── UiScreenId.HUMAN_VS_COMPUTER           [P]&#xa;&#xa;src/main/resources&#xa;├── fxml&#xa;│   └── human-vs-computer.fxml                     [P]&#xa;└── engines&#xa;    └── sunfish                                    [P]&#xa;&#xa;src/test/java/com/escontrela/lastmove&#xa;├── infrastructure/engine/uci&#xa;│   ├── FakeUciEngineMain                          [✓]&#xa;│   ├── UciProcessEngineTest                       [✓]&#xa;│   └── UciMoveParserTest                          [✓]&#xa;└── application/service&#xa;    └── ComputerGameServiceTest                    [P]" id="1TeiA-ovmJ1kelmQNo4I-1">
+          <mxCell style="text;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+            <mxGeometry x="130" y="130" width="450" height="1030" as="geometry" />
+          </mxCell>
+        </UserObject>
       </root>
     </mxGraphModel>
   </diagram>

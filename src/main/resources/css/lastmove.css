@@ -888,6 +888,28 @@
 .settings-check-box .box { -fx-background-radius: 0; -fx-border-radius: 0; }
 .settings-check-box:selected .mark { -fx-background-color: #ffffff; }
 .settings-check-box:selected .box { -fx-background-color: #1c69d4; }
+.settings-field-label {
+    -fx-font-size: 14px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #3f4b57;
+}
+.settings-text-field {
+    -fx-min-height: 42px;
+    -fx-padding: 0 12px;
+    -fx-background-color: #ffffff;
+    -fx-border-color: #cfd7e0;
+    -fx-border-width: 1px;
+    -fx-background-radius: 6px;
+    -fx-border-radius: 6px;
+    -fx-font-size: 14px;
+    -fx-text-fill: #262626;
+    -fx-prompt-text-fill: #8a96a3;
+}
+.settings-text-field:focused { -fx-border-color: #1c69d4; }
+.settings-validation-message {
+    -fx-font-size: 13px;
+    -fx-text-fill: #a72e3e;
+}
 
 .shortcut-reference-row { -fx-padding: 2 0; }
 .shortcut-reference-key {
@@ -1154,6 +1176,15 @@
     -fx-background-color: #232b35;
 }
 .night-mode .settings-check-box { -fx-text-fill: #ffffff; }
+.night-mode .settings-field-label { -fx-text-fill: #c6ccd3; }
+.night-mode .settings-text-field {
+    -fx-background-color: #1c2430;
+    -fx-border-color: #465465;
+    -fx-text-fill: #f1f3f5;
+    -fx-prompt-text-fill: #93a0ae;
+}
+.night-mode .settings-text-field:focused { -fx-border-color: #6ba5f0; }
+.night-mode .settings-validation-message { -fx-text-fill: #ff9aa6; }
 .night-mode .shortcut-reference-key {
     -fx-background-color: #1c2430;
     -fx-border-color: #465465;
