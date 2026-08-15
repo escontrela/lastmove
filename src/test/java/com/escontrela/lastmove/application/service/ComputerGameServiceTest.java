@@ -152,6 +152,25 @@ class ComputerGameServiceTest {
   }
 
   @Test
+  void clockTimeoutCancelsABlockedComputerSearchAndIgnoresItsLateReply() {
+    engineProvider.moves.add(move("e7", "e5"));
+    engineProvider.deferReplies = true;
+    var created = service.createGame(configuration(PieceColor.WHITE)).toCompletableFuture().join();
+    var pendingReply = service.playHumanMove(created.gameId(), move("e2", "e4"));
+    clock.advance(Duration.ofMinutes(5));
+
+    var expired = service.state(created.gameId());
+
+    assertEquals(GameResult.WHITE_WINS, expired.result().orElseThrow());
+    assertEquals(GameTerminationReason.TIMEOUT, expired.terminationReason().orElseThrow());
+    assertTrue(engineProvider.lastEngine.cancelSearchCalls > 0);
+    engineProvider.lastEngine.completePendingMove();
+    var afterLateReply = pendingReply.toCompletableFuture().join();
+    assertEquals(List.of("e4"), sans(afterLateReply));
+    assertEquals(GameResult.WHITE_WINS, afterLateReply.result().orElseThrow());
+  }
+
+  @Test
   void exposesAnImmutableRecordForLaterAnalysis() {
     engineProvider.moves.add(move("e7", "e5"));
     var created = service.createGame(configuration(PieceColor.WHITE)).toCompletableFuture().join();
@@ -207,6 +226,18 @@ class ComputerGameServiceTest {
     assertTrue(restored.moves().isEmpty());
     assertTrue(finalState.moves().isEmpty());
     assertEquals(PieceColor.WHITE, finalState.gameState().whoseTurn());
+    assertTrue(engineProvider.lastEngine.cancelSearchCalls > 0);
+  }
+
+  @Test
+  void applicationShutdownClosesEveryRunningComputerEngine() {
+    service.createGame(configuration(PieceColor.WHITE)).toCompletableFuture().join();
+    service.createGame(configuration(PieceColor.WHITE)).toCompletableFuture().join();
+
+    service.closeEngines();
+
+    assertEquals(2, engineProvider.createdEngines.size());
+    assertTrue(engineProvider.createdEngines.stream().noneMatch(engine -> engine.running));
   }
 
   private ComputerGameConfiguration configuration(PieceColor humanColor) {
@@ -233,6 +264,7 @@ class ComputerGameServiceTest {
     private final Queue<MoveCommand> moves = new ArrayDeque<>();
     private FakeEngine lastEngine;
     private boolean deferReplies;
+    private final java.util.ArrayList<FakeEngine> createdEngines = new java.util.ArrayList<>();
 
     @Override
     public ComputerEngineDescriptor descriptor() {
@@ -242,6 +274,7 @@ class ComputerGameServiceTest {
     @Override
     public ComputerMoveEngine create() {
       lastEngine = new FakeEngine(descriptor, moves, deferReplies);
+      createdEngines.add(lastEngine);
       return lastEngine;
     }
   }
@@ -254,6 +287,7 @@ class ComputerGameServiceTest {
     private final boolean deferReplies;
     private CompletableFuture<MoveCommand> pendingMove;
     private MoveCommand deferredMove;
+    private int cancelSearchCalls;
 
     private FakeEngine(
         ComputerEngineDescriptor descriptor, Queue<MoveCommand> moves, boolean deferReplies) {
@@ -299,7 +333,9 @@ class ComputerGameServiceTest {
     }
 
     @Override
-    public void cancelSearch() {}
+    public void cancelSearch() {
+      cancelSearchCalls++;
+    }
 
     @Override
     public void close() {

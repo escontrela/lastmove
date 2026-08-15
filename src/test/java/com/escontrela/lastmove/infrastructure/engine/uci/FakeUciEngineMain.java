@@ -34,6 +34,10 @@ public final class FakeUciEngineMain {
         } else if (command.startsWith("go ")) {
           if (!positionReceived) {
             output.println("bestmove 0000");
+          } else if ("exit-on-go".equals(mode)) {
+            return;
+          } else if ("ignore-search".equals(mode)) {
+            // Deliberately remain alive without producing bestmove.
           } else if ("wait-for-stop".equals(mode)) {
             searching = true;
           } else {
@@ -43,7 +47,7 @@ public final class FakeUciEngineMain {
         } else if ("stop".equals(command) && searching) {
           searching = false;
           output.println("bestmove " + move);
-        } else if ("quit".equals(command)) {
+        } else if ("quit".equals(command) && !"ignore-quit".equals(mode)) {
           return;
         }
       }

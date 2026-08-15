@@ -72,6 +72,7 @@ class UciProcessEngineTest {
           cancellation instanceof CompletionException ? cancellation.getCause() : cancellation;
       assertInstanceOf(CancellationException.class, cause);
       assertFalse(engine.isThinking());
+      assertTrue(engine.isRunning());
     }
   }
 
@@ -98,6 +99,46 @@ class UciProcessEngineTest {
 
       assertInstanceOf(ComputerEngineException.class, failure.getCause());
       assertFalse(engine.isThinking());
+      assertFalse(engine.isRunning());
+    }
+  }
+
+  @Test
+  void reportsWhenTheEngineProcessDiesDuringSearch() throws Exception {
+    try (UciProcessEngine engine = engine("exit-on-go", "e7e5")) {
+      engine.start().toCompletableFuture().get(TEST_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+
+      CompletionException failure =
+          assertThrows(
+              CompletionException.class,
+              () -> engine.chooseMove(request(Duration.ofMillis(20))).toCompletableFuture().join());
+
+      assertInstanceOf(ComputerEngineException.class, failure.getCause());
+      assertTrue(failure.getCause().getMessage().contains("stopped unexpectedly"));
+      assertFalse(engine.isRunning());
+    }
+  }
+
+  @Test
+  void terminatesABlockedEngineAfterTheBoundedSearchTimeout() throws Exception {
+    try (UciProcessEngine engine =
+        engine(
+            "ignore-search",
+            "e7e5",
+            Duration.ofSeconds(1),
+            Duration.ofMillis(60),
+            Duration.ofMillis(100))) {
+      engine.start().toCompletableFuture().get(TEST_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+
+      CompletionException failure =
+          assertThrows(
+              CompletionException.class,
+              () -> engine.chooseMove(request(Duration.ofMillis(20))).toCompletableFuture().join());
+
+      assertInstanceOf(ComputerEngineException.class, failure.getCause());
+      assertTrue(failure.getCause().getMessage().contains("timeout"));
+      assertFalse(engine.isThinking());
+      assertFalse(engine.isRunning());
     }
   }
 
@@ -114,6 +155,22 @@ class UciProcessEngineTest {
     assertInstanceOf(ComputerEngineException.class, failure.getCause());
   }
 
+  @Test
+  void closeForciblyTerminatesAnEngineThatIgnoresQuit() throws Exception {
+    UciProcessEngine engine =
+        engine(
+            "ignore-quit",
+            "e7e5",
+            Duration.ofSeconds(1),
+            Duration.ofMillis(100),
+            Duration.ofMillis(60));
+    engine.start().toCompletableFuture().get(TEST_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+
+    engine.close();
+
+    assertFalse(engine.isRunning());
+  }
+
   private static ComputerMoveRequest request(Duration thinkingTime) {
     return new ComputerMoveRequest(
         new ChesspressoRulesEngine().startingPosition(), thinkingTime);
@@ -125,6 +182,20 @@ class UciProcessEngineTest {
 
   private static UciProcessEngine engine(
       String mode, String move, Duration startupTimeout) {
+    return engine(
+        mode,
+        move,
+        startupTimeout,
+        Duration.ofMillis(250),
+        Duration.ofMillis(250));
+  }
+
+  private static UciProcessEngine engine(
+      String mode,
+      String move,
+      Duration startupTimeout,
+      Duration searchResponseTimeout,
+      Duration shutdownTimeout) {
     UciEngineConfiguration configuration =
         new UciEngineConfiguration(
             new ComputerEngineDescriptor("fake-uci", "Fake UCI", "test"),
@@ -132,8 +203,8 @@ class UciProcessEngineTest {
             Optional.empty(),
             Map.of(),
             startupTimeout,
-            Duration.ofMillis(250),
-            Duration.ofMillis(250));
+            searchResponseTimeout,
+            shutdownTimeout);
     return new UciProcessEngine(configuration, new FenService());
   }
 

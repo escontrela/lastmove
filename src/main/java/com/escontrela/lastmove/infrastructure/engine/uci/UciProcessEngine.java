@@ -159,6 +159,11 @@ public final class UciProcessEngine implements ComputerMoveEngine {
         throw new CancellationException("The UCI search was cancelled");
       }
       return parseBestMove(response);
+    } catch (ComputerEngineException exception) {
+      synchronized (lifecycleMonitor) {
+        terminateProcess();
+      }
+      throw exception;
     } finally {
       thinking = false;
       searchCommandSent = false;

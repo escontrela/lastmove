@@ -929,13 +929,53 @@
 }
 .progressive-status-card { -fx-min-height: 86px; }
 
-.progressive-thinking-indicator {
-    -fx-progress-color: #0879e8;
+.computer-thinking-indicator {
+    -fx-min-height: 6px;
+    -fx-pref-height: 6px;
+    -fx-max-height: 6px;
+}
+.computer-thinking-dot {
+    -fx-min-width: 6px;
+    -fx-min-height: 6px;
+    -fx-pref-width: 6px;
+    -fx-pref-height: 6px;
+    -fx-max-width: 6px;
+    -fx-max-height: 6px;
+    -fx-background-color: #1c69d4;
+    -fx-background-radius: 2px;
 }
 .progressive-moves-card { -fx-min-height: 220px; }
 .progressive-action-button {
     -fx-min-height: 42px;
     -fx-alignment: center;
+    -fx-background-color: #ffffff;
+    -fx-border-color: #c7ced7;
+    -fx-border-width: 1px;
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-padding: 10px 14px;
+    -fx-text-fill: #1f242a;
+    -fx-font-weight: 700;
+}
+.progressive-action-button:hover {
+    -fx-background-color: #f4f7fb;
+    -fx-border-color: #1c69d4;
+}
+.progressive-action-button:pressed { -fx-background-color: #e8edf4; }
+.progressive-action-button:disabled {
+    -fx-opacity: 0.46;
+    -fx-cursor: default;
+}
+.progressive-danger-action-button {
+    -fx-border-color: #d1495b;
+    -fx-text-fill: #a72e3e;
+}
+.progressive-danger-action-button:hover {
+    -fx-background-color: #fff1f3;
+    -fx-border-color: #a72e3e;
+}
+.typewriter-status-label {
+    -fx-font-family: "SF Mono", "Cascadia Code", monospace;
 }
 .computer-game-setup-card {
     -fx-background-color: #ffffff;
@@ -1267,7 +1307,25 @@
 }
 .night-mode .progressive-player-name { -fx-text-fill: #f1f3f5; }
 .night-mode .progressive-player-clock { -fx-text-fill: #79aeef; }
-.night-mode .progressive-thinking-indicator { -fx-progress-color: #79aeef; }
+.night-mode .computer-thinking-dot { -fx-background-color: #6ba5f0; }
+.night-mode .progressive-action-button {
+    -fx-background-color: #262e38;
+    -fx-border-color: #6d7783;
+    -fx-text-fill: #ffffff;
+}
+.night-mode .progressive-action-button:hover {
+    -fx-background-color: #3b4654;
+    -fx-border-color: #6ba5f0;
+}
+.night-mode .progressive-action-button:pressed { -fx-background-color: #334151; }
+.night-mode .progressive-danger-action-button {
+    -fx-border-color: #e06a78;
+    -fx-text-fill: #ff9aa6;
+}
+.night-mode .progressive-danger-action-button:hover {
+    -fx-background-color: #442932;
+    -fx-border-color: #ff9aa6;
+}
 .night-mode .computer-game-setup-card {
     -fx-background-color: #1c2430;
     -fx-border-color: #465465;

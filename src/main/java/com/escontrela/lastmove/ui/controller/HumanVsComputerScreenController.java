@@ -12,6 +12,8 @@ import com.escontrela.lastmove.domain.game.MoveCommand;
 import com.escontrela.lastmove.domain.game.Ply;
 import com.escontrela.lastmove.ui.component.board.ChessBoardControl;
 import com.escontrela.lastmove.ui.component.game.HumanVsComputerSetupOverlay;
+import com.escontrela.lastmove.ui.component.game.ThinkingIndicatorControl;
+import com.escontrela.lastmove.ui.component.game.TypewriterStatusLabel;
 import com.escontrela.lastmove.ui.component.message.MessageBox;
 import com.escontrela.lastmove.ui.component.notation.MoveNotationControl;
 import com.escontrela.lastmove.ui.component.notation.MoveNotationEntry;
@@ -36,7 +38,6 @@ import javafx.beans.value.ChangeListener;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.control.ProgressIndicator;
 import javafx.scene.layout.StackPane;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -70,9 +71,9 @@ public final class HumanVsComputerScreenController implements UiScreenController
   @FXML private Label humanPlayerLabel;
   @FXML private Label opponentClockLabel;
   @FXML private Label humanClockLabel;
-  @FXML private Label turnLabel;
+  @FXML private TypewriterStatusLabel turnLabel;
   @FXML private Label statusLabel;
-  @FXML private ProgressIndicator thinkingIndicator;
+  @FXML private ThinkingIndicatorControl opponentThinkingIndicator;
   @FXML private Button takeBackButton;
   @FXML private Button restartButton;
   @FXML private Button resignButton;
@@ -340,6 +341,7 @@ public final class HumanVsComputerScreenController implements UiScreenController
   }
 
   private void applyState(ComputerGameState state) {
+    ComputerGameState previousState = renderedState;
     renderedState = Objects.requireNonNull(state, "state must not be null");
     chessBoard.renderPosition(state.position());
     boolean humanIsWhite = state.humanColor() == PieceColor.WHITE;
@@ -353,14 +355,23 @@ public final class HumanVsComputerScreenController implements UiScreenController
     opponentClockLabel.setText(
         formatClock(
             humanIsWhite ? state.clock().blackRemaining() : state.clock().whiteRemaining()));
-    turnLabel.setText(turnText(state));
-    statusLabel.setText(state.message().orElseGet(() -> turnText(state)));
+    String currentTurnText = turnText(state);
+    boolean enteredHumanTurn =
+        state.phase() == ComputerGamePhase.WAITING_FOR_HUMAN
+            && (previousState == null
+                || previousState.phase() != ComputerGamePhase.WAITING_FOR_HUMAN
+                || !previousState.gameId().equals(state.gameId()));
+    if (enteredHumanTurn) {
+      turnLabel.play(currentTurnText);
+    } else if (state.phase() != ComputerGamePhase.WAITING_FOR_HUMAN) {
+      turnLabel.showImmediately(currentTurnText);
+    }
+    statusLabel.setText(state.message().orElse(currentTurnText));
     takeBackButton.setDisable(!state.canTakeBack());
     restartButton.setDisable(false);
     resignButton.setDisable(state.result().isPresent());
     boolean engineThinking = state.phase() == ComputerGamePhase.ENGINE_THINKING;
-    thinkingIndicator.setVisible(engineThinking);
-    thinkingIndicator.setManaged(engineThinking);
+    opponentThinkingIndicator.setThinking(engineThinking);
     refreshNotation(state.moves());
     if (state.result().isPresent()) {
       clockRefresh.stop();
@@ -413,14 +424,13 @@ public final class HumanVsComputerScreenController implements UiScreenController
     humanPlayerLabel.setText("Player");
     opponentClockLabel.setText("--:--");
     humanClockLabel.setText("--:--");
-    turnLabel.setText("Configure a new game");
+    turnLabel.showImmediately("Configure a new game");
     statusLabel.setText("Choose an opponent, colour and time control");
     moveNotation.setTree(List.of());
     takeBackButton.setDisable(true);
     restartButton.setDisable(true);
     resignButton.setDisable(true);
-    thinkingIndicator.setVisible(false);
-    thinkingIndicator.setManaged(false);
+    opponentThinkingIndicator.setThinking(false);
   }
 
   private boolean canAcceptHumanInput() {
@@ -452,6 +462,7 @@ public final class HumanVsComputerScreenController implements UiScreenController
       activeGameId = null;
     }
     renderedState = null;
+    opponentThinkingIndicator.setThinking(false);
   }
 
   private void activateGame(ComputerGameState state) {
@@ -464,13 +475,12 @@ public final class HumanVsComputerScreenController implements UiScreenController
 
   private void showTransitionState(String message) {
     clockRefresh.stop();
-    turnLabel.setText(message);
+    turnLabel.showImmediately(message);
     statusLabel.setText(message);
     takeBackButton.setDisable(true);
     restartButton.setDisable(true);
     resignButton.setDisable(true);
-    thinkingIndicator.setVisible(true);
-    thinkingIndicator.setManaged(true);
+    opponentThinkingIndicator.setThinking(false);
   }
 
   private void showRestartFailure(Throwable failure) {

@@ -2,6 +2,8 @@
 
 <?import com.escontrela.lastmove.ui.component.board.ChessBoardControl?>
 <?import com.escontrela.lastmove.ui.component.game.HumanVsComputerSetupOverlay?>
+<?import com.escontrela.lastmove.ui.component.game.ThinkingIndicatorControl?>
+<?import com.escontrela.lastmove.ui.component.game.TypewriterStatusLabel?>
 <?import com.escontrela.lastmove.ui.component.message.MessageBox?>
 <?import com.escontrela.lastmove.ui.component.notation.MoveNotationControl?>
 <?import com.escontrela.lastmove.ui.component.promotion.PromotionPickerControl?>
@@ -9,7 +11,6 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
-<?import javafx.scene.control.ProgressIndicator?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
@@ -22,7 +23,7 @@
             <HBox alignment="CENTER_LEFT" spacing="16.0" styleClass="workspace-header">
                 <VBox spacing="6.0">
                     <Label styleClass="eyebrow-label" text="Play workspace" />
-                    <Label styleClass="app-title" text="Progressive game" />
+                    <Label styleClass="app-title" text="Human vs Computer" />
                     <Label styleClass="hero-support" text="Play a timed game move by move against a computer opponent." />
                 </VBox>
                 <Region HBox.hgrow="ALWAYS" />
@@ -38,16 +39,16 @@
                 <VBox prefWidth="340.0" spacing="14.0" styleClass="board-side-panel">
                     <VBox spacing="5.0" styleClass="rail-card progressive-player-card">
                         <padding><Insets bottom="16.0" left="18.0" right="18.0" top="16.0" /></padding>
-                        <Label fx:id="opponentPlayerLabel" styleClass="progressive-player-name" text="Computer" />
+                        <HBox alignment="CENTER_LEFT" spacing="10.0">
+                            <Label fx:id="opponentPlayerLabel" styleClass="progressive-player-name" text="Computer" />
+                            <ThinkingIndicatorControl fx:id="opponentThinkingIndicator" />
+                        </HBox>
                         <Label fx:id="opponentClockLabel" styleClass="progressive-player-clock" text="--:--" />
                     </VBox>
                     <VBox spacing="8.0" styleClass="rail-card progressive-status-card">
                         <padding><Insets bottom="14.0" left="18.0" right="18.0" top="14.0" /></padding>
                         <Label styleClass="eyebrow-label" text="Game status" />
-                        <HBox alignment="CENTER_LEFT" spacing="10.0">
-                            <ProgressIndicator fx:id="thinkingIndicator" managed="false" maxHeight="22.0" maxWidth="22.0" prefHeight="22.0" prefWidth="22.0" progress="-1.0" styleClass="progressive-thinking-indicator" visible="false" />
-                            <Label fx:id="turnLabel" styleClass="card-title" text="Configure a new game" />
-                        </HBox>
+                        <TypewriterStatusLabel fx:id="turnLabel" text="Configure a new game" />
                     </VBox>
                     <VBox spacing="10.0" styleClass="rail-card progressive-moves-card" VBox.vgrow="ALWAYS">
                         <padding><Insets bottom="14.0" left="14.0" right="14.0" top="14.0" /></padding>
@@ -60,9 +61,9 @@
                         <Label fx:id="humanClockLabel" styleClass="progressive-player-clock" text="--:--" />
                     </VBox>
                     <HBox spacing="10.0">
-                        <Button fx:id="takeBackButton" maxWidth="Infinity" mnemonicParsing="false" onAction="#takeBack" styleClass="secondary-button progressive-action-button" text="Take back" HBox.hgrow="ALWAYS" />
-                        <Button fx:id="restartButton" maxWidth="Infinity" mnemonicParsing="false" onAction="#restart" styleClass="secondary-button progressive-action-button" text="Restart" HBox.hgrow="ALWAYS" />
-                        <Button fx:id="resignButton" maxWidth="Infinity" mnemonicParsing="false" onAction="#resign" styleClass="session-delete-button progressive-action-button" text="Resign" HBox.hgrow="ALWAYS" />
+                        <Button fx:id="takeBackButton" maxWidth="Infinity" mnemonicParsing="false" onAction="#takeBack" styleClass="progressive-action-button" text="Take back" HBox.hgrow="ALWAYS" />
+                        <Button fx:id="restartButton" maxWidth="Infinity" mnemonicParsing="false" onAction="#restart" styleClass="progressive-action-button" text="Restart" HBox.hgrow="ALWAYS" />
+                        <Button fx:id="resignButton" maxWidth="Infinity" mnemonicParsing="false" onAction="#resign" styleClass="progressive-action-button, progressive-danger-action-button" text="Resign" HBox.hgrow="ALWAYS" />
                     </HBox>
                 </VBox>
             </HBox>
