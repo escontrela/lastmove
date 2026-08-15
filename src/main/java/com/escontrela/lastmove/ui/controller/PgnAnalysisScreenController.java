@@ -1,18 +1,20 @@
 package com.escontrela.lastmove.ui.controller;
 
 import com.escontrela.lastmove.application.dto.AnalysisSessionSummary;
-import com.escontrela.lastmove.application.dto.AnalysisNodeSummary;
+import com.escontrela.lastmove.application.dto.AnalysisNotationNode;
+import com.escontrela.lastmove.application.dto.AnalysisNotationTree;
 import com.escontrela.lastmove.application.dto.PgnImportRequest;
 import com.escontrela.lastmove.application.service.GameLoadService;
 import com.escontrela.lastmove.application.service.AnalysisSessionService;
 import com.escontrela.lastmove.domain.analysis.AnalysisSessionId;
-import com.escontrela.lastmove.domain.common.PieceColor;
 import com.escontrela.lastmove.domain.game.MoveCommand;
 import com.escontrela.lastmove.domain.game.MoveExecutionResult;
 import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
 import com.escontrela.lastmove.ui.component.message.TextInputModal;
 import com.escontrela.lastmove.ui.component.notation.MoveNotationControl;
 import com.escontrela.lastmove.ui.component.notation.MoveNotationEntry;
+import com.escontrela.lastmove.ui.component.notation.MoveNotationNode;
+import com.escontrela.lastmove.ui.component.promotion.PromotionPickerControl;
 import com.escontrela.lastmove.ui.component.session.SessionSelectorControl;
 import com.escontrela.lastmove.ui.component.session.SessionSelectorEntry;
 import com.escontrela.lastmove.ui.event.OpenSessionManagementEvent;
@@ -31,9 +33,12 @@ import javafx.beans.value.ChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
+import javafx.scene.control.TextInputControl;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.ContextMenuEvent;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.StackPane;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.context.event.EventListener;
@@ -59,6 +64,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
   @FXML private ImageView statusBrandLogo;
   @FXML private ContextualMenuPanel contextualMenuPanel;
   @FXML private TextInputModal textInputModal;
+  @FXML private PromotionPickerControl promotionPicker;
   @FXML private SessionSelectorControl sessionSelector;
   @FXML private MoveNotationControl moveNotation;
   @FXML private Label statusLabel;
@@ -76,9 +82,9 @@ public class PgnAnalysisScreenController implements UiScreenController {
   /** Identity of the session currently rendered by this screen. */
   private AnalysisSessionId activeAnalysisSessionId;
   private String pendingStatusMessage;
+  private BoardMoveInput pendingPromotionMove;
 
   private List<AnalysisSessionSummary> visibleSessions = List.of();
-  private List<AnalysisNodeSummary> visibleNotationNodes = List.of();
 
   public PgnAnalysisScreenController(
       GameLoadService gameLoadService,
@@ -101,11 +107,13 @@ public class PgnAnalysisScreenController implements UiScreenController {
   public void initialize() {
 
     root.getProperties().put("controller", this);
+    root.addEventFilter(KeyEvent.KEY_PRESSED, this::handleNavigationShortcut);
     chessSoundService.preload();
     root.getStyleClass().addListener(themeStyleListener);
     updateStatusBrandLogo();
     configureContextMenu();
     chessBoard.setSoundService(chessSoundService);
+    configurePromotionPicker();
     if (activeAnalysisSessionId == null) {
       activeAnalysisSessionId = analysisSessionService.createInitialSession().sessionId();
     }
@@ -120,6 +128,11 @@ public class PgnAnalysisScreenController implements UiScreenController {
 
     // Suscribirse a los eventos de movimiento desde el tablero
     if (chessBoard != null) {
+      chessBoard.setOnPromotionRequested(
+          event -> {
+            pendingPromotionMove = event.getMoveInput();
+            promotionPicker.showFor(event.getPromotingColor());
+          });
       chessBoard.setOnMoveRequested(
           event -> {
             BoardMoveInput moveInput = event.getMoveInput();
@@ -140,6 +153,24 @@ public class PgnAnalysisScreenController implements UiScreenController {
     }
 
     bindResponsiveBoardSize();
+  }
+
+  /** Opens the reusable picker and resubmits the pending board gesture once a piece is chosen. */
+  private void configurePromotionPicker() {
+    promotionPicker.setOnPromotionSelected(
+        event -> {
+          if (pendingPromotionMove == null) {
+            return;
+          }
+          BoardMoveInput completedMove = pendingPromotionMove.withPromotion(event.pieceType());
+          pendingPromotionMove = null;
+          chessBoard.handleBoardMoveInput(completedMove);
+        });
+    promotionPicker.setOnCancel(
+        event -> {
+          pendingPromotionMove = null;
+          statusLabel.setText("Promotion cancelled");
+        });
   }
 
   /**
@@ -254,6 +285,29 @@ public class PgnAnalysisScreenController implements UiScreenController {
     statusLabel.setText("Moved to the last move");
   }
 
+  /** Handles the analysis-navigation arrows unless an editable or modal UI element owns input. */
+  private void handleNavigationShortcut(KeyEvent event) {
+    if (event.isConsumed()
+        || textInputModal.isVisible()
+        || promotionPicker.isVisible()
+        || contextualMenuPanel.isVisible()
+        || root.getScene() == null
+        || root.getScene().getFocusOwner() instanceof TextInputControl) {
+      return;
+    }
+
+    switch (event.getCode()) {
+      case UP -> onFirstMove();
+      case DOWN -> onLastMove();
+      case LEFT -> onPreviousMove();
+      case RIGHT -> onNextMove();
+      default -> {
+        return;
+      }
+    }
+    event.consume();
+  }
+
   /** Copies the complete FEN represented by the board's active analysis position. */
   @FXML
   public void onCopyFen() {
@@ -263,6 +317,13 @@ public class PgnAnalysisScreenController implements UiScreenController {
     } else {
       statusLabel.setText("Unable to copy FEN to clipboard");
     }
+  }
+
+  /** Rotates only the reusable board presentation, leaving the active session untouched. */
+  @FXML
+  public void onRotateBoard() {
+    boolean flipped = chessBoard.toggleOrientation();
+    statusLabel.setText(flipped ? "Board rotated: Black at bottom" : "Board rotated: White at bottom");
   }
 
   @FXML
@@ -291,10 +352,10 @@ public class PgnAnalysisScreenController implements UiScreenController {
     contextualMenuPanel.addItem("Open sessions…", "", event -> onShowSessions());
     contextualMenuPanel.addItem("Copy position as FEN", "", event -> onCopyFen());
     contextualMenuPanel.addSeparator();
-    contextualMenuPanel.addItem("First move", "⇤", event -> onFirstMove());
+    contextualMenuPanel.addItem("First move", "↑", event -> onFirstMove());
     contextualMenuPanel.addItem("Previous move", "←", event -> onPreviousMove());
     contextualMenuPanel.addItem("Next move", "→", event -> onNextMove());
-    contextualMenuPanel.addItem("Last move", "⇥", event -> onLastMove());
+    contextualMenuPanel.addItem("Last move", "↓", event -> onLastMove());
     contextualMenuPanel.addSeparator();
     contextualMenuPanel.addItem("Back to chess tools", "", event -> backToMain());
     contextualMenuPanel.addItem("Open setup", "", event -> openSetup());
@@ -434,15 +495,13 @@ public class PgnAnalysisScreenController implements UiScreenController {
   private void configureMoveNotation() {
     moveNotation.setOnPlySelected(
         event -> {
-          int plyIndex = event.getEntry().plyIndex();
-          if (plyIndex < 0 || plyIndex >= visibleNotationNodes.size()) {
-            return;
-          }
-          AnalysisNodeSummary selected = visibleNotationNodes.get(plyIndex);
+          var selectedNodeId =
+              new com.escontrela.lastmove.domain.analysis.AnalysisNodeId(
+                  event.getEntry().nodeId());
           chessBoard.renderPosition(
-              analysisSessionService.select(activeAnalysisSessionId, selected.nodeId()));
+              analysisSessionService.select(activeAnalysisSessionId, selectedNodeId));
           refreshMoveList();
-          statusLabel.setText("Selected " + selected.ply().move().san().getValue());
+          statusLabel.setText("Selected " + event.getEntry().san());
         });
   }
 
@@ -474,22 +533,23 @@ public class PgnAnalysisScreenController implements UiScreenController {
   }
 
   private void refreshMoveList() {
-    int currentPlyIndex =
-        analysisSessionService.moveHistory(activeAnalysisSessionId).size() - 1;
-    visibleNotationNodes = analysisSessionService.notationNodes(activeAnalysisSessionId);
-    moveNotation.setEntries(
-        java.util.stream.IntStream.range(0, visibleNotationNodes.size())
-            .mapToObj(
-                plyIndex -> {
-                  var ply = visibleNotationNodes.get(plyIndex).ply();
-                  return new MoveNotationEntry(
-                      plyIndex,
-                      ply.moveNumber(),
-                      ply.movingColor() == PieceColor.WHITE,
-                      ply.move().san().getValue());
-                })
-            .toList());
-    moveNotation.setSelectedPlyIndex(currentPlyIndex);
+    AnalysisNotationTree notationTree =
+        analysisSessionService.notationTree(activeAnalysisSessionId);
+    moveNotation.setTree(notationTree.roots().stream().map(this::toNotationNode).toList());
+    moveNotation.setSelectedNodeId(
+        notationTree.currentNodeId().map(nodeId -> nodeId.value()).orElse(null));
+  }
+
+  private MoveNotationNode toNotationNode(AnalysisNotationNode node) {
+    var ply = node.ply();
+    return new MoveNotationNode(
+        new MoveNotationEntry(
+            node.nodeId().value(),
+            ply.moveNumber(),
+            ply.movingColor() == com.escontrela.lastmove.domain.common.PieceColor.WHITE,
+            ply.move().san().getValue(),
+            node.activeLine()),
+        node.continuations().stream().map(this::toNotationNode).toList());
   }
 
   private void updateStatusBrandLogo() {

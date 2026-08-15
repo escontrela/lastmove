@@ -8,7 +8,9 @@ import com.escontrela.lastmove.domain.game.MoveExecutionResult;
 import com.escontrela.lastmove.domain.game.Ply;
 import com.escontrela.lastmove.domain.game.PositionSnapshot;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -30,6 +32,9 @@ public final class AnalysisSession {
   private final AnalysisTree tree;
   private PositionSnapshot currentPosition;
   private AnalysisNodeId currentNodeId;
+  private AnalysisNodeId selectedRootId;
+  private final Map<AnalysisNodeId, AnalysisNodeId> selectedContinuationIds =
+      new LinkedHashMap<>();
   private GameResult result;
 
   public AnalysisSession(
@@ -149,12 +154,13 @@ public final class AnalysisSession {
    */
   public List<AnalysisNode> notationNodes() {
     List<AnalysisNode> line = new ArrayList<>(currentNodeLine());
-    List<AnalysisNode> candidates =
-        currentNodeId == null ? tree.roots() : tree.children(currentNodeId);
-    while (!candidates.isEmpty()) {
-      AnalysisNode next = candidates.getFirst();
+    AnalysisNodeId parentId = currentNodeId;
+    Optional<AnalysisNode> continuation = selectedContinuationAt(parentId);
+    while (continuation.isPresent()) {
+      AnalysisNode next = continuation.orElseThrow();
       line.add(next);
-      candidates = tree.children(next.id());
+      parentId = next.id();
+      continuation = selectedContinuationAt(parentId);
     }
     return List.copyOf(line);
   }
@@ -213,8 +219,7 @@ public final class AnalysisSession {
 
   /** Advances through the first preferred continuation from the cursor. */
   public boolean next() {
-    List<AnalysisNode> candidates = candidatesAtCursor();
-    return !candidates.isEmpty() && select(candidates.getFirst().id());
+    return selectedContinuationAt(currentNodeId).map(node -> select(node.id())).orElse(false);
   }
 
   /** Returns to the initial position without deleting any move or variation. */
@@ -236,13 +241,62 @@ public final class AnalysisSession {
     if (node.isEmpty()) {
       return false;
     }
+    rememberSelectedLine(nodeId);
     currentNodeId = nodeId;
     refreshCurrentState();
     return true;
   }
 
+  /**
+   * Restores the tree's first-child line as the active route without moving the current cursor.
+   *
+   * <p>PGN import uses this after constructing every sibling variation so the recorded main line,
+   * which is inserted first, remains the initial navigation route.
+   */
+  public void selectPreferredLine() {
+    selectedContinuationIds.clear();
+    List<AnalysisNode> roots = tree.roots();
+    selectedRootId = roots.isEmpty() ? null : roots.getFirst().id();
+    AnalysisNode current = roots.isEmpty() ? null : roots.getFirst();
+    while (current != null) {
+      List<AnalysisNode> children = tree.children(current.id());
+      if (children.isEmpty()) {
+        current = null;
+      } else {
+        AnalysisNode child = children.getFirst();
+        selectedContinuationIds.put(current.id(), child.id());
+        current = child;
+      }
+    }
+  }
+
   private List<AnalysisNode> candidatesAtCursor() {
     return currentNodeId == null ? tree.roots() : tree.children(currentNodeId);
+  }
+
+  private Optional<AnalysisNode> selectedContinuationAt(AnalysisNodeId parentId) {
+    List<AnalysisNode> candidates = parentId == null ? tree.roots() : tree.children(parentId);
+    if (candidates.isEmpty()) {
+      return Optional.empty();
+    }
+    AnalysisNodeId selectedId =
+        parentId == null ? selectedRootId : selectedContinuationIds.get(parentId);
+    return candidates.stream()
+        .filter(candidate -> candidate.id().equals(selectedId))
+        .findFirst()
+        .or(() -> Optional.of(candidates.getFirst()));
+  }
+
+  private void rememberSelectedLine(AnalysisNodeId nodeId) {
+    AnalysisNode previous = null;
+    for (AnalysisNode node : tree.lineTo(nodeId)) {
+      if (previous == null) {
+        selectedRootId = node.id();
+      } else {
+        selectedContinuationIds.put(previous.id(), node.id());
+      }
+      previous = node;
+    }
   }
 
   private List<AnalysisNode> currentNodeLine() {

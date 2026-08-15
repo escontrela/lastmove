@@ -8,6 +8,7 @@
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
+<?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.layout.VBox?>
 
 <BorderPane fx:id="root" styleClass="app-shell" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.escontrela.lastmove.ui.controller.SetupScreenController">
@@ -26,18 +27,44 @@
         </HBox>
     </top>
     <center>
-        <VBox alignment="TOP_LEFT" spacing="24.0" styleClass="setup-content">
-            <padding><Insets bottom="64.0" left="80.0" right="80.0" top="64.0" /></padding>
-            <VBox maxWidth="680.0" spacing="16.0" styleClass="setup-card">
-                <padding><Insets bottom="32.0" left="32.0" right="32.0" top="32.0" /></padding>
-                <Label styleClass="eyebrow-label" text="Appearance" />
-                <Label styleClass="card-title" text="Night mode" />
-                <Label styleClass="card-copy" text="Use the dark LastMove workspace across every screen. This preference is saved for your next session." wrapText="true" />
-                <CheckBox fx:id="nightModeCheckBox" mnemonicParsing="false" styleClass="settings-check-box" text="Enable night mode" />
-                <Label styleClass="card-title" text="Startup" />
-                <Label styleClass="card-copy" text="Show the LastMove welcome screen when the application starts. This preference is saved for your next session." wrapText="true" />
-                <CheckBox fx:id="showSplashCheckBox" mnemonicParsing="false" styleClass="settings-check-box" text="Show splash screen on startup" />
-            </VBox>
-        </VBox>
+        <ScrollPane fitToWidth="true" hbarPolicy="NEVER" styleClass="setup-scroll-pane">
+            <content>
+                <VBox alignment="TOP_LEFT" spacing="24.0" styleClass="setup-content">
+                    <padding><Insets bottom="64.0" left="80.0" right="80.0" top="64.0" /></padding>
+                    <VBox maxWidth="680.0" spacing="16.0" styleClass="setup-card">
+                        <padding><Insets bottom="32.0" left="32.0" right="32.0" top="32.0" /></padding>
+                        <Label styleClass="eyebrow-label" text="Appearance" />
+                        <Label styleClass="card-title" text="Night mode" />
+                        <Label styleClass="card-copy" text="Use the dark LastMove workspace across every screen. This preference is saved for your next session." wrapText="true" />
+                        <CheckBox fx:id="nightModeCheckBox" mnemonicParsing="false" styleClass="settings-check-box" text="Enable night mode" />
+                        <Label styleClass="card-title" text="Startup" />
+                        <Label styleClass="card-copy" text="Show the LastMove welcome screen when the application starts. This preference is saved for your next session." wrapText="true" />
+                        <CheckBox fx:id="showSplashCheckBox" mnemonicParsing="false" styleClass="settings-check-box" text="Show splash screen on startup" />
+                    </VBox>
+                    <VBox maxWidth="680.0" spacing="12.0" styleClass="setup-card">
+                        <padding><Insets bottom="32.0" left="32.0" right="32.0" top="32.0" /></padding>
+                        <Label styleClass="eyebrow-label" text="Navigation" />
+                        <Label styleClass="card-title" text="Analysis keyboard shortcuts" />
+                        <Label styleClass="card-copy" text="Available in the PGN analysis workspace when no modal dialog or text field is active." wrapText="true" />
+                        <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="shortcut-reference-row">
+                            <Label styleClass="shortcut-reference-key" text="↑" />
+                            <Label styleClass="shortcut-reference-action" text="First move" />
+                        </HBox>
+                        <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="shortcut-reference-row">
+                            <Label styleClass="shortcut-reference-key" text="↓" />
+                            <Label styleClass="shortcut-reference-action" text="Last move" />
+                        </HBox>
+                        <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="shortcut-reference-row">
+                            <Label styleClass="shortcut-reference-key" text="←" />
+                            <Label styleClass="shortcut-reference-action" text="Previous move" />
+                        </HBox>
+                        <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="shortcut-reference-row">
+                            <Label styleClass="shortcut-reference-key" text="→" />
+                            <Label styleClass="shortcut-reference-action" text="Next move" />
+                        </HBox>
+                    </VBox>
+                </VBox>
+            </content>
+        </ScrollPane>
     </center>
 </BorderPane>

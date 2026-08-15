@@ -38,6 +38,10 @@ class AnalysisSessionTest {
     assertEquals(List.of("e5", "c5"), nodeSans(session.continuations(first.id())));
     assertEquals(List.of("e4", "c5"), plySans(session.currentLine()));
 
+    assertTrue(session.previous());
+    assertTrue(session.next());
+    assertEquals("c5", session.currentPly().orElseThrow().move().san().getValue());
+
     assertTrue(session.select(mainLineSecond.id()));
     assertEquals(List.of("e4", "e5"), plySans(session.currentLine()));
     assertFalse(mainLineSecond.id().equals(alternativeSecond.id()));

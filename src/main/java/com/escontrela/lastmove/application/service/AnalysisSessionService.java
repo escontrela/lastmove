@@ -1,6 +1,8 @@
 package com.escontrela.lastmove.application.service;
 
 import com.escontrela.lastmove.application.dto.AnalysisNodeSummary;
+import com.escontrela.lastmove.application.dto.AnalysisNotationNode;
+import com.escontrela.lastmove.application.dto.AnalysisNotationTree;
 import com.escontrela.lastmove.application.dto.AnalysisSessionSummary;
 import com.escontrela.lastmove.application.repository.AnalysisSessionRepository;
 import com.escontrela.lastmove.domain.analysis.AnalysisNode;
@@ -23,10 +25,12 @@ import com.escontrela.lastmove.domain.game.PositionSnapshot;
 import com.escontrela.lastmove.domain.notation.Fen;
 import com.escontrela.lastmove.domain.notation.PgnGame;
 import com.escontrela.lastmove.domain.service.FenService;
+import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 
 /**
@@ -101,6 +105,7 @@ public final class AnalysisSessionService {
                 ? Optional.empty()
                 : Optional.of(game.getResult()));
     importVariations(session, required.rootVariations());
+    session.selectPreferredLine();
     session.first();
     if (!required.rootVariations().isEmpty()) {
       session.next();
@@ -184,6 +189,17 @@ public final class AnalysisSessionService {
   public List<AnalysisNodeSummary> notationNodes(AnalysisSessionId sessionId) {
     AnalysisSession session = session(sessionId);
     return session.notationNodes().stream().map(node -> nodeSummary(session, node)).toList();
+  }
+
+  /** Returns the complete recursive move tree with active-route and current-node markers. */
+  public AnalysisNotationTree notationTree(AnalysisSessionId sessionId) {
+    AnalysisSession session = session(sessionId);
+    Set<AnalysisNodeId> activeNodeIds =
+        new HashSet<>(session.notationNodes().stream().map(AnalysisNode::id).toList());
+    Optional<AnalysisNodeId> currentNodeId = session.currentNode().map(AnalysisNode::id);
+    return new AnalysisNotationTree(
+        projectNotationNodes(session, session.rootVariations(), activeNodeIds, currentNodeId),
+        currentNodeId);
   }
 
   /** Returns the selectable variations that begin at the initial position. */
@@ -307,5 +323,26 @@ public final class AnalysisSessionService {
   private AnalysisNodeSummary nodeSummary(AnalysisSession session, AnalysisNode node) {
     return new AnalysisNodeSummary(
         node.id(), node.ply(), session.continuations(node.id()).size());
+  }
+
+  private List<AnalysisNotationNode> projectNotationNodes(
+      AnalysisSession session,
+      List<AnalysisNode> nodes,
+      Set<AnalysisNodeId> activeNodeIds,
+      Optional<AnalysisNodeId> currentNodeId) {
+    java.util.ArrayList<AnalysisNotationNode> projected = new java.util.ArrayList<>(nodes.size());
+    for (int index = 0; index < nodes.size(); index++) {
+      AnalysisNode node = nodes.get(index);
+      projected.add(
+          new AnalysisNotationNode(
+              node.id(),
+              node.ply(),
+              projectNotationNodes(
+                  session, session.continuations(node.id()), activeNodeIds, currentNodeId),
+              index == 0,
+              activeNodeIds.contains(node.id()),
+              currentNodeId.filter(node.id()::equals).isPresent()));
+    }
+    return List.copyOf(projected);
   }
 }

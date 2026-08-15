@@ -1,20 +1,20 @@
 package com.escontrela.lastmove.ui.component.notation;
 
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  * UI-neutral description of one selectable ply rendered by {@link MoveNotationControl}.
  *
- * <p>The entry deliberately uses a line-local index instead of an analysis-session identifier, so
- * the same control can render an analysis tree's selected line or a progressive game's history.
+ * <p>The identifier is presentation-neutral: an analysis screen can use an analysis-node UUID and
+ * a progressive game can use its ply UUID. The {@code activeLine} flag lets the skin distinguish
+ * the currently chosen continuation from sibling variations without owning navigation state.
  */
 public record MoveNotationEntry(
-    int plyIndex, int moveNumber, boolean whiteMove, String san) {
+    UUID nodeId, int moveNumber, boolean whiteMove, String san, boolean activeLine) {
 
   public MoveNotationEntry {
-    if (plyIndex < 0) {
-      throw new IllegalArgumentException("plyIndex must not be negative");
-    }
+    nodeId = Objects.requireNonNull(nodeId, "nodeId must not be null");
     if (moveNumber < 1) {
       throw new IllegalArgumentException("moveNumber must be at least one");
     }
