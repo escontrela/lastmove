@@ -77,7 +77,8 @@ public final class ChessGameFactory {
       Optional<Player> whitePlayer,
       Optional<Player> blackPlayer,
       Optional<TimeControl> timeControl,
-      Optional<GameResult> result) {
+      Optional<GameResult> result,
+      Optional<GameTerminationReason> terminationReason) {
     return new ChessGame(
         id,
         initialPosition,
@@ -89,6 +90,7 @@ public final class ChessGameFactory {
         blackPlayer,
         timeControl,
         result,
+        terminationReason,
         rulesEngine);
   }
 
@@ -110,6 +112,7 @@ public final class ChessGameFactory {
         blackPlayer,
         requiredTimeControl,
         terminalResult(position),
+        terminalReason(position),
         rulesEngine);
   }
 
@@ -121,5 +124,14 @@ public final class ChessGameFactory {
               : GameResult.WHITE_WINS);
     }
     return position.stalemate() ? Optional.of(GameResult.DRAW) : Optional.empty();
+  }
+
+  private Optional<GameTerminationReason> terminalReason(PositionSnapshot position) {
+    if (position.mate()) {
+      return Optional.of(GameTerminationReason.CHECKMATE);
+    }
+    return position.stalemate()
+        ? Optional.of(GameTerminationReason.STALEMATE)
+        : Optional.empty();
   }
 }

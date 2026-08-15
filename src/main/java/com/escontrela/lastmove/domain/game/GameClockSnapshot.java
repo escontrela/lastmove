@@ -65,6 +65,17 @@ public record GameClockSnapshot(
         : new GameClockSnapshot(whiteRemaining, Optional.of(updated));
   }
 
+  /** Returns a clock snapshot with one player's remaining time set to zero. */
+  public GameClockSnapshot expired(PieceColor color) {
+    PieceColor required = Objects.requireNonNull(color, "color must not be null");
+    if (!timed()) {
+      throw new IllegalStateException("an untimed game has no clock to expire");
+    }
+    return required == PieceColor.WHITE
+        ? new GameClockSnapshot(Optional.of(Duration.ZERO), blackRemaining)
+        : new GameClockSnapshot(whiteRemaining, Optional.of(Duration.ZERO));
+  }
+
   private static void requireNonNegative(Duration duration) {
     if (duration.isNegative()) {
       throw new IllegalArgumentException("clock durations must not be negative");

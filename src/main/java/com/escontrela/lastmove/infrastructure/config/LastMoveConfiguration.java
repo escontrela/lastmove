@@ -4,6 +4,7 @@ import com.escontrela.lastmove.domain.analysis.AnalysisSessionFactory;
 import com.escontrela.lastmove.domain.game.ChessGameFactory;
 import com.escontrela.lastmove.domain.game.ChessRulesEngine;
 import com.escontrela.lastmove.domain.service.FenService;
+import java.time.Clock;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -31,6 +32,12 @@ public class LastMoveConfiguration {
     @Bean
     public FenService fenService() {
         return new FenService();
+    }
+
+    /** Supplies wall-clock time to progressive-game application services. */
+    @Bean
+    public Clock applicationClock() {
+        return Clock.systemUTC();
     }
 
 }

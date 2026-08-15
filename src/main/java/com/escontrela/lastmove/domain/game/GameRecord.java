@@ -18,7 +18,8 @@ public record GameRecord(
     Optional<Player> blackPlayer,
     Optional<TimeControl> timeControl,
     List<RecordedPly> moves,
-    Optional<GameResult> result) {
+    Optional<GameResult> result,
+    Optional<GameTerminationReason> terminationReason) {
 
   public GameRecord {
     Objects.requireNonNull(sourceGameId, "sourceGameId must not be null");
@@ -32,6 +33,11 @@ public record GameRecord(
     timeControl = Objects.requireNonNull(timeControl, "timeControl must not be null");
     moves = List.copyOf(Objects.requireNonNull(moves, "moves must not be null"));
     result = Objects.requireNonNull(result, "result must not be null");
+    terminationReason =
+        Objects.requireNonNull(terminationReason, "terminationReason must not be null");
+    if (result.isPresent() != terminationReason.isPresent()) {
+      throw new IllegalArgumentException("a game result and its termination reason must coexist");
+    }
     for (int index = 1; index < moves.size(); index++) {
       if (!moves.get(index - 1).clockAfterMove().equals(moves.get(index).clockBeforeMove())) {
         throw new IllegalArgumentException("Recorded clock snapshots must form one timeline");

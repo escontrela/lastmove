@@ -154,6 +154,18 @@ class ChessGameTest {
     assertEquals(2, game.moveHistory().size());
   }
 
+  @Test
+  void resignationAndTimeoutProduceExplicitTerminationReasons() {
+    ChessGame resigned = newGame();
+    assertEquals(GameResult.BLACK_WINS, resigned.resign(PieceColor.WHITE));
+    assertEquals(GameTerminationReason.RESIGNATION, resigned.terminationReason().orElseThrow());
+
+    ChessGame expired = newGame();
+    assertEquals(GameResult.BLACK_WINS, expired.timeout(PieceColor.WHITE));
+    assertEquals(GameTerminationReason.TIMEOUT, expired.terminationReason().orElseThrow());
+    assertEquals(Duration.ZERO, expired.currentClock().whiteRemaining().orElseThrow());
+  }
+
   private ChessGame newGame() {
     return gameFactory.createInitial(
         new Player("Alice", PieceColor.WHITE),
