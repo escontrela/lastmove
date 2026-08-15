@@ -3,6 +3,7 @@ package com.escontrela.lastmove.ui.screen;
 /** Screens available in the primary LastMove window. */
 public enum UiScreenId {
     MAIN("/fxml/main-window.fxml", 1280.0, 800.0),
+    HUMAN_VS_COMPUTER("/fxml/progressive-game.fxml", 1280.0, 800.0),
     PGN_ANALYSIS("/fxml/pgn-analysis.fxml", 1280.0, 800.0),
     ANALYSIS_SESSIONS("/fxml/analysis-sessions.fxml", 1280.0, 800.0),
     SETUP("/fxml/setup.fxml", 1100.0, 720.0);

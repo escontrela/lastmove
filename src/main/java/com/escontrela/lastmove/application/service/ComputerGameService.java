@@ -107,6 +107,14 @@ public final class ComputerGameService {
                     : CompletableFuture.completedFuture(stateOf(game, context)));
   }
 
+  /** Lists the computer opponents available to the game-setup UI. */
+  public List<ComputerEngineDescriptor> availableEngines() {
+    return engineProviders.values().stream()
+        .map(ComputerMoveEngineProvider::descriptor)
+        .sorted(java.util.Comparator.comparing(ComputerEngineDescriptor::displayName))
+        .toList();
+  }
+
   /** Applies a human move and, when accepted, completes after the computer has replied. */
   public CompletionStage<ComputerGameState> playHumanMove(GameId gameId, MoveCommand command) {
     ChessGame game = game(gameId);

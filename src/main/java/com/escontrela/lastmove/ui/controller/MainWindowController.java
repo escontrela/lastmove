@@ -94,6 +94,12 @@ public class MainWindowController implements UiScreenController {
         uiFlowManager.show(UiScreenId.PGN_ANALYSIS);
     }
 
+    /** Opens the progressive-game screen, which owns its Human vs Computer setup overlay. */
+    @FXML
+    public void openHumanVsComputer() {
+        uiFlowManager.show(UiScreenId.HUMAN_VS_COMPUTER);
+    }
+
     @FXML
     public void openSetup() {
         uiFlowManager.show(UiScreenId.SETUP);
@@ -114,6 +120,7 @@ public class MainWindowController implements UiScreenController {
     private void configureContextMenu() {
         contextualMenuPanel.clearItems();
         contextualMenuPanel.addItem("Analyse a PGN", "", event -> openPgnAnalysis());
+        contextualMenuPanel.addItem("Human vs computer", "", event -> openHumanVsComputer());
         contextualMenuPanel.addSeparator();
         contextualMenuPanel.addItem("Open setup", "", event -> openSetup());
         contextualMenuPanel.addItem("Dismiss welcome message", "Esc", event -> {

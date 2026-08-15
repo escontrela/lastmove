@@ -62,6 +62,11 @@ class ComputerGameServiceTest {
   }
 
   @Test
+  void exposesConfiguredEnginesForTheSetupOverlay() {
+    assertEquals(List.of(engineProvider.descriptor), service.availableEngines());
+  }
+
+  @Test
   void engineMakesTheOpeningMoveWhenTheHumanSelectedBlack() {
     engineProvider.moves.add(move("e2", "e4"));
 
