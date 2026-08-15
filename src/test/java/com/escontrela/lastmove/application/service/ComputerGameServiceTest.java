@@ -21,6 +21,10 @@ import com.escontrela.lastmove.domain.game.MoveCommand;
 import com.escontrela.lastmove.domain.game.TimeControl;
 import com.escontrela.lastmove.infrastructure.chesspresso.ChesspressoRulesEngine;
 import com.escontrela.lastmove.infrastructure.game.InMemoryProgressiveGameRepository;
+import com.escontrela.lastmove.domain.analysis.AnalysisOrigin;
+import com.escontrela.lastmove.domain.analysis.AnalysisSessionFactory;
+import com.escontrela.lastmove.domain.service.FenService;
+import com.escontrela.lastmove.infrastructure.session.InMemoryAnalysisSessionRepository;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -157,6 +161,36 @@ class ComputerGameServiceTest {
 
     assertEquals(List.of("e4", "e5"),
         record.moves().stream().map(move -> move.ply().move().san().getValue()).toList());
+  }
+
+  @Test
+  void completedComputerGameCanBecomeAnIndependentAnalysisSession() {
+    engineProvider.moves.add(move("e7", "e5"));
+    var created = service.createGame(configuration(PieceColor.WHITE)).toCompletableFuture().join();
+    service.playHumanMove(created.gameId(), move("e2", "e4")).toCompletableFuture().join();
+    service.resign(created.gameId());
+    AnalysisSessionService analysisService =
+        new AnalysisSessionService(
+            new InMemoryAnalysisSessionRepository(),
+            new ChessGameFactory(new ChesspressoRulesEngine()),
+            new AnalysisSessionFactory(),
+            new FenService());
+
+    var analysis = analysisService.createFromGame(service.gameRecord(created.gameId()));
+
+    assertEquals(AnalysisOrigin.PLAYED_GAME, analysis.origin());
+    assertEquals(GameResult.BLACK_WINS, analysis.sourceResult().orElseThrow());
+    assertEquals(
+        List.of("e4", "e5"),
+        analysisService.notationLine(analysis.sessionId()).stream()
+            .map(ply -> ply.move().san().getValue())
+            .toList());
+    service.closeGame(created.gameId());
+    assertEquals(
+        List.of("e4", "e5"),
+        analysisService.notationLine(analysis.sessionId()).stream()
+            .map(ply -> ply.move().san().getValue())
+            .toList());
   }
 
   @Test

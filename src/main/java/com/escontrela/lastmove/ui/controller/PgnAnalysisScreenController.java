@@ -18,6 +18,7 @@ import com.escontrela.lastmove.ui.component.promotion.PromotionPickerControl;
 import com.escontrela.lastmove.ui.component.session.SessionSelectorControl;
 import com.escontrela.lastmove.ui.component.session.SessionSelectorEntry;
 import com.escontrela.lastmove.ui.event.OpenSessionManagementEvent;
+import com.escontrela.lastmove.ui.event.OpenAnalysisSessionEvent;
 import com.escontrela.lastmove.ui.event.ReturnToAnalysisSessionEvent;
 import com.escontrela.lastmove.ui.event.UiEventBus;
 import com.escontrela.lastmove.ui.model.BoardMoveInput;
@@ -254,6 +255,13 @@ public class PgnAnalysisScreenController implements UiScreenController {
   @EventListener
   public void onReturnToAnalysisSession(ReturnToAnalysisSessionEvent event) {
     activeAnalysisSessionId = event.activeSessionId().orElse(null);
+    pendingStatusMessage = event.statusMessage();
+  }
+
+  /** Receives a newly created study before this screen is opened from another workflow. */
+  @EventListener
+  public void onOpenAnalysisSession(OpenAnalysisSessionEvent event) {
+    activeAnalysisSessionId = event.sessionId();
     pendingStatusMessage = event.statusMessage();
   }
 

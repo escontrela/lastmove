@@ -4,6 +4,7 @@ import com.escontrela.lastmove.application.computer.ComputerGameConfiguration;
 import com.escontrela.lastmove.application.computer.ComputerGamePhase;
 import com.escontrela.lastmove.application.computer.ComputerGameState;
 import com.escontrela.lastmove.application.service.ComputerGameService;
+import com.escontrela.lastmove.application.service.AnalysisSessionService;
 import com.escontrela.lastmove.domain.common.PieceColor;
 import com.escontrela.lastmove.domain.game.GameId;
 import com.escontrela.lastmove.domain.game.GameResult;
@@ -16,6 +17,8 @@ import com.escontrela.lastmove.ui.component.notation.MoveNotationControl;
 import com.escontrela.lastmove.ui.component.notation.MoveNotationEntry;
 import com.escontrela.lastmove.ui.component.notation.MoveNotationNode;
 import com.escontrela.lastmove.ui.component.promotion.PromotionPickerControl;
+import com.escontrela.lastmove.ui.event.OpenAnalysisSessionEvent;
+import com.escontrela.lastmove.ui.event.UiEventBus;
 import com.escontrela.lastmove.ui.model.BoardMoveInput;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
 import com.escontrela.lastmove.ui.screen.UiScreenController;
@@ -51,6 +54,8 @@ public final class HumanVsComputerScreenController implements UiScreenController
 
   private final UiFlowManager uiFlowManager;
   private final ComputerGameService computerGameService;
+  private final AnalysisSessionService analysisSessionService;
+  private final UiEventBus uiEventBus;
   private final ChessSoundService chessSoundService;
   private Timeline clockRefresh;
 
@@ -81,9 +86,13 @@ public final class HumanVsComputerScreenController implements UiScreenController
   public HumanVsComputerScreenController(
       @Lazy UiFlowManager uiFlowManager,
       ComputerGameService computerGameService,
+      AnalysisSessionService analysisSessionService,
+      UiEventBus uiEventBus,
       ChessSoundService chessSoundService) {
     this.uiFlowManager = uiFlowManager;
     this.computerGameService = computerGameService;
+    this.analysisSessionService = analysisSessionService;
+    this.uiEventBus = uiEventBus;
     this.chessSoundService = chessSoundService;
   }
 
@@ -290,15 +299,32 @@ public final class HumanVsComputerScreenController implements UiScreenController
 
   private void configureResultMessage() {
     resultMessageBox.setTitle("Game finished");
-    resultMessageBox.setAcceptText("Play again");
-    resultMessageBox.setCancelText("Back to tools");
-    resultMessageBox.setOnAccept(
+    resultMessageBox.setAcceptText("Analyze game");
+    resultMessageBox.setCancelText("Play again");
+    resultMessageBox.setOnAccept(event -> analyzeFinishedGame());
+    resultMessageBox.setOnCancel(
         event -> {
           resultMessageBox.hide();
           restart();
         });
-    resultMessageBox.setOnCancel(event -> backToMain());
     resultMessageBox.setOnClose(event -> backToMain());
+  }
+
+  private void analyzeFinishedGame() {
+    if (activeGameId == null || renderedState == null || renderedState.result().isEmpty()) {
+      return;
+    }
+    try {
+      var analysis =
+          analysisSessionService.createFromGame(computerGameService.gameRecord(activeGameId));
+      resultMessageBox.hide();
+      uiEventBus.publish(
+          new OpenAnalysisSessionEvent(
+              analysis.sessionId(), "Analyzing completed game: " + analysis.title()));
+      uiFlowManager.show(UiScreenId.PGN_ANALYSIS);
+    } catch (RuntimeException exception) {
+      statusLabel.setText(rootCauseMessage(exception));
+    }
   }
 
   private void refreshClockState() {
