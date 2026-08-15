@@ -48,7 +48,10 @@
                         <Label styleClass="card-title" text="Sunfish UCI" />
                         <Label styleClass="card-copy" text="LastMove starts this executable as a child process and communicates with it through standard UCI input and output streams." wrapText="true" />
                         <Label styleClass="settings-field-label" text="Executable path" />
-                        <TextField fx:id="sunfishExecutablePathField" maxWidth="Infinity" promptText="/absolute/path/to/sunfish-uci" styleClass="settings-text-field" />
+                        <HBox alignment="CENTER_LEFT" spacing="12.0">
+                            <TextField fx:id="sunfishExecutablePathField" maxWidth="Infinity" promptText="/absolute/path/to/sunfish-uci" styleClass="settings-text-field" HBox.hgrow="ALWAYS" />
+                            <Button fx:id="testSunfishButton" mnemonicParsing="false" onAction="#testSunfishConnection" styleClass="secondary-button" text="Test connection" />
+                        </HBox>
                         <Label fx:id="sunfishValidationLabel" maxWidth="Infinity" styleClass="settings-validation-message" wrapText="true" />
                     </VBox>
                     <VBox maxWidth="680.0" spacing="12.0" styleClass="setup-card">

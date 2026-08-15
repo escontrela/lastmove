@@ -908,8 +908,10 @@
 .settings-text-field:focused { -fx-border-color: #1c69d4; }
 .settings-validation-message {
     -fx-font-size: 13px;
-    -fx-text-fill: #a72e3e;
+    -fx-text-fill: #596675;
 }
+.settings-validation-message.settings-validation-error { -fx-text-fill: #a72e3e; }
+.settings-validation-message.settings-validation-success { -fx-text-fill: #167443; }
 
 .shortcut-reference-row { -fx-padding: 2 0; }
 .shortcut-reference-key {
@@ -1184,7 +1186,9 @@
     -fx-prompt-text-fill: #93a0ae;
 }
 .night-mode .settings-text-field:focused { -fx-border-color: #6ba5f0; }
-.night-mode .settings-validation-message { -fx-text-fill: #ff9aa6; }
+.night-mode .settings-validation-message { -fx-text-fill: #aeb8c3; }
+.night-mode .settings-validation-message.settings-validation-error { -fx-text-fill: #ff9aa6; }
+.night-mode .settings-validation-message.settings-validation-success { -fx-text-fill: #7edca7; }
 .night-mode .shortcut-reference-key {
     -fx-background-color: #1c2430;
     -fx-border-color: #465465;

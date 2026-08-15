@@ -1,11 +1,14 @@
 package com.escontrela.lastmove.ui.controller;
 
+import com.escontrela.lastmove.application.computer.ComputerEngineHealth;
+import com.escontrela.lastmove.application.service.ComputerEngineHealthService;
 import com.escontrela.lastmove.application.service.ComputerEngineSettingsService;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
 import com.escontrela.lastmove.ui.screen.UiScreenController;
 import com.escontrela.lastmove.ui.screen.UiScreenId;
 import com.escontrela.lastmove.ui.service.ApplicationThemeService;
 import com.escontrela.lastmove.ui.service.StartupPreferencesService;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
@@ -23,6 +26,7 @@ public class SetupScreenController implements UiScreenController {
     private final ApplicationThemeService themeService;
     private final StartupPreferencesService startupPreferencesService;
     private final ComputerEngineSettingsService computerEngineSettingsService;
+    private final ComputerEngineHealthService computerEngineHealthService;
 
     @FXML
     private BorderPane root;
@@ -35,6 +39,8 @@ public class SetupScreenController implements UiScreenController {
     @FXML
     private TextField sunfishExecutablePathField;
     @FXML
+    private Button testSunfishButton;
+    @FXML
     private Label sunfishValidationLabel;
 
     private boolean savedNightMode;
@@ -45,11 +51,13 @@ public class SetupScreenController implements UiScreenController {
             @Lazy UiFlowManager uiFlowManager,
             ApplicationThemeService themeService,
             StartupPreferencesService startupPreferencesService,
-            ComputerEngineSettingsService computerEngineSettingsService) {
+            ComputerEngineSettingsService computerEngineSettingsService,
+            ComputerEngineHealthService computerEngineHealthService) {
         this.uiFlowManager = uiFlowManager;
         this.themeService = themeService;
         this.startupPreferencesService = startupPreferencesService;
         this.computerEngineSettingsService = computerEngineSettingsService;
+        this.computerEngineHealthService = computerEngineHealthService;
     }
 
     @FXML
@@ -61,7 +69,7 @@ public class SetupScreenController implements UiScreenController {
         showSplashCheckBox.selectedProperty().addListener((ignored, oldValue, newValue) ->
                 updateApplyButtonVisibility());
         sunfishExecutablePathField.textProperty().addListener((ignored, oldValue, newValue) -> {
-            sunfishValidationLabel.setText("");
+            clearSunfishValidation();
             updateApplyButtonVisibility();
         });
     }
@@ -77,7 +85,7 @@ public class SetupScreenController implements UiScreenController {
         nightModeCheckBox.setSelected(savedNightMode);
         showSplashCheckBox.setSelected(savedSplashScreen);
         sunfishExecutablePathField.setText(savedSunfishExecutablePath);
-        sunfishValidationLabel.setText("");
+        clearSunfishValidation();
         updateApplyButtonVisibility();
     }
 
@@ -89,7 +97,7 @@ public class SetupScreenController implements UiScreenController {
                     .executablePath()
                     .toString();
         } catch (IllegalArgumentException exception) {
-            sunfishValidationLabel.setText(exception.getMessage());
+            showSunfishValidation(exception.getMessage(), false);
             return;
         }
         themeService.setNightMode(nightModeCheckBox.isSelected());
@@ -97,6 +105,15 @@ public class SetupScreenController implements UiScreenController {
         savedNightMode = nightModeCheckBox.isSelected();
         savedSplashScreen = showSplashCheckBox.isSelected();
         updateApplyButtonVisibility();
+    }
+
+    /** Runs a non-blocking end-to-end UCI probe against the saved Sunfish executable. */
+    @FXML
+    public void testSunfishConnection() {
+        testSunfishButton.setDisable(true);
+        showSunfishValidation("Checking wrapper, Python runtime and UCI response…", null);
+        computerEngineHealthService.checkSunfish().whenComplete((health, failure) ->
+                Platform.runLater(() -> finishSunfishCheck(health, failure)));
     }
 
     @FXML
@@ -110,5 +127,36 @@ public class SetupScreenController implements UiScreenController {
                 || !sunfishExecutablePathField.getText().trim().equals(savedSunfishExecutablePath);
         applyButton.setVisible(hasUnsavedChanges);
         applyButton.setManaged(hasUnsavedChanges);
+        testSunfishButton.setDisable(hasUnsavedChanges || savedSunfishExecutablePath == null);
+        if (hasUnsavedChanges
+                && !sunfishExecutablePathField.getText().trim().equals(savedSunfishExecutablePath)) {
+            showSunfishValidation("Apply the executable path before testing the connection.", null);
+        }
+    }
+
+    private void finishSunfishCheck(ComputerEngineHealth health, Throwable failure) {
+        if (failure != null) {
+            Throwable cause = failure.getCause() == null ? failure : failure.getCause();
+            showSunfishValidation("Sunfish check failed: " + cause.getMessage(), false);
+        } else {
+            showSunfishValidation(health.message(), health.available());
+        }
+        updateApplyButtonVisibility();
+    }
+
+    private void clearSunfishValidation() {
+        sunfishValidationLabel.setText("");
+        sunfishValidationLabel.getStyleClass().removeAll(
+                "settings-validation-success", "settings-validation-error");
+    }
+
+    private void showSunfishValidation(String message, Boolean successful) {
+        sunfishValidationLabel.setText(message == null ? "" : message);
+        sunfishValidationLabel.getStyleClass().removeAll(
+                "settings-validation-success", "settings-validation-error");
+        if (successful != null) {
+            sunfishValidationLabel.getStyleClass().add(
+                    successful ? "settings-validation-success" : "settings-validation-error");
+        }
     }
 }

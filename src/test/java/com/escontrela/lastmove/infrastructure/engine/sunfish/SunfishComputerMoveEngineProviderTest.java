@@ -8,16 +8,20 @@ import com.escontrela.lastmove.application.computer.ComputerEngineSettings;
 import com.escontrela.lastmove.application.computer.ComputerEngineSettingsRepository;
 import com.escontrela.lastmove.application.service.ComputerEngineSettingsService;
 import com.escontrela.lastmove.domain.service.FenService;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class SunfishComputerMoveEngineProviderTest {
 
+  @TempDir Path temporaryDirectory;
+
   @Test
-  void createsAnIndependentEngineFromTheConfiguredExecutable() {
-    Path javaExecutable = Path.of(System.getProperty("java.home"), "bin", "java");
-    var provider = provider(javaExecutable);
+  void createsAnIndependentEngineFromTheConfiguredExecutable() throws IOException {
+    var provider = provider(wrapper("sunfish-uci"));
 
     try (var first = provider.create(); var second = provider.create()) {
       assertEquals("sunfish", first.descriptor().id());
@@ -45,6 +49,16 @@ class SunfishComputerMoveEngineProviderTest {
           public void save(ComputerEngineSettings settings) {}
         };
     return new SunfishComputerMoveEngineProvider(
-        new ComputerEngineSettingsService(repository, executable.toString()), new FenService());
+        new ComputerEngineSettingsService(repository, executable.toString()),
+        new FenService(),
+        new SunfishExecutableResolver());
+  }
+
+  private Path wrapper(String name) throws IOException {
+    Path javaExecutable = Path.of(System.getProperty("java.home"), "bin", "java");
+    Path wrapper = temporaryDirectory.resolve(name);
+    Files.writeString(wrapper, "#!" + javaExecutable + System.lineSeparator());
+    wrapper.toFile().setExecutable(true);
+    return wrapper;
   }
 }
