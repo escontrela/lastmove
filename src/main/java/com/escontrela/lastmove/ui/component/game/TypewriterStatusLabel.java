@@ -17,7 +17,7 @@ public final class TypewriterStatusLabel extends Label {
   private static final String CURSOR = "█";
   private static final Duration CHARACTER_DELAY = Duration.millis(65);
   private static final Duration CURSOR_BLINK = Duration.millis(360);
-  private static final Duration CURSOR_LIFETIME = Duration.seconds(4);
+  private static final Duration CURSOR_LIFETIME = Duration.seconds(1);
 
   private final Timeline typing = new Timeline();
   private final Timeline cursor = new Timeline();
@@ -25,7 +25,7 @@ public final class TypewriterStatusLabel extends Label {
   private String completeText = "";
 
   public TypewriterStatusLabel() {
-    getStyleClass().addAll("card-title", "typewriter-status-label");
+    getStyleClass().add("typewriter-status-label");
     cursor.setCycleCount(Timeline.INDEFINITE);
     cursor.getKeyFrames().setAll(
         new KeyFrame(Duration.ZERO, event -> setText(completeText + CURSOR)),

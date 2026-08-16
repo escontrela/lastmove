@@ -30,4 +30,36 @@ public class FileChooserFactory {
         );
         return Optional.ofNullable(chooser.showOpenDialog(owner));
     }
+
+    /**
+     * Opens the operating system's save dialog for a PGN export.
+     *
+     * @param owner the owning window (may be {@code null})
+     * @param suggestedName title used to propose a safe file name
+     * @return the selected file with a {@code .pgn} extension, or empty when cancelled
+     */
+    public Optional<File> choosePgnExportFile(Window owner, String suggestedName) {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Export PGN");
+        chooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("PGN Files", "*.pgn"),
+                new FileChooser.ExtensionFilter("All Files", "*.*")
+        );
+        chooser.setInitialFileName(safePgnFileName(suggestedName));
+        return Optional.ofNullable(chooser.showSaveDialog(owner)).map(this::withPgnExtension);
+    }
+
+    private String safePgnFileName(String suggestedName) {
+        String safe = Optional.ofNullable(suggestedName).orElse("analysis")
+                .trim()
+                .replaceAll("[\\\\/:*?\"<>|]", "-");
+        safe = safe.isBlank() ? "analysis" : safe;
+        return safe.toLowerCase(java.util.Locale.ROOT).endsWith(".pgn") ? safe : safe + ".pgn";
+    }
+
+    private File withPgnExtension(File file) {
+        return file.getName().toLowerCase(java.util.Locale.ROOT).endsWith(".pgn")
+                ? file
+                : new File(file.getAbsolutePath() + ".pgn");
+    }
 }

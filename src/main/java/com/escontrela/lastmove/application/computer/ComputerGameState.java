@@ -20,6 +20,7 @@ public record ComputerGameState(
     Player blackPlayer,
     PieceColor humanColor,
     ComputerEngineDescriptor engine,
+    PositionSnapshot initialPosition,
     PositionSnapshot position,
     List<Ply> moves,
     GameStateSnapshot gameState,
@@ -37,6 +38,7 @@ public record ComputerGameState(
     Objects.requireNonNull(blackPlayer, "blackPlayer must not be null");
     Objects.requireNonNull(humanColor, "humanColor must not be null");
     Objects.requireNonNull(engine, "engine must not be null");
+    Objects.requireNonNull(initialPosition, "initialPosition must not be null");
     Objects.requireNonNull(position, "position must not be null");
     moves = List.copyOf(Objects.requireNonNull(moves, "moves must not be null"));
     Objects.requireNonNull(gameState, "gameState must not be null");

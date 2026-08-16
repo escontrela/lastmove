@@ -60,6 +60,7 @@ class ComputerGameServiceTest {
         service.playHumanMove(created.gameId(), move("e2", "e4")).toCompletableFuture().join();
 
     assertEquals(ComputerGamePhase.WAITING_FOR_HUMAN, state.phase());
+    assertEquals(created.initialPosition(), state.initialPosition());
     assertEquals(PieceColor.WHITE, state.gameState().whoseTurn());
     assertEquals(List.of("e4", "e5"), sans(state));
     assertEquals(Duration.ofMinutes(4).plusSeconds(48), state.clock().whiteRemaining().orElseThrow());
@@ -70,6 +71,19 @@ class ComputerGameServiceTest {
   @Test
   void exposesConfiguredEnginesForTheSetupOverlay() {
     assertEquals(List.of(engineProvider.descriptor), service.availableEngines());
+  }
+
+  @Test
+  void listsAProgressiveGameWhileItRemainsInMemory() {
+    assertTrue(service.gamesInMemory().isEmpty());
+    var created = service.createGame(configuration(PieceColor.WHITE)).toCompletableFuture().join();
+
+    var retained = service.gamesInMemory();
+
+    assertEquals(List.of(created.gameId()), retained.stream().map(state -> state.gameId()).toList());
+    assertEquals(ComputerGamePhase.WAITING_FOR_HUMAN, retained.getFirst().phase());
+    service.closeGame(created.gameId());
+    assertTrue(service.gamesInMemory().isEmpty());
   }
 
   @Test

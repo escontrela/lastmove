@@ -945,6 +945,7 @@
     -fx-background-radius: 2px;
 }
 .progressive-moves-card { -fx-min-height: 220px; }
+.progressive-navigation-row { -fx-padding: 0 0 2px 0; }
 .progressive-action-button {
     -fx-min-height: 42px;
     -fx-alignment: center;
@@ -976,6 +977,7 @@
 }
 .typewriter-status-label {
     -fx-font-family: "SF Mono", "Cascadia Code", monospace;
+    -fx-font-size: 15px;
 }
 .computer-game-setup-card {
     -fx-background-color: #ffffff;

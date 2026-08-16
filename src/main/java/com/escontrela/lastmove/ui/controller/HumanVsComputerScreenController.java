@@ -71,18 +71,24 @@ public final class HumanVsComputerScreenController implements UiScreenController
   @FXML private Label humanPlayerLabel;
   @FXML private Label opponentClockLabel;
   @FXML private Label humanClockLabel;
-  @FXML private TypewriterStatusLabel turnLabel;
-  @FXML private Label statusLabel;
+  @FXML private Label turnLabel;
+  @FXML private TypewriterStatusLabel statusLabel;
   @FXML private ThinkingIndicatorControl opponentThinkingIndicator;
   @FXML private Button takeBackButton;
   @FXML private Button restartButton;
   @FXML private Button resignButton;
+  @FXML private Button firstMoveButton;
+  @FXML private Button previousMoveButton;
+  @FXML private Button nextMoveButton;
+  @FXML private Button lastMoveButton;
 
   private GameId activeGameId;
   private ComputerGameState renderedState;
   private BoardMoveInput pendingPromotionMove;
   private boolean screenVisible;
   private boolean resultShown;
+  private boolean followingLivePosition = true;
+  private int reviewedPlyCount;
 
   public HumanVsComputerScreenController(
       @Lazy UiFlowManager uiFlowManager,
@@ -117,21 +123,21 @@ public final class HumanVsComputerScreenController implements UiScreenController
   @Override
   public void onShow() {
     screenVisible = true;
-    if (activeGameId == null) {
-      setupOverlay.show(computerGameService.availableEngines());
+    if (restoreGameInMemory()) {
+      return;
     }
+    setupOverlay.show(computerGameService.availableEngines());
   }
 
   @Override
   public void onHide() {
     screenVisible = false;
     clockRefresh.stop();
-    closeActiveGame();
+    statusLabel.showImmediately(statusLabel.getAccessibleText());
   }
 
   @FXML
   public void backToMain() {
-    closeActiveGame();
     uiFlowManager.show(UiScreenId.MAIN);
   }
 
@@ -145,7 +151,7 @@ public final class HumanVsComputerScreenController implements UiScreenController
       resultShown = false;
       applyState(computerGameService.takeBack(activeGameId));
     } catch (RuntimeException exception) {
-      statusLabel.setText(exception.getMessage());
+      statusLabel.showImmediately(exception.getMessage());
     }
   }
 
@@ -154,6 +160,50 @@ public final class HumanVsComputerScreenController implements UiScreenController
     if (activeGameId != null) {
       applyState(computerGameService.resign(activeGameId));
     }
+  }
+
+  /** Shows the position before the first official move without pausing the live game. */
+  @FXML
+  public void reviewFirstMove() {
+    if (renderedState == null || renderedState.moves().isEmpty()) {
+      return;
+    }
+    followingLivePosition = false;
+    reviewedPlyCount = 0;
+    renderReviewedPosition();
+  }
+
+  /** Shows the preceding official position while clocks and engine activity continue. */
+  @FXML
+  public void reviewPreviousMove() {
+    if (renderedState == null || reviewedPlyCount == 0) {
+      return;
+    }
+    followingLivePosition = false;
+    reviewedPlyCount--;
+    renderReviewedPosition();
+  }
+
+  /** Advances one reviewed ply and resumes live following upon reaching the latest position. */
+  @FXML
+  public void reviewNextMove() {
+    if (renderedState == null || reviewedPlyCount >= renderedState.moves().size()) {
+      return;
+    }
+    reviewedPlyCount++;
+    followingLivePosition = reviewedPlyCount == renderedState.moves().size();
+    renderReviewedPosition();
+  }
+
+  /** Returns immediately to the live game position and follows later moves automatically. */
+  @FXML
+  public void reviewLastMove() {
+    if (renderedState == null) {
+      return;
+    }
+    followingLivePosition = true;
+    reviewedPlyCount = renderedState.moves().size();
+    renderReviewedPosition();
   }
 
   /** Restarts the current game with the same opponent, colour and time control. */
@@ -251,6 +301,9 @@ public final class HumanVsComputerScreenController implements UiScreenController
 
   private void submitHumanMove(BoardMoveInput moveInput) {
     if (!canAcceptHumanInput()) {
+      if (renderedState != null && !followingLivePosition) {
+        statusLabel.showImmediately("Return to the live position before moving");
+      }
       return;
     }
     GameId submittedGameId = activeGameId;
@@ -263,7 +316,7 @@ public final class HumanVsComputerScreenController implements UiScreenController
                   moveInput.fromSquare(), moveInput.toSquare(), moveInput.promotionPiece()));
       applyState(computerGameService.state(submittedGameId));
     } catch (RuntimeException exception) {
-      statusLabel.setText(exception.getMessage());
+      statusLabel.showImmediately(exception.getMessage());
       return;
     }
     reply.whenComplete(
@@ -274,7 +327,7 @@ public final class HumanVsComputerScreenController implements UiScreenController
                     return;
                   }
                   if (failure != null) {
-                    statusLabel.setText(rootCauseMessage(failure));
+                    statusLabel.showImmediately(rootCauseMessage(failure));
                   } else {
                     applyState(state);
                   }
@@ -294,7 +347,7 @@ public final class HumanVsComputerScreenController implements UiScreenController
     promotionPicker.setOnCancel(
         event -> {
           pendingPromotionMove = null;
-          statusLabel.setText("Promotion cancelled");
+          statusLabel.showImmediately("Promotion cancelled");
         });
   }
 
@@ -324,7 +377,7 @@ public final class HumanVsComputerScreenController implements UiScreenController
               analysis.sessionId(), "Analyzing completed game: " + analysis.title()));
       uiFlowManager.show(UiScreenId.PGN_ANALYSIS);
     } catch (RuntimeException exception) {
-      statusLabel.setText(rootCauseMessage(exception));
+      statusLabel.showImmediately(rootCauseMessage(exception));
     }
   }
 
@@ -336,14 +389,19 @@ public final class HumanVsComputerScreenController implements UiScreenController
       applyState(computerGameService.state(activeGameId));
     } catch (RuntimeException exception) {
       clockRefresh.stop();
-      statusLabel.setText(exception.getMessage());
+      statusLabel.showImmediately(exception.getMessage());
     }
   }
 
   private void applyState(ComputerGameState state) {
     ComputerGameState previousState = renderedState;
     renderedState = Objects.requireNonNull(state, "state must not be null");
-    chessBoard.renderPosition(state.position());
+    if (followingLivePosition) {
+      reviewedPlyCount = state.moves().size();
+    } else {
+      reviewedPlyCount = Math.min(reviewedPlyCount, state.moves().size());
+    }
+    chessBoard.renderPosition(reviewedPosition());
     boolean humanIsWhite = state.humanColor() == PieceColor.WHITE;
     humanPlayerLabel.setText(
         humanIsWhite ? state.whitePlayer().getName() : state.blackPlayer().getName());
@@ -356,23 +414,29 @@ public final class HumanVsComputerScreenController implements UiScreenController
         formatClock(
             humanIsWhite ? state.clock().blackRemaining() : state.clock().whiteRemaining()));
     String currentTurnText = turnText(state);
+    turnLabel.setText(currentTurnText);
     boolean enteredHumanTurn =
         state.phase() == ComputerGamePhase.WAITING_FOR_HUMAN
             && (previousState == null
                 || previousState.phase() != ComputerGamePhase.WAITING_FOR_HUMAN
                 || !previousState.gameId().equals(state.gameId()));
     if (enteredHumanTurn) {
-      turnLabel.play(currentTurnText);
-    } else if (state.phase() != ComputerGamePhase.WAITING_FOR_HUMAN) {
-      turnLabel.showImmediately(currentTurnText);
+      if (state.message().isEmpty()) {
+        statusLabel.play(currentTurnText);
+      } else {
+        statusLabel.showImmediately(state.message().orElseThrow());
+      }
+    } else if (state.phase() != ComputerGamePhase.WAITING_FOR_HUMAN
+        || state.message().isPresent()) {
+      statusLabel.showImmediately(state.message().orElse(currentTurnText));
     }
-    statusLabel.setText(state.message().orElse(currentTurnText));
     takeBackButton.setDisable(!state.canTakeBack());
     restartButton.setDisable(false);
     resignButton.setDisable(state.result().isPresent());
     boolean engineThinking = state.phase() == ComputerGamePhase.ENGINE_THINKING;
     opponentThinkingIndicator.setThinking(engineThinking);
     refreshNotation(state.moves());
+    updateReviewControls();
     if (state.result().isPresent()) {
       clockRefresh.stop();
       showResult(state);
@@ -386,7 +450,8 @@ public final class HumanVsComputerScreenController implements UiScreenController
       return;
     }
     moveNotation.setTree(List.of(toNotationNode(moves, 0)));
-    moveNotation.setSelectedNodeId(moves.getLast().id());
+    moveNotation.setSelectedNodeId(
+        reviewedPlyCount == 0 ? null : moves.get(reviewedPlyCount - 1).id());
   }
 
   private MoveNotationNode toNotationNode(List<Ply> moves, int index) {
@@ -424,17 +489,23 @@ public final class HumanVsComputerScreenController implements UiScreenController
     humanPlayerLabel.setText("Player");
     opponentClockLabel.setText("--:--");
     humanClockLabel.setText("--:--");
-    turnLabel.showImmediately("Configure a new game");
-    statusLabel.setText("Choose an opponent, colour and time control");
+    turnLabel.setText("Configure a new game");
+    statusLabel.showImmediately("Choose an opponent, colour and time control");
     moveNotation.setTree(List.of());
     takeBackButton.setDisable(true);
     restartButton.setDisable(true);
     resignButton.setDisable(true);
     opponentThinkingIndicator.setThinking(false);
+    followingLivePosition = true;
+    reviewedPlyCount = 0;
+    updateReviewControls();
   }
 
   private boolean canAcceptHumanInput() {
-    return activeGameId != null && renderedState != null && renderedState.canMove();
+    return activeGameId != null
+        && renderedState != null
+        && followingLivePosition
+        && renderedState.canMove();
   }
 
   private String turnText(ComputerGameState state) {
@@ -455,28 +526,38 @@ public final class HumanVsComputerScreenController implements UiScreenController
     return "%02d:%02d".formatted(seconds / 60, seconds % 60);
   }
 
-  private void closeActiveGame() {
-    clockRefresh.stop();
-    if (activeGameId != null) {
-      computerGameService.closeGame(activeGameId);
-      activeGameId = null;
-    }
-    renderedState = null;
-    opponentThinkingIndicator.setThinking(false);
-  }
-
   private void activateGame(ComputerGameState state) {
+    setupOverlay.hide();
     activeGameId = state.gameId();
     resultShown = false;
+    followingLivePosition = true;
+    reviewedPlyCount = state.moves().size();
     chessBoard.setFlipped(state.humanColor() == PieceColor.BLACK);
     applyState(state);
     clockRefresh.play();
   }
 
+  private boolean restoreGameInMemory() {
+    if (activeGameId != null) {
+      try {
+        activateGame(computerGameService.state(activeGameId));
+        return true;
+      } catch (java.util.NoSuchElementException ignored) {
+        activeGameId = null;
+      }
+    }
+    List<ComputerGameState> games = computerGameService.gamesInMemory();
+    if (games.isEmpty()) {
+      return false;
+    }
+    activateGame(games.getLast());
+    return true;
+  }
+
   private void showTransitionState(String message) {
     clockRefresh.stop();
-    turnLabel.showImmediately(message);
-    statusLabel.setText(message);
+    turnLabel.setText(message);
+    statusLabel.showImmediately(message);
     takeBackButton.setDisable(true);
     restartButton.setDisable(true);
     resignButton.setDisable(true);
@@ -485,7 +566,7 @@ public final class HumanVsComputerScreenController implements UiScreenController
 
   private void showRestartFailure(Throwable failure) {
     showEmptyWorkspace();
-    statusLabel.setText(rootCauseMessage(failure));
+    statusLabel.showImmediately(rootCauseMessage(failure));
     setupOverlay.show(computerGameService.availableEngines());
     setupOverlay.showError(rootCauseMessage(failure));
   }
@@ -511,5 +592,34 @@ public final class HumanVsComputerScreenController implements UiScreenController
       cause = cause.getCause();
     }
     return cause.getMessage() == null ? cause.getClass().getSimpleName() : cause.getMessage();
+  }
+
+  private com.escontrela.lastmove.domain.game.PositionSnapshot reviewedPosition() {
+    if (reviewedPlyCount == 0) {
+      return renderedState.initialPosition();
+    }
+    return renderedState.moves().get(reviewedPlyCount - 1).resultingPosition();
+  }
+
+  private void renderReviewedPosition() {
+    chessBoard.renderPosition(reviewedPosition());
+    refreshNotation(renderedState.moves());
+    updateReviewControls();
+    if (followingLivePosition) {
+      statusLabel.showImmediately(turnText(renderedState));
+    } else {
+      statusLabel.showImmediately(
+          "Reviewing position %d of %d · clocks continue"
+              .formatted(reviewedPlyCount, renderedState.moves().size()));
+    }
+  }
+
+  private void updateReviewControls() {
+    boolean unavailable = renderedState == null;
+    int moveCount = unavailable ? 0 : renderedState.moves().size();
+    firstMoveButton.setDisable(unavailable || reviewedPlyCount == 0);
+    previousMoveButton.setDisable(unavailable || reviewedPlyCount == 0);
+    nextMoveButton.setDisable(unavailable || reviewedPlyCount >= moveCount);
+    lastMoveButton.setDisable(unavailable || followingLivePosition);
   }
 }

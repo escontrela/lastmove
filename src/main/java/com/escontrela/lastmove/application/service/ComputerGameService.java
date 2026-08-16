@@ -116,6 +116,20 @@ public final class ComputerGameService {
   }
 
   /**
+   * Lists the progressive computer games that still have a live application runtime.
+   *
+   * <p>The order follows the repository order, allowing each UI screen to decide which game it
+   * considers active without storing a global active-game selection in the application service.
+   */
+  public List<ComputerGameState> gamesInMemory() {
+    return gameRepository.findAll().stream()
+        .map(ChessGame::id)
+        .filter(runtimes::containsKey)
+        .map(this::state)
+        .toList();
+  }
+
+  /**
    * Replaces a progressive game with a fresh one using the same players, engine and time control.
    *
    * <p>The returned state belongs to a new game identifier. Callers that own the active selection
@@ -311,6 +325,7 @@ public final class ComputerGameService {
         game.blackPlayer().orElseThrow(),
         humanColor,
         context.descriptor,
+        game.initialPosition(),
         game.currentPosition(),
         moves,
         game.currentState(),
