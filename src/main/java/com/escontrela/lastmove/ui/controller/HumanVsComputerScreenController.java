@@ -27,6 +27,7 @@ import com.escontrela.lastmove.ui.screen.UiFlowManager;
 import com.escontrela.lastmove.ui.screen.UiScreenController;
 import com.escontrela.lastmove.ui.screen.UiScreenId;
 import com.escontrela.lastmove.ui.service.ChessSoundService;
+import com.escontrela.lastmove.ui.service.BoardAppearancePreferencesService;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
@@ -64,6 +65,7 @@ public final class HumanVsComputerScreenController implements UiScreenController
   private final UiEventBus uiEventBus;
   private final ChessSoundService chessSoundService;
   private final CurrentUserService currentUserService;
+  private final BoardAppearancePreferencesService boardAppearancePreferencesService;
   private Timeline clockRefresh;
   private final ListChangeListener<String> themeStyleListener = change -> updatePlayerIcons();
 
@@ -105,13 +107,15 @@ public final class HumanVsComputerScreenController implements UiScreenController
       AnalysisSessionService analysisSessionService,
       UiEventBus uiEventBus,
       ChessSoundService chessSoundService,
-      CurrentUserService currentUserService) {
+      CurrentUserService currentUserService,
+      BoardAppearancePreferencesService boardAppearancePreferencesService) {
     this.uiFlowManager = uiFlowManager;
     this.computerGameService = computerGameService;
     this.analysisSessionService = analysisSessionService;
     this.uiEventBus = uiEventBus;
     this.chessSoundService = chessSoundService;
     this.currentUserService = currentUserService;
+    this.boardAppearancePreferencesService = boardAppearancePreferencesService;
   }
 
   @FXML
@@ -125,6 +129,8 @@ public final class HumanVsComputerScreenController implements UiScreenController
     updatePlayerIcons();
     chessSoundService.preload();
     chessBoard.setSoundService(chessSoundService);
+    chessBoard.visualEffectsEnabledProperty().bind(
+        boardAppearancePreferencesService.boardVisualEffectsEnabledProperty());
     configureBoardInput();
     configurePromotionPicker();
     configureSetupOverlay();

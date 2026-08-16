@@ -605,6 +605,10 @@
     -fx-border-width: 0;
 }
 
+.chess-board.board-visual-effects {
+    -fx-effect: dropshadow(gaussian, rgba(31, 49, 66, 0.42), 28, 0.16, 0, 0);
+}
+
 .board-coordinate-overlay { -fx-background-color: transparent; }
 
 .board-coordinate-label {
@@ -1347,6 +1351,9 @@
 }
 .night-mode .progressive-player-name { -fx-text-fill: #f1f3f5; }
 .night-mode .progressive-player-clock { -fx-text-fill: #79aeef; }
+.night-mode .chess-board.board-visual-effects {
+    -fx-effect: dropshadow(gaussian, rgba(175, 202, 229, 0.26), 30, 0.14, 0, 0);
+}
 .night-mode .computer-thinking-dot { -fx-background-color: #6ba5f0; }
 .night-mode .progressive-action-button {
     -fx-background-color: #262e38;

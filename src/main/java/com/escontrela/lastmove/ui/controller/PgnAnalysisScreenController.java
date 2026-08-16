@@ -27,6 +27,7 @@ import com.escontrela.lastmove.ui.screen.UiFlowManager;
 import com.escontrela.lastmove.ui.screen.UiScreenController;
 import com.escontrela.lastmove.ui.screen.UiScreenId;
 import com.escontrela.lastmove.ui.service.ChessSoundService;
+import com.escontrela.lastmove.ui.service.BoardAppearancePreferencesService;
 import com.escontrela.lastmove.ui.service.ClipboardService;
 import com.escontrela.lastmove.ui.support.FileChooserFactory;
 import com.escontrela.lastmove.ui.support.PgnFileWriter;
@@ -82,6 +83,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
   private final UiEventBus uiEventBus;
   private final ChessSoundService chessSoundService;
   private final ClipboardService clipboardService;
+  private final BoardAppearancePreferencesService boardAppearancePreferencesService;
   private final ListChangeListener<String> themeStyleListener = change -> updateStatusBrandLogo();
 
   /** Identity of the session currently rendered by this screen. */
@@ -99,6 +101,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
       PgnFileWriter pgnFileWriter,
       ChessSoundService chessSoundService,
       ClipboardService clipboardService,
+      BoardAppearancePreferencesService boardAppearancePreferencesService,
       UiEventBus uiEventBus,
       @Lazy UiFlowManager uiFlowManager) {
     this.gameLoadService = gameLoadService;
@@ -108,6 +111,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
     this.pgnFileWriter = pgnFileWriter;
     this.chessSoundService = chessSoundService;
     this.clipboardService = clipboardService;
+    this.boardAppearancePreferencesService = boardAppearancePreferencesService;
     this.uiEventBus = uiEventBus;
     this.uiFlowManager = uiFlowManager;
   }
@@ -122,6 +126,8 @@ public class PgnAnalysisScreenController implements UiScreenController {
     updateStatusBrandLogo();
     configureContextMenu();
     chessBoard.setSoundService(chessSoundService);
+    chessBoard.visualEffectsEnabledProperty().bind(
+        boardAppearancePreferencesService.boardVisualEffectsEnabledProperty());
     configurePromotionPicker();
     if (activeAnalysisSessionId == null) {
       activeAnalysisSessionId = analysisSessionService.createInitialSession().sessionId();
