@@ -18,7 +18,7 @@ import org.springframework.stereotype.Repository;
  * never stores a globally active session because each UI workflow owns its own selection.
  */
 @Repository
-public final class InMemoryAnalysisSessionRepository implements AnalysisSessionRepository {
+public class InMemoryAnalysisSessionRepository implements AnalysisSessionRepository {
 
   private final Map<AnalysisSessionId, AnalysisSession> sessions = new LinkedHashMap<>();
   private final List<AnalysisSessionId> displayOrder = new ArrayList<>();

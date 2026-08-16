@@ -28,6 +28,8 @@ Chesspresso is the current rules and PGN integration. It is isolated behind engi
 | JUnit Jupiter |                 5.10.2 | Automated testing                                      |
 | Jackson       | Managed by Spring Boot | Serialization and future local data support            |
 | Caffeine      | Managed by Spring Boot | Local in-memory caching                                |
+| SQLite JDBC   |               3.45.3.0 | Local, serverless SQL persistence                      |
+| Flyway        | Managed by Spring Boot | Schema migrations for local persistence                |
 | RichTextFX    |                 0.11.7 | Rich text support for notation and annotations         |
 
 Spring Boot is used only as a dependency-injection container and lifecycle manager for the desktop application. LastMove does **not** start a web server and does not include `spring-boot-starter-web`.
@@ -51,6 +53,8 @@ Spring Boot is used only as a dependency-injection container and lifecycle manag
 * Convert a progressive game into an independent `AnalysisSession` through `GameRecord`.
 * Play Human vs Computer games against a configured Sunfish UCI process, with clocks, promotion,
   takeback, resignation, restart, result presentation, and post-game analysis.
+* Persist player profiles (email, first name, last name, and an optional photo) in a local SQLite
+  database managed by Flyway; create and select the current player from the main window.
 * Draw calculation arrows by dragging with the secondary mouse button; double-click it to clear.
 
 ### Planned
@@ -78,9 +82,9 @@ src/main/java/com/escontrela/lastmove/
 | Package          | Responsibility                                                                                                                           |
 | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | `bootstrap`      | Starts JavaFX, creates the Spring context, and handles application shutdown.                                                             |
-| `domain`         | Represents progressive games, analysis trees, positions, players, FEN, SAN, and PGN. It contains no JavaFX or Spring code.             |
+| `domain`         | Represents progressive games, analysis trees, positions, players, users, FEN, SAN, and PGN. It contains no JavaFX or Spring code.            |
 | `application`    | Coordinates PGN loading, creation/navigation of analysis sessions, conversion from played games, and repository access.                  |
-| `infrastructure` | Contains technical implementations: Spring configuration, local files, and the Chesspresso integration.                                  |
+| `infrastructure` | Contains technical implementations: Spring configuration, local files, SQLite persistence, Flyway migrations, and the Chesspresso integration. |
 | `ui`             | Contains JavaFX-only code: FXML controllers, screen navigation, CSS, visual controls, and presentation state.                            |
 
 The UI must not implement chess rules. Controllers delegate actions to application services and update view models.
@@ -108,7 +112,7 @@ src/main/java/com/escontrela/lastmove/
 │   ├── config/                         # Spring beans and application configuration
 │   ├── chesspresso/                    # ChesspressoRulesEngine, readers and mappers
 │   ├── session/                        # In-memory analysis-session repository
-│   └── persistence/                    # Reserved for future local persistence
+│   └── persistence/                    # SQLite repositories and Flyway migrations
 └── ui/
     ├── controller/                     # FXML screen controllers
     ├── component/board/                # Reusable ChessBoardControl and square controls
@@ -202,8 +206,9 @@ For a detailed class inventory and flows, see:
 * [x] In-memory session switching.
 * [x] Progressive `ChessGame`, takebacks, and conversion to analysis.
 * [x] Human vs Computer through Sunfish/UCI with clocks and post-game analysis.
+* [x] Persisted player profiles in a local SQLite database.
 * [ ] PGN editing and export.
-* [ ] Persistent study and played-game repositories.
+* [ ] Persistent repositories for studies, played games, and other app data.
 * [ ] UCI engine analysis.
 * [ ] Training, puzzles, online play, and community features.
 

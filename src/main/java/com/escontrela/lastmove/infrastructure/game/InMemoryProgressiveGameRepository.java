@@ -12,7 +12,7 @@ import org.springframework.stereotype.Repository;
 
 /** Process-local progressive-game repository that can later be replaced by durable storage. */
 @Repository
-public final class InMemoryProgressiveGameRepository implements ProgressiveGameRepository {
+public class InMemoryProgressiveGameRepository implements ProgressiveGameRepository {
 
   private final Map<GameId, ChessGame> games = new LinkedHashMap<>();
 

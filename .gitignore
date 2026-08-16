@@ -1,4 +1,5 @@
 target/
+lastmove.db
 *.class
 *.jar
 *.war

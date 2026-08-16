@@ -57,6 +57,22 @@ public class FileChooserFactory {
         return safe.toLowerCase(java.util.Locale.ROOT).endsWith(".pgn") ? safe : safe + ".pgn";
     }
 
+    /**
+     * Opens an image file chooser dialog for player profile photos.
+     *
+     * @param owner the owning window (may be {@code null})
+     * @return the selected file, or empty if the dialog was cancelled
+     */
+    public Optional<File> chooseImageFile(Window owner) {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Choose profile photo");
+        chooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("Image Files", "*.png", "*.jpg", "*.jpeg"),
+                new FileChooser.ExtensionFilter("All Files", "*.*")
+        );
+        return Optional.ofNullable(chooser.showOpenDialog(owner));
+    }
+
     private File withPgnExtension(File file) {
         return file.getName().toLowerCase(java.util.Locale.ROOT).endsWith(".pgn")
                 ? file

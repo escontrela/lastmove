@@ -1,4 +1,4 @@
-/** Placeholder package for future local persistence support. */
+/** Local SQLite persistence, migrations and availability tracking. */
 @NonNullApi
 package com.escontrela.lastmove.infrastructure.persistence;
 

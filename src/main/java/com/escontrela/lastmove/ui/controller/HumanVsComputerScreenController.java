@@ -5,6 +5,7 @@ import com.escontrela.lastmove.application.computer.ComputerGamePhase;
 import com.escontrela.lastmove.application.computer.ComputerGameState;
 import com.escontrela.lastmove.application.service.ComputerGameService;
 import com.escontrela.lastmove.application.service.AnalysisSessionService;
+import com.escontrela.lastmove.application.service.CurrentUserService;
 import com.escontrela.lastmove.domain.common.PieceColor;
 import com.escontrela.lastmove.domain.game.GameId;
 import com.escontrela.lastmove.domain.game.GameResult;
@@ -34,10 +35,13 @@ import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
+import javafx.collections.ListChangeListener;
 import javafx.beans.value.ChangeListener;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -52,13 +56,16 @@ import org.springframework.stereotype.Component;
 public final class HumanVsComputerScreenController implements UiScreenController {
 
   private static final double BOARD_MAX_SIZE = 720.0;
+  private static final String NIGHT_MODE_STYLE_CLASS = "night-mode";
 
   private final UiFlowManager uiFlowManager;
   private final ComputerGameService computerGameService;
   private final AnalysisSessionService analysisSessionService;
   private final UiEventBus uiEventBus;
   private final ChessSoundService chessSoundService;
+  private final CurrentUserService currentUserService;
   private Timeline clockRefresh;
+  private final ListChangeListener<String> themeStyleListener = change -> updatePlayerIcons();
 
   @FXML private StackPane root;
   @FXML private StackPane boardHost;
@@ -69,6 +76,8 @@ public final class HumanVsComputerScreenController implements UiScreenController
   @FXML private MessageBox resultMessageBox;
   @FXML private Label opponentPlayerLabel;
   @FXML private Label humanPlayerLabel;
+  @FXML private ImageView opponentPlayerIcon;
+  @FXML private ImageView humanPlayerIcon;
   @FXML private Label opponentClockLabel;
   @FXML private Label humanClockLabel;
   @FXML private Label turnLabel;
@@ -95,12 +104,14 @@ public final class HumanVsComputerScreenController implements UiScreenController
       ComputerGameService computerGameService,
       AnalysisSessionService analysisSessionService,
       UiEventBus uiEventBus,
-      ChessSoundService chessSoundService) {
+      ChessSoundService chessSoundService,
+      CurrentUserService currentUserService) {
     this.uiFlowManager = uiFlowManager;
     this.computerGameService = computerGameService;
     this.analysisSessionService = analysisSessionService;
     this.uiEventBus = uiEventBus;
     this.chessSoundService = chessSoundService;
+    this.currentUserService = currentUserService;
   }
 
   @FXML
@@ -110,6 +121,8 @@ public final class HumanVsComputerScreenController implements UiScreenController
             new KeyFrame(javafx.util.Duration.millis(200), event -> refreshClockState()));
     clockRefresh.setCycleCount(Animation.INDEFINITE);
     root.getProperties().put("controller", this);
+    root.getStyleClass().addListener(themeStyleListener);
+    updatePlayerIcons();
     chessSoundService.preload();
     chessBoard.setSoundService(chessSoundService);
     configureBoardInput();
@@ -126,7 +139,8 @@ public final class HumanVsComputerScreenController implements UiScreenController
     if (restoreGameInMemory()) {
       return;
     }
-    setupOverlay.show(computerGameService.availableEngines());
+    setupOverlay.show(
+        computerGameService.availableEngines(), currentUserService.currentUser().name());
   }
 
   @Override
@@ -486,7 +500,7 @@ public final class HumanVsComputerScreenController implements UiScreenController
   private void showEmptyWorkspace() {
     renderedState = null;
     opponentPlayerLabel.setText("Computer");
-    humanPlayerLabel.setText("Player");
+    humanPlayerLabel.setText(currentUserService.currentUser().name());
     opponentClockLabel.setText("--:--");
     humanClockLabel.setText("--:--");
     turnLabel.setText("Configure a new game");
@@ -499,6 +513,18 @@ public final class HumanVsComputerScreenController implements UiScreenController
     followingLivePosition = true;
     reviewedPlyCount = 0;
     updateReviewControls();
+  }
+
+  private void updatePlayerIcons() {
+    String iconColor = root.getStyleClass().contains(NIGHT_MODE_STYLE_CLASS) ? "FFFFFF" : "000000";
+    humanPlayerIcon.setImage(loadImage("/images/face_35dp_" + iconColor + ".png"));
+    opponentPlayerIcon.setImage(loadImage("/images/robot_2_35dp_" + iconColor + ".png"));
+  }
+
+  private Image loadImage(String resource) {
+    return new Image(
+        Objects.requireNonNull(getClass().getResource(resource), () -> "Missing image resource: " + resource)
+            .toExternalForm());
   }
 
   private boolean canAcceptHumanInput() {
@@ -567,7 +593,8 @@ public final class HumanVsComputerScreenController implements UiScreenController
   private void showRestartFailure(Throwable failure) {
     showEmptyWorkspace();
     statusLabel.showImmediately(rootCauseMessage(failure));
-    setupOverlay.show(computerGameService.availableEngines());
+    setupOverlay.show(
+        computerGameService.availableEngines(), currentUserService.currentUser().name());
     setupOverlay.showError(rootCauseMessage(failure));
   }
 

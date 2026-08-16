@@ -29,7 +29,7 @@
     -fx-text-fill: #262626;
 }
 
-.app-brand { -fx-alignment: baseline-left; }
+.app-brand { -fx-alignment: center-left; }
 
 .app-brand-name,
 .app-brand-edition {
@@ -39,6 +39,38 @@
 
 .app-brand-name { -fx-text-fill: #1f242a; }
 .app-brand-edition { -fx-text-fill: #8b939d; }
+
+.current-user-avatar {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-border-insets: 0;
+    -fx-cursor: hand;
+    -fx-padding: 0;
+}
+
+.current-user-avatar-ring {
+    -fx-fill: transparent;
+    -fx-stroke: #607386;
+    -fx-stroke-width: 3px;
+}
+
+.current-user-avatar-face { -fx-stroke: transparent; }
+
+.current-user-avatar-initials {
+    -fx-font-size: 15px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #ffffff;
+}
+
+.current-user-avatar-face.current-user-avatar-tone-0 { -fx-fill: #1c69d4; }
+.current-user-avatar-face.current-user-avatar-tone-1 { -fx-fill: #287fe0; }
+.current-user-avatar-face.current-user-avatar-tone-2 { -fx-fill: #466fb2; }
+.current-user-avatar-face.current-user-avatar-tone-3 { -fx-fill: #6454a4; }
+.current-user-avatar-face.current-user-avatar-tone-4 { -fx-fill: #315f91; }
+
+.current-user-avatar:hover { -fx-opacity: 0.9; }
+.current-user-avatar:pressed { -fx-opacity: 0.82; }
 
 .hero-support, .card-copy, .status-text {
     -fx-text-fill: #3c3c3c;
@@ -1144,6 +1176,12 @@
 .night-mode .app-title, .night-mode .card-title { -fx-text-fill: #ffffff; }
 .night-mode .app-brand-name { -fx-text-fill: #ffffff; }
 .night-mode .app-brand-edition { -fx-text-fill: #a8b4c1; }
+.night-mode .current-user-avatar-ring { -fx-stroke: #9fb2c6; }
+.night-mode .current-user-avatar-face.current-user-avatar-tone-0 { -fx-fill: #2e8cf0; }
+.night-mode .current-user-avatar-face.current-user-avatar-tone-1 { -fx-fill: #4a9bf3; }
+.night-mode .current-user-avatar-face.current-user-avatar-tone-2 { -fx-fill: #6389ca; }
+.night-mode .current-user-avatar-face.current-user-avatar-tone-3 { -fx-fill: #8371bd; }
+.night-mode .current-user-avatar-face.current-user-avatar-tone-4 { -fx-fill: #4679aa; }
 .night-mode .hero-support, .night-mode .card-copy, .night-mode .status-text { -fx-text-fill: #c6ccd3; }
 .night-mode .eyebrow-label { -fx-text-fill: #aeb8c4; }
 .night-mode .feature-card, .night-mode .rail-card, .night-mode .setup-card, .night-mode .board-card {
@@ -1377,3 +1415,89 @@
     -fx-border-color: #6ba5f0;
 }
 .night-mode .board-coordinate-label { -fx-text-fill: #b8c5d3; }
+
+/* Player profile table on the players management screen. */
+.player-table {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #d8dde3;
+    -fx-border-width: 1;
+}
+
+.player-row {
+    -fx-background-color: #ffffff;
+    -fx-border-color: transparent transparent #e3e8ee transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 14 18;
+    -fx-min-height: 78px;
+    -fx-cursor: hand;
+}
+
+.player-row:hover { -fx-background-color: #f4f7fb; }
+
+.player-row-active {
+    -fx-background-color: #edf4fc;
+    -fx-border-color: transparent transparent #c5d9ef #1c69d4;
+    -fx-border-width: 0 0 1 4;
+    -fx-padding: 14 18 14 14;
+}
+
+.player-row-status {
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #1c69d4;
+}
+
+.player-row-actions-hint {
+    -fx-font-size: 12px;
+    -fx-text-fill: #73808d;
+}
+
+.player-editor-overlay { -fx-background-color: rgba(20, 27, 36, 0.34); }
+
+.player-editor-card {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #d8dde3;
+    -fx-border-width: 1;
+    -fx-background-radius: 14;
+    -fx-border-radius: 14;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.24), 28, 0.14, 0, 8);
+}
+
+.player-editor-title {
+    -fx-font-size: 25px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #262626;
+}
+
+.player-card-photo {
+    -fx-fit-height: 52px;
+    -fx-fit-width: 52px;
+    -fx-preserve-ratio: true;
+}
+
+.player-card-name {
+    -fx-font-size: 15px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #1f242a;
+}
+
+.player-card-email {
+    -fx-font-size: 12px;
+    -fx-text-fill: #6a7683;
+}
+
+.night-mode .player-table { -fx-background-color: #1c2430; -fx-border-color: #465465; }
+.night-mode .player-row { -fx-background-color: #1c2430; -fx-border-color: transparent transparent #3b4654 transparent; }
+.night-mode .player-row:hover { -fx-background-color: #243243; }
+.night-mode .player-row-active {
+    -fx-background-color: #243243;
+    -fx-border-color: transparent transparent #465465 #6ba5f0;
+}
+.night-mode .player-row-status { -fx-text-fill: #79aeef; }
+.night-mode .player-row-actions-hint { -fx-text-fill: #aeb8c3; }
+.night-mode .player-editor-overlay { -fx-background-color: rgba(0, 0, 0, 0.54); }
+.night-mode .player-editor-card { -fx-background-color: #1c2430; -fx-border-color: #465465; }
+.night-mode .player-editor-title { -fx-text-fill: #f1f3f5; }
+
+.night-mode .player-card-name { -fx-text-fill: #f1f3f5; }
+.night-mode .player-card-email { -fx-text-fill: #aeb8c3; }

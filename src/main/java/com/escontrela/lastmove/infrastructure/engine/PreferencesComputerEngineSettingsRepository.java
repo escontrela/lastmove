@@ -11,7 +11,7 @@ import org.springframework.stereotype.Repository;
 
 /** Java Preferences implementation retaining engine executable paths between desktop sessions. */
 @Repository
-public final class PreferencesComputerEngineSettingsRepository
+public class PreferencesComputerEngineSettingsRepository
     implements ComputerEngineSettingsRepository {
 
   private static final String EXECUTABLE_SUFFIX = ".executable";

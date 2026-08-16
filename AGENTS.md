@@ -17,6 +17,7 @@ third-party-library details.
 | UI | JavaFX 22.0.2 |
 | Dependency injection / desktop bootstrap | Spring Boot 3.3.2 |
 | Chess-format engine | Chesspresso 0.9.2 |
+| Local persistence | SQLite 3.45.3.0 + Flyway (managed by Spring Boot) |
 
 Run these commands from the repository root:
 
@@ -117,18 +118,36 @@ orientation, and avoid embedding a particular screen's layout assumptions.
 
 ## Current delivery boundary
 
-The repository currently establishes the project structure and UI shell. Do
-not describe an unfinished workflow as implemented. The next vertical slice
-should be:
+The repository currently implements the project structure, UI shell, PGN
+analysis navigation, Human vs Computer play, and persisted player profiles.
 
-1. select or receive a PGN;
-2. parse and map it through the Chesspresso infrastructure;
-3. create a domain game tree and initial position;
-4. navigate previous/next/first/last moves through an application service;
-5. update the board and move list from the resulting state.
+Implemented vertical slices include:
 
-Keep this slice end-to-end before adding engine analysis, online play, user
-accounts, persistence backends, or a web API.
+1. select or receive a PGN, parse and map it through the Chesspresso
+   infrastructure, create a domain game tree, and navigate moves with the
+   board and move list updated from the resulting state;
+2. play Human vs Computer against a configured UCI engine with clocks,
+   takebacks, resignation, restart, result presentation, and post-game
+   analysis;
+3. create and persist player profiles (email, first name, last name, and an
+   optional photo) in a local SQLite database managed by Flyway, and select
+   the current player from the main window.
+
+Keep each slice end-to-end before adding engine analysis, online play,
+user accounts, or a web API.
+
+## Persistence
+
+Player profiles are the first persisted concept. SQLite is used as a local,
+serverless store; Flyway manages the schema. `spring.flyway.enabled=false`
+disables Spring Boot auto-migration so that `PersistenceConfig` can run
+Flyway manually and mark persistence as unavailable if the database cannot
+be initialized, allowing the desktop application to start in a degraded
+state rather than failing outright.
+
+Only infrastructure classes depend on JDBC, SQLite, or Flyway. The
+database file (`lastmove.db`) lives in the project root, is gitignored, and
+must not be committed.
 
 ## Dependencies and framework boundaries
 
