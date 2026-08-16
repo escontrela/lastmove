@@ -19,6 +19,7 @@ import com.escontrela.lastmove.domain.game.GameResult;
 import com.escontrela.lastmove.domain.game.GameTerminationReason;
 import com.escontrela.lastmove.domain.game.MoveCommand;
 import com.escontrela.lastmove.domain.game.TimeControl;
+import com.escontrela.lastmove.domain.notation.Fen;
 import com.escontrela.lastmove.infrastructure.chesspresso.ChesspressoRulesEngine;
 import com.escontrela.lastmove.infrastructure.game.InMemoryProgressiveGameRepository;
 import com.escontrela.lastmove.domain.analysis.AnalysisOrigin;
@@ -95,6 +96,34 @@ class ComputerGameServiceTest {
     assertEquals(List.of("e4"), sans(state));
     assertEquals(PieceColor.BLACK, state.gameState().whoseTurn());
     assertTrue(state.canMove());
+  }
+
+  @Test
+  void startsFromFenAndUsesItsActiveColorForTheFirstTurn() {
+    engineProvider.moves.add(move("e7", "e5"));
+    Fen blackToMove =
+        Fen.of("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1");
+
+    var state =
+        service
+            .createGame(configuration(PieceColor.WHITE, blackToMove))
+            .toCompletableFuture()
+            .join();
+
+    assertEquals(PieceColor.BLACK, state.initialPosition().activeColor());
+    assertEquals(List.of("e5"), sans(state));
+    assertEquals(ComputerGamePhase.WAITING_FOR_HUMAN, state.phase());
+    assertTrue(state.canMove());
+  }
+
+  @Test
+  void rejectsAnInvalidFenBeforeCreatingTheEngineRuntime() {
+    assertThrows(
+        RuntimeException.class,
+        () -> service.createGame(configuration(PieceColor.WHITE, Fen.of("invalid-fen"))));
+
+    assertTrue(engineProvider.createdEngines.isEmpty());
+    assertTrue(service.gamesInMemory().isEmpty());
   }
 
   @Test
@@ -259,6 +288,16 @@ class ComputerGameServiceTest {
         "Human",
         humanColor,
         TimeControl.of(Duration.ofMinutes(5), Duration.ZERO),
+        "fake",
+        Duration.ofMillis(100));
+  }
+
+  private ComputerGameConfiguration configuration(PieceColor humanColor, Fen startingFen) {
+    return new ComputerGameConfiguration(
+        "Human",
+        humanColor,
+        TimeControl.of(Duration.ofMinutes(5), Duration.ZERO),
+        Optional.of(startingFen),
         "fake",
         Duration.ofMillis(100));
   }

@@ -71,14 +71,23 @@ public final class ComputerGameService {
     ComputerGameConfiguration required =
         Objects.requireNonNull(configuration, "configuration must not be null");
     ComputerMoveEngineProvider provider = provider(required.engineId());
-    ComputerMoveEngine engine = provider.create();
     PieceColor computerColor = required.humanColor().opposite();
     Player human = new Player(required.humanName(), required.humanColor());
     Player computer = new Player(provider.descriptor().displayName(), computerColor);
     Player white = required.humanColor() == PieceColor.WHITE ? human : computer;
     Player black = required.humanColor() == PieceColor.BLACK ? human : computer;
     ChessGame game =
-        gameFactory.createInitial(white, black, Optional.of(required.timeControl()));
+        required
+            .startingFen()
+            .map(
+                fen ->
+                    gameFactory.createFrom(
+                        fen, white, black, Optional.of(required.timeControl())))
+            .orElseGet(
+                () ->
+                    gameFactory.createInitial(
+                        white, black, Optional.of(required.timeControl())));
+    ComputerMoveEngine engine = provider.create();
     RuntimeContext context = new RuntimeContext(required, engine, provider.descriptor());
     gameRepository.save(game);
     runtimes.put(game.id(), context);
@@ -90,6 +99,11 @@ public final class ComputerGameService {
               synchronized (context) {
                 if (failure != null) {
                   markEngineFailure(context, failure);
+                  return false;
+                }
+                if (game.result().isPresent()) {
+                  context.turnStartedAt = null;
+                  context.phase = ComputerGamePhase.FINISHED;
                   return false;
                 }
                 context.turnStartedAt = clock.instant();

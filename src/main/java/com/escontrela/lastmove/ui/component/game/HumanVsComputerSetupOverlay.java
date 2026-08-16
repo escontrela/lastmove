@@ -4,9 +4,11 @@ import com.escontrela.lastmove.application.computer.ComputerEngineDescriptor;
 import com.escontrela.lastmove.application.computer.ComputerGameConfiguration;
 import com.escontrela.lastmove.domain.common.PieceColor;
 import com.escontrela.lastmove.domain.game.TimeControl;
+import com.escontrela.lastmove.domain.notation.Fen;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -20,6 +22,7 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
+import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -44,6 +47,10 @@ public final class HumanVsComputerSetupOverlay extends StackPane {
   private final ComboBox<TimePreset> timeSelector = new ComboBox<>();
   private final ToggleButton whiteButton = new ToggleButton("White");
   private final ToggleButton blackButton = new ToggleButton("Black");
+  private final ToggleButton initialPositionButton = new ToggleButton("Initial position");
+  private final ToggleButton fenPositionButton = new ToggleButton("FEN");
+  private final TextField fenField = new TextField();
+  private final VBox fenInput = new VBox(8);
   private final Button cancelButton = new Button("Cancel");
   private final Button startButton = new Button("Start game");
   private final Label validationLabel = new Label();
@@ -68,7 +75,8 @@ public final class HumanVsComputerSetupOverlay extends StackPane {
     Label title = new Label("Human vs computer");
     title.getStyleClass().add("computer-game-setup-title");
     Label description =
-        new Label("Choose an opponent, your colour and the clock used by both players.");
+        new Label(
+            "Choose an opponent, your colour, the clock and the position where play begins.");
     description.setWrapText(true);
     description.getStyleClass().add("computer-game-setup-description");
 
@@ -100,6 +108,34 @@ public final class HumanVsComputerSetupOverlay extends StackPane {
     HBox colors = new HBox(10, whiteButton, blackButton);
     colors.setAlignment(Pos.CENTER_LEFT);
 
+    ToggleGroup positionGroup = new ToggleGroup();
+    initialPositionButton.setToggleGroup(positionGroup);
+    fenPositionButton.setToggleGroup(positionGroup);
+    initialPositionButton.setSelected(true);
+    initialPositionButton.getStyleClass().add("computer-game-color-button");
+    fenPositionButton.getStyleClass().add("computer-game-color-button");
+    HBox startingPositions = new HBox(10, initialPositionButton, fenPositionButton);
+    startingPositions.setAlignment(Pos.CENTER_LEFT);
+    fenField.setPromptText("Paste a complete FEN position");
+    fenField.setMaxWidth(Double.MAX_VALUE);
+    fenField.getStyleClass().add("settings-text-field");
+    fenInput.getChildren().setAll(fieldLabel("FEN position"), fenField);
+    fenInput.setVisible(false);
+    fenInput.setManaged(false);
+    positionGroup.selectedToggleProperty().addListener(
+        (ignored, previous, selected) -> {
+          if (selected == null) {
+            initialPositionButton.setSelected(true);
+            return;
+          }
+          boolean fenSelected = selected == fenPositionButton;
+          fenInput.setManaged(fenSelected);
+          fenInput.setVisible(fenSelected);
+          if (fenSelected) {
+            Platform.runLater(fenField::requestFocus);
+          }
+        });
+
     timeSelector.setItems(FXCollections.observableArrayList(TimePreset.values()));
     timeSelector.getSelectionModel().select(TimePreset.TEN_MINUTES);
     timeSelector.setMaxWidth(Double.MAX_VALUE);
@@ -130,6 +166,9 @@ public final class HumanVsComputerSetupOverlay extends StackPane {
             colors,
             fieldLabel("Time control"),
             timeSelector,
+            fieldLabel("Starting position"),
+            startingPositions,
+            fenInput,
             validationLabel,
             actions);
     card.setPadding(new Insets(28));
@@ -163,6 +202,8 @@ public final class HumanVsComputerSetupOverlay extends StackPane {
     engineSelector.getSelectionModel().selectFirst();
     whiteButton.setSelected(true);
     timeSelector.getSelectionModel().select(TimePreset.TEN_MINUTES);
+    initialPositionButton.setSelected(true);
+    fenField.clear();
     setBusy(false);
     validationLabel.setText(required.isEmpty() ? "No computer engine is configured." : "");
     startButton.setDisable(required.isEmpty());
@@ -178,6 +219,9 @@ public final class HumanVsComputerSetupOverlay extends StackPane {
     timeSelector.setDisable(busy);
     whiteButton.setDisable(busy);
     blackButton.setDisable(busy);
+    initialPositionButton.setDisable(busy);
+    fenPositionButton.setDisable(busy);
+    fenField.setDisable(busy);
     cancelButton.setDisable(busy);
     startButton.setDisable(busy || engineSelector.getItems().isEmpty());
     startButton.setText(busy ? "Starting…" : "Start game");
@@ -213,6 +257,16 @@ public final class HumanVsComputerSetupOverlay extends StackPane {
       validationLabel.setText("Choose an opponent and time control.");
       return;
     }
+    Optional<Fen> startingFen = Optional.empty();
+    if (fenPositionButton.isSelected()) {
+      String value = fenField.getText() == null ? "" : fenField.getText().trim();
+      if (value.isEmpty()) {
+        validationLabel.setText("Enter a FEN position or choose the initial position.");
+        fenField.requestFocus();
+        return;
+      }
+      startingFen = Optional.of(Fen.of(value));
+    }
     EventHandler<StartGameEvent> handler = onStartGame.get();
     if (handler != null) {
       handler.handle(
@@ -222,6 +276,7 @@ public final class HumanVsComputerSetupOverlay extends StackPane {
                   DEFAULT_HUMAN_NAME,
                   color,
                   time.timeControl,
+                  startingFen,
                   engine.id(),
                   DEFAULT_ENGINE_THINKING_TIME)));
     }
