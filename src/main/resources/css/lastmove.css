@@ -888,6 +888,142 @@
 .settings-check-box .box { -fx-background-radius: 0; -fx-border-radius: 0; }
 .settings-check-box:selected .mark { -fx-background-color: #ffffff; }
 .settings-check-box:selected .box { -fx-background-color: #1c69d4; }
+.settings-field-label {
+    -fx-font-size: 14px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #3f4b57;
+}
+.settings-text-field {
+    -fx-min-height: 42px;
+    -fx-padding: 0 12px;
+    -fx-background-color: #ffffff;
+    -fx-border-color: #cfd7e0;
+    -fx-border-width: 1px;
+    -fx-background-radius: 6px;
+    -fx-border-radius: 6px;
+    -fx-font-size: 14px;
+    -fx-text-fill: #262626;
+    -fx-prompt-text-fill: #8a96a3;
+}
+.settings-text-field:focused { -fx-border-color: #1c69d4; }
+.settings-validation-message {
+    -fx-font-size: 13px;
+    -fx-text-fill: #596675;
+}
+.settings-validation-message.settings-validation-error { -fx-text-fill: #a72e3e; }
+.settings-validation-message.settings-validation-success { -fx-text-fill: #167443; }
+
+/* Progressive-game screen and its Human vs Computer setup overlay. */
+.progressive-game-workspace { -fx-alignment: center; }
+.progressive-player-card { -fx-background-color: #ffffff; }
+.progressive-player-name {
+    -fx-font-size: 16px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #262626;
+}
+.progressive-player-clock {
+    -fx-font-family: "Monospaced";
+    -fx-font-size: 30px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #1c69d4;
+}
+.progressive-status-card { -fx-min-height: 86px; }
+
+.computer-thinking-indicator {
+    -fx-min-height: 6px;
+    -fx-pref-height: 6px;
+    -fx-max-height: 6px;
+}
+.computer-thinking-dot {
+    -fx-min-width: 6px;
+    -fx-min-height: 6px;
+    -fx-pref-width: 6px;
+    -fx-pref-height: 6px;
+    -fx-max-width: 6px;
+    -fx-max-height: 6px;
+    -fx-background-color: #1c69d4;
+    -fx-background-radius: 2px;
+}
+.progressive-moves-card { -fx-min-height: 220px; }
+.progressive-navigation-row { -fx-padding: 0 0 2px 0; }
+.progressive-action-button {
+    -fx-min-height: 42px;
+    -fx-alignment: center;
+    -fx-background-color: #ffffff;
+    -fx-border-color: #c7ced7;
+    -fx-border-width: 1px;
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-padding: 10px 14px;
+    -fx-text-fill: #1f242a;
+    -fx-font-weight: 700;
+}
+.progressive-action-button:hover {
+    -fx-background-color: #f4f7fb;
+    -fx-border-color: #1c69d4;
+}
+.progressive-action-button:pressed { -fx-background-color: #e8edf4; }
+.progressive-action-button:disabled {
+    -fx-opacity: 0.46;
+    -fx-cursor: default;
+}
+.progressive-danger-action-button {
+    -fx-border-color: #d1495b;
+    -fx-text-fill: #a72e3e;
+}
+.progressive-danger-action-button:hover {
+    -fx-background-color: #fff1f3;
+    -fx-border-color: #a72e3e;
+}
+.typewriter-status-label {
+    -fx-font-family: "SF Mono", "Cascadia Code", monospace;
+    -fx-font-size: 15px;
+}
+.computer-game-setup-card {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #d8dde3;
+    -fx-border-width: 1px;
+    -fx-background-radius: 12px;
+    -fx-border-radius: 12px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.22), 28, 0.12, 0, 8);
+}
+.computer-game-setup-title {
+    -fx-font-size: 28px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #262626;
+}
+.computer-game-setup-description {
+    -fx-font-size: 14px;
+    -fx-text-fill: #596675;
+}
+.computer-game-setup-combo {
+    -fx-min-height: 42px;
+    -fx-background-color: #ffffff;
+    -fx-border-color: #cfd7e0;
+    -fx-border-width: 1px;
+    -fx-background-radius: 6px;
+    -fx-border-radius: 6px;
+}
+.computer-game-color-button {
+    -fx-min-width: 112px;
+    -fx-padding: 10px 18px;
+    -fx-background-color: #ffffff;
+    -fx-border-color: #cfd7e0;
+    -fx-border-width: 1px;
+    -fx-background-radius: 6px;
+    -fx-border-radius: 6px;
+    -fx-text-fill: #262626;
+}
+.computer-game-color-button:selected {
+    -fx-background-color: #e8f2ff;
+    -fx-border-color: #1c69d4;
+    -fx-text-fill: #0653b6;
+}
+.computer-game-setup-validation {
+    -fx-min-height: 20px;
+    -fx-font-size: 13px;
+    -fx-text-fill: #a72e3e;
+}
 
 .shortcut-reference-row { -fx-padding: 2 0; }
 .shortcut-reference-key {
@@ -1154,6 +1290,69 @@
     -fx-background-color: #232b35;
 }
 .night-mode .settings-check-box { -fx-text-fill: #ffffff; }
+.night-mode .settings-field-label { -fx-text-fill: #c6ccd3; }
+.night-mode .settings-text-field {
+    -fx-background-color: #1c2430;
+    -fx-border-color: #465465;
+    -fx-text-fill: #f1f3f5;
+    -fx-prompt-text-fill: #93a0ae;
+}
+.night-mode .settings-text-field:focused { -fx-border-color: #6ba5f0; }
+.night-mode .settings-validation-message { -fx-text-fill: #aeb8c3; }
+.night-mode .settings-validation-message.settings-validation-error { -fx-text-fill: #ff9aa6; }
+.night-mode .settings-validation-message.settings-validation-success { -fx-text-fill: #7edca7; }
+.night-mode .progressive-player-card,
+.night-mode .progressive-status-card,
+.night-mode .progressive-moves-card {
+    -fx-background-color: #262e38;
+    -fx-border-color: #3b4654;
+}
+.night-mode .progressive-player-name { -fx-text-fill: #f1f3f5; }
+.night-mode .progressive-player-clock { -fx-text-fill: #79aeef; }
+.night-mode .computer-thinking-dot { -fx-background-color: #6ba5f0; }
+.night-mode .progressive-action-button {
+    -fx-background-color: #262e38;
+    -fx-border-color: #6d7783;
+    -fx-text-fill: #ffffff;
+}
+.night-mode .progressive-action-button:hover {
+    -fx-background-color: #3b4654;
+    -fx-border-color: #6ba5f0;
+}
+.night-mode .progressive-action-button:pressed { -fx-background-color: #334151; }
+.night-mode .progressive-danger-action-button {
+    -fx-border-color: #e06a78;
+    -fx-text-fill: #ff9aa6;
+}
+.night-mode .progressive-danger-action-button:hover {
+    -fx-background-color: #442932;
+    -fx-border-color: #ff9aa6;
+}
+.night-mode .computer-game-setup-card {
+    -fx-background-color: #1c2430;
+    -fx-border-color: #465465;
+}
+.night-mode .computer-game-setup-title { -fx-text-fill: #f1f3f5; }
+.night-mode .computer-game-setup-description { -fx-text-fill: #b8c5d3; }
+.night-mode .computer-game-setup-combo {
+    -fx-background-color: #243243;
+    -fx-border-color: #465465;
+}
+.night-mode .computer-game-setup-combo .list-cell {
+    -fx-background-color: #243243;
+    -fx-text-fill: #f1f3f5;
+}
+.night-mode .computer-game-color-button {
+    -fx-background-color: #243243;
+    -fx-border-color: #465465;
+    -fx-text-fill: #f1f3f5;
+}
+.night-mode .computer-game-color-button:selected {
+    -fx-background-color: #2d4056;
+    -fx-border-color: #6ba5f0;
+    -fx-text-fill: #9fc8f7;
+}
+.night-mode .computer-game-setup-validation { -fx-text-fill: #ff9aa6; }
 .night-mode .shortcut-reference-key {
     -fx-background-color: #1c2430;
     -fx-border-color: #465465;

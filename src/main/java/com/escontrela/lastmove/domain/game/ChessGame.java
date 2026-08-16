@@ -32,6 +32,7 @@ public final class ChessGame {
   private PositionSnapshot currentPosition;
   private GameClockSnapshot currentClock;
   private GameResult result;
+  private GameTerminationReason terminationReason;
 
   ChessGame(
       GameId id,
@@ -44,6 +45,7 @@ public final class ChessGame {
       Optional<Player> blackPlayer,
       Optional<TimeControl> timeControl,
       Optional<GameResult> result,
+      Optional<GameTerminationReason> terminationReason,
       ChessRulesEngine rulesEngine) {
     this.id = Objects.requireNonNull(id, "id must not be null");
     this.initialPosition =
@@ -60,6 +62,8 @@ public final class ChessGame {
     this.blackPlayer = Objects.requireNonNull(blackPlayer, "blackPlayer must not be null");
     this.timeControl = Objects.requireNonNull(timeControl, "timeControl must not be null");
     this.result = Objects.requireNonNull(result, "result must not be null").orElse(null);
+    this.terminationReason =
+        Objects.requireNonNull(terminationReason, "terminationReason must not be null").orElse(null);
     this.rulesEngine = Objects.requireNonNull(rulesEngine, "rulesEngine must not be null");
     validatePlayers();
     validateHistory();
@@ -150,7 +154,31 @@ public final class ChessGame {
     currentPosition = execution.newSnapshot();
     currentClock = nextClock;
     result = terminalResult(currentPosition).orElse(null);
+    terminationReason = terminalReason(currentPosition).orElse(null);
     return execution;
+  }
+
+  /** Finishes the game immediately because one player resigned. */
+  public GameResult resign(PieceColor resignedBy) {
+    PieceColor required = Objects.requireNonNull(resignedBy, "resignedBy must not be null");
+    requireGameInProgress();
+    result = winFor(required.opposite());
+    terminationReason = GameTerminationReason.RESIGNATION;
+    return result;
+  }
+
+  /** Finishes a timed game because the active player's clock reached zero. */
+  public GameResult timeout(PieceColor expiredPlayer) {
+    PieceColor required =
+        Objects.requireNonNull(expiredPlayer, "expiredPlayer must not be null");
+    requireGameInProgress();
+    if (currentTurn() != required) {
+      throw new IllegalArgumentException("only the active player's clock can expire");
+    }
+    currentClock = currentClock.expired(required);
+    result = winFor(required.opposite());
+    terminationReason = GameTerminationReason.TIMEOUT;
+    return result;
   }
 
   /**
@@ -206,6 +234,7 @@ public final class ChessGame {
     currentPosition =
         moveHistory.isEmpty() ? initialPosition : moveHistory.getLast().resultingPosition();
     result = terminalResult(currentPosition).orElse(null);
+    terminationReason = terminalReason(currentPosition).orElse(null);
     required.markApplied();
     return currentPosition;
   }
@@ -268,6 +297,10 @@ public final class ChessGame {
     return Optional.ofNullable(result);
   }
 
+  public Optional<GameTerminationReason> terminationReason() {
+    return Optional.ofNullable(terminationReason);
+  }
+
   /** Exports an immutable record without the injected rules engine or aggregate mutability. */
   public GameRecord toRecord() {
     List<RecordedPly> recordedMoves = new ArrayList<>(moveHistory.size());
@@ -287,7 +320,8 @@ public final class ChessGame {
         blackPlayer,
         timeControl,
         recordedMoves,
-        Optional.ofNullable(result));
+        Optional.ofNullable(result),
+        Optional.ofNullable(terminationReason));
   }
 
   /** Returns the current rules state without exposing independently mutable state. */
@@ -353,6 +387,13 @@ public final class ChessGame {
     if (terminal.isPresent() && terminal.get() != result) {
       throw new IllegalArgumentException("The game result must match its current position");
     }
+    if ((result == null) != (terminationReason == null)) {
+      throw new IllegalArgumentException("The game result and termination reason must coexist");
+    }
+    Optional<GameTerminationReason> boardReason = terminalReason(currentPosition);
+    if (boardReason.isPresent() && boardReason.get() != terminationReason) {
+      throw new IllegalArgumentException("The termination reason must match the terminal position");
+    }
   }
 
   private void validateAcceptedResult(MoveExecutionResult execution) {
@@ -375,5 +416,25 @@ public final class ChessGame {
       return Optional.of(GameResult.DRAW);
     }
     return Optional.empty();
+  }
+
+  private Optional<GameTerminationReason> terminalReason(PositionSnapshot position) {
+    if (position.mate()) {
+      return Optional.of(GameTerminationReason.CHECKMATE);
+    }
+    if (position.stalemate()) {
+      return Optional.of(GameTerminationReason.STALEMATE);
+    }
+    return Optional.empty();
+  }
+
+  private void requireGameInProgress() {
+    if (result != null) {
+      throw new IllegalStateException("The game has already finished");
+    }
+  }
+
+  private GameResult winFor(PieceColor winner) {
+    return winner == PieceColor.WHITE ? GameResult.WHITE_WINS : GameResult.BLACK_WINS;
   }
 }

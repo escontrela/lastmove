@@ -226,7 +226,30 @@ Las flechas no forman parte de `ChessGame`, `AnalysisSession` ni del PGN. Son un
 presentación y, por tanto, el mismo control puede utilizarlas tanto en análisis como en una partida
 regular.
 
-## Verificación
+## Partida Human vs Computer y ciclo UCI
+
+`HumanVsComputerScreenController` conserva el `GameId` activo de su pantalla y renderiza los DTO
+de `ComputerGameService`. El servicio coordina `ChessGame`, `ProgressiveGameRepository` y una
+instancia exclusiva de `ComputerMoveEngine`; el repositorio no contiene ninguna selección activa.
+
+Al terminar, `ChessGame.toRecord()` produce un `GameRecord` inmutable.
+`AnalysisSessionService.createFromGame(...)` delega en `AnalysisSessionFactory`, guarda una sesión
+`PLAYED_GAME` independiente y la interfaz navega directamente a ella. Reiniciar reemplaza partida,
+identificador y proceso UCI conservando la configuración elegida.
+
+`UciProcessEngine` serializa el protocolo en un hilo virtual y consume stdout en otro. Todos los
+handshakes y búsquedas tienen timeout. Una cancelación envía `stop`, consume el `bestmove` pendiente
+y mantiene el proceso reutilizable; una caída, salida inválida o timeout invalida y termina el
+proceso para que ninguna respuesta tardía contamine la siguiente búsqueda. `close()` envía
+`stop`/`quit` y escala a destrucción forzosa si el motor no responde. El `@PreDestroy` de
+`ComputerGameService`, invocado al cerrar Spring desde `JavaFxApplication.stop()`, cierra todas las
+instancias restantes para no dejar procesos Python vivos.
+
+La cobertura específica incluye caída durante búsqueda, salida inválida, búsqueda bloqueada,
+cancelación, revocación con respuesta tardía, timeout humano y del motor, cierre resistente a un
+motor que ignora `quit`, y cierre global de todas las partidas.
+
+## Verificación automatizada
 
 La suite automatizada cubre:
 

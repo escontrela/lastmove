@@ -6,6 +6,7 @@ import com.escontrela.lastmove.application.dto.AnalysisNotationTree;
 import com.escontrela.lastmove.application.dto.PgnImportRequest;
 import com.escontrela.lastmove.application.service.GameLoadService;
 import com.escontrela.lastmove.application.service.AnalysisSessionService;
+import com.escontrela.lastmove.application.service.PgnExportService;
 import com.escontrela.lastmove.domain.analysis.AnalysisSessionId;
 import com.escontrela.lastmove.domain.game.MoveCommand;
 import com.escontrela.lastmove.domain.game.MoveExecutionResult;
@@ -18,6 +19,7 @@ import com.escontrela.lastmove.ui.component.promotion.PromotionPickerControl;
 import com.escontrela.lastmove.ui.component.session.SessionSelectorControl;
 import com.escontrela.lastmove.ui.component.session.SessionSelectorEntry;
 import com.escontrela.lastmove.ui.event.OpenSessionManagementEvent;
+import com.escontrela.lastmove.ui.event.OpenAnalysisSessionEvent;
 import com.escontrela.lastmove.ui.event.ReturnToAnalysisSessionEvent;
 import com.escontrela.lastmove.ui.event.UiEventBus;
 import com.escontrela.lastmove.ui.model.BoardMoveInput;
@@ -27,6 +29,7 @@ import com.escontrela.lastmove.ui.screen.UiScreenId;
 import com.escontrela.lastmove.ui.service.ChessSoundService;
 import com.escontrela.lastmove.ui.service.ClipboardService;
 import com.escontrela.lastmove.ui.support.FileChooserFactory;
+import com.escontrela.lastmove.ui.support.PgnFileWriter;
 import java.util.List;
 import java.util.Objects;
 import javafx.beans.value.ChangeListener;
@@ -72,7 +75,9 @@ public class PgnAnalysisScreenController implements UiScreenController {
 
   private final GameLoadService gameLoadService;
   private final AnalysisSessionService analysisSessionService;
+  private final PgnExportService pgnExportService;
   private final FileChooserFactory fileChooserFactory;
+  private final PgnFileWriter pgnFileWriter;
   private final UiFlowManager uiFlowManager;
   private final UiEventBus uiEventBus;
   private final ChessSoundService chessSoundService;
@@ -89,14 +94,18 @@ public class PgnAnalysisScreenController implements UiScreenController {
   public PgnAnalysisScreenController(
       GameLoadService gameLoadService,
       AnalysisSessionService analysisSessionService,
+      PgnExportService pgnExportService,
       FileChooserFactory fileChooserFactory,
+      PgnFileWriter pgnFileWriter,
       ChessSoundService chessSoundService,
       ClipboardService clipboardService,
       UiEventBus uiEventBus,
       @Lazy UiFlowManager uiFlowManager) {
     this.gameLoadService = gameLoadService;
     this.analysisSessionService = analysisSessionService;
+    this.pgnExportService = pgnExportService;
     this.fileChooserFactory = fileChooserFactory;
+    this.pgnFileWriter = pgnFileWriter;
     this.chessSoundService = chessSoundService;
     this.clipboardService = clipboardService;
     this.uiEventBus = uiEventBus;
@@ -250,10 +259,40 @@ public class PgnAnalysisScreenController implements UiScreenController {
     uiFlowManager.show(UiScreenId.ANALYSIS_SESSIONS);
   }
 
+  /** Exports the complete selected study, including its variations, through the native save dialog. */
+  @FXML
+  public void onExportSession() {
+    AnalysisSessionSummary selected =
+        analysisSessionService.sessionSummary(activeAnalysisSessionId);
+    fileChooserFactory
+        .choosePgnExportFile(root.getScene().getWindow(), selected.title())
+        .ifPresentOrElse(
+            file -> {
+              try {
+                var exportedPath =
+                    pgnFileWriter.write(file, pgnExportService.export(activeAnalysisSessionId));
+                statusLabel.setText("PGN exported: " + exportedPath.getFileName());
+              } catch (RuntimeException exception) {
+                statusLabel.setText(
+                    exception.getMessage() == null
+                        ? "Unable to export PGN"
+                        : exception.getMessage());
+              }
+            },
+            () -> statusLabel.setText("PGN export cancelled"));
+  }
+
   /** Receives the selection made by the dedicated session-management screen. */
   @EventListener
   public void onReturnToAnalysisSession(ReturnToAnalysisSessionEvent event) {
     activeAnalysisSessionId = event.activeSessionId().orElse(null);
+    pendingStatusMessage = event.statusMessage();
+  }
+
+  /** Receives a newly created study before this screen is opened from another workflow. */
+  @EventListener
+  public void onOpenAnalysisSession(OpenAnalysisSessionEvent event) {
+    activeAnalysisSessionId = event.sessionId();
     pendingStatusMessage = event.statusMessage();
   }
 
@@ -350,6 +389,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
     contextualMenuPanel.addItem("Initial position", "", event -> onReset());
     contextualMenuPanel.addItem("Start from FEN…", "", event -> onFen());
     contextualMenuPanel.addItem("Open sessions…", "", event -> onShowSessions());
+    contextualMenuPanel.addItem("Export PGN…", "", event -> onExportSession());
     contextualMenuPanel.addItem("Copy position as FEN", "", event -> onCopyFen());
     contextualMenuPanel.addSeparator();
     contextualMenuPanel.addItem("First move", "↑", event -> onFirstMove());

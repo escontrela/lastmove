@@ -49,6 +49,8 @@ Spring Boot is used only as a dependency-injection container and lifecycle manag
 * Submit progressive moves either by board coordinates (`MoveCommand`) or SAN (`"Nf3"`).
 * Track clocks and apply opponent-approved takebacks.
 * Convert a progressive game into an independent `AnalysisSession` through `GameRecord`.
+* Play Human vs Computer games against a configured Sunfish UCI process, with clocks, promotion,
+  takeback, resignation, restart, result presentation, and post-game analysis.
 * Draw calculation arrows by dragging with the secondary mouse button; double-click it to clear.
 
 ### Planned
@@ -134,6 +136,7 @@ src/main/java/com/escontrela/lastmove/
 
 * JDK 22
 * Maven 3.8 or newer
+* Sunfish UCI for Human vs Computer (its executable path is configurable in Settings)
 
 ### Build and test
 
@@ -171,6 +174,11 @@ each `AnalysisNode` wraps a tree-neutral `Ply`.
 Moves are validated through `ChessRulesEngine`. The current infrastructure implementation is
 `ChesspressoRulesEngine`; domain, application, and UI never receive Chesspresso objects.
 
+Human vs Computer uses the generic `ComputerMoveEngine` contract. `UciProcessEngine` owns the
+external process, bounded handshakes/searches, cancellation and forced shutdown; the Sunfish
+provider supplies its configured executable. `ComputerGameService` owns no global active game: it
+coordinates the progressive aggregate and closes every engine from its Spring shutdown hook.
+
 For a detailed class inventory and flows, see:
 
 * [Architecture summary](docs/pgn-analysis-session-architecture.md)
@@ -193,6 +201,7 @@ For a detailed class inventory and flows, see:
 * [x] Analysis sessions from initial position and FEN.
 * [x] In-memory session switching.
 * [x] Progressive `ChessGame`, takebacks, and conversion to analysis.
+* [x] Human vs Computer through Sunfish/UCI with clocks and post-game analysis.
 * [ ] PGN editing and export.
 * [ ] Persistent study and played-game repositories.
 * [ ] UCI engine analysis.
