@@ -49,6 +49,7 @@
                 </HBox>
                 <HBox alignment="CENTER_LEFT" spacing="8.0">
                     <ToolbarIconButton accessibleText="Export current session as PGN" darkIconResource="/images/file_export_35dp_FFFFFF.png" lightIconResource="/images/file_export_35dp_000000.png" onAction="#onExportSession" tooltipText="Export PGN" />
+                    <ToolbarIconButton fx:id="saveSessionAsStudyButton" accessibleText="Save session as chapter" darkIconResource="/images/copy_35dp_FFFFFF.png" lightIconResource="/images/copy_35dp_000000.png" onAction="#onSaveSessionAsStudy" tooltipText="Save session as chapter" />
                 </HBox>
             </VBox>
             <VBox spacing="12.0" styleClass="rail-card" VBox.vgrow="ALWAYS">

@@ -57,7 +57,8 @@ Spring Boot is used only as a dependency-injection container and lifecycle manag
   database managed by Flyway; create and select the current player from the main window.
 * Persist studies and ordered chapters in SQLite (Flyway migration V2): each chapter owns the same
   analysis content and reading state as a session, with owner-scoped access through `StudyService`.
-  The UI workspace is pending, but the domain, application, and persistence layers are complete.
+  The **My studies** library and the dedicated chapter workspace are available only for the active
+  player profile.
 * Draw calculation arrows by dragging with the secondary mouse button; double-click it to clear.
 
 ### Planned
@@ -175,6 +176,18 @@ selection.
 
 Visual controls own rendering and interaction only. A board control receives a view model or a game position; it does not parse PGN, validate chess rules, or call persistence services.
 
+## Studies
+
+Analysis sessions remain process-local scratchpads and do not require a selected player. Studies
+are persistent containers owned by the active player profile, with ordered chapters that retain an
+independent analysis tree and reading state. The **My studies** tool is disabled when no player is
+selected or local persistence is unavailable.
+
+The dedicated study workspace can create chapters from the initial position or FEN, import a PGN
+as a chapter, and edit variants with the shared board and notation controls. Saving an analysis
+session as a study copies it to the first chapter of a new study; later edits to each copy are
+independent.
+
 ## Domain Model
 
 `ChessGame` is a progressive, single-line aggregate. It owns its current position, official plies,
@@ -213,8 +226,7 @@ For a detailed class inventory and flows, see:
 * [x] Progressive `ChessGame`, takebacks, and conversion to analysis.
 * [x] Human vs Computer through Sunfish/UCI with clocks and post-game analysis.
 * [x] Persisted player profiles in a local SQLite database.
-* [x] Persisted studies and chapters backend (domain, application and SQLite persistence).
-* [ ] Studies and chapters UI.
+* [x] Player-owned persistent studies and chapters, including library and chapter workspace UI.
 * [ ] PGN editing and export.
 * [ ] UCI engine analysis.
 * [ ] Training, puzzles, online play, and community features.

@@ -6,6 +6,7 @@ import com.escontrela.lastmove.application.dto.AnalysisNotationTree;
 import com.escontrela.lastmove.application.dto.PgnImportRequest;
 import com.escontrela.lastmove.application.service.GameLoadService;
 import com.escontrela.lastmove.application.service.AnalysisSessionService;
+import com.escontrela.lastmove.application.service.CurrentUserService;
 import com.escontrela.lastmove.application.service.PgnExportService;
 import com.escontrela.lastmove.domain.analysis.AnalysisSessionId;
 import com.escontrela.lastmove.domain.game.MoveCommand;
@@ -18,9 +19,11 @@ import com.escontrela.lastmove.ui.component.notation.MoveNotationNode;
 import com.escontrela.lastmove.ui.component.promotion.PromotionPickerControl;
 import com.escontrela.lastmove.ui.component.session.SessionSelectorControl;
 import com.escontrela.lastmove.ui.component.session.SessionSelectorEntry;
+import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton;
 import com.escontrela.lastmove.ui.event.OpenSessionManagementEvent;
 import com.escontrela.lastmove.ui.event.OpenAnalysisSessionEvent;
 import com.escontrela.lastmove.ui.event.ReturnToAnalysisSessionEvent;
+import com.escontrela.lastmove.ui.event.SelectStudyDestinationEvent;
 import com.escontrela.lastmove.ui.event.UiEventBus;
 import com.escontrela.lastmove.ui.model.BoardMoveInput;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
@@ -72,11 +75,13 @@ public class PgnAnalysisScreenController implements UiScreenController {
   @FXML private SessionSelectorControl sessionSelector;
   @FXML private MoveNotationControl moveNotation;
   @FXML private Label statusLabel;
+  @FXML private ToolbarIconButton saveSessionAsStudyButton;
   @FXML private com.escontrela.lastmove.ui.component.board.ChessBoardControl chessBoard;
 
   private final GameLoadService gameLoadService;
   private final AnalysisSessionService analysisSessionService;
   private final PgnExportService pgnExportService;
+  private final CurrentUserService currentUserService;
   private final FileChooserFactory fileChooserFactory;
   private final PgnFileWriter pgnFileWriter;
   private final UiFlowManager uiFlowManager;
@@ -97,6 +102,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
       GameLoadService gameLoadService,
       AnalysisSessionService analysisSessionService,
       PgnExportService pgnExportService,
+      CurrentUserService currentUserService,
       FileChooserFactory fileChooserFactory,
       PgnFileWriter pgnFileWriter,
       ChessSoundService chessSoundService,
@@ -107,6 +113,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
     this.gameLoadService = gameLoadService;
     this.analysisSessionService = analysisSessionService;
     this.pgnExportService = pgnExportService;
+    this.currentUserService = currentUserService;
     this.fileChooserFactory = fileChooserFactory;
     this.pgnFileWriter = pgnFileWriter;
     this.chessSoundService = chessSoundService;
@@ -129,6 +136,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
     chessBoard.visualEffectsEnabledProperty().bind(
         boardAppearancePreferencesService.boardVisualEffectsEnabledProperty());
     configurePromotionPicker();
+    refreshStudyPersistenceAvailability();
     if (activeAnalysisSessionId == null) {
       activeAnalysisSessionId = analysisSessionService.createInitialSession().sessionId();
     }
@@ -286,6 +294,18 @@ public class PgnAnalysisScreenController implements UiScreenController {
               }
             },
             () -> statusLabel.setText("PGN export cancelled"));
+  }
+
+  /** Opens a destination picker to copy the active ephemeral session into a persistent chapter. */
+  @FXML
+  public void onSaveSessionAsStudy() {
+    if (currentUserService.activePlayerState().playerId().isEmpty()) {
+      statusLabel.setText("Select an active player profile before saving a study.");
+      refreshStudyPersistenceAvailability();
+      return;
+    }
+    uiEventBus.publish(new SelectStudyDestinationEvent(activeAnalysisSessionId));
+    uiFlowManager.show(UiScreenId.STUDY_DESTINATION);
   }
 
   /** Receives the selection made by the dedicated session-management screen. */
@@ -557,7 +577,18 @@ public class PgnAnalysisScreenController implements UiScreenController {
     refreshMoveList();
     statusLabel.setText(
         "Ready: " + analysisSessionService.sessionSummary(activeAnalysisSessionId).title());
+    refreshStudyPersistenceAvailability();
   }
+
+  private void refreshStudyPersistenceAvailability() {
+    boolean available = currentUserService.activePlayerState().playerId().isPresent();
+    saveSessionAsStudyButton.setDisable(!available);
+    saveSessionAsStudyButton.setTooltipText(
+        available
+            ? "Save session as a chapter"
+            : "Select an active player profile to save this session as a chapter");
+  }
+
 
   private void refreshSessionList() {
     visibleSessions = analysisSessionService.listSessions();

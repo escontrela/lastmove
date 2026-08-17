@@ -11,30 +11,30 @@ import java.util.Objects;
  */
 public final class User {
 
-    public static final User UNKNOWN = new User("unknown");
+  public static final User UNKNOWN = new User("unknown");
 
-    private final String name;
+  private final String name;
 
-    private User(String name) {
-        this.name = name;
+  private User(String name) {
+    this.name = name;
+  }
+
+  /** Creates a user with the given display name. */
+  public static User named(String name) {
+    Objects.requireNonNull(name, "name must not be null");
+    String trimmed = name.trim();
+    if (trimmed.isEmpty()) {
+      throw new IllegalArgumentException("name must not be blank");
     }
+    return new User(trimmed);
+  }
 
-    /** Creates a user with the given display name. */
-    public static User named(String name) {
-        Objects.requireNonNull(name, "name must not be null");
-        String trimmed = name.trim();
-        if (trimmed.isEmpty()) {
-            throw new IllegalArgumentException("name must not be blank");
-        }
-        return new User(trimmed);
-    }
+  public String name() {
+    return name;
+  }
 
-    public String name() {
-        return name;
-    }
-
-    @Override
-    public String toString() {
-        return "User{" + name + "}";
-    }
+  @Override
+  public String toString() {
+    return "User{" + name + "}";
+  }
 }

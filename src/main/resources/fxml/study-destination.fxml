@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import com.escontrela.lastmove.ui.component.message.TextInputModal?>
+<?import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox fx:id="root" styleClass="app-shell" stylesheets="@../css/lastmove.css" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.escontrela.lastmove.ui.controller.StudyDestinationScreenController">
+    <BorderPane VBox.vgrow="ALWAYS">
+        <top>
+            <HBox alignment="CENTER_LEFT" spacing="16.0" styleClass="workspace-header">
+                <VBox spacing="6.0">
+                    <Label styleClass="eyebrow-label" text="Analysis session" />
+                    <Label styleClass="app-title" text="Choose a study" />
+                    <Label fx:id="sessionTitleLabel" styleClass="hero-support" text="Add the active session as a chapter" />
+                </VBox>
+                <Region HBox.hgrow="ALWAYS" />
+                <Button fx:id="createStudyButton" mnemonicParsing="false" onAction="#onCreateStudy" styleClass="primary-button" text="New study" />
+                <ToolbarIconButton accessibleText="Back to analysis" darkIconResource="/images/back_35dp_FFFFFF.png" lightIconResource="/images/back_35dp_000000.png" onAction="#backToAnalysis" tooltipText="Back to analysis" />
+            </HBox>
+        </top>
+        <center>
+            <VBox spacing="16.0" styleClass="studies-workspace">
+                <padding><Insets bottom="48.0" left="48.0" right="48.0" top="32.0" /></padding>
+                <Label styleClass="sessions-section-title" text="Existing studies" />
+                <StackPane>
+                    <ListView fx:id="studyList" styleClass="study-library-list" />
+                    <Label fx:id="emptyStateLabel" styleClass="session-empty-state" text="Create a study to save this session as its first chapter." wrapText="true" />
+                </StackPane>
+            </VBox>
+        </center>
+        <bottom>
+            <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="status-rail">
+                <Label styleClass="eyebrow-label" text="Status" />
+                <Label fx:id="statusLabel" styleClass="status-text" text="Choose a destination study" />
+                <Region HBox.hgrow="ALWAYS" />
+            </HBox>
+        </bottom>
+    </BorderPane>
+    <TextInputModal fx:id="textInputModal" />
+</VBox>

@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import com.escontrela.lastmove.ui.component.board.ChessBoardControl?>
+<?import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel?>
+<?import com.escontrela.lastmove.ui.component.message.TextInputModal?>
+<?import com.escontrela.lastmove.ui.component.notation.MoveNotationControl?>
+<?import com.escontrela.lastmove.ui.component.promotion.PromotionPickerControl?>
+<?import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<StackPane fx:id="root" styleClass="app-shell" stylesheets="@../css/lastmove.css" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.escontrela.lastmove.ui.controller.StudyWorkspaceScreenController">
+    <BorderPane styleClass="app-shell">
+        <top>
+            <HBox alignment="CENTER_LEFT" spacing="16.0" styleClass="workspace-header">
+                <VBox spacing="5.0">
+                    <Label styleClass="eyebrow-label" text="Persistent study" />
+                    <Label fx:id="studyTitleLabel" styleClass="app-title" text="Study" />
+                    <Label fx:id="chapterTitleLabel" styleClass="hero-support" text="Chapter" />
+                </VBox>
+                <Region HBox.hgrow="ALWAYS" />
+                <ToolbarIconButton accessibleText="Back to studies" darkIconResource="/images/back_35dp_FFFFFF.png" lightIconResource="/images/back_35dp_000000.png" onAction="#backToStudies" tooltipText="My studies" />
+            </HBox>
+        </top>
+        <left>
+            <VBox prefWidth="292.0" spacing="16.0" styleClass="utility-rail">
+                <BorderPane.margin><Insets bottom="24.0" left="24.0" right="12.0" top="24.0" /></BorderPane.margin>
+                <VBox spacing="12.0" styleClass="rail-card">
+                    <padding><Insets bottom="20.0" left="20.0" right="20.0" top="20.0" /></padding>
+                    <Label styleClass="eyebrow-label" text="Add chapter" />
+                    <Label styleClass="card-title" text="Chapter source" />
+                    <Label styleClass="card-copy" text="Build a new chapter, start from a FEN position, or bring in a complete PGN." wrapText="true" />
+                    <HBox alignment="CENTER_LEFT" spacing="8.0">
+                        <ToolbarIconButton accessibleText="New chapter" darkIconResource="/images/clear_35dp_FFFFFF.png" lightIconResource="/images/clear_35dp_000000.png" onAction="#onAddChapter" tooltipText="New chapter" />
+                        <ToolbarIconButton accessibleText="Chapter from FEN" darkIconResource="/images/code_xml_35dp_FFFFFF.png" lightIconResource="/images/code_xml_35dp_000000.png" onAction="#onAddChapterFromFen" tooltipText="Chapter from FEN" />
+                        <ToolbarIconButton accessibleText="Import PGN as chapter" darkIconResource="/images/file_open_35dp_FFFFFF.png" lightIconResource="/images/file_open_35dp_000000.png" onAction="#onImportPgnChapter" tooltipText="Import PGN" />
+                    </HBox>
+                </VBox>
+                <VBox spacing="12.0" styleClass="rail-card" VBox.vgrow="ALWAYS">
+                    <padding><Insets bottom="20.0" left="20.0" right="20.0" top="20.0" /></padding>
+                    <Label styleClass="eyebrow-label" text="Study chapters" />
+                    <Label styleClass="card-title" text="Chapters" />
+                    <ListView fx:id="chapterList" styleClass="chapter-list" VBox.vgrow="ALWAYS" />
+                </VBox>
+            </VBox>
+        </left>
+        <center>
+            <HBox spacing="24.0" styleClass="analysis-workspace">
+                <padding><Insets bottom="24.0" left="24.0" right="24.0" top="24.0" /></padding>
+                <StackPane fx:id="boardHost" alignment="CENTER" HBox.hgrow="ALWAYS">
+                    <ChessBoardControl fx:id="chessBoard" />
+                </StackPane>
+                <VBox prefWidth="320.0" spacing="16.0" styleClass="board-side-panel">
+                    <VBox spacing="12.0" styleClass="rail-card board-side-card">
+                        <padding><Insets bottom="20.0" left="20.0" right="20.0" top="20.0" /></padding>
+                        <Label styleClass="eyebrow-label" text="Position" />
+                        <Label styleClass="card-title" text="Navigation" />
+                        <HBox alignment="CENTER_LEFT" spacing="8.0" styleClass="move-navigation">
+                            <ToolbarIconButton accessibleText="First move" darkIconResource="/images/first_page_35dp_FFFFFF.png" lightIconResource="/images/first_page_35dp_000000.png" onAction="#onFirstMove" tooltipText="First move" />
+                            <ToolbarIconButton accessibleText="Previous move" darkIconResource="/images/arrow_left_alt_35dp_FFFFFF.png" lightIconResource="/images/arrow_left_alt_35dp_000000.png" onAction="#onPreviousMove" tooltipText="Previous move" />
+                            <ToolbarIconButton accessibleText="Next move" darkIconResource="/images/arrow_right_alt_35dp_FFFFFF.png" lightIconResource="/images/arrow_right_alt_35dp_000000.png" onAction="#onNextMove" tooltipText="Next move" />
+                            <ToolbarIconButton accessibleText="Last move" darkIconResource="/images/last_page_35dp_FFFFFF.png" lightIconResource="/images/last_page_35dp_000000.png" onAction="#onLastMove" tooltipText="Last move" />
+                        </HBox>
+                        <HBox alignment="CENTER_LEFT" spacing="8.0">
+                            <ToolbarIconButton accessibleText="Copy position as FEN" darkIconResource="/images/copy_35dp_FFFFFF.png" lightIconResource="/images/copy_35dp_000000.png" onAction="#onCopyFen" tooltipText="Copy FEN" />
+                            <ToolbarIconButton accessibleText="Rotate board" darkIconResource="/images/screen_rotation_up_35dp_FFFFFF.png" lightIconResource="/images/screen_rotation_up_35dp_000000.png" onAction="#onRotateBoard" toggleMode="true" tooltipText="Rotate board" />
+                        </HBox>
+                    </VBox>
+                    <VBox spacing="12.0" styleClass="rail-card board-side-card" VBox.vgrow="ALWAYS">
+                        <padding><Insets bottom="20.0" left="20.0" right="20.0" top="20.0" /></padding>
+                        <Label styleClass="card-title" text="Moves" />
+                        <MoveNotationControl fx:id="moveNotation" VBox.vgrow="ALWAYS" />
+                    </VBox>
+                </VBox>
+            </HBox>
+        </center>
+        <bottom>
+            <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="status-rail">
+                <Label styleClass="eyebrow-label" text="Status" />
+                <Label fx:id="statusLabel" styleClass="status-text" text="Ready" />
+                <Region HBox.hgrow="ALWAYS" />
+                <ImageView fitHeight="20.0" fitWidth="96.0" preserveRatio="true" smooth="true" styleClass="status-brand-logo"><image><Image url="@../images/lastmove-chess-logo.png" /></image></ImageView>
+            </HBox>
+        </bottom>
+    </BorderPane>
+    <TextInputModal fx:id="textInputModal" />
+    <PromotionPickerControl fx:id="promotionPicker" />
+    <ContextualMenuPanel fx:id="contextualMenuPanel" />
+</StackPane>
