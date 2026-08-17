@@ -51,6 +51,8 @@ public class MainWindowController implements UiScreenController {
     @FXML
     private Button studiesToolButton;
     @FXML
+    private Button tacticsToolButton;
+    @FXML
     private ImageView localGameToolIcon;
     @FXML
     private ImageView openingToolIcon;
@@ -118,6 +120,16 @@ public class MainWindowController implements UiScreenController {
         uiFlowManager.show(UiScreenId.STUDIES);
     }
 
+    /** Opens the local tactic-suite library. */
+    @FXML
+    public void openTactics() {
+        if (currentUserService.activePlayerState().status() != ActivePlayerStatus.ACTIVE) {
+            featureStatusLabel.setText("Select an active player profile before opening tactics.");
+            return;
+        }
+        uiFlowManager.show(UiScreenId.TACTICS);
+    }
+
     /** Opens the progressive-game screen, which owns its Human vs Computer setup overlay. */
     @FXML
     public void openHumanVsComputer() {
@@ -151,6 +163,7 @@ public class MainWindowController implements UiScreenController {
         contextualMenuPanel.addItem("Analyse a PGN", "", event -> openPgnAnalysis());
         if (currentUserService.activePlayerState().status() == ActivePlayerStatus.ACTIVE) {
             contextualMenuPanel.addItem("My studies", "", event -> openStudies());
+            contextualMenuPanel.addItem("Tactic suites", "", event -> openTactics());
         }
         contextualMenuPanel.addItem("Human vs computer", "", event -> openHumanVsComputer());
         contextualMenuPanel.addSeparator();
@@ -190,6 +203,7 @@ public class MainWindowController implements UiScreenController {
     private void updateStudiesAvailability() {
         boolean enabled = currentUserService.activePlayerState().status() == ActivePlayerStatus.ACTIVE;
         studiesToolButton.setDisable(!enabled);
+        tacticsToolButton.setDisable(!enabled);
         if (!enabled) {
             studiesToolButton.setAccessibleHelp("Select an active player profile to use persistent studies.");
         } else {

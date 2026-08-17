@@ -10,6 +10,7 @@ import javafx.scene.layout.BorderWidths;
 import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
+import com.escontrela.lastmove.ui.support.CssClassNames;
 
 /**
  * A single square on the {@link ChessBoardControl}.
@@ -81,6 +82,17 @@ public class ChessSquareControl extends StackPane {
   /** Activa o desactiva el borde sutil usado como destino potencial durante drag-drop. */
   public void setDragTarget(boolean dragTarget) {
     setBorder(dragTarget ? DRAG_TARGET_BORDER : null);
+  }
+
+  /** Marks this square as the source of a requested tactic hint. */
+  public void setHint(boolean hint) {
+    if (hint) {
+      if (!getStyleClass().contains(CssClassNames.SQUARE_HINT)) {
+        getStyleClass().add(CssClassNames.SQUARE_HINT);
+      }
+    } else {
+      getStyleClass().remove(CssClassNames.SQUARE_HINT);
+    }
   }
 
   /**

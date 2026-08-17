@@ -76,6 +76,8 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
       (observable, oldValue, flipped) -> applyOrientation();
   private final ChangeListener<Boolean> visualEffectsListener =
       (observable, oldValue, enabled) -> updateSquareVisualEffects(enabled);
+  private final ChangeListener<Square> hintSquareListener =
+      (observable, oldSquare, newSquare) -> updateHintSquare(oldSquare, newSquare);
 
   public ChessBoardSkin(ChessBoardControl control) {
 
@@ -86,11 +88,13 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     control.positionProperty().addListener(positionListener);
     control.flippedProperty().addListener(orientationListener);
     control.visualEffectsEnabledProperty().addListener(visualEffectsListener);
+    control.hintSquareProperty().addListener(hintSquareListener);
     control.observableArrows().addListener(arrowsListener);
     control.addEventFilter(ContextMenuEvent.CONTEXT_MENU_REQUESTED, contextMenuFilter);
     if (control.getPosition() != null) {
       renderPosition(control.getPosition());
     }
+    updateHintSquare(null, control.getHintSquare());
 
     // Configurar overlay para pieza flotante
     dragOverlay.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
@@ -229,6 +233,15 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
       for (int rank = 0; rank < ChessConstants.RANKS; rank++) {
         squares[file][rank].setVisualEffectsEnabled(enabled);
       }
+    }
+  }
+
+  private void updateHintSquare(Square oldSquare, Square newSquare) {
+    if (oldSquare != null) {
+      squares[oldSquare.getFile()][oldSquare.getRank()].setHint(false);
+    }
+    if (newSquare != null) {
+      squares[newSquare.getFile()][newSquare.getRank()].setHint(true);
     }
   }
 

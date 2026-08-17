@@ -7,6 +7,8 @@ public enum UiScreenId {
     PGN_ANALYSIS("/fxml/pgn-analysis.fxml", 1280.0, 800.0),
     ANALYSIS_SESSIONS("/fxml/analysis-sessions.fxml", 1280.0, 800.0),
     STUDIES("/fxml/studies.fxml", 1280.0, 800.0),
+    TACTICS("/fxml/tactics.fxml", 1280.0, 800.0),
+    TACTICS_WORKSPACE("/fxml/tactics-workspace.fxml", 1280.0, 800.0),
     STUDY_DESTINATION("/fxml/study-destination.fxml", 1100.0, 720.0),
     STUDY_WORKSPACE("/fxml/study-workspace.fxml", 1280.0, 800.0),
     SETUP("/fxml/setup.fxml", 1100.0, 720.0),

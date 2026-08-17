@@ -24,6 +24,7 @@ import com.escontrela.lastmove.ui.event.OpenSessionManagementEvent;
 import com.escontrela.lastmove.ui.event.OpenAnalysisSessionEvent;
 import com.escontrela.lastmove.ui.event.ReturnToAnalysisSessionEvent;
 import com.escontrela.lastmove.ui.event.SelectStudyDestinationEvent;
+import com.escontrela.lastmove.ui.event.SelectTacticDestinationEvent;
 import com.escontrela.lastmove.ui.event.UiEventBus;
 import com.escontrela.lastmove.ui.model.BoardMoveInput;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
@@ -306,6 +307,17 @@ public class PgnAnalysisScreenController implements UiScreenController {
     }
     uiEventBus.publish(new SelectStudyDestinationEvent(activeAnalysisSessionId));
     uiFlowManager.show(UiScreenId.STUDY_DESTINATION);
+  }
+
+  /** Opens the tactic-suite picker to copy the position currently shown as a new exercise. */
+  @FXML
+  public void onSavePositionAsTactic() {
+    if (currentUserService.activePlayerState().playerId().isEmpty()) {
+      statusLabel.setText("Select an active player profile before saving a tactic.");
+      return;
+    }
+    uiEventBus.publish(new SelectTacticDestinationEvent(activeAnalysisSessionId));
+    uiFlowManager.show(UiScreenId.TACTICS);
   }
 
   /** Receives the selection made by the dedicated session-management screen. */

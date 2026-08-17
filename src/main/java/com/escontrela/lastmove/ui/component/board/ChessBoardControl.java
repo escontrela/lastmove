@@ -2,6 +2,7 @@ package com.escontrela.lastmove.ui.component.board;
 
 import com.escontrela.lastmove.domain.common.PieceColor;
 import com.escontrela.lastmove.domain.common.PieceType;
+import com.escontrela.lastmove.domain.common.Square;
 import com.escontrela.lastmove.domain.game.PositionPiece;
 import com.escontrela.lastmove.domain.game.PositionSnapshot;
 import com.escontrela.lastmove.ui.model.BoardMoveInput;
@@ -37,6 +38,7 @@ public class ChessBoardControl extends Control {
   private final BooleanProperty flipped = new SimpleBooleanProperty(this, "flipped", false);
   private final BooleanProperty visualEffectsEnabled =
       new SimpleBooleanProperty(this, "visualEffectsEnabled", true);
+  private final ObjectProperty<Square> hintSquare = new SimpleObjectProperty<>(this, "hintSquare");
 
   // 1. PROPIEDAD DEL EVENTO: Permite suscribir controladores externos
   private final ObjectProperty<EventHandler<BoardMoveEvent>> onMoveRequested =
@@ -111,6 +113,23 @@ public class ChessBoardControl extends Control {
 
   public final void setVisualEffectsEnabled(boolean enabled) {
     visualEffectsEnabled.set(enabled);
+  }
+
+  /** Highlights a source square as presentation-only guidance for the next move. */
+  public final void setHintSquare(Square square) {
+    hintSquare.set(square);
+  }
+
+  public final void clearHintSquare() {
+    hintSquare.set(null);
+  }
+
+  public final ObjectProperty<Square> hintSquareProperty() {
+    return hintSquare;
+  }
+
+  public final Square getHintSquare() {
+    return hintSquare.get();
   }
 
   /** Replaces the visual calculation arrows without changing the rendered chess position. */
