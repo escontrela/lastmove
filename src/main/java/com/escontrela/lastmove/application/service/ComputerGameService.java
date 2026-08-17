@@ -15,7 +15,7 @@ import com.escontrela.lastmove.domain.game.GameClockSnapshot;
 import com.escontrela.lastmove.domain.game.GameId;
 import com.escontrela.lastmove.domain.game.GameRecord;
 import com.escontrela.lastmove.domain.game.MoveCommand;
-import com.escontrela.lastmove.domain.game.Player;
+import com.escontrela.lastmove.domain.game.GamePlayer;
 import com.escontrela.lastmove.domain.game.Ply;
 import com.escontrela.lastmove.domain.game.PositionSnapshot;
 import com.escontrela.lastmove.domain.game.TakebackRequest;
@@ -72,10 +72,10 @@ public final class ComputerGameService {
         Objects.requireNonNull(configuration, "configuration must not be null");
     ComputerMoveEngineProvider provider = provider(required.engineId());
     PieceColor computerColor = required.humanColor().opposite();
-    Player human = new Player(required.humanName(), required.humanColor());
-    Player computer = new Player(provider.descriptor().displayName(), computerColor);
-    Player white = required.humanColor() == PieceColor.WHITE ? human : computer;
-    Player black = required.humanColor() == PieceColor.BLACK ? human : computer;
+    GamePlayer human = new GamePlayer(required.humanName(), required.humanColor());
+    GamePlayer computer = new GamePlayer(provider.descriptor().displayName(), computerColor);
+    GamePlayer white = required.humanColor() == PieceColor.WHITE ? human : computer;
+    GamePlayer black = required.humanColor() == PieceColor.BLACK ? human : computer;
     ChessGame game =
         required
             .startingFen()

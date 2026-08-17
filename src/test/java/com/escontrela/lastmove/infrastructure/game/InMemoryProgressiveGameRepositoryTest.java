@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.escontrela.lastmove.domain.common.PieceColor;
 import com.escontrela.lastmove.domain.game.ChessGameFactory;
-import com.escontrela.lastmove.domain.game.Player;
+import com.escontrela.lastmove.domain.game.GamePlayer;
 import com.escontrela.lastmove.domain.game.TimeControl;
 import com.escontrela.lastmove.infrastructure.chesspresso.ChesspressoRulesEngine;
 import java.util.Optional;
@@ -19,8 +19,8 @@ class InMemoryProgressiveGameRepositoryTest {
     var game =
         new ChessGameFactory(new ChesspressoRulesEngine())
             .createInitial(
-                new Player("Alice", PieceColor.WHITE),
-                new Player("Bob", PieceColor.BLACK),
+                new GamePlayer("Alice", PieceColor.WHITE),
+                new GamePlayer("Bob", PieceColor.BLACK),
                 Optional.of(TimeControl.unlimited()));
 
     repository.save(game);

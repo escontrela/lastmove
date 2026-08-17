@@ -23,8 +23,8 @@ public final class ChessGame {
 
   private final GameId id;
   private final PositionSnapshot initialPosition;
-  private final Optional<Player> whitePlayer;
-  private final Optional<Player> blackPlayer;
+  private final Optional<GamePlayer> whitePlayer;
+  private final Optional<GamePlayer> blackPlayer;
   private final Optional<TimeControl> timeControl;
   private final ChessRulesEngine rulesEngine;
   private final List<Ply> moveHistory;
@@ -41,8 +41,8 @@ public final class ChessGame {
       List<Ply> moveHistory,
       List<GameClockSnapshot> clocksBeforeMoves,
       GameClockSnapshot currentClock,
-      Optional<Player> whitePlayer,
-      Optional<Player> blackPlayer,
+      Optional<GamePlayer> whitePlayer,
+      Optional<GamePlayer> blackPlayer,
       Optional<TimeControl> timeControl,
       Optional<GameResult> result,
       Optional<GameTerminationReason> terminationReason,
@@ -251,11 +251,11 @@ public final class ChessGame {
     return currentPosition;
   }
 
-  public Optional<Player> whitePlayer() {
+  public Optional<GamePlayer> whitePlayer() {
     return whitePlayer;
   }
 
-  public Optional<Player> blackPlayer() {
+  public Optional<GamePlayer> blackPlayer() {
     return blackPlayer;
   }
 
@@ -369,8 +369,8 @@ public final class ChessGame {
   }
 
   private String displayTitle() {
-    String white = whitePlayer.map(Player::getName).orElse("?");
-    String black = blackPlayer.map(Player::getName).orElse("?");
+    String white = whitePlayer.map(GamePlayer::getName).orElse("?");
+    String black = blackPlayer.map(GamePlayer::getName).orElse("?");
     return white + " vs. " + black;
   }
 

@@ -168,8 +168,8 @@ class ChessGameTest {
 
   private ChessGame newGame() {
     return gameFactory.createInitial(
-        new Player("Alice", PieceColor.WHITE),
-        new Player("Bob", PieceColor.BLACK),
+        new GamePlayer("Alice", PieceColor.WHITE),
+        new GamePlayer("Bob", PieceColor.BLACK),
         Optional.of(TimeControl.fifteenPlusTen()));
   }
 

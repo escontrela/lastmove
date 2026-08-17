@@ -9,19 +9,19 @@ import java.util.Objects;
  *
  * <p>A player has a name, an optional rating, and a side (color).
  */
-public class Player {
+public class GamePlayer {
 
     private final String name;
     private final PieceColor color;
     private final Integer elo;
 
-    public Player(String name, PieceColor color, Integer elo) {
+    public GamePlayer(String name, PieceColor color, Integer elo) {
         this.name = Objects.requireNonNull(name, "name must not be null");
         this.color = Objects.requireNonNull(color, "color must not be null");
         this.elo = elo;
     }
 
-    public Player(String name, PieceColor color) {
+    public GamePlayer(String name, PieceColor color) {
         this(name, color, null);
     }
 
