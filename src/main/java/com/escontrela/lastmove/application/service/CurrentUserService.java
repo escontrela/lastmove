@@ -19,6 +19,22 @@ import org.springframework.stereotype.Service;
 @Service
 public class CurrentUserService {
 
+    /** UI-friendly state that distinguishes an active profile from its absence. */
+    public enum ActivePlayerStatus {
+        ACTIVE,
+        NO_PROFILE,
+        PERSISTENCE_UNAVAILABLE
+    }
+
+    /** Read-only snapshot of the currently selected profile for the application UI. */
+    public record ActivePlayerState(ActivePlayerStatus status, Optional<PlayerId> playerId) {
+
+        public ActivePlayerState {
+            Objects.requireNonNull(status, "status must not be null");
+            playerId = Objects.requireNonNull(playerId, "playerId must not be null");
+        }
+    }
+
     private static final String PREFERENCE_NODE = "com.escontrela.lastmove.user";
     private static final String CURRENT_PLAYER_ID_KEY = "currentPlayerId";
 
@@ -74,5 +90,18 @@ public class CurrentUserService {
             preferences.remove(CURRENT_PLAYER_ID_KEY);
             return Optional.empty();
         }
+    }
+
+    /**
+     * Returns the active-profile state for application flows that need to distinguish an active
+     * profile from a missing one or from an unavailable local database.
+     */
+    public ActivePlayerState activePlayerState() {
+        if (!availability.isAvailable()) {
+            return new ActivePlayerState(ActivePlayerStatus.PERSISTENCE_UNAVAILABLE, Optional.empty());
+        }
+        return selectedPlayerId()
+                .map(id -> new ActivePlayerState(ActivePlayerStatus.ACTIVE, Optional.of(id)))
+                .orElse(new ActivePlayerState(ActivePlayerStatus.NO_PROFILE, Optional.empty()));
     }
 }

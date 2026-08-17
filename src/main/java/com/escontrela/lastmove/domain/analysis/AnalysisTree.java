@@ -25,14 +25,26 @@ public final class AnalysisTree {
 
   /** Adds a root variation beginning at the study's initial position. */
   public AnalysisNode addRoot(Ply ply) {
-    return add(null, ply);
+    return add(null, ply, AnalysisNodeId.random());
   }
 
   /** Adds a continuation to an existing parent node. */
   public AnalysisNode addChild(AnalysisNodeId parentId, Ply ply) {
     Objects.requireNonNull(parentId, "parentId must not be null");
     node(parentId);
-    return add(parentId, ply);
+    return add(parentId, ply, AnalysisNodeId.random());
+  }
+
+  /** Adds a root variation with a caller-supplied node identity, used when rehydrating trees. */
+  public AnalysisNode addRoot(Ply ply, AnalysisNodeId nodeId) {
+    return add(null, ply, Objects.requireNonNull(nodeId, "nodeId must not be null"));
+  }
+
+  /** Adds a continuation with a caller-supplied node identity, used when rehydrating trees. */
+  public AnalysisNode addChild(AnalysisNodeId parentId, Ply ply, AnalysisNodeId nodeId) {
+    Objects.requireNonNull(parentId, "parentId must not be null");
+    node(parentId);
+    return add(parentId, ply, Objects.requireNonNull(nodeId, "nodeId must not be null"));
   }
 
   /** Returns a node by identity. */
@@ -82,12 +94,15 @@ public final class AnalysisTree {
     return List.copyOf(line);
   }
 
-  private AnalysisNode add(AnalysisNodeId parentId, Ply ply) {
+  private AnalysisNode add(AnalysisNodeId parentId, Ply ply, AnalysisNodeId nodeId) {
     Ply requiredPly = Objects.requireNonNull(ply, "ply must not be null");
     if (nodeIdsByPlyId.containsKey(requiredPly.id())) {
       throw new IllegalArgumentException("A ply can belong to only one analysis node");
     }
-    AnalysisNode node = new AnalysisNode(AnalysisNodeId.random(), parentId, requiredPly);
+    if (nodesById.containsKey(nodeId)) {
+      throw new IllegalArgumentException("An analysis node can be added only once");
+    }
+    AnalysisNode node = new AnalysisNode(nodeId, parentId, requiredPly);
     nodesById.put(node.id(), node);
     nodeIdsByPlyId.put(requiredPly.id(), node.id());
     if (parentId == null) {

@@ -1,9 +1,11 @@
 package com.escontrela.lastmove.infrastructure.config;
 
+import com.escontrela.lastmove.domain.analysis.AnalysisDocumentFactory;
 import com.escontrela.lastmove.domain.analysis.AnalysisSessionFactory;
 import com.escontrela.lastmove.domain.game.ChessGameFactory;
 import com.escontrela.lastmove.domain.game.ChessRulesEngine;
 import com.escontrela.lastmove.domain.service.FenService;
+import com.escontrela.lastmove.domain.study.StudyChapterFactory;
 import java.time.Clock;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,10 +19,22 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class LastMoveConfiguration {
 
+    /** Builds independent analysis documents for sessions and persisted chapters. */
+    @Bean
+    public AnalysisDocumentFactory analysisDocumentFactory() {
+        return new AnalysisDocumentFactory();
+    }
+
     /** Creates analysis sessions from immutable records of played games. */
     @Bean
-    public AnalysisSessionFactory analysisSessionFactory() {
-        return new AnalysisSessionFactory();
+    public AnalysisSessionFactory analysisSessionFactory(AnalysisDocumentFactory documentFactory) {
+        return new AnalysisSessionFactory(documentFactory);
+    }
+
+    /** Builds persisted study chapters from positions, PGN imports or session copies. */
+    @Bean
+    public StudyChapterFactory studyChapterFactory(AnalysisDocumentFactory documentFactory) {
+        return new StudyChapterFactory(documentFactory);
     }
 
     /** Creates domain chess games with the configured rules-engine implementation. */

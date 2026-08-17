@@ -55,15 +55,19 @@ Spring Boot is used only as a dependency-injection container and lifecycle manag
   takeback, resignation, restart, result presentation, and post-game analysis.
 * Persist player profiles (email, first name, last name, and an optional photo) in a local SQLite
   database managed by Flyway; create and select the current player from the main window.
+* Persist studies and ordered chapters in SQLite (Flyway migration V2): each chapter owns the same
+  analysis content and reading state as a session, with owner-scoped access through `StudyService`.
+  The UI workspace is pending, but the domain, application, and persistence layers are complete.
 * Draw calculation arrows by dragging with the secondary mouse button; double-click it to clear.
 
 ### Planned
 
+* Studies and chapters UI: library screen and chapter workspace reusing the board and notation controls.
 * PGN editing and export.
 * Training exercises and puzzles.
 * UCI engine analysis.
 * Opening explorer and game collections.
-* Persistent repositories for studies and played games.
+* Persistent repositories for played games.
 * Online play, profiles, and community features.
 
 ## Project Structure
@@ -101,13 +105,15 @@ src/main/java/com/escontrela/lastmove/
 ├── domain/
 │   ├── common/                         # Square, piece color/type, shared chess values
 │   ├── game/                           # ChessGame, clocks, takebacks, GameRecord and rules contract
-│   ├── analysis/                       # AnalysisSession, its tree and played-game conversion
+│   ├── analysis/                       # AnalysisSession, shared AnalysisDocument content/reading state
+│   ├── study/                          # Persisted Study aggregate, chapters and owner-scoped repository
 │   ├── notation/                       # Fen, SanMove, PgnGame
 │   └── service/                        # Stateless domain services such as FenService
 ├── application/
-│   ├── service/                        # GameLoadService and AnalysisSessionService
+│   ├── service/                        # GameLoadService, AnalysisSessionService, StudyService
 │   ├── repository/                     # Analysis-session persistence contract
-│   └── dto/                            # Input and output data for UI workflows
+│   ├── dto/                            # Input and output data for UI workflows
+│   └── study/                          # Study DTOs, immutable commands and summaries
 ├── infrastructure/
 │   ├── config/                         # Spring beans and application configuration
 │   ├── chesspresso/                    # ChesspressoRulesEngine, readers and mappers
@@ -207,8 +213,9 @@ For a detailed class inventory and flows, see:
 * [x] Progressive `ChessGame`, takebacks, and conversion to analysis.
 * [x] Human vs Computer through Sunfish/UCI with clocks and post-game analysis.
 * [x] Persisted player profiles in a local SQLite database.
+* [x] Persisted studies and chapters backend (domain, application and SQLite persistence).
+* [ ] Studies and chapters UI.
 * [ ] PGN editing and export.
-* [ ] Persistent repositories for studies, played games, and other app data.
 * [ ] UCI engine analysis.
 * [ ] Training, puzzles, online play, and community features.
 

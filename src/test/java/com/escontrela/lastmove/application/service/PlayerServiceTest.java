@@ -9,12 +9,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.escontrela.lastmove.application.player.CreatePlayerCommand;
 import com.escontrela.lastmove.application.player.PlayerSummary;
 import com.escontrela.lastmove.application.player.UpdatePlayerCommand;
+import com.escontrela.lastmove.domain.analysis.ChapterNavigation;
 import com.escontrela.lastmove.domain.player.DuplicatePlayerEmailException;
 import com.escontrela.lastmove.domain.player.Player;
 import com.escontrela.lastmove.domain.player.PlayerId;
 import com.escontrela.lastmove.domain.player.PlayerRepository;
+import com.escontrela.lastmove.domain.study.Study;
+import com.escontrela.lastmove.domain.study.StudyChapterId;
+import com.escontrela.lastmove.domain.study.StudyId;
+import com.escontrela.lastmove.domain.study.StudyRepository;
 import com.escontrela.lastmove.infrastructure.persistence.PersistenceAvailability;
 import com.escontrela.lastmove.infrastructure.persistence.PersistenceUnavailableException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -27,7 +33,9 @@ import org.junit.jupiter.api.Test;
 class PlayerServiceTest {
 
     private final FakePlayerRepository repository = new FakePlayerRepository();
-    private final PlayerService service = new PlayerService(repository, PersistenceAvailability.available());
+    private final FakeStudyRepository studyRepository = new FakeStudyRepository();
+    private final PlayerService service =
+            new PlayerService(repository, studyRepository, PersistenceAvailability.available());
 
     @Test
     void createsPlayer() {
@@ -119,7 +127,7 @@ class PlayerServiceTest {
     @Test
     void throwsWhenPersistenceIsUnavailable() {
         PlayerService unavailableService =
-                new PlayerService(repository, PersistenceAvailability.unavailable("disk full"));
+                new PlayerService(repository, studyRepository, PersistenceAvailability.unavailable("disk full"));
 
         assertFalse(unavailableService.isPersistenceAvailable());
         assertEquals("disk full", unavailableService.persistenceUnavailableReason().orElseThrow());
@@ -196,5 +204,51 @@ class PlayerServiceTest {
         public boolean existsByEmail(String email) {
             return playersById.values().stream().anyMatch(player -> player.email().equals(email));
         }
+    }
+
+    private static final class FakeStudyRepository implements StudyRepository {
+
+        private final Map<PlayerId, List<Study>> studiesByOwner = new HashMap<>();
+
+        @Override
+        public Study save(Study study) {
+            studiesByOwner
+                    .computeIfAbsent(study.ownerId(), ignored -> new ArrayList<>())
+                    .removeIf(existing -> existing.id().equals(study.id()));
+            studiesByOwner.get(study.ownerId()).add(study);
+            return study;
+        }
+
+        @Override
+        public Optional<Study> findByIdAndOwner(StudyId studyId, PlayerId ownerId) {
+            return studiesByOwner.getOrDefault(ownerId, List.of()).stream()
+                    .filter(study -> study.id().equals(studyId))
+                    .findFirst();
+        }
+
+        @Override
+        public List<Study> findAllByOwner(PlayerId ownerId) {
+            return List.copyOf(studiesByOwner.getOrDefault(ownerId, List.of()));
+        }
+
+        @Override
+        public boolean deleteByIdAndOwner(StudyId studyId, PlayerId ownerId) {
+            List<Study> owned = studiesByOwner.getOrDefault(ownerId, List.of());
+            return owned.removeIf(study -> study.id().equals(studyId));
+        }
+
+        @Override
+        public void deleteByOwner(PlayerId ownerId) {
+            studiesByOwner.remove(ownerId);
+        }
+
+        @Override
+        public boolean moveStudyToIndex(PlayerId ownerId, StudyId studyId, int targetIndex) {
+            return false;
+        }
+
+        @Override
+        public void updateChapterNavigation(
+                StudyChapterId chapterId, ChapterNavigation navigation, Instant updatedAt) {}
     }
 }

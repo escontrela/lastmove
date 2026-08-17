@@ -7,6 +7,7 @@ import com.escontrela.lastmove.domain.player.DuplicatePlayerEmailException;
 import com.escontrela.lastmove.domain.player.Player;
 import com.escontrela.lastmove.domain.player.PlayerId;
 import com.escontrela.lastmove.domain.player.PlayerRepository;
+import com.escontrela.lastmove.domain.study.StudyRepository;
 import com.escontrela.lastmove.infrastructure.persistence.PersistenceAvailability;
 import com.escontrela.lastmove.infrastructure.persistence.PersistenceUnavailableException;
 import java.util.List;
@@ -18,10 +19,15 @@ import org.springframework.stereotype.Service;
 public class PlayerService {
 
     private final PlayerRepository playerRepository;
+    private final StudyRepository studyRepository;
     private final PersistenceAvailability availability;
 
-    public PlayerService(PlayerRepository playerRepository, PersistenceAvailability availability) {
+    public PlayerService(
+            PlayerRepository playerRepository,
+            StudyRepository studyRepository,
+            PersistenceAvailability availability) {
         this.playerRepository = Objects.requireNonNull(playerRepository, "playerRepository must not be null");
+        this.studyRepository = Objects.requireNonNull(studyRepository, "studyRepository must not be null");
         this.availability = Objects.requireNonNull(availability, "availability must not be null");
     }
 
@@ -72,10 +78,11 @@ public class PlayerService {
         return playerRepository.update(updated);
     }
 
-    /** Deletes a persisted player profile. The caller owns any current-user selection cleanup. */
+    /** Deletes a persisted player profile and cascades to its owned studies. The caller owns any current-user selection cleanup. */
     public void deletePlayer(PlayerId id) {
         assertAvailable();
         Objects.requireNonNull(id, "player id must not be null");
+        studyRepository.deleteByOwner(id);
         playerRepository.deleteById(id);
     }
 
