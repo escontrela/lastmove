@@ -2,12 +2,16 @@ package com.escontrela.lastmove.application.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.escontrela.lastmove.application.tactics.AppendTacticSolutionMoveCommand;
 import com.escontrela.lastmove.application.tactics.CopyAnalysisSessionTacticCommand;
 import com.escontrela.lastmove.application.tactics.CreateTacticExerciseFromFenCommand;
 import com.escontrela.lastmove.application.tactics.CreateTacticSuiteCommand;
+import com.escontrela.lastmove.application.tactics.DeleteTacticSuiteCommand;
+import com.escontrela.lastmove.application.tactics.MoveTacticSuiteCommand;
+import com.escontrela.lastmove.application.tactics.RenameTacticSuiteCommand;
 import com.escontrela.lastmove.application.tactics.TacticExerciseSummary;
 import com.escontrela.lastmove.application.tactics.TacticSuiteSummary;
 import com.escontrela.lastmove.domain.analysis.AnalysisDocumentFactory;
@@ -32,6 +36,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
@@ -157,6 +162,43 @@ class TacticServiceTest {
     assertTrue(result.workspace().solved());
     assertEquals(70, result.workspace().accuracyPercentage());
     assertEquals(1, result.workspace().hintCount());
+  }
+
+  @Test
+  void renamesASuiteAndPersistsTheNewTitle() {
+    TacticSuiteSummary suite =
+        service.createSuite(new CreateTacticSuiteCommand(owner, "Forks", Optional.empty()));
+
+    service.renameSuite(new RenameTacticSuiteCommand(owner, suite.suiteId(), "Pins"));
+
+    assertEquals(
+        List.of("Pins"), service.listSuites(owner).stream().map(TacticSuiteSummary::title).toList());
+  }
+
+  @Test
+  void movesASuiteOnePlaceAndReportsWhenAlreadyAtTheEdge() {
+    TacticSuiteSummary first =
+        service.createSuite(new CreateTacticSuiteCommand(owner, "First", Optional.empty()));
+    service.createSuite(new CreateTacticSuiteCommand(owner, "Second", Optional.empty()));
+
+    assertTrue(service.moveSuite(new MoveTacticSuiteCommand(owner, first.suiteId(), 1)));
+    assertEquals(
+        List.of("Second", "First"),
+        service.listSuites(owner).stream().map(TacticSuiteSummary::title).toList());
+    assertFalse(service.moveSuite(new MoveTacticSuiteCommand(owner, first.suiteId(), 1)));
+  }
+
+  @Test
+  void deletesASuiteAndRejectsAnUnknownSuite() {
+    TacticSuiteSummary suite =
+        service.createSuite(new CreateTacticSuiteCommand(owner, "Doomed", Optional.empty()));
+
+    service.deleteSuite(new DeleteTacticSuiteCommand(owner, suite.suiteId()));
+
+    assertTrue(service.listSuites(owner).isEmpty());
+    assertThrows(
+        NoSuchElementException.class,
+        () -> service.deleteSuite(new DeleteTacticSuiteCommand(owner, suite.suiteId())));
   }
 
   private MoveCommand move(String from, String to) {

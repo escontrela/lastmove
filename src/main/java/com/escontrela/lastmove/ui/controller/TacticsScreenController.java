@@ -2,11 +2,15 @@ package com.escontrela.lastmove.ui.controller;
 
 import com.escontrela.lastmove.application.service.CurrentUserService;
 import com.escontrela.lastmove.application.service.TacticService;
-import com.escontrela.lastmove.application.tactics.CreateTacticSuiteCommand;
 import com.escontrela.lastmove.application.tactics.CopyAnalysisSessionTacticCommand;
-import com.escontrela.lastmove.application.tactics.TacticSuiteSummary;
+import com.escontrela.lastmove.application.tactics.CreateTacticSuiteCommand;
+import com.escontrela.lastmove.application.tactics.DeleteTacticSuiteCommand;
+import com.escontrela.lastmove.application.tactics.MoveTacticSuiteCommand;
+import com.escontrela.lastmove.application.tactics.RenameTacticSuiteCommand;
 import com.escontrela.lastmove.application.tactics.TacticExerciseSummary;
+import com.escontrela.lastmove.application.tactics.TacticSuiteSummary;
 import com.escontrela.lastmove.domain.player.PlayerId;
+import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
 import com.escontrela.lastmove.ui.component.message.TextInputModal;
 import com.escontrela.lastmove.ui.event.OpenTacticsWorkspaceEvent;
 import com.escontrela.lastmove.ui.event.SelectTacticDestinationEvent;
@@ -14,6 +18,8 @@ import com.escontrela.lastmove.ui.event.UiEventBus;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
 import com.escontrela.lastmove.ui.screen.UiScreenController;
 import com.escontrela.lastmove.ui.screen.UiScreenId;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 import javafx.fxml.FXML;
@@ -34,12 +40,16 @@ import org.springframework.stereotype.Component;
 @Component
 public final class TacticsScreenController implements UiScreenController {
 
+  private static final DateTimeFormatter UPDATED_AT =
+      DateTimeFormatter.ofPattern("d MMM uuuu, HH:mm").withZone(ZoneId.systemDefault());
+
   @FXML private StackPane root;
   @FXML private ListView<TacticSuiteSummary> suiteList;
   @FXML private Label suiteCountLabel;
   @FXML private Label emptyStateLabel;
   @FXML private Label statusLabel;
   @FXML private TextInputModal textInputModal;
+  @FXML private ContextualMenuPanel contextualMenuPanel;
 
   private final TacticService tacticService;
   private final CurrentUserService currentUserService;
@@ -109,6 +119,66 @@ public final class TacticsScreenController implements UiScreenController {
     openSuite(suite);
   }
 
+  private void showTacticsActions(TacticSuiteSummary summary, double sceneX, double sceneY) {
+    contextualMenuPanel.clearItems();
+    contextualMenuPanel.addItem("Open tactic suite", "", event -> openSuite(summary));
+    contextualMenuPanel.addItem("Rename tactic suite…", "", event -> renameSuite(summary));
+    contextualMenuPanel.addSeparator();
+    contextualMenuPanel.addItem("Move tactic suite up", "↑", event -> moveSuite(summary, -1));
+    contextualMenuPanel.addItem("Move tactic suite down", "↓", event -> moveSuite(summary, 1));
+    contextualMenuPanel.addSeparator();
+    contextualMenuPanel.addItem("Delete tactic suite…", "", event -> deleteSuite(summary));
+    contextualMenuPanel.showAtScene(sceneX, sceneY);
+  }
+
+  private void renameSuite(TacticSuiteSummary summary) {
+    PlayerId owner = ownerId.orElse(null);
+    if (owner == null) {
+      return;
+    }
+
+    textInputModal.setTitle("Rename tactic suite");
+    textInputModal.setMessage("Choose a clear name for this tactic suite.");
+    textInputModal.setPromptText("Tactic suite title");
+    textInputModal.setText(summary.title());
+    textInputModal.setAcceptText("Rename");
+    textInputModal.setCancelText("Cancel");
+    textInputModal.setOnCancel(event -> statusLabel.setText("Rename cancelled"));
+    textInputModal.setOnAccept(
+        event -> {
+          String title = textInputModal.getText().trim();
+          if (title.isEmpty()) {
+            textInputModal.setValidationMessage("Enter a tactic suite title.");
+            return;
+          }
+          tacticService.renameSuite(new RenameTacticSuiteCommand(owner, summary.suiteId(), title));
+          textInputModal.hide();
+          refresh();
+          statusLabel.setText("Renamed suite to " + title);
+        });
+    textInputModal.show();
+  }
+
+  private void deleteSuite(TacticSuiteSummary summary) {
+    PlayerId owner = ownerId.orElse(null);
+    if (owner == null) {
+      return;
+    }
+    tacticService.deleteSuite(new DeleteTacticSuiteCommand(owner, summary.suiteId()));
+    refresh();
+    statusLabel.setText("Deleted suite: " + summary.title());
+  }
+
+  private void moveSuite(TacticSuiteSummary summary, int offset) {
+    PlayerId owner = ownerId.orElse(null);
+    if (owner == null) {
+      return;
+    }
+    boolean moved = tacticService.moveSuite(new MoveTacticSuiteCommand(owner, summary.suiteId(), offset));
+    refresh();
+    statusLabel.setText(moved ? "Reordered " + summary.title() : "Suite is already at the edge");
+  }
+
   private void refresh() {
     ownerId = currentUserService.activePlayerState().playerId();
     if (ownerId.isEmpty()) {
@@ -125,7 +195,8 @@ public final class TacticsScreenController implements UiScreenController {
     emptyStateLabel.setText("Create a suite, then add a position and author its solution line.");
     emptyStateLabel.setVisible(suites.isEmpty());
     emptyStateLabel.setManaged(suites.isEmpty());
-    statusLabel.setText(suites.isEmpty() ? "Ready to create your first tactic suite" : "Open a suite to train");
+    statusLabel.setText(
+        suites.isEmpty() ? "Ready to create your first tactic suite" : "Open a suite to train");
   }
 
   private void openSuite(TacticSuiteSummary suite) {
@@ -152,6 +223,7 @@ public final class TacticsScreenController implements UiScreenController {
     private final Label summary = new Label();
 
     private SuiteCell() {
+      getStyleClass().add("study-library-cell");
       row.getStyleClass().add("study-library-row");
       row.setAlignment(Pos.CENTER_LEFT);
       title.getStyleClass().add("study-library-title");
@@ -159,11 +231,22 @@ public final class TacticsScreenController implements UiScreenController {
       details.getChildren().addAll(title, summary);
       HBox.setHgrow(details, Priority.ALWAYS);
       row.getChildren().add(details);
+
       row.setOnMouseClicked(
           event -> {
             if (event.getButton() == MouseButton.PRIMARY
                 && event.getClickCount() == 2
-                && getItem() != null) openSuite(getItem());
+                && getItem() != null) {
+              openSuite(getItem());
+            }
+          });
+
+      row.setOnContextMenuRequested(
+          event -> {
+            if (getItem() != null) {
+              showTacticsActions(getItem(), event.getSceneX(), event.getSceneY());
+              event.consume();
+            }
           });
     }
 
@@ -175,7 +258,16 @@ public final class TacticsScreenController implements UiScreenController {
         return;
       }
       title.setText(item.title());
-      summary.setText(item.exerciseCount() + (item.exerciseCount() == 1 ? " exercise" : " exercises"));
+
+      String description =
+          item.description().filter(value -> !value.isBlank()).orElse("No description");
+      summary.setText(
+          item.exerciseCount()
+              + (item.exerciseCount() == 1 ? " exercise · " : " exercises · ")
+              + description
+              + " · updated "
+              + UPDATED_AT.format(item.updatedAt()));
+
       setGraphic(row);
     }
   }

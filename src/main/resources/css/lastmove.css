@@ -112,9 +112,14 @@
     -fx-cursor: hand;
 }
 
-.study-library-row:hover, .chapter-row:hover {
+.study-library-row:hover {
     -fx-background-color: #f5f8fc;
+    -fx-border-color: transparent transparent #c5d9ef #1c69d4;
+    -fx-border-width: 0 0 1 4;
+    -fx-padding: 12 16 12 12;
 }
+
+.chapter-row:hover { -fx-background-color: #f5f8fc; }
 
 .study-library-cell:selected .study-library-row, .chapter-row-active {
     -fx-background-color: #edf4fc;
@@ -1603,6 +1608,10 @@
 .night-mode .player-row-status { -fx-text-fill: #79aeef; }
 .night-mode .player-row-actions-hint { -fx-text-fill: #aeb8c3; }
 .night-mode .study-library-cell:selected .study-library-row, .night-mode .chapter-row-active {
+    -fx-background-color: #243243;
+    -fx-border-color: transparent transparent #465465 #6ba5f0;
+}
+.night-mode .study-library-row:hover {
     -fx-background-color: #243243;
     -fx-border-color: transparent transparent #465465 #6ba5f0;
 }
