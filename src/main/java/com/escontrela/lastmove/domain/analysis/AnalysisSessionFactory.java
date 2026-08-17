@@ -1,7 +1,6 @@
 package com.escontrela.lastmove.domain.analysis;
 
 import com.escontrela.lastmove.domain.game.GameRecord;
-import com.escontrela.lastmove.domain.game.MoveExecutionResult;
 import java.util.Objects;
 
 /**
@@ -12,25 +11,24 @@ import java.util.Objects;
  */
 public final class AnalysisSessionFactory {
 
+  private final AnalysisDocumentFactory documentFactory;
+
+  public AnalysisSessionFactory() {
+    this(new AnalysisDocumentFactory());
+  }
+
+  public AnalysisSessionFactory(AnalysisDocumentFactory documentFactory) {
+    this.documentFactory =
+        Objects.requireNonNull(documentFactory, "documentFactory must not be null");
+  }
+
   /** Creates a navigable study from an immutable progressive-game record. */
   public AnalysisSession fromGame(GameRecord gameRecord) {
     GameRecord record = Objects.requireNonNull(gameRecord, "gameRecord must not be null");
-    AnalysisSession session =
-        new AnalysisSession(
-            AnalysisSessionId.random(),
-            record.title(),
-            AnalysisOrigin.PLAYED_GAME,
-            record.initialPosition(),
-            record.result());
-    record.moves().forEach(
-        recorded ->
-            session.apply(
-                MoveExecutionResult.accepted(
-                    recorded.ply().resultingPosition(), recorded.ply().move())));
-    session.first();
-    if (!record.moves().isEmpty()) {
-      session.next();
-    }
-    return session;
+    return new AnalysisSession(
+        AnalysisSessionId.random(),
+        record.title(),
+        AnalysisOrigin.PLAYED_GAME,
+        documentFactory.fromGame(record));
   }
 }

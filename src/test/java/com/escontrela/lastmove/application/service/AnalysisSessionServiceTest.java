@@ -15,7 +15,7 @@ import com.escontrela.lastmove.domain.game.ChessGameFactory;
 import com.escontrela.lastmove.domain.game.ChessGame;
 import com.escontrela.lastmove.domain.game.GameResult;
 import com.escontrela.lastmove.domain.game.MoveCommand;
-import com.escontrela.lastmove.domain.game.Player;
+import com.escontrela.lastmove.domain.game.GamePlayer;
 import com.escontrela.lastmove.domain.game.TimeControl;
 import com.escontrela.lastmove.domain.notation.Fen;
 import com.escontrela.lastmove.domain.notation.PgnGame;
@@ -200,8 +200,8 @@ class AnalysisSessionServiceTest {
     ChessGame sourceGame =
         new ChessGameFactory(new ChesspressoRulesEngine())
             .createInitial(
-                new Player("Alice", PieceColor.WHITE),
-                new Player("Bob", PieceColor.BLACK),
+                new GamePlayer("Alice", PieceColor.WHITE),
+                new GamePlayer("Bob", PieceColor.BLACK),
                 Optional.of(TimeControl.fifteenPlusTen()));
     assertTrue(sourceGame.move(move("f2", "f3")).accepted());
     assertTrue(sourceGame.move(move("e7", "e5")).accepted());

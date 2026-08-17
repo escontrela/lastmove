@@ -621,9 +621,13 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
   }
 
   private void layoutCoordinateLabels(double boardSide, double gutter, double squareSize) {
+    // The clear strip sits inside the existing coordinate gutter, so this visual adjustment never
+    // changes the board side or the exact size of its eight-by-eight square grid.
+    double labelGap = Math.min(5.0, Math.max(0.0, gutter - 1.0));
+    double labelExtent = Math.max(1.0, gutter - labelGap);
     for (int index = 0; index < ChessConstants.FILES; index++) {
-      fileLabels[index].resizeRelocate(index * squareSize, boardSide, squareSize, gutter);
-      rankLabels[index].resizeRelocate(boardSide, index * squareSize, gutter, squareSize);
+      fileLabels[index].resizeRelocate(index * squareSize, boardSide + labelGap, squareSize, labelExtent);
+      rankLabels[index].resizeRelocate(boardSide + labelGap, index * squareSize, labelExtent, squareSize);
     }
   }
 

@@ -6,7 +6,7 @@ import com.escontrela.lastmove.domain.game.GameId;
 import com.escontrela.lastmove.domain.game.GameResult;
 import com.escontrela.lastmove.domain.game.GameStateSnapshot;
 import com.escontrela.lastmove.domain.game.GameTerminationReason;
-import com.escontrela.lastmove.domain.game.Player;
+import com.escontrela.lastmove.domain.game.GamePlayer;
 import com.escontrela.lastmove.domain.game.Ply;
 import com.escontrela.lastmove.domain.game.PositionSnapshot;
 import java.util.List;
@@ -16,8 +16,8 @@ import java.util.Optional;
 /** Immutable application DTO rendered by a progressive-game screen. */
 public record ComputerGameState(
     GameId gameId,
-    Player whitePlayer,
-    Player blackPlayer,
+    GamePlayer whitePlayer,
+    GamePlayer blackPlayer,
     PieceColor humanColor,
     ComputerEngineDescriptor engine,
     PositionSnapshot initialPosition,

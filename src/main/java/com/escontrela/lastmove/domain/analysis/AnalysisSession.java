@@ -1,41 +1,28 @@
 package com.escontrela.lastmove.domain.analysis;
 
-import com.escontrela.lastmove.domain.common.PieceColor;
 import com.escontrela.lastmove.domain.game.GameResult;
 import com.escontrela.lastmove.domain.game.GameStateSnapshot;
-import com.escontrela.lastmove.domain.game.MoveDescriptor;
 import com.escontrela.lastmove.domain.game.MoveExecutionResult;
 import com.escontrela.lastmove.domain.game.Ply;
 import com.escontrela.lastmove.domain.game.PositionSnapshot;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.UUID;
 
 /**
  * Aggregate root for a navigable chess study with non-destructive move variations.
  *
- * <p>The session owns the current cursor and position, while {@link AnalysisTree} exclusively owns
- * the topology. Applying a new move at a node with continuations adds an alternative child; applying
- * an already existing continuation selects it instead of duplicating or deleting the line.
+ * <p>The session is a thin shell over an {@link AnalysisDocument}: it owns the session identity,
+ * title and origin, while the document owns the chess content, the reading state and every
+ * navigation behavior. The {@code AnalysisSession} public API is intentionally stable so sessions
+ * and persisted study chapters behave identically on the board.
  */
 public final class AnalysisSession {
 
   private final AnalysisSessionId id;
   private String title;
   private final AnalysisOrigin origin;
-  private final PositionSnapshot initialPosition;
-  private final Optional<GameResult> sourceResult;
-  private final AnalysisTree tree;
-  private PositionSnapshot currentPosition;
-  private AnalysisNodeId currentNodeId;
-  private AnalysisNodeId selectedRootId;
-  private final Map<AnalysisNodeId, AnalysisNodeId> selectedContinuationIds =
-      new LinkedHashMap<>();
-  private GameResult result;
+  private final AnalysisDocument document;
 
   public AnalysisSession(
       AnalysisSessionId id,
@@ -52,25 +39,16 @@ public final class AnalysisSession {
       AnalysisOrigin origin,
       PositionSnapshot initialPosition,
       Optional<GameResult> sourceResult) {
-    this(id, title, origin, initialPosition, sourceResult, new AnalysisTree());
+    this(id, title, origin, new AnalysisDocument(initialPosition, sourceResult));
   }
 
-  AnalysisSession(
-      AnalysisSessionId id,
-      String title,
-      AnalysisOrigin origin,
-      PositionSnapshot initialPosition,
-      Optional<GameResult> sourceResult,
-      AnalysisTree tree) {
+  /** Wraps an existing analysis document as an independently navigable session. */
+  public AnalysisSession(
+      AnalysisSessionId id, String title, AnalysisOrigin origin, AnalysisDocument document) {
     this.id = Objects.requireNonNull(id, "id must not be null");
     this.title = requireTitle(title);
     this.origin = Objects.requireNonNull(origin, "origin must not be null");
-    this.initialPosition =
-        Objects.requireNonNull(initialPosition, "initialPosition must not be null");
-    this.sourceResult = Objects.requireNonNull(sourceResult, "sourceResult must not be null");
-    this.currentPosition = initialPosition;
-    this.tree = Objects.requireNonNull(tree, "tree must not be null");
-    this.result = terminalResult(initialPosition).orElse(null);
+    this.document = Objects.requireNonNull(document, "document must not be null");
   }
 
   public AnalysisSessionId id() {
@@ -90,60 +68,55 @@ public final class AnalysisSession {
     return origin;
   }
 
+  public AnalysisDocument document() {
+    return document;
+  }
+
   public PositionSnapshot initialPosition() {
-    return initialPosition;
+    return document.initialPosition();
   }
 
   public PositionSnapshot currentPosition() {
-    return currentPosition;
+    return document.currentPosition();
   }
 
   /** Returns the declared result of the imported game, independent of cursor position. */
   public Optional<GameResult> sourceResult() {
-    return sourceResult;
+    return document.sourceResult();
   }
 
   public Optional<AnalysisNode> currentNode() {
-    return Optional.ofNullable(currentNodeId).flatMap(tree::find);
+    return document.currentNode();
   }
 
   public Optional<Ply> currentPly() {
-    return currentNode().map(AnalysisNode::ply);
+    return document.currentPly();
   }
 
   public Optional<GameResult> result() {
-    return Optional.ofNullable(result);
+    return document.result();
   }
 
   public GameStateSnapshot currentState() {
-    return new GameStateSnapshot(
-        currentPosition.activeColor(),
-        currentPosition.castlingRights(),
-        currentPosition.enPassantTarget(),
-        currentPosition.halfmoveClock(),
-        currentPosition.fullmoveNumber(),
-        currentPosition.check(),
-        currentPosition.mate(),
-        currentPosition.stalemate(),
-        Optional.ofNullable(result));
+    return document.currentState();
   }
 
   public List<AnalysisNode> rootVariations() {
-    return tree.roots();
+    return document.rootVariations();
   }
 
   public List<AnalysisNode> continuations(AnalysisNodeId nodeId) {
-    return tree.children(nodeId);
+    return document.continuations(nodeId);
   }
 
   /** Returns the selected line from the initial position through the cursor. */
   public List<Ply> currentLine() {
-    return currentNodeLine().stream().map(AnalysisNode::ply).toList();
+    return document.currentLine();
   }
 
   /** Returns the selected line plus its preferred continuation ahead of the cursor. */
   public List<Ply> notationLine() {
-    return notationNodes().stream().map(AnalysisNode::ply).toList();
+    return document.notationLine();
   }
 
   /**
@@ -153,16 +126,7 @@ public final class AnalysisSession {
    * a UI can render the complete visible line and select any displayed ply by node identity.
    */
   public List<AnalysisNode> notationNodes() {
-    List<AnalysisNode> line = new ArrayList<>(currentNodeLine());
-    AnalysisNodeId parentId = currentNodeId;
-    Optional<AnalysisNode> continuation = selectedContinuationAt(parentId);
-    while (continuation.isPresent()) {
-      AnalysisNode next = continuation.orElseThrow();
-      line.add(next);
-      parentId = next.id();
-      continuation = selectedContinuationAt(parentId);
-    }
-    return List.copyOf(line);
+    return document.notationNodes();
   }
 
   /**
@@ -171,80 +135,32 @@ public final class AnalysisSession {
    * <p>Rejected results preserve both the cursor and the tree.
    */
   public void apply(MoveExecutionResult execution) {
-    Objects.requireNonNull(execution, "execution must not be null");
-    if (!execution.accepted()) {
-      if (!currentPosition.equals(execution.newSnapshot())) {
-        throw new IllegalArgumentException("A rejected move must preserve the current position");
-      }
-      return;
-    }
-
-    MoveDescriptor move =
-        execution
-            .move()
-            .orElseThrow(() -> new IllegalArgumentException("An accepted move requires a descriptor"));
-    validateAcceptedResult(execution);
-    Optional<AnalysisNode> existing =
-        candidatesAtCursor().stream().filter(node -> node.ply().move().equals(move)).findFirst();
-    if (existing.isPresent()) {
-      if (!existing.get().ply().resultingPosition().equals(execution.newSnapshot())) {
-        throw new IllegalStateException("An existing continuation must produce the same position");
-      }
-      select(existing.get().id());
-      return;
-    }
-
-    Ply ply =
-        new Ply(
-            UUID.randomUUID(),
-            move,
-            execution.newSnapshot(),
-            currentPosition.fullmoveNumber(),
-            currentPosition.activeColor());
-    AnalysisNode node =
-        currentNodeId == null ? tree.addRoot(ply) : tree.addChild(currentNodeId, ply);
-    select(node.id());
+    document.apply(execution);
   }
 
   /** Moves the cursor to its parent, or to the initial position from a root move. */
   public boolean previous() {
-    if (currentNodeId == null) {
-      return false;
-    }
-    AnalysisNode current = tree.node(currentNodeId);
-    currentNodeId = current.parentId().orElse(null);
-    refreshCurrentState();
-    return true;
+    return document.previous();
   }
 
   /** Advances through the first preferred continuation from the cursor. */
   public boolean next() {
-    return selectedContinuationAt(currentNodeId).map(node -> select(node.id())).orElse(false);
+    return document.next();
   }
 
   /** Returns to the initial position without deleting any move or variation. */
   public void first() {
-    currentNodeId = null;
-    refreshCurrentState();
+    document.first();
   }
 
   /** Advances to the final node of the preferred continuation from the current cursor. */
   public void last() {
-    while (next()) {
-      // next() selects the preferred continuation until the branch has no more nodes.
-    }
+    document.last();
   }
 
   /** Selects a node belonging to this session. */
   public boolean select(AnalysisNodeId nodeId) {
-    Optional<AnalysisNode> node = tree.find(Objects.requireNonNull(nodeId, "nodeId must not be null"));
-    if (node.isEmpty()) {
-      return false;
-    }
-    rememberSelectedLine(nodeId);
-    currentNodeId = nodeId;
-    refreshCurrentState();
-    return true;
+    return document.select(nodeId);
   }
 
   /**
@@ -254,77 +170,7 @@ public final class AnalysisSession {
    * which is inserted first, remains the initial navigation route.
    */
   public void selectPreferredLine() {
-    selectedContinuationIds.clear();
-    List<AnalysisNode> roots = tree.roots();
-    selectedRootId = roots.isEmpty() ? null : roots.getFirst().id();
-    AnalysisNode current = roots.isEmpty() ? null : roots.getFirst();
-    while (current != null) {
-      List<AnalysisNode> children = tree.children(current.id());
-      if (children.isEmpty()) {
-        current = null;
-      } else {
-        AnalysisNode child = children.getFirst();
-        selectedContinuationIds.put(current.id(), child.id());
-        current = child;
-      }
-    }
-  }
-
-  private List<AnalysisNode> candidatesAtCursor() {
-    return currentNodeId == null ? tree.roots() : tree.children(currentNodeId);
-  }
-
-  private Optional<AnalysisNode> selectedContinuationAt(AnalysisNodeId parentId) {
-    List<AnalysisNode> candidates = parentId == null ? tree.roots() : tree.children(parentId);
-    if (candidates.isEmpty()) {
-      return Optional.empty();
-    }
-    AnalysisNodeId selectedId =
-        parentId == null ? selectedRootId : selectedContinuationIds.get(parentId);
-    return candidates.stream()
-        .filter(candidate -> candidate.id().equals(selectedId))
-        .findFirst()
-        .or(() -> Optional.of(candidates.getFirst()));
-  }
-
-  private void rememberSelectedLine(AnalysisNodeId nodeId) {
-    AnalysisNode previous = null;
-    for (AnalysisNode node : tree.lineTo(nodeId)) {
-      if (previous == null) {
-        selectedRootId = node.id();
-      } else {
-        selectedContinuationIds.put(previous.id(), node.id());
-      }
-      previous = node;
-    }
-  }
-
-  private List<AnalysisNode> currentNodeLine() {
-    return currentNodeId == null ? List.of() : tree.lineTo(currentNodeId);
-  }
-
-  private void refreshCurrentState() {
-    currentPosition = currentNode().map(node -> node.ply().resultingPosition()).orElse(initialPosition);
-    result = terminalResult(currentPosition).orElse(null);
-  }
-
-  private void validateAcceptedResult(MoveExecutionResult execution) {
-    PositionSnapshot position = execution.newSnapshot();
-    if (execution.check() != position.check()
-        || execution.mate() != position.mate()
-        || execution.stalemate() != position.stalemate()) {
-      throw new IllegalArgumentException("Move result flags must match its resulting position");
-    }
-  }
-
-  private Optional<GameResult> terminalResult(PositionSnapshot position) {
-    if (position.mate()) {
-      return Optional.of(
-          position.activeColor() == PieceColor.WHITE
-              ? GameResult.BLACK_WINS
-              : GameResult.WHITE_WINS);
-    }
-    return position.stalemate() ? Optional.of(GameResult.DRAW) : Optional.empty();
+    document.selectPreferredLine();
   }
 
   private String requireTitle(String value) {

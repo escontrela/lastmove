@@ -1,6 +1,7 @@
 package com.escontrela.lastmove.ui.controller;
 
 import com.escontrela.lastmove.application.service.CurrentUserService;
+import com.escontrela.lastmove.application.service.CurrentUserService.ActivePlayerStatus;
 import com.escontrela.lastmove.ui.component.profile.CurrentUserAvatarControl;
 import com.escontrela.lastmove.ui.component.message.MessageBox;
 import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
@@ -48,6 +49,8 @@ public class MainWindowController implements UiScreenController {
     @FXML
     private ImageView fenToolIcon;
     @FXML
+    private Button studiesToolButton;
+    @FXML
     private ImageView localGameToolIcon;
     @FXML
     private ImageView openingToolIcon;
@@ -92,6 +95,7 @@ public class MainWindowController implements UiScreenController {
     @Override
     public void onShow() {
         updateCurrentUserAvatar();
+        updateStudiesAvailability();
         if (!startupMessageShown) {
             startupMessageShown = true;
             chessSoundService.play(ChessSound.NOTIFY);
@@ -102,6 +106,16 @@ public class MainWindowController implements UiScreenController {
     @FXML
     public void openPgnAnalysis() {
         uiFlowManager.show(UiScreenId.PGN_ANALYSIS);
+    }
+
+    /** Opens the persistent study library for the selected local player. */
+    @FXML
+    public void openStudies() {
+        if (currentUserService.activePlayerState().status() != ActivePlayerStatus.ACTIVE) {
+            featureStatusLabel.setText("Select an active player profile before opening studies.");
+            return;
+        }
+        uiFlowManager.show(UiScreenId.STUDIES);
     }
 
     /** Opens the progressive-game screen, which owns its Human vs Computer setup overlay. */
@@ -135,6 +149,9 @@ public class MainWindowController implements UiScreenController {
     private void configureContextMenu() {
         contextualMenuPanel.clearItems();
         contextualMenuPanel.addItem("Analyse a PGN", "", event -> openPgnAnalysis());
+        if (currentUserService.activePlayerState().status() == ActivePlayerStatus.ACTIVE) {
+            contextualMenuPanel.addItem("My studies", "", event -> openStudies());
+        }
         contextualMenuPanel.addItem("Human vs computer", "", event -> openHumanVsComputer());
         contextualMenuPanel.addSeparator();
         contextualMenuPanel.addItem("Players", "", event -> openPlayers());
@@ -160,7 +177,7 @@ public class MainWindowController implements UiScreenController {
         String iconColor = isNightMode() ? "FFFFFF" : "000000";
         updateToolIcon(pgnToolIcon, "history", iconColor);
         updateToolIcon(fenToolIcon, "structure", iconColor);
-        updateToolIcon(localGameToolIcon, "next", iconColor);
+        updateToolIcon(localGameToolIcon, "swords", iconColor);
         updateToolIcon(openingToolIcon, "search", iconColor);
         updateToolIcon(trainingToolIcon, "filter", iconColor);
         updateToolIcon(engineToolIcon, "zoom", iconColor);
@@ -168,6 +185,16 @@ public class MainWindowController implements UiScreenController {
 
     private void updateCurrentUserAvatar() {
         currentUserAvatar.setDisplayName(currentUserService.currentUser().name());
+    }
+
+    private void updateStudiesAvailability() {
+        boolean enabled = currentUserService.activePlayerState().status() == ActivePlayerStatus.ACTIVE;
+        studiesToolButton.setDisable(!enabled);
+        if (!enabled) {
+            studiesToolButton.setAccessibleHelp("Select an active player profile to use persistent studies.");
+        } else {
+            studiesToolButton.setAccessibleHelp(null);
+        }
     }
 
     private boolean isNightMode() {

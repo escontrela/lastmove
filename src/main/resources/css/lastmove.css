@@ -83,6 +83,91 @@
     -fx-background-color: #f7f7f7;
 }
 
+.studies-workspace {
+    -fx-background-color: #f7f7f7;
+}
+
+.study-library-list, .chapter-list {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #dfe5ec;
+    -fx-border-width: 1;
+}
+
+.study-library-list .virtual-flow, .study-library-list .viewport,
+.study-library-cell, .chapter-list .virtual-flow, .chapter-list .viewport {
+    -fx-background-color: #ffffff;
+}
+
+.study-library-cell, .chapter-list .list-cell {
+    -fx-padding: 0;
+    -fx-background-color: transparent;
+}
+
+.study-library-row, .chapter-row {
+    -fx-padding: 12 16;
+    -fx-background-color: #ffffff;
+    -fx-border-color: transparent transparent #e7ebf0 transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-min-height: 78px;
+    -fx-cursor: hand;
+}
+
+.study-library-row:hover, .chapter-row:hover {
+    -fx-background-color: #f5f8fc;
+}
+
+.study-library-cell:selected .study-library-row, .chapter-row-active {
+    -fx-background-color: #edf4fc;
+    -fx-border-color: transparent transparent #c5d9ef #1c69d4;
+    -fx-border-width: 0 0 1 4;
+    -fx-padding: 12 16 12 12;
+}
+
+.study-destination-row {
+    -fx-padding: 12 16;
+    -fx-background-color: #ffffff;
+    -fx-border-color: transparent transparent #e7ebf0 transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.study-destination-row:hover { -fx-background-color: #f5f8fc; }
+
+.study-library-title, .chapter-title {
+    -fx-font-size: 15px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #1f242a;
+}
+
+.study-library-list {
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+}
+
+.study-library-row:first-child {
+    -fx-background-radius: 10 10 0 0;
+}
+
+.study-library-row:last-child {
+    -fx-background-radius: 0 0 10 10;
+}
+
+.study-library-summary, .chapter-summary {
+    -fx-font-size: 12px;
+    -fx-text-fill: #6a7683;
+}
+
+.chapter-list {
+    -fx-pref-height: 420px;
+}
+
+.chapter-row {
+    -fx-padding: 10 8;
+}
+
+.chapter-row-active {
+    -fx-padding: 10 8 10 4;
+}
+
 .setup-scroll-pane {
     -fx-background-color: #f7f7f7;
     -fx-border-color: transparent;
@@ -1502,6 +1587,10 @@
 }
 .night-mode .player-row-status { -fx-text-fill: #79aeef; }
 .night-mode .player-row-actions-hint { -fx-text-fill: #aeb8c3; }
+.night-mode .study-library-cell:selected .study-library-row, .night-mode .chapter-row-active {
+    -fx-background-color: #243243;
+    -fx-border-color: transparent transparent #465465 #6ba5f0;
+}
 .night-mode .player-editor-overlay { -fx-background-color: rgba(0, 0, 0, 0.54); }
 .night-mode .player-editor-card { -fx-background-color: #1c2430; -fx-border-color: #465465; }
 .night-mode .player-editor-title { -fx-text-fill: #f1f3f5; }

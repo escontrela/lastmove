@@ -22,7 +22,7 @@ public final class ChessGameFactory {
 
   /** Creates a progressive game at the standard initial position. */
   public ChessGame createInitial(
-      Player whitePlayer, Player blackPlayer, Optional<TimeControl> timeControl) {
+      GamePlayer whitePlayer, GamePlayer blackPlayer, Optional<TimeControl> timeControl) {
     return create(
         rulesEngine.startingPosition(),
         Optional.of(Objects.requireNonNull(whitePlayer, "whitePlayer must not be null")),
@@ -32,7 +32,7 @@ public final class ChessGameFactory {
 
   /** Creates a progressive game from the supplied FEN position. */
   public ChessGame createFrom(
-      Fen fen, Player whitePlayer, Player blackPlayer, Optional<TimeControl> timeControl) {
+      Fen fen, GamePlayer whitePlayer, GamePlayer blackPlayer, Optional<TimeControl> timeControl) {
     Objects.requireNonNull(fen, "fen must not be null");
     return create(
         rulesEngine.positionFrom(fen),
@@ -74,8 +74,8 @@ public final class ChessGameFactory {
       List<Ply> moveHistory,
       List<GameClockSnapshot> clocksBeforeMoves,
       GameClockSnapshot currentClock,
-      Optional<Player> whitePlayer,
-      Optional<Player> blackPlayer,
+      Optional<GamePlayer> whitePlayer,
+      Optional<GamePlayer> blackPlayer,
       Optional<TimeControl> timeControl,
       Optional<GameResult> result,
       Optional<GameTerminationReason> terminationReason) {
@@ -96,8 +96,8 @@ public final class ChessGameFactory {
 
   private ChessGame create(
       PositionSnapshot position,
-      Optional<Player> whitePlayer,
-      Optional<Player> blackPlayer,
+      Optional<GamePlayer> whitePlayer,
+      Optional<GamePlayer> blackPlayer,
       Optional<TimeControl> timeControl) {
     Optional<TimeControl> requiredTimeControl =
         Objects.requireNonNull(timeControl, "timeControl must not be null");

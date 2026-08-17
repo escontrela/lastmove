@@ -101,6 +101,27 @@ class CurrentUserServiceTest {
         assertTrue(unavailableService.selectedPlayerId().isEmpty());
     }
 
+    @Test
+    void activeStateReportsActiveSelectedAndUnavailable() {
+        assertEquals(
+                CurrentUserService.ActivePlayerStatus.NO_PROFILE,
+                service.activePlayerState().status());
+        assertTrue(service.activePlayerState().playerId().isEmpty());
+
+        Player player = repository.save(
+                Player.create("eve@example.com", "Eve", "Moore", Optional.empty()));
+        service.selectPlayer(player.id());
+        CurrentUserService.ActivePlayerState active = service.activePlayerState();
+        assertEquals(CurrentUserService.ActivePlayerStatus.ACTIVE, active.status());
+        assertEquals(player.id(), active.playerId().orElseThrow());
+
+        CurrentUserService unavailableService =
+                new CurrentUserService(repository, PersistenceAvailability.unavailable("disk full"), preferences);
+        CurrentUserService.ActivePlayerState unavailable = unavailableService.activePlayerState();
+        assertEquals(CurrentUserService.ActivePlayerStatus.PERSISTENCE_UNAVAILABLE, unavailable.status());
+        assertTrue(unavailable.playerId().isEmpty());
+    }
+
     private static final class FakePlayerRepository implements PlayerRepository {
 
         private final AtomicLong idGenerator = new AtomicLong();
