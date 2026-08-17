@@ -7,6 +7,7 @@ import com.escontrela.lastmove.ui.screen.UiFlowManager;
 import com.escontrela.lastmove.ui.screen.UiScreenController;
 import com.escontrela.lastmove.ui.screen.UiScreenId;
 import com.escontrela.lastmove.ui.service.ApplicationThemeService;
+import com.escontrela.lastmove.ui.service.BoardAppearancePreferencesService;
 import com.escontrela.lastmove.ui.service.StartupPreferencesService;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
@@ -25,6 +26,7 @@ public class SetupScreenController implements UiScreenController {
     private final UiFlowManager uiFlowManager;
     private final ApplicationThemeService themeService;
     private final StartupPreferencesService startupPreferencesService;
+    private final BoardAppearancePreferencesService boardAppearancePreferencesService;
     private final ComputerEngineSettingsService computerEngineSettingsService;
     private final ComputerEngineHealthService computerEngineHealthService;
 
@@ -34,6 +36,8 @@ public class SetupScreenController implements UiScreenController {
     private CheckBox nightModeCheckBox;
     @FXML
     private CheckBox showSplashCheckBox;
+    @FXML
+    private CheckBox boardVisualEffectsCheckBox;
     @FXML
     private Button applyButton;
     @FXML
@@ -45,17 +49,20 @@ public class SetupScreenController implements UiScreenController {
 
     private boolean savedNightMode;
     private boolean savedSplashScreen;
+    private boolean savedBoardVisualEffects;
     private String savedSunfishExecutablePath;
 
     public SetupScreenController(
             @Lazy UiFlowManager uiFlowManager,
             ApplicationThemeService themeService,
             StartupPreferencesService startupPreferencesService,
+            BoardAppearancePreferencesService boardAppearancePreferencesService,
             ComputerEngineSettingsService computerEngineSettingsService,
             ComputerEngineHealthService computerEngineHealthService) {
         this.uiFlowManager = uiFlowManager;
         this.themeService = themeService;
         this.startupPreferencesService = startupPreferencesService;
+        this.boardAppearancePreferencesService = boardAppearancePreferencesService;
         this.computerEngineSettingsService = computerEngineSettingsService;
         this.computerEngineHealthService = computerEngineHealthService;
     }
@@ -68,6 +75,8 @@ public class SetupScreenController implements UiScreenController {
                 updateApplyButtonVisibility());
         showSplashCheckBox.selectedProperty().addListener((ignored, oldValue, newValue) ->
                 updateApplyButtonVisibility());
+        boardVisualEffectsCheckBox.selectedProperty().addListener((ignored, oldValue, newValue) ->
+                updateApplyButtonVisibility());
         sunfishExecutablePathField.textProperty().addListener((ignored, oldValue, newValue) -> {
             clearSunfishValidation();
             updateApplyButtonVisibility();
@@ -78,12 +87,14 @@ public class SetupScreenController implements UiScreenController {
     public void onShow() {
         savedNightMode = themeService.currentThemeMode().isNightMode();
         savedSplashScreen = startupPreferencesService.isSplashScreenEnabled();
+        savedBoardVisualEffects = boardAppearancePreferencesService.isBoardVisualEffectsEnabled();
         savedSunfishExecutablePath = computerEngineSettingsService
                 .sunfishSettings()
                 .executablePath()
                 .toString();
         nightModeCheckBox.setSelected(savedNightMode);
         showSplashCheckBox.setSelected(savedSplashScreen);
+        boardVisualEffectsCheckBox.setSelected(savedBoardVisualEffects);
         sunfishExecutablePathField.setText(savedSunfishExecutablePath);
         clearSunfishValidation();
         updateApplyButtonVisibility();
@@ -102,8 +113,10 @@ public class SetupScreenController implements UiScreenController {
         }
         themeService.setNightMode(nightModeCheckBox.isSelected());
         startupPreferencesService.setSplashScreenEnabled(showSplashCheckBox.isSelected());
+        boardAppearancePreferencesService.setBoardVisualEffectsEnabled(boardVisualEffectsCheckBox.isSelected());
         savedNightMode = nightModeCheckBox.isSelected();
         savedSplashScreen = showSplashCheckBox.isSelected();
+        savedBoardVisualEffects = boardVisualEffectsCheckBox.isSelected();
         updateApplyButtonVisibility();
     }
 
@@ -124,6 +137,7 @@ public class SetupScreenController implements UiScreenController {
     private void updateApplyButtonVisibility() {
         boolean hasUnsavedChanges = nightModeCheckBox.isSelected() != savedNightMode
                 || showSplashCheckBox.isSelected() != savedSplashScreen
+                || boardVisualEffectsCheckBox.isSelected() != savedBoardVisualEffects
                 || !sunfishExecutablePathField.getText().trim().equals(savedSunfishExecutablePath);
         applyButton.setVisible(hasUnsavedChanges);
         applyButton.setManaged(hasUnsavedChanges);

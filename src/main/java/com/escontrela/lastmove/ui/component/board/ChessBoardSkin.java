@@ -74,6 +74,8 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
       };
   private final ChangeListener<Boolean> orientationListener =
       (observable, oldValue, flipped) -> applyOrientation();
+  private final ChangeListener<Boolean> visualEffectsListener =
+      (observable, oldValue, enabled) -> updateSquareVisualEffects(enabled);
 
   public ChessBoardSkin(ChessBoardControl control) {
 
@@ -83,6 +85,7 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     buildGrid(control); // Pasó 1: Construcción estructural del Grid e interacción pura
     control.positionProperty().addListener(positionListener);
     control.flippedProperty().addListener(orientationListener);
+    control.visualEffectsEnabledProperty().addListener(visualEffectsListener);
     control.observableArrows().addListener(arrowsListener);
     control.addEventFilter(ContextMenuEvent.CONTEXT_MENU_REQUESTED, contextMenuFilter);
     if (control.getPosition() != null) {
@@ -163,6 +166,7 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
 
         boolean isLight = (file + rank) % 2 != 0;
         ChessSquareControl square = new ChessSquareControl(file, rank, isLight, control.getTheme());
+        square.setVisualEffectsEnabled(control.isVisualEffectsEnabled());
 
         // Almacenamos la referencia en la matriz indexada del estado de renderizado
         squares[file][rank] = square;
@@ -218,6 +222,14 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
           }
         });
     applyOrientation();
+  }
+
+  private void updateSquareVisualEffects(boolean enabled) {
+    for (int file = 0; file < ChessConstants.FILES; file++) {
+      for (int rank = 0; rank < ChessConstants.RANKS; rank++) {
+        squares[file][rank].setVisualEffectsEnabled(enabled);
+      }
+    }
   }
 
   private void applyOrientation() {
@@ -574,6 +586,7 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
   public void dispose() {
     getSkinnable().positionProperty().removeListener(positionListener);
     getSkinnable().flippedProperty().removeListener(orientationListener);
+    getSkinnable().visualEffectsEnabledProperty().removeListener(visualEffectsListener);
     getSkinnable().observableArrows().removeListener(arrowsListener);
     getSkinnable().removeEventFilter(ContextMenuEvent.CONTEXT_MENU_REQUESTED, contextMenuFilter);
     super.dispose();

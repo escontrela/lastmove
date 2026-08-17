@@ -6,7 +6,8 @@ public enum UiScreenId {
     HUMAN_VS_COMPUTER("/fxml/progressive-game.fxml", 1280.0, 800.0),
     PGN_ANALYSIS("/fxml/pgn-analysis.fxml", 1280.0, 800.0),
     ANALYSIS_SESSIONS("/fxml/analysis-sessions.fxml", 1280.0, 800.0),
-    SETUP("/fxml/setup.fxml", 1100.0, 720.0);
+    SETUP("/fxml/setup.fxml", 1100.0, 720.0),
+    PLAYERS("/fxml/players.fxml", 1100.0, 720.0);
 
     private final String fxmlPath;
     private final double width;

@@ -35,6 +35,8 @@ public class ChessBoardControl extends Control {
       new SimpleObjectProperty<>(this, "position");
   private final ObservableList<BoardArrow> arrows = FXCollections.observableArrayList();
   private final BooleanProperty flipped = new SimpleBooleanProperty(this, "flipped", false);
+  private final BooleanProperty visualEffectsEnabled =
+      new SimpleBooleanProperty(this, "visualEffectsEnabled", true);
 
   // 1. PROPIEDAD DEL EVENTO: Permite suscribir controladores externos
   private final ObjectProperty<EventHandler<BoardMoveEvent>> onMoveRequested =
@@ -52,6 +54,8 @@ public class ChessBoardControl extends Control {
     setMinSize(240, 240);
     setPrefSize(720, 720);
     setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+    visualEffectsEnabled.addListener((observable, oldValue, enabled) -> updateVisualEffectsStyle());
+    updateVisualEffectsStyle();
   }
 
   @Override
@@ -96,6 +100,19 @@ public class ChessBoardControl extends Control {
     return isFlipped();
   }
 
+  /** Enables the optional board halo and square gradients without changing any chess state. */
+  public final BooleanProperty visualEffectsEnabledProperty() {
+    return visualEffectsEnabled;
+  }
+
+  public final boolean isVisualEffectsEnabled() {
+    return visualEffectsEnabled.get();
+  }
+
+  public final void setVisualEffectsEnabled(boolean enabled) {
+    visualEffectsEnabled.set(enabled);
+  }
+
   /** Replaces the visual calculation arrows without changing the rendered chess position. */
   public final void setArrows(java.util.List<BoardArrow> values) {
     arrows.setAll(java.util.List.copyOf(values));
@@ -137,6 +154,13 @@ public class ChessBoardControl extends Control {
     if (getSkin() != null) {
       getSkin().dispose();
       setSkin(createDefaultSkin());
+    }
+  }
+
+  private void updateVisualEffectsStyle() {
+    getStyleClass().remove("board-visual-effects");
+    if (isVisualEffectsEnabled()) {
+      getStyleClass().add("board-visual-effects");
     }
   }
 

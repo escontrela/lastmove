@@ -40,7 +40,6 @@ import javafx.util.StringConverter;
  */
 public final class HumanVsComputerSetupOverlay extends StackPane {
 
-  private static final String DEFAULT_HUMAN_NAME = "Player";
   private static final Duration DEFAULT_ENGINE_THINKING_TIME = Duration.ofMillis(500);
 
   private final ComboBox<ComputerEngineDescriptor> engineSelector = new ComboBox<>();
@@ -194,10 +193,13 @@ public final class HumanVsComputerSetupOverlay extends StackPane {
         });
   }
 
+  private String humanName = "Player";
+
   /** Shows fresh setup state for the supplied application-provided engines. */
-  public void show(List<ComputerEngineDescriptor> engines) {
+  public void show(List<ComputerEngineDescriptor> engines, String humanName) {
     List<ComputerEngineDescriptor> required =
         List.copyOf(Objects.requireNonNull(engines, "engines must not be null"));
+    this.humanName = Objects.requireNonNull(humanName, "humanName must not be null").trim();
     engineSelector.setItems(FXCollections.observableArrayList(required));
     engineSelector.getSelectionModel().selectFirst();
     whiteButton.setSelected(true);
@@ -272,13 +274,13 @@ public final class HumanVsComputerSetupOverlay extends StackPane {
       handler.handle(
           new StartGameEvent(
               this,
-              new ComputerGameConfiguration(
-                  DEFAULT_HUMAN_NAME,
-                  color,
-                  time.timeControl,
-                  startingFen,
-                  engine.id(),
-                  DEFAULT_ENGINE_THINKING_TIME)));
+          new ComputerGameConfiguration(
+              humanName.isEmpty() ? "Player" : humanName,
+              color,
+              time.timeControl,
+              startingFen,
+              engine.id(),
+              DEFAULT_ENGINE_THINKING_TIME)));
     }
   }
 

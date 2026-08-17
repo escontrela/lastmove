@@ -1,5 +1,7 @@
 package com.escontrela.lastmove.ui.controller;
 
+import com.escontrela.lastmove.application.service.CurrentUserService;
+import com.escontrela.lastmove.ui.component.profile.CurrentUserAvatarControl;
 import com.escontrela.lastmove.ui.component.message.MessageBox;
 import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
@@ -33,6 +35,7 @@ public class MainWindowController implements UiScreenController {
 
     private final UiFlowManager uiFlowManager;
     private final ChessSoundService chessSoundService;
+    private final CurrentUserService currentUserService;
 
     @FXML
     private AnchorPane root;
@@ -56,14 +59,19 @@ public class MainWindowController implements UiScreenController {
     private MessageBox startupMessageBox;
     @FXML
     private ContextualMenuPanel contextualMenuPanel;
+    @FXML
+    private CurrentUserAvatarControl currentUserAvatar;
 
     private final ListChangeListener<String> themeStyleListener = change -> updateThemeAssets();
     private boolean startupMessageShown;
 
     public MainWindowController(
-            @Lazy UiFlowManager uiFlowManager, ChessSoundService chessSoundService) {
+            @Lazy UiFlowManager uiFlowManager,
+            ChessSoundService chessSoundService,
+            CurrentUserService currentUserService) {
         this.uiFlowManager = uiFlowManager;
         this.chessSoundService = chessSoundService;
+        this.currentUserService = currentUserService;
     }
 
     @FXML
@@ -72,6 +80,7 @@ public class MainWindowController implements UiScreenController {
         chessSoundService.preload();
         root.getStyleClass().addListener(themeStyleListener);
         updateThemeAssets();
+        updateCurrentUserAvatar();
         configureContextMenu();
         startupMessageBox.setOnAccept(event -> openPgnAnalysis());
         startupMessageBox.setOnCancel(event ->
@@ -82,6 +91,7 @@ public class MainWindowController implements UiScreenController {
 
     @Override
     public void onShow() {
+        updateCurrentUserAvatar();
         if (!startupMessageShown) {
             startupMessageShown = true;
             chessSoundService.play(ChessSound.NOTIFY);
@@ -106,6 +116,11 @@ public class MainWindowController implements UiScreenController {
     }
 
     @FXML
+    public void openPlayers() {
+        uiFlowManager.show(UiScreenId.PLAYERS);
+    }
+
+    @FXML
     public void showComingSoon(ActionEvent event) {
         String featureName = ((Button) event.getSource()).getAccessibleText();
         featureStatusLabel.setText(featureName + " is coming soon.");
@@ -122,6 +137,7 @@ public class MainWindowController implements UiScreenController {
         contextualMenuPanel.addItem("Analyse a PGN", "", event -> openPgnAnalysis());
         contextualMenuPanel.addItem("Human vs computer", "", event -> openHumanVsComputer());
         contextualMenuPanel.addSeparator();
+        contextualMenuPanel.addItem("Players", "", event -> openPlayers());
         contextualMenuPanel.addItem("Open setup", "", event -> openSetup());
         contextualMenuPanel.addItem("Dismiss welcome message", "Esc", event -> {
             startupMessageBox.hide();
@@ -148,6 +164,10 @@ public class MainWindowController implements UiScreenController {
         updateToolIcon(openingToolIcon, "search", iconColor);
         updateToolIcon(trainingToolIcon, "filter", iconColor);
         updateToolIcon(engineToolIcon, "zoom", iconColor);
+    }
+
+    private void updateCurrentUserAvatar() {
+        currentUserAvatar.setDisplayName(currentUserService.currentUser().name());
     }
 
     private boolean isNightMode() {

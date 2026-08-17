@@ -33,6 +33,8 @@ public class ChessSquareControl extends StackPane {
   private final int file;
   private final int rank;
   private final boolean isLight;
+  private BoardTheme theme;
+  private boolean visualEffectsEnabled = true;
   private final ImageView pieceImageView =
       new ImageView(); // Cambiado el nombre de la variable para evitar colisión con el tipo Image
 
@@ -53,8 +55,19 @@ public class ChessSquareControl extends StackPane {
   }
 
   private void applyTheme(BoardTheme theme) {
+    this.theme = theme;
     String color = isLight ? theme.getLightColor() : theme.getDarkColor();
-    setStyle("-fx-background-color: " + color + ";");
+    String background = visualEffectsEnabled
+        ? "linear-gradient(from 0% 0% to 100% 100%, derive(" + color + ", 8%) 0%, "
+            + color + " 52%, derive(" + color + ", -12%) 100%)"
+        : color;
+    setStyle("-fx-background-color: " + background + ";");
+  }
+
+  /** Toggles the presentation-only gradient while keeping the active board palette intact. */
+  public void setVisualEffectsEnabled(boolean enabled) {
+    visualEffectsEnabled = enabled;
+    applyTheme(theme);
   }
 
   public int getFile() {
