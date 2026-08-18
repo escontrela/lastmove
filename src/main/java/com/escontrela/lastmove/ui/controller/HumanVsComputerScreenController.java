@@ -4,6 +4,7 @@ import com.escontrela.lastmove.application.computer.ComputerGameConfiguration;
 import com.escontrela.lastmove.application.computer.ComputerGamePhase;
 import com.escontrela.lastmove.application.computer.ComputerGameState;
 import com.escontrela.lastmove.application.service.ComputerGameService;
+import com.escontrela.lastmove.application.service.ComputerEngineSettingsService;
 import com.escontrela.lastmove.application.service.AnalysisSessionService;
 import com.escontrela.lastmove.application.service.CurrentUserService;
 import com.escontrela.lastmove.domain.common.PieceColor;
@@ -66,6 +67,7 @@ public final class HumanVsComputerScreenController implements UiScreenController
   private final ChessSoundService chessSoundService;
   private final CurrentUserService currentUserService;
   private final BoardAppearancePreferencesService boardAppearancePreferencesService;
+  private final ComputerEngineSettingsService computerEngineSettingsService;
   private Timeline clockRefresh;
   private final ListChangeListener<String> themeStyleListener = change -> updatePlayerIcons();
 
@@ -108,7 +110,8 @@ public final class HumanVsComputerScreenController implements UiScreenController
       UiEventBus uiEventBus,
       ChessSoundService chessSoundService,
       CurrentUserService currentUserService,
-      BoardAppearancePreferencesService boardAppearancePreferencesService) {
+      BoardAppearancePreferencesService boardAppearancePreferencesService,
+      ComputerEngineSettingsService computerEngineSettingsService) {
     this.uiFlowManager = uiFlowManager;
     this.computerGameService = computerGameService;
     this.analysisSessionService = analysisSessionService;
@@ -116,6 +119,7 @@ public final class HumanVsComputerScreenController implements UiScreenController
     this.chessSoundService = chessSoundService;
     this.currentUserService = currentUserService;
     this.boardAppearancePreferencesService = boardAppearancePreferencesService;
+    this.computerEngineSettingsService = computerEngineSettingsService;
   }
 
   @FXML
@@ -146,7 +150,9 @@ public final class HumanVsComputerScreenController implements UiScreenController
       return;
     }
     setupOverlay.show(
-        computerGameService.availableEngines(), currentUserService.currentUser().name());
+        computerGameService.availableEngines(),
+        currentUserService.currentUser().name(),
+        computerEngineSettingsService::thinkingTime);
   }
 
   @Override
@@ -600,7 +606,9 @@ public final class HumanVsComputerScreenController implements UiScreenController
     showEmptyWorkspace();
     statusLabel.showImmediately(rootCauseMessage(failure));
     setupOverlay.show(
-        computerGameService.availableEngines(), currentUserService.currentUser().name());
+        computerGameService.availableEngines(),
+        currentUserService.currentUser().name(),
+        computerEngineSettingsService::thinkingTime);
     setupOverlay.showError(rootCauseMessage(failure));
   }
 

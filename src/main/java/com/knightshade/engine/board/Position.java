@@ -35,6 +35,9 @@ public interface Position {
     return pieceAt(square) == Piece.NONE;
   }
 
+  /** Returns whether the given square is attacked by any piece of the given color. */
+  boolean isSquareAttacked(Square target, PieceColor byColor);
+
   /** Converts a file/rank square to its 0..63 mailbox index (rank-major). */
   static int indexOf(Square square) {
     return square.getRank() * 8 + square.getFile();

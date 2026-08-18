@@ -15,6 +15,7 @@ public class PreferencesComputerEngineSettingsRepository
     implements ComputerEngineSettingsRepository {
 
   private static final String EXECUTABLE_SUFFIX = ".executable";
+  private static final String THINKING_TIME_SUFFIX = ".thinking-time";
 
   private final Preferences preferences =
       Preferences.userNodeForPackage(PreferencesComputerEngineSettingsRepository.class)
@@ -46,6 +47,25 @@ public class PreferencesComputerEngineSettingsRepository
   @Override
   public void deleteByEngineId(String engineId) {
     preferences.remove(requireEngineId(engineId) + EXECUTABLE_SUFFIX);
+  }
+
+  @Override
+  public Optional<Long> findThinkingTimeMillis(String engineId) {
+    String value = preferences.get(requireEngineId(engineId) + THINKING_TIME_SUFFIX, null);
+    if (value == null || value.isBlank()) {
+      return Optional.empty();
+    }
+    try {
+      return Optional.of(Long.parseLong(value.trim()));
+    } catch (NumberFormatException exception) {
+      return Optional.empty();
+    }
+  }
+
+  @Override
+  public void saveThinkingTimeMillis(String engineId, long thinkingTimeMillis) {
+    preferences.put(
+        requireEngineId(engineId) + THINKING_TIME_SUFFIX, Long.toString(thinkingTimeMillis));
   }
 
   private String requireEngineId(String value) {

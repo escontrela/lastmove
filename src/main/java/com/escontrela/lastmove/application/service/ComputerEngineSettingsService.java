@@ -5,6 +5,7 @@ import com.escontrela.lastmove.application.computer.ComputerEngineSettings;
 import com.escontrela.lastmove.application.computer.ComputerEngineSettingsRepository;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Value;
@@ -13,6 +14,8 @@ import org.springframework.stereotype.Service;
 /** Application service for reading and changing executable paths of computer opponents. */
 @Service
 public final class ComputerEngineSettingsService {
+
+  private static final Duration DEFAULT_THINKING_TIME = Duration.ofMillis(500);
 
   private final ComputerEngineSettingsRepository repository;
   private final Path defaultSunfishExecutable;
@@ -94,6 +97,24 @@ public final class ComputerEngineSettingsService {
             ComputerEngineIds.MAIA_WEIGHTS, parsePath(weightsLocation, "Maia weights"));
     repository.save(settings);
     return settings;
+  }
+
+  /** Returns the effective thinking time for an engine, defaulting to 500 ms. */
+  public Duration thinkingTime(String engineId) {
+    return repository
+        .findThinkingTimeMillis(engineId)
+        .map(Duration::ofMillis)
+        .orElse(DEFAULT_THINKING_TIME);
+  }
+
+  /** Persists the thinking time for an engine, rejecting non-positive values. */
+  public Duration updateThinkingTime(String engineId, Duration thinkingTime) {
+    Duration required = Objects.requireNonNull(thinkingTime, "thinkingTime must not be null");
+    if (required.isZero() || required.isNegative()) {
+      throw new IllegalArgumentException("Thinking time must be positive");
+    }
+    repository.saveThinkingTimeMillis(engineId, required.toMillis());
+    return required;
   }
 
   private static Path parsePath(String value, String description) {

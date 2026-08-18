@@ -9,6 +9,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
 import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -194,12 +195,19 @@ public final class HumanVsComputerSetupOverlay extends StackPane {
   }
 
   private String humanName = "Player";
+  private Function<String, Duration> thinkingTimeResolver =
+      engineId -> DEFAULT_ENGINE_THINKING_TIME;
 
   /** Shows fresh setup state for the supplied application-provided engines. */
-  public void show(List<ComputerEngineDescriptor> engines, String humanName) {
+  public void show(
+      List<ComputerEngineDescriptor> engines,
+      String humanName,
+      Function<String, Duration> thinkingTimeResolver) {
     List<ComputerEngineDescriptor> required =
         List.copyOf(Objects.requireNonNull(engines, "engines must not be null"));
     this.humanName = Objects.requireNonNull(humanName, "humanName must not be null").trim();
+    this.thinkingTimeResolver =
+        Objects.requireNonNull(thinkingTimeResolver, "thinkingTimeResolver must not be null");
     engineSelector.setItems(FXCollections.observableArrayList(required));
     engineSelector.getSelectionModel().selectFirst();
     whiteButton.setSelected(true);
@@ -271,16 +279,17 @@ public final class HumanVsComputerSetupOverlay extends StackPane {
     }
     EventHandler<StartGameEvent> handler = onStartGame.get();
     if (handler != null) {
+      Duration thinkingTime = thinkingTimeResolver.apply(engine.id());
       handler.handle(
           new StartGameEvent(
               this,
-          new ComputerGameConfiguration(
-              humanName.isEmpty() ? "Player" : humanName,
-              color,
-              time.timeControl,
-              startingFen,
-              engine.id(),
-              DEFAULT_ENGINE_THINKING_TIME)));
+              new ComputerGameConfiguration(
+                  humanName.isEmpty() ? "Player" : humanName,
+                  color,
+                  time.timeControl,
+                  startingFen,
+                  engine.id(),
+                  thinkingTime)));
     }
   }
 

@@ -20,7 +20,7 @@ import org.springframework.stereotype.Component;
 public final class KnightshadeMoveEngineProvider implements ComputerMoveEngineProvider {
 
   private static final ComputerEngineDescriptor DESCRIPTOR =
-      new ComputerEngineDescriptor(ComputerEngineIds.KNIGHTSHADE, "Knightshade", "v3");
+      new ComputerEngineDescriptor(ComputerEngineIds.KNIGHTSHADE, "Knightshade", "v3.5");
 
   private final FenService fenService;
 

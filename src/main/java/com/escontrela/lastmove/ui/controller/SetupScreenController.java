@@ -1,6 +1,7 @@
 package com.escontrela.lastmove.ui.controller;
 
 import com.escontrela.lastmove.application.computer.ComputerEngineHealth;
+import com.escontrela.lastmove.application.computer.ComputerEngineIds;
 import com.escontrela.lastmove.application.service.ComputerEngineHealthService;
 import com.escontrela.lastmove.application.service.ComputerEngineSettingsService;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
@@ -9,13 +10,19 @@ import com.escontrela.lastmove.ui.screen.UiScreenId;
 import com.escontrela.lastmove.ui.service.ApplicationThemeService;
 import com.escontrela.lastmove.ui.service.BoardAppearancePreferencesService;
 import com.escontrela.lastmove.ui.service.StartupPreferencesService;
+import java.time.Duration;
+import java.util.List;
+import java.util.Objects;
 import javafx.application.Platform;
+import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
+import javafx.util.StringConverter;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
@@ -54,6 +61,39 @@ public class SetupScreenController implements UiScreenController {
     private Button testMaiaButton;
     @FXML
     private Label maiaValidationLabel;
+    @FXML
+    private ComboBox<Duration> knightshadeThinkingTimeCombo;
+
+    private static final List<Duration> THINKING_TIME_PRESETS = List.of(
+            Duration.ofMillis(500),
+            Duration.ofSeconds(1),
+            Duration.ofSeconds(2),
+            Duration.ofSeconds(5),
+            Duration.ofSeconds(10),
+            Duration.ofSeconds(30));
+
+    private static final StringConverter<Duration> THINKING_TIME_CONVERTER =
+            new StringConverter<>() {
+                @Override
+                public String toString(Duration duration) {
+                    if (duration == null) {
+                        return "";
+                    }
+                    long millis = duration.toMillis();
+                    if (millis < 1000) {
+                        return millis + " ms";
+                    }
+                    if (millis % 1000 == 0) {
+                        return (millis / 1000) + " s";
+                    }
+                    return String.format("%.1f s", millis / 1000.0);
+                }
+
+                @Override
+                public Duration fromString(String value) {
+                    throw new UnsupportedOperationException("The thinking time selector is not editable");
+                }
+            };
 
     private boolean savedNightMode;
     private boolean savedSplashScreen;
@@ -61,6 +101,7 @@ public class SetupScreenController implements UiScreenController {
     private String savedSunfishExecutablePath;
     private String savedMaiaExecutablePath;
     private String savedMaiaWeightsPath;
+    private Duration savedKnightshadeThinkingTime;
 
     public SetupScreenController(
             @Lazy UiFlowManager uiFlowManager,
@@ -99,6 +140,10 @@ public class SetupScreenController implements UiScreenController {
             clearMaiaValidation();
             updateApplyButtonVisibility();
         });
+        knightshadeThinkingTimeCombo.setItems(FXCollections.observableArrayList(THINKING_TIME_PRESETS));
+        knightshadeThinkingTimeCombo.setConverter(THINKING_TIME_CONVERTER);
+        knightshadeThinkingTimeCombo.valueProperty().addListener((ignored, oldValue, newValue) ->
+                updateApplyButtonVisibility());
     }
 
     @Override
@@ -117,12 +162,18 @@ public class SetupScreenController implements UiScreenController {
         savedMaiaWeightsPath = computerEngineSettingsService
                 .maiaWeightsLocation()
                 .toString();
+        savedKnightshadeThinkingTime = computerEngineSettingsService
+                .thinkingTime(ComputerEngineIds.KNIGHTSHADE);
         nightModeCheckBox.setSelected(savedNightMode);
         showSplashCheckBox.setSelected(savedSplashScreen);
         boardVisualEffectsCheckBox.setSelected(savedBoardVisualEffects);
         sunfishExecutablePathField.setText(savedSunfishExecutablePath);
         maiaExecutablePathField.setText(savedMaiaExecutablePath);
         maiaWeightsPathField.setText(savedMaiaWeightsPath);
+        if (!knightshadeThinkingTimeCombo.getItems().contains(savedKnightshadeThinkingTime)) {
+            knightshadeThinkingTimeCombo.getItems().add(savedKnightshadeThinkingTime);
+        }
+        knightshadeThinkingTimeCombo.getSelectionModel().select(savedKnightshadeThinkingTime);
         clearSunfishValidation();
         clearMaiaValidation();
         updateApplyButtonVisibility();
@@ -145,6 +196,8 @@ public class SetupScreenController implements UiScreenController {
             showMaiaValidation(exception.getMessage(), false);
             return;
         }
+        savedKnightshadeThinkingTime = computerEngineSettingsService.updateThinkingTime(
+                ComputerEngineIds.KNIGHTSHADE, knightshadeThinkingTimeCombo.getValue());
         themeService.setNightMode(nightModeCheckBox.isSelected());
         startupPreferencesService.setSplashScreenEnabled(showSplashCheckBox.isSelected());
         boardAppearancePreferencesService.setBoardVisualEffectsEnabled(boardVisualEffectsCheckBox.isSelected());
@@ -204,7 +257,9 @@ public class SetupScreenController implements UiScreenController {
                 || boardVisualEffectsCheckBox.isSelected() != savedBoardVisualEffects
                 || !sunfishExecutablePathField.getText().trim().equals(savedSunfishExecutablePath)
                 || !trimmed(maiaExecutablePathField.getText()).equals(savedMaiaExecutablePath)
-                || !trimmed(maiaWeightsPathField.getText()).equals(savedMaiaWeightsPath);
+                || !trimmed(maiaWeightsPathField.getText()).equals(savedMaiaWeightsPath)
+                || !Objects.equals(
+                        knightshadeThinkingTimeCombo.getValue(), savedKnightshadeThinkingTime);
         applyButton.setVisible(hasUnsavedChanges);
         applyButton.setManaged(hasUnsavedChanges);
         testSunfishButton.setDisable(hasUnsavedChanges || savedSunfishExecutablePath == null);

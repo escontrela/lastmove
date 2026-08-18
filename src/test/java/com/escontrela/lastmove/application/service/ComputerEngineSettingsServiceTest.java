@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.escontrela.lastmove.application.computer.ComputerEngineSettings;
 import com.escontrela.lastmove.application.computer.ComputerEngineSettingsRepository;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -94,6 +95,30 @@ class ComputerEngineSettingsServiceTest {
     assertTrue(service.maiaExecutable().isEmpty());
   }
 
+  @Test
+  void returnsTheDefaultThinkingTimeUntilAnOverrideIsStored() {
+    InMemorySettingsRepository repository = new InMemorySettingsRepository();
+    ComputerEngineSettingsService service = service(repository);
+
+    assertEquals(Duration.ofMillis(500), service.thinkingTime("knightshade"));
+
+    service.updateThinkingTime("knightshade", Duration.ofSeconds(5));
+
+    assertEquals(Duration.ofSeconds(5), service.thinkingTime("knightshade"));
+  }
+
+  @Test
+  void rejectsANonPositiveThinkingTimeWithoutStoring() {
+    InMemorySettingsRepository repository = new InMemorySettingsRepository();
+    ComputerEngineSettingsService service = service(repository);
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> service.updateThinkingTime("knightshade", Duration.ZERO));
+
+    assertEquals(Duration.ofMillis(500), service.thinkingTime("knightshade"));
+  }
+
   private static ComputerEngineSettingsService service(InMemorySettingsRepository repository) {
     return new ComputerEngineSettingsService(
         repository, "/default/sunfish-uci", DEFAULT_MAIA_WEIGHTS);
@@ -103,6 +128,7 @@ class ComputerEngineSettingsServiceTest {
       implements ComputerEngineSettingsRepository {
 
     private final Map<String, ComputerEngineSettings> settings = new HashMap<>();
+    private final Map<String, Long> thinkingTimes = new HashMap<>();
 
     @Override
     public Optional<ComputerEngineSettings> findByEngineId(String engineId) {
@@ -117,6 +143,16 @@ class ComputerEngineSettingsServiceTest {
     @Override
     public void deleteByEngineId(String engineId) {
       settings.remove(engineId);
+    }
+
+    @Override
+    public Optional<Long> findThinkingTimeMillis(String engineId) {
+      return Optional.ofNullable(thinkingTimes.get(engineId));
+    }
+
+    @Override
+    public void saveThinkingTimeMillis(String engineId, long thinkingTimeMillis) {
+      thinkingTimes.put(engineId, thinkingTimeMillis);
     }
   }
 }
