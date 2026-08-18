@@ -112,9 +112,14 @@
     -fx-cursor: hand;
 }
 
-.study-library-row:hover, .chapter-row:hover {
+.study-library-row:hover {
     -fx-background-color: #f5f8fc;
+    -fx-border-color: transparent transparent #c5d9ef #1c69d4;
+    -fx-border-width: 0 0 1 4;
+    -fx-padding: 12 16 12 12;
 }
+
+.chapter-row:hover { -fx-background-color: #f5f8fc; }
 
 .study-library-cell:selected .study-library-row, .chapter-row-active {
     -fx-background-color: #edf4fc;
@@ -712,7 +717,22 @@
     -fx-border-width: 4px;
 }
 
-.chess-square-hint { -fx-background-color: rgba(28, 105, 212, 0.30); }
+.chess-square-hint {
+    -fx-border-color: #efb700;
+    -fx-border-width: 4px;
+    -fx-effect: dropshadow(gaussian, rgba(239, 183, 0, 0.85), 15, 0.32, 0, 0);
+}
+
+.tactic-result-card {
+    -fx-background-color: #f5f8fb;
+    -fx-border-color: #dce5ef;
+    -fx-border-width: 1px;
+}
+
+.tactic-result-score { -fx-font-size: 30px; -fx-font-weight: 800; }
+.tactic-result-score.score-high { -fx-text-fill: #167443; }
+.tactic-result-score.score-medium { -fx-text-fill: #a97700; }
+.tactic-result-score.score-low { -fx-text-fill: #b3261e; }
 
 .move-list {
     -fx-background-color: transparent;
@@ -1588,6 +1608,10 @@
 .night-mode .player-row-status { -fx-text-fill: #79aeef; }
 .night-mode .player-row-actions-hint { -fx-text-fill: #aeb8c3; }
 .night-mode .study-library-cell:selected .study-library-row, .night-mode .chapter-row-active {
+    -fx-background-color: #243243;
+    -fx-border-color: transparent transparent #465465 #6ba5f0;
+}
+.night-mode .study-library-row:hover {
     -fx-background-color: #243243;
     -fx-border-color: transparent transparent #465465 #6ba5f0;
 }

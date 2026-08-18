@@ -6,6 +6,7 @@ import com.escontrela.lastmove.domain.game.ChessGameFactory;
 import com.escontrela.lastmove.domain.game.ChessRulesEngine;
 import com.escontrela.lastmove.domain.service.FenService;
 import com.escontrela.lastmove.domain.study.StudyChapterFactory;
+import com.escontrela.lastmove.domain.tactics.TacticExerciseFactory;
 import java.time.Clock;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -35,6 +36,12 @@ public class LastMoveConfiguration {
     @Bean
     public StudyChapterFactory studyChapterFactory(AnalysisDocumentFactory documentFactory) {
         return new StudyChapterFactory(documentFactory);
+    }
+
+    /** Builds independent tactic exercises from positions or analysis documents. */
+    @Bean
+    public TacticExerciseFactory tacticExerciseFactory(AnalysisDocumentFactory documentFactory) {
+        return new TacticExerciseFactory(documentFactory);
     }
 
     /** Creates domain chess games with the configured rules-engine implementation. */

@@ -1,6 +1,6 @@
-<mxfile host="Electron" modified="2026-08-17T20:51:49.701Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/24.5.3 Chrome/124.0.6367.207 Electron/30.0.6 Safari/537.36" etag="F38qTAo80OoWAsYsPp2S" version="24.5.3" type="device" pages="2">
+<mxfile host="Electron" modified="2026-08-17T20:50:01.050Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/24.5.3 Chrome/124.0.6367.207 Electron/30.0.6 Safari/537.36" etag="s7t_jaNcAcY4xgS6nF6F" version="24.5.3" type="device" pages="2">
   <diagram id="chess-domain-analysis-raw" name="Chess domain · analysis and raw game">
-    <mxGraphModel dx="1180" dy="713" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1800" math="0" shadow="0">
+    <mxGraphModel dx="940" dy="713" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1800" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -80,7 +80,7 @@
           <mxGeometry x="685" y="230" width="300" height="80" as="geometry" />
         </mxCell>
         <mxCell id="commonPanel" value="CONCEPTOS COMPARTIDOS" style="swimlane;html=1;rounded=1;horizontal=1;startSize=34;fillColor=#fafafa;strokeColor=#9e9e9e;fontStyle=1;fontColor=#424242;" parent="1" vertex="1">
-          <mxGeometry x="20" y="1445" width="1685" height="555" as="geometry" />
+          <mxGeometry x="20" y="1445" width="1560" height="320" as="geometry" />
         </mxCell>
         <mxCell id="position" value="&lt;b&gt;PositionSnapshot&lt;/b&gt;&lt;br&gt;&lt;hr&gt;pieces: List&lt;PositionPiece&gt;&lt;br&gt;activeColor: PieceColor&lt;br&gt;castlingRights: CastlingRights&lt;br&gt;enPassantTarget: Optional&lt;Square&gt;&lt;br&gt;halfmoveClock / fullmoveNumber: int&lt;br&gt;lastMove: Optional&lt;MoveDescriptor&gt;&lt;br&gt;check / mate / stalemate: boolean" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7f7f7f;fontColor=#1f2937;align=left;spacingLeft=10;spacingTop=7;" parent="commonPanel" vertex="1">
           <mxGeometry x="25" y="55" width="300" height="165" as="geometry" />
@@ -94,23 +94,8 @@
         <mxCell id="ply" value="&lt;b&gt;Ply&lt;/b&gt;&lt;br&gt;&lt;hr&gt;id: UUID&lt;br&gt;move: MoveDescriptor&lt;br&gt;resultingPosition: PositionSnapshot&lt;br&gt;moveNumber: int&lt;br&gt;movingColor: PieceColor&lt;br&gt;&lt;br&gt;Neutro respecto a árbol o lista." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7f7f7f;fontColor=#1f2937;align=left;spacingLeft=10;spacingTop=7;" parent="commonPanel" vertex="1">
           <mxGeometry x="970" y="55" width="240" height="135" as="geometry" />
         </mxCell>
-        <mxCell id="tacticsPanel" value="TÁCTICAS PERSISTIDAS (por PlayerId)" style="swimlane;html=1;rounded=1;horizontal=1;startSize=34;fillColor=#fff4e6;strokeColor=#ed7d31;fontStyle=1;fontColor=#9e480e;" parent="commonPanel" vertex="1">
-          <mxGeometry x="25" y="255" width="1650" height="300" as="geometry" />
-        </mxCell>
-        <mxCell id="tacticRepository" value="&lt;b&gt;TacticRepository&lt;/b&gt; «interface»&lt;br&gt;&lt;hr&gt;+ save(suite): TacticSuite&lt;br&gt;+ findByIdAndOwner / findAllByOwner&lt;br&gt;+ deleteByIdAndOwner / deleteByOwner&lt;br&gt;+ moveSuiteToIndex(...)&lt;br&gt;&lt;hr&gt;Persistencia SQLite: suites, ejercicios y tactic_solution_nodes." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff7e6;strokeColor=#ed7d31;fontColor=#1f2937;align=left;spacingLeft=10;spacingTop=7;" parent="tacticsPanel" vertex="1">
-          <mxGeometry x="1275" y="95" width="375" height="185" as="geometry" />
-        </mxCell>
-        <mxCell id="tacticFactory" value="&lt;b&gt;TacticExerciseFactory&lt;/b&gt;&lt;br&gt;&lt;hr&gt;+ empty(title, position)&lt;br&gt;+ fromDocument(title, source)&lt;br&gt;&lt;br&gt;Copia el árbol de solución mediante AnalysisDocumentFactory; el Study o AnalysisSession fuente queda independiente." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff7e6;strokeColor=#ed7d31;fontColor=#1f2937;align=left;spacingLeft=10;spacingTop=7;" parent="tacticsPanel" vertex="1">
-          <mxGeometry x="900" y="90" width="330" height="165" as="geometry" />
-        </mxCell>
-        <mxCell id="tacticExercise" value="&lt;b&gt;TacticExercise&lt;/b&gt; (entidad)&lt;br&gt;&lt;hr&gt;− id: TacticExerciseId&lt;br&gt;− title: String&lt;br&gt;− solution: AnalysisContent&lt;br&gt;− createdAt / updatedAt: Instant&lt;br&gt;&lt;hr&gt;+ solverColor(): PieceColor&lt;br&gt;+ hasSolution(): boolean&lt;br&gt;+ rename(title) / touch()&lt;br&gt;&lt;br&gt;El color se deriva de initialPosition.activeColor; la orientación visual no lo altera." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#ed7d31;fontColor=#1f2937;align=left;spacingLeft=10;spacingTop=7;" parent="tacticsPanel" vertex="1">
-          <mxGeometry x="485" y="40" width="335" height="220" as="geometry" />
-        </mxCell>
-        <mxCell id="e_tactic_factory_exercise" value="crea" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;endArrow=open;strokeColor=#ed7d31;" parent="tacticsPanel" source="tacticFactory" target="tacticExercise" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
         <mxCell id="supportTypes" value="&lt;b&gt;Value objects&lt;/b&gt;&lt;br&gt;Square · PieceColor · PieceType&lt;br&gt;CastlingRights · GameResult · PositionPiece&lt;br&gt;Fen · SanMove · PgnGame&lt;br&gt;TimeControl · GameClockSnapshot&lt;br&gt;&lt;br&gt;&lt;b&gt;Identidades&lt;/b&gt;&lt;br&gt;PlayerId · StudyId · StudyChapterId&lt;br&gt;AnalysisSessionId · AnalysisNodeId&lt;br&gt;&lt;br&gt;&lt;b&gt;Personas&lt;/b&gt;&lt;br&gt;Player (perfil persistido)&lt;br&gt;GamePlayer (asset de partida)&lt;br&gt;User (nombre de display)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f7f7f7;strokeColor=#b7b7b7;fontColor=#4b5563;align=left;spacingLeft=10;spacingTop=7;" parent="commonPanel" vertex="1">
-          <mxGeometry x="1295" y="45" width="285" height="210" as="geometry" />
+          <mxGeometry x="1240" y="55" width="285" height="210" as="geometry" />
         </mxCell>
         <mxCell id="e_session_document" value="documento" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;endArrow=diamond;endFill=1;strokeColor=#4472c4;" parent="1" source="analysisSession" target="analysisDocument" edge="1">
           <mxGeometry relative="1" as="geometry" />
@@ -190,26 +175,35 @@
         <mxCell id="e_repo_study" value="persiste" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;endArrow=open;strokeColor=#8064a2;dashed=1;" parent="1" source="studyRepository" target="study" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e_tactic_exercise_content" value="árbol de soluciones" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;endArrow=diamond;endFill=1;strokeColor=#ed7d31;" parent="1" source="tacticExercise" target="analysisContent" edge="1">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="tacticsPanel" value="TÁCTICAS PERSISTIDAS (por PlayerId)" style="swimlane;html=1;rounded=1;horizontal=1;startSize=34;fillColor=#fff4e6;strokeColor=#ed7d31;fontStyle=1;fontColor=#9e480e;" parent="1" vertex="1">
+          <mxGeometry x="20" y="1450" width="1560" height="300" as="geometry" />
         </mxCell>
-        <mxCell id="e_tactic_factory_document" value="copia" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;endArrow=open;strokeColor=#ed7d31;dashed=1;" parent="1" source="tacticSuite" target="analysisDocumentFactory" edge="1">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="tacticSuite" value="&lt;b&gt;TacticSuite&lt;/b&gt; (agregado raíz)&lt;br&gt;&lt;hr&gt;− id: TacticSuiteId&lt;br&gt;− ownerId: PlayerId&lt;br&gt;− title / description&lt;br&gt;− exercises: List&lt;TacticExercise&gt; (ordenados)&lt;br&gt;− createdAt / updatedAt: Instant&lt;br&gt;&lt;hr&gt;+ addExercise / removeExercise / moveExercise&lt;br&gt;+ rename(title) / setDescription(desc)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#ed7d31;fontColor=#1f2937;align=left;spacingLeft=10;spacingTop=7;" parent="tacticsPanel" vertex="1">
+          <mxGeometry x="25" y="55" width="315" height="205" as="geometry" />
         </mxCell>
-        <mxCell id="tacticSuite" value="&lt;b&gt;TacticSuite&lt;/b&gt; (agregado raíz)&lt;br&gt;&lt;hr&gt;− id: TacticSuiteId&lt;br&gt;− ownerId: PlayerId&lt;br&gt;− title / description&lt;br&gt;− exercises: List&lt;TacticExercise&gt; (ordenados)&lt;br&gt;− createdAt / updatedAt: Instant&lt;br&gt;&lt;hr&gt;+ addExercise / removeExercise / moveExercise&lt;br&gt;+ rename(title) / setDescription(desc)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#ed7d31;fontColor=#1f2937;align=left;spacingLeft=10;spacingTop=7;" parent="1" vertex="1">
-          <mxGeometry x="90" y="1755" width="315" height="205" as="geometry" />
+        <mxCell id="tacticExercise" value="&lt;b&gt;TacticExercise&lt;/b&gt; (entidad)&lt;br&gt;&lt;hr&gt;− id: TacticExerciseId&lt;br&gt;− title: String&lt;br&gt;− solution: AnalysisContent&lt;br&gt;− createdAt / updatedAt: Instant&lt;br&gt;&lt;hr&gt;+ solverColor(): PieceColor&lt;br&gt;+ hasSolution(): boolean&lt;br&gt;+ rename(title) / touch()&lt;br&gt;&lt;br&gt;El color se deriva de initialPosition.activeColor; la orientación visual no lo altera." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#ed7d31;fontColor=#1f2937;align=left;spacingLeft=10;spacingTop=7;" parent="tacticsPanel" vertex="1">
+          <mxGeometry x="370" y="55" width="335" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="tacticFactory" value="&lt;b&gt;TacticExerciseFactory&lt;/b&gt;&lt;br&gt;&lt;hr&gt;+ empty(title, position)&lt;br&gt;+ fromDocument(title, source)&lt;br&gt;&lt;br&gt;Copia el árbol de solución mediante AnalysisDocumentFactory; el Study o AnalysisSession fuente queda independiente." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff7e6;strokeColor=#ed7d31;fontColor=#1f2937;align=left;spacingLeft=10;spacingTop=7;" parent="tacticsPanel" vertex="1">
+          <mxGeometry x="735" y="55" width="330" height="165" as="geometry" />
+        </mxCell>
+        <mxCell id="tacticRepository" value="&lt;b&gt;TacticRepository&lt;/b&gt; «interface»&lt;br&gt;&lt;hr&gt;+ save(suite): TacticSuite&lt;br&gt;+ findByIdAndOwner / findAllByOwner&lt;br&gt;+ deleteByIdAndOwner / deleteByOwner&lt;br&gt;+ moveSuiteToIndex(...)&lt;br&gt;&lt;hr&gt;Persistencia SQLite: suites, ejercicios y tactic_solution_nodes." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff7e6;strokeColor=#ed7d31;fontColor=#1f2937;align=left;spacingLeft=10;spacingTop=7;" parent="tacticsPanel" vertex="1">
+          <mxGeometry x="1095" y="55" width="375" height="185" as="geometry" />
         </mxCell>
         <mxCell id="e_tactic_suite_exercise" value="1→* ejercicios" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;endArrow=diamond;endFill=1;strokeColor=#ed7d31;" parent="1" source="tacticSuite" target="tacticExercise" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e_tactic_repo_suite" value="persiste" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;endArrow=open;strokeColor=#ed7d31;dashed=1;" parent="1" source="tacticRepository" target="tacticSuite" edge="1">
+        <mxCell id="e_tactic_exercise_content" value="árbol de soluciones" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;endArrow=diamond;endFill=1;strokeColor=#ed7d31;" parent="1" source="tacticExercise" target="analysisContent" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="dmeP_4xdn52iLwvFam3w-1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;endArrow=open;strokeColor=#ed7d31;dashed=1;" edge="1" parent="1" source="tacticFactory" target="tacticSuite">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="945" y="1873" as="sourcePoint" />
-            <mxPoint x="205" y="480" as="targetPoint" />
-          </mxGeometry>
+        <mxCell id="e_tactic_factory_exercise" value="crea" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;endArrow=open;strokeColor=#ed7d31;" parent="1" source="tacticFactory" target="tacticExercise" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_tactic_factory_document" value="copia" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;endArrow=open;strokeColor=#ed7d31;dashed=1;" parent="1" source="tacticFactory" target="analysisDocumentFactory" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_tactic_repo_suite" value="persiste" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;endArrow=open;strokeColor=#ed7d31;dashed=1;" parent="1" source="tacticRepository" target="tacticSuite" edge="1">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>

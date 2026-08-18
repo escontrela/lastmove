@@ -34,7 +34,6 @@ import javafx.scene.control.ListView;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import org.springframework.context.annotation.Lazy;
@@ -130,11 +129,14 @@ public final class StudiesScreenController implements UiScreenController {
   }
 
   private void refreshLibrary() {
+
     ActivePlayerState state = currentUserService.activePlayerState();
     ownerId = state.playerId();
     boolean available = state.status() == ActivePlayerStatus.ACTIVE;
     createStudyButton.setDisable(!available);
+
     if (!available) {
+
       visibleStudies = List.of();
       studyList.getItems().clear();
       studyList.setPrefHeight(116.0);
@@ -150,6 +152,7 @@ public final class StudiesScreenController implements UiScreenController {
               ? "No active player"
               : "Persistence unavailable");
       statusLabel.setText("Studies require an active player profile.");
+
       return;
     }
 
@@ -163,7 +166,9 @@ public final class StudiesScreenController implements UiScreenController {
     emptyStateLabel.setManaged(visibleStudies.isEmpty());
     profileStateLabel.setText("Studies for active player");
     statusLabel.setText(
-        visibleStudies.isEmpty() ? "Ready to create your first study" : "Choose a study to continue");
+        visibleStudies.isEmpty()
+            ? "Ready to create your first study"
+            : "Choose a study to continue");
   }
 
   private void openStudy(StudySummary summary) {
@@ -296,7 +301,8 @@ public final class StudiesScreenController implements UiScreenController {
         return;
       }
       title.setText(item.title());
-      String description = item.description().filter(value -> !value.isBlank()).orElse("No description");
+      String description =
+          item.description().filter(value -> !value.isBlank()).orElse("No description");
       summary.setText(
           item.chapterCount()
               + (item.chapterCount() == 1 ? " chapter · " : " chapters · ")
