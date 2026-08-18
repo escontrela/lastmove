@@ -5,5 +5,7 @@ public final class ComputerEngineIds {
 
   public static final String SUNFISH = "sunfish";
 
+  public static final String KNIGHTSHADE = "knightshade";
+
   private ComputerEngineIds() {}
 }
