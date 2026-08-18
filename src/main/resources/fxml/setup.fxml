@@ -59,6 +59,20 @@
                     </VBox>
                     <VBox maxWidth="680.0" spacing="12.0" styleClass="setup-card">
                         <padding><Insets bottom="32.0" left="32.0" right="32.0" top="32.0" /></padding>
+                        <Label styleClass="eyebrow-label" text="Computer opponents" />
+                        <Label styleClass="card-title" text="Maia (Leela Chess Zero)" />
+                        <Label styleClass="card-copy" text="Maia runs the lc0 engine with a neural-network weights file. Leave the executable blank to discover lc0 on PATH." wrapText="true" />
+                        <Label styleClass="settings-field-label" text="lc0 executable (optional)" />
+                        <TextField fx:id="maiaExecutablePathField" maxWidth="Infinity" promptText="Auto-discover lc0 on PATH" styleClass="settings-text-field" />
+                        <Label styleClass="settings-field-label" text="Weights file or directory" />
+                        <HBox alignment="CENTER_LEFT" spacing="12.0">
+                            <TextField fx:id="maiaWeightsPathField" maxWidth="Infinity" promptText="/path/to/maia-1900.pb.gz or /directory/of/weights" styleClass="settings-text-field" HBox.hgrow="ALWAYS" />
+                            <Button fx:id="testMaiaButton" mnemonicParsing="false" onAction="#testMaiaConnection" styleClass="secondary-button" text="Test connection" />
+                        </HBox>
+                        <Label fx:id="maiaValidationLabel" maxWidth="Infinity" styleClass="settings-validation-message" wrapText="true" />
+                    </VBox>
+                    <VBox maxWidth="680.0" spacing="12.0" styleClass="setup-card">
+                        <padding><Insets bottom="32.0" left="32.0" right="32.0" top="32.0" /></padding>
                         <Label styleClass="eyebrow-label" text="Navigation" />
                         <Label styleClass="card-title" text="Analysis keyboard shortcuts" />
                         <Label styleClass="card-copy" text="Available in the PGN analysis workspace when no modal dialog or text field is active." wrapText="true" />

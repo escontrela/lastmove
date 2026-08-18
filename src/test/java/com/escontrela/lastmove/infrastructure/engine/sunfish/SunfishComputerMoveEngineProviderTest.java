@@ -47,9 +47,12 @@ class SunfishComputerMoveEngineProviderTest {
 
           @Override
           public void save(ComputerEngineSettings settings) {}
+
+          @Override
+          public void deleteByEngineId(String engineId) {}
         };
     return new SunfishComputerMoveEngineProvider(
-        new ComputerEngineSettingsService(repository, executable.toString()),
+        new ComputerEngineSettingsService(repository, executable.toString(), "/default/maia"),
         new FenService(),
         new SunfishExecutableResolver());
   }

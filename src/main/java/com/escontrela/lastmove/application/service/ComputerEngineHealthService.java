@@ -24,6 +24,10 @@ public final class ComputerEngineHealthService {
     return check(ComputerEngineIds.SUNFISH);
   }
 
+  public CompletionStage<ComputerEngineHealth> checkMaia() {
+    return check(ComputerEngineIds.MAIA_1100);
+  }
+
   public CompletionStage<ComputerEngineHealth> check(String engineId) {
     String required = Objects.requireNonNull(engineId, "engineId must not be null");
     return healthChecks.stream()

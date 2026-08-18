@@ -43,6 +43,11 @@ public class PreferencesComputerEngineSettingsRepository
         required.executablePath().toString());
   }
 
+  @Override
+  public void deleteByEngineId(String engineId) {
+    preferences.remove(requireEngineId(engineId) + EXECUTABLE_SUFFIX);
+  }
+
   private String requireEngineId(String value) {
     String required = Objects.requireNonNull(value, "engineId must not be null").trim();
     if (required.isEmpty()) {
