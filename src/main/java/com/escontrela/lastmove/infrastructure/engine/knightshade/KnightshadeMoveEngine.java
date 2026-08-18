@@ -17,6 +17,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * In-process {@link ComputerMoveEngine} backed by the embedded Knightshade engine.
@@ -26,6 +28,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * and the resulting engine move is mapped directly onto a domain {@link MoveCommand}.
  */
 public final class KnightshadeMoveEngine implements ComputerMoveEngine {
+
+  private static final Logger log = LoggerFactory.getLogger(KnightshadeMoveEngine.class);
 
   private final KnightshadeEngine engine;
   private final FenService fenService;
@@ -97,20 +101,35 @@ public final class KnightshadeMoveEngine implements ComputerMoveEngine {
   }
 
   private MoveCommand chooseMoveBlocking(ComputerMoveRequest request) {
+    long startedAt = System.nanoTime();
     try {
       String fen = fenService.fromSnapshot(request.position()).getValue();
+      long maxTimeMillis = request.maximumThinkingTime().toMillis();
+      log.info("Knightshade search started: fen='{}' maxTimeMs={}", fen, maxTimeMillis);
       SearchResult result =
           engine.search(
               fen,
               SearchLimits.timeOnly(request.maximumThinkingTime()),
               cancellationRequested::get);
       if (result.move() == null) {
+        log.warn("Knightshade found no playable move for fen='{}'", fen);
         throw new ComputerEngineException("Knightshade found no playable move");
       }
+      log.info(
+          "Knightshade chose {} score={} depth={} nodes={} elapsedMs={} totalMs={}",
+          result.move().toUci(),
+          result.score(),
+          result.depth(),
+          result.nodes(),
+          result.elapsedMillis(),
+          (System.nanoTime() - startedAt) / 1_000_000L);
       return new MoveCommand(
           result.move().from(),
           result.move().to(),
           Optional.ofNullable(result.move().promotion()));
+    } catch (ComputerEngineException exception) {
+      log.error("Knightshade search failed", exception);
+      throw exception;
     } finally {
       thinking.set(false);
       cancellationRequested.set(false);

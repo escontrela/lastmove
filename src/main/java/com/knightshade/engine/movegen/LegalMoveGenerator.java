@@ -42,6 +42,21 @@ public final class LegalMoveGenerator implements MoveGenerator {
 
   @Override
   public List<Move> generate(Board board) {
+    return filterLegal(board, board.sideToMove(), generatePseudoLegal(board));
+  }
+
+  @Override
+  public List<Move> generateCaptures(Board board) {
+    List<Move> captures = new ArrayList<>();
+    for (Move move : generatePseudoLegal(board)) {
+      if (move.isCapture() || move.isPromotion()) {
+        captures.add(move);
+      }
+    }
+    return filterLegal(board, board.sideToMove(), captures);
+  }
+
+  private List<Move> generatePseudoLegal(Board board) {
     List<Move> pseudoLegal = new ArrayList<>();
     PieceColor side = board.sideToMove();
     for (int index = 0; index < 64; index++) {
@@ -62,7 +77,7 @@ public final class LegalMoveGenerator implements MoveGenerator {
         case KING -> generateKingMoves(board, from, piece, pseudoLegal);
       }
     }
-    return filterLegal(board, side, pseudoLegal);
+    return pseudoLegal;
   }
 
   private List<Move> filterLegal(Board board, PieceColor side, List<Move> pseudoLegal) {

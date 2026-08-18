@@ -64,13 +64,13 @@ class KnightshadeMoveEngineTest {
     KnightshadeMoveEngineProvider provider = new KnightshadeMoveEngineProvider(fenService);
 
     assertEquals(
-        new ComputerEngineDescriptor("knightshade", "Knightshade", "v0"), provider.descriptor());
+        new ComputerEngineDescriptor("knightshade", "Knightshade", "v3"), provider.descriptor());
     assertTrue(provider.create() instanceof KnightshadeMoveEngine);
   }
 
   private KnightshadeMoveEngine engine() {
     ComputerEngineDescriptor descriptor =
-        new ComputerEngineDescriptor("knightshade", "Knightshade", "v0");
+        new ComputerEngineDescriptor("knightshade", "Knightshade", "v3");
     return new KnightshadeMoveEngine(new KnightshadeEngine(), fenService, descriptor);
   }
 }

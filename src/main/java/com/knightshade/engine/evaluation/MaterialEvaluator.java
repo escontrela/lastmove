@@ -2,7 +2,6 @@ package com.knightshade.engine.evaluation;
 
 import com.knightshade.engine.board.Piece;
 import com.knightshade.engine.board.Position;
-import com.escontrela.lastmove.domain.common.PieceType;
 
 /**
  * v0 evaluator: the sum of material values, White minus Black.
@@ -20,20 +19,9 @@ public final class MaterialEvaluator implements Evaluator {
       if (piece == Piece.NONE) {
         continue;
       }
-      int value = value(Piece.type(piece));
+      int value = PieceValues.of(Piece.type(piece));
       score += Piece.isWhite(piece) ? value : -value;
     }
     return score;
-  }
-
-  private int value(PieceType type) {
-    return switch (type) {
-      case PAWN -> 100;
-      case KNIGHT -> 320;
-      case BISHOP -> 330;
-      case ROOK -> 500;
-      case QUEEN -> 900;
-      case KING -> 0;
-    };
   }
 }

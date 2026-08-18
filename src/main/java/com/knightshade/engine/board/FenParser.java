@@ -33,6 +33,7 @@ public final class FenParser {
     board.setEnPassantTarget(parseEnPassant(fields[3]));
     board.setHalfmoveClock(fields.length > 4 ? parseNonNegativeInt(fields[4]) : 0);
     board.setFullmoveNumber(fields.length > 5 ? parseFullmove(fields[5]) : 1);
+    board.recomputeZobristKey();
     return board;
   }
 

@@ -33,10 +33,32 @@ public final class Board implements Position {
   private Square enPassantTarget;
   private int halfmoveClock;
   private int fullmoveNumber = 1;
+  private long zobristKey;
 
   /** Creates an empty board; the FEN parser fills state through the package setters below. */
   static Board empty() {
     return new Board();
+  }
+
+  /** Returns the current incremental Zobrist key. */
+  public long zobristKey() {
+    return zobristKey;
+  }
+
+  /** Recomputes the Zobrist key from scratch, called once after FEN parsing. */
+  void recomputeZobristKey() {
+    long key = 0;
+    for (int index = 0; index < 64; index++) {
+      if (pieces[index] != Piece.NONE) {
+        key ^= Zobrist.piece(pieces[index], index);
+      }
+    }
+    if (sideToMove == PieceColor.BLACK) {
+      key ^= Zobrist.sideToMove();
+    }
+    key ^= Zobrist.castling(castlingRights);
+    key ^= Zobrist.enPassant(enPassantTarget);
+    zobristKey = key;
   }
 
   @Override
@@ -97,7 +119,9 @@ public final class Board implements Position {
   public void make(Move move) {
     Square from = move.from();
     Square to = move.to();
-    int movingPiece = pieces[indexOf(from)];
+    int fromIndex = indexOf(from);
+    int toIndex = indexOf(to);
+    int movingPiece = pieces[fromIndex];
 
     int capturedPiece;
     Square capturedSquare;
@@ -106,30 +130,54 @@ public final class Board implements Position {
       capturedPiece = pieces[indexOf(capturedSquare)];
     } else {
       capturedSquare = to;
-      capturedPiece = pieces[indexOf(to)];
+      capturedPiece = pieces[toIndex];
     }
-
-    undoStack.push(
-        new Undo(move, capturedPiece, capturedSquare, castlingRights, enPassantTarget,
-            halfmoveClock, fullmoveNumber));
 
     PieceColor movingColor = Piece.color(movingPiece);
-    pieces[indexOf(from)] = Piece.NONE;
-    pieces[indexOf(to)] =
+    int placedPiece =
         Piece.of(movingColor, move.isPromotion() ? move.promotion() : Piece.type(movingPiece));
-    if (move.isEnPassant()) {
-      pieces[indexOf(capturedSquare)] = Piece.NONE;
-    }
-    if (move.isCastle()) {
-      moveRookForCastle(movingColor, move.flag() == MoveFlag.KING_CASTLE);
-    }
-
-    sideToMove = sideToMove.opposite();
-    castlingRights = castlingRightsAfter(move, movingColor, movingPiece, capturedSquare);
-    enPassantTarget =
+    CastlingRights newCastling = castlingRightsAfter(move, movingColor, movingPiece, capturedSquare);
+    Square newEnPassant =
         move.flag() == MoveFlag.DOUBLE_PAWN_PUSH
             ? Square.of(from.getFile(), (from.getRank() + to.getRank()) / 2)
             : null;
+
+    undoStack.push(
+        new Undo(
+            move, capturedPiece, capturedSquare, castlingRights, enPassantTarget,
+            halfmoveClock, fullmoveNumber, zobristKey));
+
+    pieces[fromIndex] = Piece.NONE;
+    pieces[toIndex] = placedPiece;
+    if (move.isEnPassant()) {
+      pieces[indexOf(capturedSquare)] = Piece.NONE;
+    }
+
+    long key = zobristKey;
+    key ^= Zobrist.piece(movingPiece, fromIndex);
+    key ^= Zobrist.piece(placedPiece, toIndex);
+    if (capturedPiece != Piece.NONE) {
+      key ^= Zobrist.piece(capturedPiece, indexOf(capturedSquare));
+    }
+    if (move.isCastle()) {
+      boolean kingSide = move.flag() == MoveFlag.KING_CASTLE;
+      Square rookFrom = castlingRookFrom(movingColor, kingSide);
+      Square rookTo = castlingRookTo(movingColor, kingSide);
+      int rook = pieces[indexOf(rookFrom)];
+      key ^= Zobrist.piece(rook, indexOf(rookFrom));
+      key ^= Zobrist.piece(rook, indexOf(rookTo));
+      moveRookForCastle(movingColor, kingSide);
+    }
+    key ^= Zobrist.sideToMove();
+    key ^= Zobrist.castling(castlingRights);
+    key ^= Zobrist.castling(newCastling);
+    key ^= Zobrist.enPassant(enPassantTarget);
+    key ^= Zobrist.enPassant(newEnPassant);
+    zobristKey = key;
+
+    sideToMove = sideToMove.opposite();
+    castlingRights = newCastling;
+    enPassantTarget = newEnPassant;
     boolean resetsClock = Piece.type(movingPiece) == PieceType.PAWN || move.isCapture();
     halfmoveClock = resetsClock ? 0 : halfmoveClock + 1;
     if (movingColor == PieceColor.BLACK) {
@@ -162,6 +210,38 @@ public final class Board implements Position {
     enPassantTarget = undo.enPassantTarget;
     halfmoveClock = undo.halfmoveClock;
     fullmoveNumber = undo.fullmoveNumber;
+    zobristKey = undo.zobristKey;
+  }
+
+  /** Passes the turn without moving a piece, for null-move pruning. */
+  public void makeNullMove() {
+    undoStack.push(
+        new Undo(
+            null, Piece.NONE, null, castlingRights, enPassantTarget, halfmoveClock, fullmoveNumber,
+            zobristKey));
+
+    long key = zobristKey;
+    key ^= Zobrist.sideToMove();
+    if (enPassantTarget != null) {
+      key ^= Zobrist.enPassant(enPassantTarget);
+      key ^= Zobrist.enPassant(null);
+    }
+    zobristKey = key;
+
+    sideToMove = sideToMove.opposite();
+    enPassantTarget = null;
+    halfmoveClock++;
+  }
+
+  /** Reverts the most recent {@link #makeNullMove()} call. */
+  public void unmakeNullMove() {
+    Undo undo = undoStack.pop();
+    sideToMove = sideToMove.opposite();
+    castlingRights = undo.castlingRights;
+    enPassantTarget = undo.enPassantTarget;
+    halfmoveClock = undo.halfmoveClock;
+    fullmoveNumber = undo.fullmoveNumber;
+    zobristKey = undo.zobristKey;
   }
 
   /** Returns the square of the given color's king. */
@@ -277,19 +357,27 @@ public final class Board implements Position {
   }
 
   private void moveRookForCastle(PieceColor color, boolean kingSide) {
-    int rank = color == PieceColor.WHITE ? 0 : 7;
-    int rookFrom = indexOf(Square.of(kingSide ? 7 : 0, rank));
-    int rookTo = indexOf(Square.of(kingSide ? 5 : 3, rank));
+    int rookFrom = indexOf(castlingRookFrom(color, kingSide));
+    int rookTo = indexOf(castlingRookTo(color, kingSide));
     pieces[rookTo] = pieces[rookFrom];
     pieces[rookFrom] = Piece.NONE;
   }
 
   private void moveRookBackForCastle(PieceColor color, boolean kingSide) {
-    int rank = color == PieceColor.WHITE ? 0 : 7;
-    int rookTo = indexOf(Square.of(kingSide ? 5 : 3, rank));
-    int rookFrom = indexOf(Square.of(kingSide ? 7 : 0, rank));
+    int rookTo = indexOf(castlingRookTo(color, kingSide));
+    int rookFrom = indexOf(castlingRookFrom(color, kingSide));
     pieces[rookFrom] = pieces[rookTo];
     pieces[rookTo] = Piece.NONE;
+  }
+
+  private Square castlingRookFrom(PieceColor color, boolean kingSide) {
+    int rank = color == PieceColor.WHITE ? 0 : 7;
+    return Square.of(kingSide ? 7 : 0, rank);
+  }
+
+  private Square castlingRookTo(PieceColor color, boolean kingSide) {
+    int rank = color == PieceColor.WHITE ? 0 : 7;
+    return Square.of(kingSide ? 5 : 3, rank);
   }
 
   private CastlingRights castlingRightsAfter(
@@ -394,5 +482,6 @@ public final class Board implements Position {
       CastlingRights castlingRights,
       Square enPassantTarget,
       int halfmoveClock,
-      int fullmoveNumber) {}
+      int fullmoveNumber,
+      long zobristKey) {}
 }
