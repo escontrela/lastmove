@@ -18,7 +18,7 @@
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<StackPane fx:id="root" styleClass="app-shell" stylesheets="@../css/lastmove.css" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.escontrela.lastmove.ui.controller.HumanVsComputerScreenController">
+<StackPane fx:id="root" styleClass="app-shell" stylesheets="@../css/lastmove.css" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.escontrela.lastmove.ui.controller.HumanVsComputerScreenController">
     <BorderPane styleClass="app-shell">
         <top>
             <HBox alignment="CENTER_LEFT" spacing="16.0" styleClass="workspace-header">
@@ -28,7 +28,8 @@
                     <Label styleClass="hero-support" text="Play a timed game move by move against a computer opponent." />
                 </VBox>
                 <Region HBox.hgrow="ALWAYS" />
-                <ToolbarIconButton accessibleText="Back to chess tools" darkIconResource="/images/back_35dp_FFFFFF.png" lightIconResource="/images/back_35dp_000000.png" onAction="#backToMain" tooltipText="Back" />
+                <ToolbarIconButton accessibleText="Reset the computer model" darkIconResource="/images/compare_arrows_35dp_FFFFFF.png" lightIconResource="/images/compare_arrows_35dp_000000.png" onAction="#resetModel" tooltipText="Back" />
+            <ToolbarIconButton accessibleText="Back to chess tools" darkIconResource="/images/back_35dp_FFFFFF.png" layoutX="1070.0" layoutY="55.0" lightIconResource="/images/back_35dp_000000.png" onAction="#backToMain" tooltipText="Back" />
             </HBox>
         </top>
         <center>
