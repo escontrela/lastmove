@@ -167,6 +167,24 @@ public final class HumanVsComputerScreenController implements UiScreenController
     uiFlowManager.show(UiScreenId.MAIN);
   }
 
+  /** Stops the current game, discards its runtime and returns to the new-game setup overlay. */
+  @FXML
+  public void resetModel() {
+    clockRefresh.stop();
+    if (activeGameId != null) {
+      computerGameService.closeGame(activeGameId);
+      activeGameId = null;
+    }
+    pendingPromotionMove = null;
+    resultShown = false;
+    resultMessageBox.hide();
+    showEmptyWorkspace();
+    setupOverlay.show(
+        computerGameService.availableEngines(),
+        currentUserService.currentUser().name(),
+        computerEngineSettingsService::thinkingTime);
+  }
+
   @FXML
   public void takeBack() {
     if (activeGameId == null) {
