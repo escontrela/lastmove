@@ -125,7 +125,9 @@ public final class ComputerGameService {
   public List<ComputerEngineDescriptor> availableEngines() {
     return engineProviders.values().stream()
         .map(ComputerMoveEngineProvider::descriptor)
-        .sorted(java.util.Comparator.comparing(ComputerEngineDescriptor::displayName))
+        .sorted(
+            java.util.Comparator.comparing(ComputerEngineDescriptor::displayName)
+                .thenComparing(ComputerEngineDescriptor::id))
         .toList();
   }
 

@@ -28,7 +28,7 @@ class SunfishRealEngineIntegrationTest {
             System.getProperty("lastmove.sunfish.executable", DEFAULT_SUNFISH_EXECUTABLE));
     ComputerEngineSettingsRepository repository = repository(executable);
     var settingsService =
-        new ComputerEngineSettingsService(repository, executable.toString());
+        new ComputerEngineSettingsService(repository, executable.toString(), "/default/maia");
     var rulesEngine = new ChesspressoRulesEngine();
     var provider =
         new SunfishComputerMoveEngineProvider(
@@ -53,6 +53,9 @@ class SunfishRealEngineIntegrationTest {
 
       @Override
       public void save(ComputerEngineSettings settings) {}
+
+      @Override
+      public void deleteByEngineId(String engineId) {}
     };
   }
 }

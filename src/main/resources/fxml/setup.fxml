@@ -4,6 +4,7 @@
 <?import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.BorderPane?>
@@ -56,6 +57,28 @@
                             <Button fx:id="testSunfishButton" mnemonicParsing="false" onAction="#testSunfishConnection" styleClass="secondary-button" text="Test connection" />
                         </HBox>
                         <Label fx:id="sunfishValidationLabel" maxWidth="Infinity" styleClass="settings-validation-message" wrapText="true" />
+                    </VBox>
+                    <VBox maxWidth="680.0" spacing="12.0" styleClass="setup-card">
+                        <padding><Insets bottom="32.0" left="32.0" right="32.0" top="32.0" /></padding>
+                        <Label styleClass="eyebrow-label" text="Computer opponents" />
+                        <Label styleClass="card-title" text="Maia (Leela Chess Zero)" />
+                        <Label styleClass="card-copy" text="Maia runs the lc0 engine with a neural-network weights file. Leave the executable blank to discover lc0 on PATH." wrapText="true" />
+                        <Label styleClass="settings-field-label" text="lc0 executable (optional)" />
+                        <TextField fx:id="maiaExecutablePathField" maxWidth="Infinity" promptText="Auto-discover lc0 on PATH" styleClass="settings-text-field" />
+                        <Label styleClass="settings-field-label" text="Weights file or directory" />
+                        <HBox alignment="CENTER_LEFT" spacing="12.0">
+                            <TextField fx:id="maiaWeightsPathField" maxWidth="Infinity" promptText="/path/to/maia-1900.pb.gz or /directory/of/weights" styleClass="settings-text-field" HBox.hgrow="ALWAYS" />
+                            <Button fx:id="testMaiaButton" mnemonicParsing="false" onAction="#testMaiaConnection" styleClass="secondary-button" text="Test connection" />
+                        </HBox>
+                        <Label fx:id="maiaValidationLabel" maxWidth="Infinity" styleClass="settings-validation-message" wrapText="true" />
+                    </VBox>
+                    <VBox maxWidth="680.0" spacing="12.0" styleClass="setup-card">
+                        <padding><Insets bottom="32.0" left="32.0" right="32.0" top="32.0" /></padding>
+                        <Label styleClass="eyebrow-label" text="Computer opponents" />
+                        <Label styleClass="card-title" text="Knightshade" />
+                        <Label styleClass="card-copy" text="Knightshade is the engine built into LastMove. Give it more thinking time per move to make it play stronger." wrapText="true" />
+                        <Label styleClass="settings-field-label" text="Thinking time per move" />
+                        <ComboBox fx:id="knightshadeThinkingTimeCombo" maxWidth="Infinity" />
                     </VBox>
                     <VBox maxWidth="680.0" spacing="12.0" styleClass="setup-card">
                         <padding><Insets bottom="32.0" left="32.0" right="32.0" top="32.0" /></padding>

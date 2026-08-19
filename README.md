@@ -51,8 +51,9 @@ Spring Boot is used only as a dependency-injection container and lifecycle manag
 * Submit progressive moves either by board coordinates (`MoveCommand`) or SAN (`"Nf3"`).
 * Track clocks and apply opponent-approved takebacks.
 * Convert a progressive game into an independent `AnalysisSession` through `GameRecord`.
-* Play Human vs Computer games against a configured Sunfish UCI process, with clocks, promotion,
-  takeback, resignation, restart, result presentation, and post-game analysis.
+* Play Human vs Computer games against a selectable computer opponent — the embedded Knightshade
+  engine, a configured Sunfish UCI process, or any Maia profile (Leela Chess Zero + weights) — with
+  clocks, promotion, takeback, resignation, restart, result presentation, and post-game analysis.
 * Persist player profiles (email, first name, last name, and an optional photo) in a local SQLite
   database managed by Flyway; create and select the current player from the main window.
 * Persist studies and ordered chapters in SQLite (Flyway migration V2): each chapter owns the same
@@ -148,6 +149,8 @@ src/main/java/com/escontrela/lastmove/
 * JDK 22
 * Maven 3.8 or newer
 * Sunfish UCI for Human vs Computer (its executable path is configurable in Settings)
+* Optional: Leela Chess Zero (`lc0`) with Maia weights for the Maia opponents (see
+  [Maia integration](docs/maia-engine.md))
 
 ### Build and test
 
@@ -198,14 +201,16 @@ Moves are validated through `ChessRulesEngine`. The current infrastructure imple
 `ChesspressoRulesEngine`; domain, application, and UI never receive Chesspresso objects.
 
 Human vs Computer uses the generic `ComputerMoveEngine` contract. `UciProcessEngine` owns the
-external process, bounded handshakes/searches, cancellation and forced shutdown; the Sunfish
-provider supplies its configured executable. `ComputerGameService` owns no global active game: it
-coordinates the progressive aggregate and closes every engine from its Spring shutdown hook.
+external process, bounded handshakes/searches, cancellation and forced shutdown; the Sunfish and
+Maia providers supply their configured executables. `ComputerGameService` owns no global active
+game: it coordinates the progressive aggregate and closes every engine from its Spring shutdown
+hook.
 
 For a detailed class inventory and flows, see:
 
 * [Architecture summary](docs/pgn-analysis-session-architecture.md)
 * [Current ChessGame and AnalysisSession model](docs/proposed-chess-game-analysis-model.md)
+* [Maia integration](docs/maia-engine.md)
 
 ## Development Guidelines
 
@@ -225,6 +230,7 @@ For a detailed class inventory and flows, see:
 * [x] In-memory session switching.
 * [x] Progressive `ChessGame`, takebacks, and conversion to analysis.
 * [x] Human vs Computer through Sunfish/UCI with clocks and post-game analysis.
+* [x] Maia profiles (Leela Chess Zero + weights) as selectable computer opponents.
 * [x] Persisted player profiles in a local SQLite database.
 * [x] Player-owned persistent studies and chapters, including library and chapter workspace UI.
 * [ ] PGN editing and export.
