@@ -16,6 +16,7 @@ public class PreferencesComputerEngineSettingsRepository
 
   private static final String EXECUTABLE_SUFFIX = ".executable";
   private static final String THINKING_TIME_SUFFIX = ".thinking-time";
+  private static final String DEFAULT_ANALYSIS_ENGINE_KEY = "analysis.default-engine";
 
   private final Preferences preferences =
       Preferences.userNodeForPackage(PreferencesComputerEngineSettingsRepository.class)
@@ -66,6 +67,25 @@ public class PreferencesComputerEngineSettingsRepository
   public void saveThinkingTimeMillis(String engineId, long thinkingTimeMillis) {
     preferences.put(
         requireEngineId(engineId) + THINKING_TIME_SUFFIX, Long.toString(thinkingTimeMillis));
+  }
+
+  @Override
+  public Optional<String> findDefaultAnalysisEngineId() {
+    String value = preferences.get(DEFAULT_ANALYSIS_ENGINE_KEY, null);
+    if (value == null || value.isBlank()) {
+      return Optional.empty();
+    }
+    return Optional.of(value.trim());
+  }
+
+  @Override
+  public void saveDefaultAnalysisEngineId(String engineId) {
+    preferences.put(DEFAULT_ANALYSIS_ENGINE_KEY, requireEngineId(engineId));
+  }
+
+  @Override
+  public void deleteDefaultAnalysisEngineId() {
+    preferences.remove(DEFAULT_ANALYSIS_ENGINE_KEY);
   }
 
   private String requireEngineId(String value) {

@@ -690,6 +690,11 @@
     -fx-border-width: 1px;
 }
 
+.analysis-value {
+    -fx-font-size: 14px;
+    -fx-text-fill: #262626;
+}
+
 .chess-board {
     -fx-border-color: transparent;
     -fx-border-width: 0;

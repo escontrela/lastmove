@@ -1,16 +1,20 @@
 package com.escontrela.lastmove.ui.controller;
 
+import com.escontrela.lastmove.application.computer.ComputerEngineDescriptor;
 import com.escontrela.lastmove.application.dto.AnalysisSessionSummary;
 import com.escontrela.lastmove.application.dto.AnalysisNotationNode;
 import com.escontrela.lastmove.application.dto.AnalysisNotationTree;
 import com.escontrela.lastmove.application.dto.PgnImportRequest;
+import com.escontrela.lastmove.application.dto.PositionAnalysisResult;
 import com.escontrela.lastmove.application.service.GameLoadService;
 import com.escontrela.lastmove.application.service.AnalysisSessionService;
 import com.escontrela.lastmove.application.service.CurrentUserService;
 import com.escontrela.lastmove.application.service.PgnExportService;
+import com.escontrela.lastmove.application.service.PositionAnalysisService;
 import com.escontrela.lastmove.domain.analysis.AnalysisSessionId;
 import com.escontrela.lastmove.domain.game.MoveCommand;
 import com.escontrela.lastmove.domain.game.MoveExecutionResult;
+import com.escontrela.lastmove.domain.game.PositionSnapshot;
 import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
 import com.escontrela.lastmove.ui.component.message.TextInputModal;
 import com.escontrela.lastmove.ui.component.notation.MoveNotationControl;
@@ -37,9 +41,14 @@ import com.escontrela.lastmove.ui.support.FileChooserFactory;
 import com.escontrela.lastmove.ui.support.PgnFileWriter;
 import java.util.List;
 import java.util.Objects;
+import javafx.animation.PauseTransition;
+import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
+import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.fxml.FXML;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.image.Image;
@@ -48,6 +57,8 @@ import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.StackPane;
+import javafx.util.Duration;
+import javafx.util.StringConverter;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -67,6 +78,21 @@ public class PgnAnalysisScreenController implements UiScreenController {
 
   private static final double BOARD_MAX_SIZE = 720.0;
 
+  private static final StringConverter<ComputerEngineDescriptor> ENGINE_CONVERTER =
+      new StringConverter<>() {
+        @Override
+        public String toString(ComputerEngineDescriptor descriptor) {
+          return descriptor == null
+              ? ""
+              : descriptor.displayName() + " " + descriptor.version();
+        }
+
+        @Override
+        public ComputerEngineDescriptor fromString(String value) {
+          throw new UnsupportedOperationException("The analysis engine selector is not editable");
+        }
+      };
+
   @FXML private StackPane root;
   @FXML private StackPane boardHost;
   @FXML private ImageView statusBrandLogo;
@@ -78,6 +104,10 @@ public class PgnAnalysisScreenController implements UiScreenController {
   @FXML private Label statusLabel;
   @FXML private ToolbarIconButton saveSessionAsStudyButton;
   @FXML private com.escontrela.lastmove.ui.component.board.ChessBoardControl chessBoard;
+  @FXML private CheckBox analysisEnabledCheckBox;
+  @FXML private ComboBox<ComputerEngineDescriptor> analysisEngineCombo;
+  @FXML private Label analysisBestMoveLabel;
+  @FXML private Label analysisScoreLabel;
 
   private final GameLoadService gameLoadService;
   private final AnalysisSessionService analysisSessionService;
@@ -90,6 +120,8 @@ public class PgnAnalysisScreenController implements UiScreenController {
   private final ChessSoundService chessSoundService;
   private final ClipboardService clipboardService;
   private final BoardAppearancePreferencesService boardAppearancePreferencesService;
+  private final PositionAnalysisService positionAnalysisService;
+  private final PauseTransition analysisDebounce = new PauseTransition(Duration.millis(350));
   private final ListChangeListener<String> themeStyleListener = change -> updateStatusBrandLogo();
 
   /** Identity of the session currently rendered by this screen. */
@@ -109,6 +141,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
       ChessSoundService chessSoundService,
       ClipboardService clipboardService,
       BoardAppearancePreferencesService boardAppearancePreferencesService,
+      PositionAnalysisService positionAnalysisService,
       UiEventBus uiEventBus,
       @Lazy UiFlowManager uiFlowManager) {
     this.gameLoadService = gameLoadService;
@@ -120,6 +153,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
     this.chessSoundService = chessSoundService;
     this.clipboardService = clipboardService;
     this.boardAppearancePreferencesService = boardAppearancePreferencesService;
+    this.positionAnalysisService = positionAnalysisService;
     this.uiEventBus = uiEventBus;
     this.uiFlowManager = uiFlowManager;
   }
@@ -137,6 +171,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
     chessBoard.visualEffectsEnabledProperty().bind(
         boardAppearancePreferencesService.boardVisualEffectsEnabledProperty());
     configurePromotionPicker();
+    configureEngineAnalysis();
     refreshStudyPersistenceAvailability();
     if (activeAnalysisSessionId == null) {
       activeAnalysisSessionId = analysisSessionService.createInitialSession().sessionId();
@@ -652,5 +687,103 @@ public class PgnAnalysisScreenController implements UiScreenController {
                     getClass().getResource(resource),
                     () -> "Missing status logo resource: " + resource)
                 .toExternalForm()));
+  }
+
+  @Override
+  public void onHide() {
+    analysisDebounce.stop();
+    positionAnalysisService.close();
+  }
+
+  private void configureEngineAnalysis() {
+    analysisEngineCombo.setConverter(ENGINE_CONVERTER);
+    analysisEngineCombo.setItems(
+        FXCollections.observableArrayList(positionAnalysisService.availableEngines()));
+    selectAnalysisEngine(positionAnalysisService.defaultEngineId());
+    analysisEnabledCheckBox.setSelected(true);
+    analysisDebounce.setOnFinished(event -> requestAnalysis());
+
+    chessBoard
+        .positionProperty()
+        .addListener(
+            (observable, oldPosition, newPosition) -> {
+              if (newPosition != null) {
+                analysisDebounce.playFromStart();
+              }
+            });
+
+    analysisEnabledCheckBox
+        .selectedProperty()
+        .addListener(
+            (observable, oldValue, enabled) -> {
+              if (enabled) {
+                requestAnalysis();
+              } else {
+                clearAnalysisLabels();
+              }
+            });
+
+    analysisEngineCombo
+        .valueProperty()
+        .addListener(
+            (observable, oldValue, selectedEngine) -> {
+              if (selectedEngine != null && analysisEnabledCheckBox.isSelected()) {
+                requestAnalysis();
+              }
+            });
+  }
+
+  private void selectAnalysisEngine(String engineId) {
+    for (ComputerEngineDescriptor engine : analysisEngineCombo.getItems()) {
+      if (engine.id().equals(engineId)) {
+        analysisEngineCombo.getSelectionModel().select(engine);
+        return;
+      }
+    }
+    analysisEngineCombo.getSelectionModel().selectFirst();
+  }
+
+  private void requestAnalysis() {
+    if (!analysisEnabledCheckBox.isSelected()) {
+      clearAnalysisLabels();
+      return;
+    }
+    ComputerEngineDescriptor selectedEngine = analysisEngineCombo.getValue();
+    PositionSnapshot position = chessBoard.getPosition();
+    if (selectedEngine == null || position == null) {
+      clearAnalysisLabels();
+      return;
+    }
+    analysisBestMoveLabel.setText("Best move: …");
+    analysisScoreLabel.setText("Analysing with " + selectedEngine.displayName() + "…");
+    positionAnalysisService
+        .analyze(position, selectedEngine.id())
+        .whenComplete(
+            (result, failure) ->
+                Platform.runLater(
+                    () -> {
+                      if (failure != null) {
+                        showAnalysisFailure(failure);
+                      } else if (result != null) {
+                        result.ifPresent(this::renderAnalysis);
+                      }
+                    }));
+  }
+
+  private void renderAnalysis(PositionAnalysisResult result) {
+    analysisBestMoveLabel.setText("Best move: " + result.bestMoveSan().orElse("—"));
+    String score = result.scoreText().orElse("—");
+    String depth = result.depth().map(value -> "  ·  depth " + value).orElse("");
+    analysisScoreLabel.setText("Score: " + score + depth);
+  }
+
+  private void showAnalysisFailure(Throwable failure) {
+    analysisBestMoveLabel.setText("Best move: —");
+    analysisScoreLabel.setText("Analysis unavailable");
+  }
+
+  private void clearAnalysisLabels() {
+    analysisBestMoveLabel.setText("Best move: —");
+    analysisScoreLabel.setText("Score: —");
   }
 }

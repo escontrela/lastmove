@@ -117,6 +117,24 @@ public final class ComputerEngineSettingsService {
     return required;
   }
 
+  /** Returns the user-selected default analysis engine, or empty to fall back to Knightshade. */
+  public Optional<String> defaultAnalysisEngineId() {
+    return repository.findDefaultAnalysisEngineId();
+  }
+
+  /** Persists or clears the default analysis engine, rejecting blank identifiers. */
+  public void updateDefaultAnalysisEngineId(Optional<String> engineId) {
+    Optional<String> required =
+        Objects.requireNonNull(engineId, "engineId must not be null")
+            .map(String::trim)
+            .filter(value -> !value.isEmpty());
+    if (required.isPresent()) {
+      repository.saveDefaultAnalysisEngineId(required.orElseThrow());
+    } else {
+      repository.deleteDefaultAnalysisEngineId();
+    }
+  }
+
   private static Path parsePath(String value, String description) {
     String required =
         Objects.requireNonNull(value, "executablePath must not be null").trim();

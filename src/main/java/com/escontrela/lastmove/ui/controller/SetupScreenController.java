@@ -1,9 +1,11 @@
 package com.escontrela.lastmove.ui.controller;
 
+import com.escontrela.lastmove.application.computer.ComputerEngineDescriptor;
 import com.escontrela.lastmove.application.computer.ComputerEngineHealth;
 import com.escontrela.lastmove.application.computer.ComputerEngineIds;
 import com.escontrela.lastmove.application.service.ComputerEngineHealthService;
 import com.escontrela.lastmove.application.service.ComputerEngineSettingsService;
+import com.escontrela.lastmove.application.service.PositionAnalysisService;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
 import com.escontrela.lastmove.ui.screen.UiScreenController;
 import com.escontrela.lastmove.ui.screen.UiScreenId;
@@ -13,6 +15,7 @@ import com.escontrela.lastmove.ui.service.StartupPreferencesService;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
@@ -36,6 +39,7 @@ public class SetupScreenController implements UiScreenController {
     private final BoardAppearancePreferencesService boardAppearancePreferencesService;
     private final ComputerEngineSettingsService computerEngineSettingsService;
     private final ComputerEngineHealthService computerEngineHealthService;
+    private final PositionAnalysisService positionAnalysisService;
 
     @FXML
     private BorderPane root;
@@ -63,6 +67,10 @@ public class SetupScreenController implements UiScreenController {
     private Label maiaValidationLabel;
     @FXML
     private ComboBox<Duration> knightshadeThinkingTimeCombo;
+    @FXML
+    private ComboBox<ComputerEngineDescriptor> analysisEngineCombo;
+    @FXML
+    private CheckBox analysisEngineDefaultCheckBox;
 
     private static final List<Duration> THINKING_TIME_PRESETS = List.of(
             Duration.ofMillis(500),
@@ -95,6 +103,21 @@ public class SetupScreenController implements UiScreenController {
                 }
             };
 
+    private static final StringConverter<ComputerEngineDescriptor> ENGINE_CONVERTER =
+            new StringConverter<>() {
+                @Override
+                public String toString(ComputerEngineDescriptor descriptor) {
+                    return descriptor == null
+                            ? ""
+                            : descriptor.displayName() + " " + descriptor.version();
+                }
+
+                @Override
+                public ComputerEngineDescriptor fromString(String value) {
+                    throw new UnsupportedOperationException("The engine selector is not editable");
+                }
+            };
+
     private boolean savedNightMode;
     private boolean savedSplashScreen;
     private boolean savedBoardVisualEffects;
@@ -102,6 +125,7 @@ public class SetupScreenController implements UiScreenController {
     private String savedMaiaExecutablePath;
     private String savedMaiaWeightsPath;
     private Duration savedKnightshadeThinkingTime;
+    private String savedAnalysisEngineDefaultId;
 
     public SetupScreenController(
             @Lazy UiFlowManager uiFlowManager,
@@ -109,13 +133,15 @@ public class SetupScreenController implements UiScreenController {
             StartupPreferencesService startupPreferencesService,
             BoardAppearancePreferencesService boardAppearancePreferencesService,
             ComputerEngineSettingsService computerEngineSettingsService,
-            ComputerEngineHealthService computerEngineHealthService) {
+            ComputerEngineHealthService computerEngineHealthService,
+            PositionAnalysisService positionAnalysisService) {
         this.uiFlowManager = uiFlowManager;
         this.themeService = themeService;
         this.startupPreferencesService = startupPreferencesService;
         this.boardAppearancePreferencesService = boardAppearancePreferencesService;
         this.computerEngineSettingsService = computerEngineSettingsService;
         this.computerEngineHealthService = computerEngineHealthService;
+        this.positionAnalysisService = positionAnalysisService;
     }
 
     @FXML
@@ -143,6 +169,11 @@ public class SetupScreenController implements UiScreenController {
         knightshadeThinkingTimeCombo.setItems(FXCollections.observableArrayList(THINKING_TIME_PRESETS));
         knightshadeThinkingTimeCombo.setConverter(THINKING_TIME_CONVERTER);
         knightshadeThinkingTimeCombo.valueProperty().addListener((ignored, oldValue, newValue) ->
+                updateApplyButtonVisibility());
+        analysisEngineCombo.setConverter(ENGINE_CONVERTER);
+        analysisEngineCombo.valueProperty().addListener((ignored, oldValue, newValue) ->
+                updateApplyButtonVisibility());
+        analysisEngineDefaultCheckBox.selectedProperty().addListener((ignored, oldValue, newValue) ->
                 updateApplyButtonVisibility());
     }
 
@@ -174,6 +205,11 @@ public class SetupScreenController implements UiScreenController {
             knightshadeThinkingTimeCombo.getItems().add(savedKnightshadeThinkingTime);
         }
         knightshadeThinkingTimeCombo.getSelectionModel().select(savedKnightshadeThinkingTime);
+        analysisEngineCombo.setItems(FXCollections.observableArrayList(positionAnalysisService.availableEngines()));
+        savedAnalysisEngineDefaultId =
+                computerEngineSettingsService.defaultAnalysisEngineId().orElse(null);
+        analysisEngineDefaultCheckBox.setSelected(savedAnalysisEngineDefaultId != null);
+        selectAnalysisEngine(positionAnalysisService.defaultEngineId());
         clearSunfishValidation();
         clearMaiaValidation();
         updateApplyButtonVisibility();
@@ -198,6 +234,9 @@ public class SetupScreenController implements UiScreenController {
         }
         savedKnightshadeThinkingTime = computerEngineSettingsService.updateThinkingTime(
                 ComputerEngineIds.KNIGHTSHADE, knightshadeThinkingTimeCombo.getValue());
+        savedAnalysisEngineDefaultId = effectiveAnalysisEngineDefaultId();
+        computerEngineSettingsService.updateDefaultAnalysisEngineId(
+                Optional.ofNullable(savedAnalysisEngineDefaultId));
         themeService.setNightMode(nightModeCheckBox.isSelected());
         startupPreferencesService.setSplashScreenEnabled(showSplashCheckBox.isSelected());
         boardAppearancePreferencesService.setBoardVisualEffectsEnabled(boardVisualEffectsCheckBox.isSelected());
@@ -226,6 +265,24 @@ public class SetupScreenController implements UiScreenController {
 
     private static String trimmed(String value) {
         return value == null ? "" : value.trim();
+    }
+
+    private void selectAnalysisEngine(String engineId) {
+        for (ComputerEngineDescriptor engine : analysisEngineCombo.getItems()) {
+            if (engine.id().equals(engineId)) {
+                analysisEngineCombo.getSelectionModel().select(engine);
+                return;
+            }
+        }
+        analysisEngineCombo.getSelectionModel().selectFirst();
+    }
+
+    private String effectiveAnalysisEngineDefaultId() {
+        if (!analysisEngineDefaultCheckBox.isSelected()) {
+            return null;
+        }
+        ComputerEngineDescriptor selected = analysisEngineCombo.getValue();
+        return selected == null ? null : selected.id();
     }
 
     /** Runs a non-blocking end-to-end UCI probe against the saved Sunfish executable. */
@@ -259,7 +316,9 @@ public class SetupScreenController implements UiScreenController {
                 || !trimmed(maiaExecutablePathField.getText()).equals(savedMaiaExecutablePath)
                 || !trimmed(maiaWeightsPathField.getText()).equals(savedMaiaWeightsPath)
                 || !Objects.equals(
-                        knightshadeThinkingTimeCombo.getValue(), savedKnightshadeThinkingTime);
+                        knightshadeThinkingTimeCombo.getValue(), savedKnightshadeThinkingTime)
+                || !Objects.equals(
+                        effectiveAnalysisEngineDefaultId(), savedAnalysisEngineDefaultId);
         applyButton.setVisible(hasUnsavedChanges);
         applyButton.setManaged(hasUnsavedChanges);
         testSunfishButton.setDisable(hasUnsavedChanges || savedSunfishExecutablePath == null);
