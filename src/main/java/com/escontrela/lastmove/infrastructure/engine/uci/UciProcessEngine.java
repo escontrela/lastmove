@@ -4,6 +4,8 @@ import com.escontrela.lastmove.application.computer.ComputerEngineDescriptor;
 import com.escontrela.lastmove.application.computer.ComputerEngineException;
 import com.escontrela.lastmove.application.computer.ComputerMoveEngine;
 import com.escontrela.lastmove.application.computer.ComputerMoveRequest;
+import com.escontrela.lastmove.application.computer.EngineAnalysisResult;
+import com.escontrela.lastmove.application.computer.EngineScore;
 import com.escontrela.lastmove.domain.game.MoveCommand;
 import com.escontrela.lastmove.domain.service.FenService;
 import java.io.BufferedReader;
@@ -14,6 +16,7 @@ import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
@@ -104,6 +107,21 @@ public final class UciProcessEngine implements ComputerMoveEngine {
   }
 
   @Override
+  public CompletionStage<EngineAnalysisResult> analyze(ComputerMoveRequest request) {
+    ComputerMoveRequest required =
+        Objects.requireNonNull(request, "request must not be null");
+    if (closed) {
+      return CompletableFuture.failedFuture(closedEngineException());
+    }
+    try {
+      return CompletableFuture.supplyAsync(
+          () -> analyzeBlocking(required), protocolExecutor);
+    } catch (RejectedExecutionException exception) {
+      return CompletableFuture.failedFuture(closedEngineException());
+    }
+  }
+
+  @Override
   public void cancelSearch() {
     if (!thinking) {
       return;
@@ -140,6 +158,16 @@ public final class UciProcessEngine implements ComputerMoveEngine {
   }
 
   private MoveCommand chooseMoveBlocking(ComputerMoveRequest request) {
+    EngineAnalysisResult result = analyzeBlocking(request);
+    return result
+        .bestMove()
+        .orElseThrow(
+            () ->
+                new ComputerEngineException(
+                    "The UCI engine " + descriptor().displayName() + " returned no playable move"));
+  }
+
+  private EngineAnalysisResult analyzeBlocking(ComputerMoveRequest request) {
     ensureStarted();
     thinking = true;
     searchCommandSent = false;
@@ -154,11 +182,7 @@ public final class UciProcessEngine implements ComputerMoveEngine {
       }
       Duration responseTimeout =
           request.maximumThinkingTime().plus(configuration.searchResponseTimeout());
-      String response = awaitLine(line -> line.startsWith("bestmove "), responseTimeout);
-      if (cancellationRequested.get()) {
-        throw new CancellationException("The UCI search was cancelled");
-      }
-      return parseBestMove(response);
+      return awaitBestMoveWithInfo(responseTimeout);
     } catch (ComputerEngineException exception) {
       synchronized (lifecycleMonitor) {
         terminateProcess();
@@ -168,6 +192,47 @@ public final class UciProcessEngine implements ComputerMoveEngine {
       thinking = false;
       searchCommandSent = false;
       cancellationRequested.set(false);
+    }
+  }
+
+  private EngineAnalysisResult awaitBestMoveWithInfo(Duration timeout) {
+    long remainingNanos = timeout.toNanos();
+    long deadline = System.nanoTime() + remainingNanos;
+    Optional<EngineScore> score = Optional.empty();
+    Optional<Integer> depth = Optional.empty();
+    try {
+      while (remainingNanos > 0) {
+        String line = outputLines.poll(remainingNanos, TimeUnit.NANOSECONDS);
+        if (line == null) {
+          break;
+        }
+        if (END_OF_OUTPUT.equals(line)) {
+          throw new ComputerEngineException(
+              "UCI engine " + descriptor().displayName() + " stopped unexpectedly");
+        }
+        if (line.startsWith("bestmove ")) {
+          if (cancellationRequested.get()) {
+            throw new CancellationException("The UCI search was cancelled");
+          }
+          return new EngineAnalysisResult(parseBestMoveToken(line), score, depth);
+        }
+        if (line.startsWith("info ")) {
+          Optional<EngineScore> parsedScore = UciInfoParser.parseScore(line);
+          if (parsedScore.isPresent()) {
+            score = parsedScore;
+          }
+          Optional<Integer> parsedDepth = UciInfoParser.parseDepth(line);
+          if (parsedDepth.isPresent()) {
+            depth = parsedDepth;
+          }
+        }
+        remainingNanos = deadline - System.nanoTime();
+      }
+      throw new ComputerEngineException(
+          "UCI engine " + descriptor().displayName() + " did not respond before the timeout");
+    } catch (InterruptedException exception) {
+      Thread.currentThread().interrupt();
+      throw new ComputerEngineException("Interrupted while waiting for the UCI engine", exception);
     }
   }
 
@@ -257,12 +322,12 @@ public final class UciProcessEngine implements ComputerMoveEngine {
     }
   }
 
-  private MoveCommand parseBestMove(String response) {
+  private Optional<MoveCommand> parseBestMoveToken(String response) {
     String[] tokens = response.split("\\s+");
     if (tokens.length < 2 || "(none)".equals(tokens[1]) || "0000".equals(tokens[1])) {
-      throw new ComputerEngineException("The UCI engine returned no playable move: " + response);
+      return Optional.empty();
     }
-    return UciMoveParser.parse(tokens[1]);
+    return Optional.of(UciMoveParser.parse(tokens[1]));
   }
 
   private void sendCommand(String command) {

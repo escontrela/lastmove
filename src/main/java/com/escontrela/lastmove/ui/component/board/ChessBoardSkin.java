@@ -6,6 +6,8 @@ import com.escontrela.lastmove.domain.game.PositionPiece;
 import com.escontrela.lastmove.domain.game.PositionSnapshot;
 import com.escontrela.lastmove.ui.model.BoardMoveInput;
 import com.escontrela.lastmove.ui.service.ChessSound;
+import java.util.HashMap;
+import java.util.Map;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.event.EventHandler;
@@ -51,6 +53,9 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
   // 1. ESTADO DE RENDERIZADO: Matriz fija para indexar y acceder a los nodos visuales
   private final ChessSquareControl[][] squares =
       new ChessSquareControl[ChessConstants.FILES][ChessConstants.RANKS];
+
+  // Cache de imágenes de piezas para no releer los PNG del classpath en cada renderizado.
+  private final Map<String, Image> pieceImages = new HashMap<>();
 
   // 2. ESTADO DE CAPTURA DE INPUT: Separado por tipo de interacción para evitar interferencias
   // Click-click: almacena la primera casilla hasta que se hace clic en la segunda
@@ -516,14 +521,22 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     }
     for (PositionPiece piece : snapshot.pieces()) {
       squares[piece.square().getFile()][piece.square().getRank()]
-          .setPieceImage(pieceResource(piece));
+          .setPieceImageObject(pieceImage(piece));
     }
   }
 
-  private String pieceResource(PositionPiece piece) {
-    String color = piece.color().name().toLowerCase();
-    String type = piece.type().name().toLowerCase();
-    return "/chess-pieces/" + color + "-" + type + ".png";
+  private Image pieceImage(PositionPiece piece) {
+    String key = piece.color().name().toLowerCase() + "-" + piece.type().name().toLowerCase();
+    return pieceImages.computeIfAbsent(key, this::loadPieceImage);
+  }
+
+  private Image loadPieceImage(String key) {
+    String resourcePath = "/chess-pieces/" + key + ".png";
+    var stream = ChessBoardSkin.class.getResourceAsStream(resourcePath);
+    if (stream == null) {
+      throw new IllegalArgumentException("No se encontró el recurso: " + resourcePath);
+    }
+    return new Image(stream);
   }
 
   private void playMoveSoundIfNeeded(PositionSnapshot previous, PositionSnapshot current) {

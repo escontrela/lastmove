@@ -74,23 +74,25 @@ public final class IterativeDeepeningSearch implements Search {
     KillerMoves killers = new KillerMoves();
     HistoryTable history = new HistoryTable();
     TimeManager timeManager = new TimeManager(limits.maxTimeMillis());
+    StopSignal timeBoundStop = () -> stop.shouldStop() || timeManager.exceeded();
 
-    bestRootMove = rootMoves.getFirst();
+    Move bestMove = rootMoves.getFirst();
     int bestScore = 0;
     int completedDepth = 0;
     for (int depth = 1; depth <= maxDepth; depth++) {
-      int score = searchDepth(board, depth, bestScore, killers, history, stop);
-      if (stop.shouldStop()) {
+      int score = searchDepth(board, depth, bestScore, killers, history, timeBoundStop);
+      if (timeBoundStop.shouldStop()) {
         break;
       }
       completedDepth = depth;
       bestScore = score;
-      if (Scores.isMate(score) || timeManager.exceeded()) {
+      bestMove = bestRootMove;
+      if (Scores.isMate(score)) {
         break;
       }
     }
     return new SearchResult(
-        bestRootMove, bestScore, completedDepth, totalNodes(), elapsedMillis(startedAt));
+        bestMove, bestScore, completedDepth, totalNodes(), elapsedMillis(startedAt));
   }
 
   private int searchDepth(

@@ -21,4 +21,19 @@ public interface ComputerEngineSettingsRepository {
   default void saveThinkingTimeMillis(String engineId, long thinkingTimeMillis) {
     // Not persisted by default; repositories that retain thinking time override this method.
   }
+
+  /** Returns the engine selected by the user as the default for position analysis, if any. */
+  default Optional<String> findDefaultAnalysisEngineId() {
+    return Optional.empty();
+  }
+
+  /** Persists the engine selected by the user as the default for position analysis. */
+  default void saveDefaultAnalysisEngineId(String engineId) {
+    // Not persisted by default; repositories that retain the default override this method.
+  }
+
+  /** Removes the stored default so analysis falls back to its built-in default engine. */
+  default void deleteDefaultAnalysisEngineId() {
+    // Not persisted by default; repositories that retain the default override this method.
+  }
 }

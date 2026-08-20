@@ -119,6 +119,20 @@ class ComputerEngineSettingsServiceTest {
     assertEquals(Duration.ofMillis(500), service.thinkingTime("knightshade"));
   }
 
+  @Test
+  void storesClearsAndReturnsTheDefaultAnalysisEngine() {
+    InMemorySettingsRepository repository = new InMemorySettingsRepository();
+    ComputerEngineSettingsService service = service(repository);
+
+    assertTrue(service.defaultAnalysisEngineId().isEmpty());
+
+    service.updateDefaultAnalysisEngineId(Optional.of(" sunfish "));
+    assertEquals(Optional.of("sunfish"), service.defaultAnalysisEngineId());
+
+    service.updateDefaultAnalysisEngineId(Optional.empty());
+    assertTrue(service.defaultAnalysisEngineId().isEmpty());
+  }
+
   private static ComputerEngineSettingsService service(InMemorySettingsRepository repository) {
     return new ComputerEngineSettingsService(
         repository, "/default/sunfish-uci", DEFAULT_MAIA_WEIGHTS);
@@ -129,6 +143,7 @@ class ComputerEngineSettingsServiceTest {
 
     private final Map<String, ComputerEngineSettings> settings = new HashMap<>();
     private final Map<String, Long> thinkingTimes = new HashMap<>();
+    private String defaultAnalysisEngineId;
 
     @Override
     public Optional<ComputerEngineSettings> findByEngineId(String engineId) {
@@ -153,6 +168,21 @@ class ComputerEngineSettingsServiceTest {
     @Override
     public void saveThinkingTimeMillis(String engineId, long thinkingTimeMillis) {
       thinkingTimes.put(engineId, thinkingTimeMillis);
+    }
+
+    @Override
+    public Optional<String> findDefaultAnalysisEngineId() {
+      return Optional.ofNullable(defaultAnalysisEngineId);
+    }
+
+    @Override
+    public void saveDefaultAnalysisEngineId(String engineId) {
+      this.defaultAnalysisEngineId = engineId;
+    }
+
+    @Override
+    public void deleteDefaultAnalysisEngineId() {
+      this.defaultAnalysisEngineId = null;
     }
   }
 }

@@ -612,12 +612,6 @@
     -fx-text-fill: #6a7683;
 }
 
-.splash-loading-status {
-    -fx-font-family: "SF Mono", "Cascadia Code", monospace;
-    -fx-font-size: 13px;
-    -fx-text-fill: #5f6c79;
-}
-
 .splash-loader-cell {
     -fx-min-width: 9px;
     -fx-min-height: 9px;
@@ -627,6 +621,12 @@
     -fx-max-height: 9px;
     -fx-background-color: #1c69d4;
     -fx-background-radius: 3px;
+}
+
+.splash-loading-status {
+    -fx-font-family: "SF Mono", "Cascadia Code", monospace;
+    -fx-font-size: 13px;
+    -fx-text-fill: #5f6c79;
 }
 
 .status-brand-logo { -fx-opacity: 0.82; }
@@ -688,6 +688,11 @@
     -fx-background-color: #ffffff;
     -fx-border-color: #e6e6e6;
     -fx-border-width: 1px;
+}
+
+.analysis-value {
+    -fx-font-size: 14px;
+    -fx-text-fill: #262626;
 }
 
 .chess-board {

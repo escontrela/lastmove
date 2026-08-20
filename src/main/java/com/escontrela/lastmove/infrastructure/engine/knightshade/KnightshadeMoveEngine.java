@@ -4,6 +4,8 @@ import com.escontrela.lastmove.application.computer.ComputerEngineDescriptor;
 import com.escontrela.lastmove.application.computer.ComputerEngineException;
 import com.escontrela.lastmove.application.computer.ComputerMoveEngine;
 import com.escontrela.lastmove.application.computer.ComputerMoveRequest;
+import com.escontrela.lastmove.application.computer.EngineAnalysisResult;
+import com.escontrela.lastmove.application.computer.EngineScore;
 import com.escontrela.lastmove.domain.game.MoveCommand;
 import com.escontrela.lastmove.domain.service.FenService;
 import com.knightshade.engine.KnightshadeEngine;
@@ -88,6 +90,23 @@ public final class KnightshadeMoveEngine implements ComputerMoveEngine {
   }
 
   @Override
+  public CompletionStage<EngineAnalysisResult> analyze(ComputerMoveRequest request) {
+    ComputerMoveRequest required =
+        Objects.requireNonNull(request, "request must not be null");
+    if (closed.get()) {
+      return CompletableFuture.failedFuture(closedEngineException());
+    }
+    thinking.set(true);
+    cancellationRequested.set(false);
+    try {
+      return CompletableFuture.supplyAsync(() -> analyzeBlocking(required), executor);
+    } catch (RejectedExecutionException exception) {
+      thinking.set(false);
+      return CompletableFuture.failedFuture(closedEngineException());
+    }
+  }
+
+  @Override
   public void cancelSearch() {
     cancellationRequested.set(true);
   }
@@ -101,6 +120,14 @@ public final class KnightshadeMoveEngine implements ComputerMoveEngine {
   }
 
   private MoveCommand chooseMoveBlocking(ComputerMoveRequest request) {
+    EngineAnalysisResult result = analyzeBlocking(request);
+    return result
+        .bestMove()
+        .orElseThrow(
+            () -> new ComputerEngineException("Knightshade found no playable move"));
+  }
+
+  private EngineAnalysisResult analyzeBlocking(ComputerMoveRequest request) {
     long startedAt = System.nanoTime();
     try {
       String fen = fenService.fromSnapshot(request.position()).getValue();
@@ -111,22 +138,29 @@ public final class KnightshadeMoveEngine implements ComputerMoveEngine {
               fen,
               SearchLimits.timeOnly(request.maximumThinkingTime()),
               cancellationRequested::get);
-      if (result.move() == null) {
-        log.warn("Knightshade found no playable move for fen='{}'", fen);
-        throw new ComputerEngineException("Knightshade found no playable move");
-      }
+      EngineScore score =
+          result.mate()
+              ? EngineScore.mateIn(signedMatePlies(result))
+              : EngineScore.centipawns(result.score());
       log.info(
-          "Knightshade chose {} score={} depth={} nodes={} elapsedMs={} totalMs={}",
-          result.move().toUci(),
+          "Knightshade analysed {} score={} depth={} nodes={} elapsedMs={} totalMs={}",
+          result.move() == null ? "(none)" : result.move().toUci(),
           result.score(),
           result.depth(),
           result.nodes(),
           result.elapsedMillis(),
           (System.nanoTime() - startedAt) / 1_000_000L);
-      return new MoveCommand(
-          result.move().from(),
-          result.move().to(),
-          Optional.ofNullable(result.move().promotion()));
+      if (result.move() == null) {
+        return new EngineAnalysisResult(
+            Optional.empty(), Optional.of(score), Optional.of(result.depth()));
+      }
+      MoveCommand move =
+          new MoveCommand(
+              result.move().from(),
+              result.move().to(),
+              Optional.ofNullable(result.move().promotion()));
+      return new EngineAnalysisResult(
+          Optional.of(move), Optional.of(score), Optional.of(result.depth()));
     } catch (ComputerEngineException exception) {
       log.error("Knightshade search failed", exception);
       throw exception;
@@ -134,6 +168,11 @@ public final class KnightshadeMoveEngine implements ComputerMoveEngine {
       thinking.set(false);
       cancellationRequested.set(false);
     }
+  }
+
+  private static int signedMatePlies(SearchResult result) {
+    int plies = result.matePlies();
+    return result.score() > 0 ? plies : -plies;
   }
 
   private ComputerEngineException closedEngineException() {

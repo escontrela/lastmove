@@ -66,6 +66,20 @@ class IterativeDeepeningSearchTest {
   }
 
   @Test
+  void findsALegalMoveInAQueenEndgameWithinTheTimeBudget() {
+    String fen = "8/1K5k/5q2/2p5/8/8/8/8 b - - 7 69";
+    var board = FenParser.parse(fen);
+    var legal = new LegalMoveGenerator().generate(board);
+    var search = new IterativeDeepeningSearch(new LegalMoveGenerator(), new PieceSquareEvaluator());
+
+    SearchResult result =
+        search.search(board, SearchLimits.timeOnly(Duration.ofSeconds(1)), StopSignal.never());
+
+    assertNotNull(result.move());
+    assertTrue(legal.stream().anyMatch(move -> move.equals(result.move())));
+  }
+
+  @Test
   void respectsTheTimeBudgetAndReturnsALegalMove() {
     String fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     var board = FenParser.parse(fen);

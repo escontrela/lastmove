@@ -82,6 +82,15 @@
                     </VBox>
                     <VBox maxWidth="680.0" spacing="12.0" styleClass="setup-card">
                         <padding><Insets bottom="32.0" left="32.0" right="32.0" top="32.0" /></padding>
+                        <Label styleClass="eyebrow-label" text="Analysis" />
+                        <Label styleClass="card-title" text="Default analysis engine" />
+                        <Label styleClass="card-copy" text="Choose the engine that evaluates each position in the PGN analysis workspace. This model is preselected when you open a game." wrapText="true" />
+                        <Label styleClass="settings-field-label" text="Engine" />
+                        <ComboBox fx:id="analysisEngineCombo" maxWidth="Infinity" />
+                        <CheckBox fx:id="analysisEngineDefaultCheckBox" mnemonicParsing="false" styleClass="settings-check-box" text="Use as default analysis engine" />
+                    </VBox>
+                    <VBox maxWidth="680.0" spacing="12.0" styleClass="setup-card">
+                        <padding><Insets bottom="32.0" left="32.0" right="32.0" top="32.0" /></padding>
                         <Label styleClass="eyebrow-label" text="Navigation" />
                         <Label styleClass="card-title" text="Analysis keyboard shortcuts" />
                         <Label styleClass="card-copy" text="Available in the PGN analysis workspace when no modal dialog or text field is active." wrapText="true" />
