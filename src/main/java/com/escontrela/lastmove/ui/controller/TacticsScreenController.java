@@ -11,6 +11,7 @@ import com.escontrela.lastmove.application.tactics.TacticExerciseSummary;
 import com.escontrela.lastmove.application.tactics.TacticSuiteSummary;
 import com.escontrela.lastmove.domain.player.PlayerId;
 import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
+import com.escontrela.lastmove.ui.component.list.ManagedListCell;
 import com.escontrela.lastmove.ui.component.message.TextInputModal;
 import com.escontrela.lastmove.ui.event.OpenTacticsWorkspaceEvent;
 import com.escontrela.lastmove.ui.event.SelectTacticDestinationEvent;
@@ -25,7 +26,6 @@ import java.util.Optional;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
-import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.HBox;
@@ -56,6 +56,7 @@ public final class TacticsScreenController implements UiScreenController {
   private final UiEventBus uiEventBus;
   private final UiFlowManager uiFlowManager;
   private Optional<PlayerId> ownerId = Optional.empty();
+  private List<TacticSuiteSummary> visibleSuites = List.of();
   private com.escontrela.lastmove.domain.analysis.AnalysisSessionId pendingAnalysisSessionId;
 
   public TacticsScreenController(
@@ -120,12 +121,18 @@ public final class TacticsScreenController implements UiScreenController {
   }
 
   private void showTacticsActions(TacticSuiteSummary summary, double sceneX, double sceneY) {
+    int selectedIndex = visibleSuites.indexOf(summary);
     contextualMenuPanel.clearItems();
     contextualMenuPanel.addItem("Open tactic suite", "", event -> openSuite(summary));
     contextualMenuPanel.addItem("Rename tactic suite…", "", event -> renameSuite(summary));
     contextualMenuPanel.addSeparator();
-    contextualMenuPanel.addItem("Move tactic suite up", "↑", event -> moveSuite(summary, -1));
-    contextualMenuPanel.addItem("Move tactic suite down", "↓", event -> moveSuite(summary, 1));
+    contextualMenuPanel.addItem(
+        "Move tactic suite up", "↑", selectedIndex <= 0, event -> moveSuite(summary, -1));
+    contextualMenuPanel.addItem(
+        "Move tactic suite down",
+        "↓",
+        selectedIndex < 0 || selectedIndex >= visibleSuites.size() - 1,
+        event -> moveSuite(summary, 1));
     contextualMenuPanel.addSeparator();
     contextualMenuPanel.addItem("Delete tactic suite…", "", event -> deleteSuite(summary));
     contextualMenuPanel.showAtScene(sceneX, sceneY);
@@ -182,6 +189,7 @@ public final class TacticsScreenController implements UiScreenController {
   private void refresh() {
     ownerId = currentUserService.activePlayerState().playerId();
     if (ownerId.isEmpty()) {
+      visibleSuites = List.of();
       suiteList.getItems().clear();
       suiteCountLabel.setText("0 suites");
       emptyStateLabel.setText("Choose an active player profile to create tactical suites.");
@@ -189,14 +197,17 @@ public final class TacticsScreenController implements UiScreenController {
       emptyStateLabel.setManaged(true);
       return;
     }
-    List<TacticSuiteSummary> suites = tacticService.listSuites(ownerId.orElseThrow());
-    suiteList.getItems().setAll(suites);
-    suiteCountLabel.setText(suites.size() + (suites.size() == 1 ? " suite" : " suites"));
+    visibleSuites = tacticService.listSuites(ownerId.orElseThrow());
+    suiteList.getItems().setAll(visibleSuites);
+    suiteCountLabel.setText(
+        visibleSuites.size() + (visibleSuites.size() == 1 ? " suite" : " suites"));
     emptyStateLabel.setText("Create a suite, then add a position and author its solution line.");
-    emptyStateLabel.setVisible(suites.isEmpty());
-    emptyStateLabel.setManaged(suites.isEmpty());
+    emptyStateLabel.setVisible(visibleSuites.isEmpty());
+    emptyStateLabel.setManaged(visibleSuites.isEmpty());
     statusLabel.setText(
-        suites.isEmpty() ? "Ready to create your first tactic suite" : "Open a suite to train");
+        visibleSuites.isEmpty()
+            ? "Ready to create your first tactic suite"
+            : "Open a suite to train");
   }
 
   private void openSuite(TacticSuiteSummary suite) {
@@ -216,7 +227,7 @@ public final class TacticsScreenController implements UiScreenController {
     uiFlowManager.show(UiScreenId.TACTICS_WORKSPACE);
   }
 
-  private final class SuiteCell extends ListCell<TacticSuiteSummary> {
+  private final class SuiteCell extends ManagedListCell<TacticSuiteSummary> {
     private final HBox row = new HBox(12);
     private final VBox details = new VBox(4);
     private final Label title = new Label();

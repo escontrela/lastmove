@@ -15,6 +15,7 @@ import com.escontrela.lastmove.domain.player.PlayerId;
 import com.escontrela.lastmove.domain.study.StudyChapterId;
 import com.escontrela.lastmove.domain.study.StudyId;
 import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
+import com.escontrela.lastmove.ui.component.list.ManagedListCell;
 import com.escontrela.lastmove.ui.component.message.TextInputModal;
 import com.escontrela.lastmove.ui.event.OpenStudyWorkspaceEvent;
 import com.escontrela.lastmove.ui.event.UiEventBus;
@@ -29,7 +30,6 @@ import javafx.fxml.FXML;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.HBox;
@@ -242,12 +242,18 @@ public final class StudiesScreenController implements UiScreenController {
   }
 
   private void showStudyActions(StudySummary summary, double sceneX, double sceneY) {
+    int selectedIndex = visibleStudies.indexOf(summary);
     contextualMenuPanel.clearItems();
     contextualMenuPanel.addItem("Open study", "", event -> openStudy(summary));
     contextualMenuPanel.addItem("Rename study…", "", event -> renameStudy(summary));
     contextualMenuPanel.addSeparator();
-    contextualMenuPanel.addItem("Move study up", "↑", event -> moveStudy(summary, -1));
-    contextualMenuPanel.addItem("Move study down", "↓", event -> moveStudy(summary, 1));
+    contextualMenuPanel.addItem(
+        "Move study up", "↑", selectedIndex <= 0, event -> moveStudy(summary, -1));
+    contextualMenuPanel.addItem(
+        "Move study down",
+        "↓",
+        selectedIndex < 0 || selectedIndex >= visibleStudies.size() - 1,
+        event -> moveStudy(summary, 1));
     contextualMenuPanel.addSeparator();
     contextualMenuPanel.addItem("Delete study…", "", event -> deleteStudy(summary));
     contextualMenuPanel.showAtScene(sceneX, sceneY);
@@ -259,7 +265,7 @@ public final class StudiesScreenController implements UiScreenController {
         : exception.getMessage();
   }
 
-  private final class StudyCell extends ListCell<StudySummary> {
+  private final class StudyCell extends ManagedListCell<StudySummary> {
 
     private final HBox row = new HBox(12);
     private final VBox details = new VBox(4);

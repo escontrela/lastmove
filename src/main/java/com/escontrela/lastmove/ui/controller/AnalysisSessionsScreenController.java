@@ -4,6 +4,8 @@ import com.escontrela.lastmove.application.dto.AnalysisSessionSummary;
 import com.escontrela.lastmove.application.service.AnalysisSessionService;
 import com.escontrela.lastmove.domain.analysis.AnalysisOrigin;
 import com.escontrela.lastmove.domain.analysis.AnalysisSessionId;
+import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
+import com.escontrela.lastmove.ui.component.list.ManagedListCell;
 import com.escontrela.lastmove.ui.component.message.TextInputModal;
 import com.escontrela.lastmove.ui.event.OpenSessionManagementEvent;
 import com.escontrela.lastmove.ui.event.ReturnToAnalysisSessionEvent;
@@ -18,12 +20,11 @@ import javafx.collections.ListChangeListener;
 import javafx.css.PseudoClass;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
-import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.MouseButton;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -54,12 +55,14 @@ public final class AnalysisSessionsScreenController implements UiScreenControlle
   @FXML private Label sessionCountLabel;
   @FXML private Label statusLabel;
   @FXML private ImageView statusBrandLogo;
+  @FXML private ContextualMenuPanel contextualMenuPanel;
 
   private final AnalysisSessionService analysisSessionService;
   private final UiEventBus uiEventBus;
   private final UiFlowManager uiFlowManager;
   private final ListChangeListener<String> themeStyleListener = change -> updateStatusBrandLogo();
   private AnalysisSessionId activeSessionId;
+  private List<AnalysisSessionSummary> visibleSessions = List.of();
   private String returnStatusMessage = "Returned to analysis";
 
   public AnalysisSessionsScreenController(
@@ -157,15 +160,34 @@ public final class AnalysisSessionsScreenController implements UiScreenControlle
     refreshSessions();
   }
 
+  private void showSessionActions(AnalysisSessionSummary session, double sceneX, double sceneY) {
+    int selectedIndex = visibleSessions.indexOf(session);
+    contextualMenuPanel.clearItems();
+    contextualMenuPanel.addItem("Open session", "", event -> openSession(session));
+    contextualMenuPanel.addItem("Rename session…", "", event -> renameSession(session));
+    contextualMenuPanel.addSeparator();
+    contextualMenuPanel.addItem(
+        "Move session up", "↑", selectedIndex <= 0, event -> moveSession(session, true));
+    contextualMenuPanel.addItem(
+        "Move session down",
+        "↓",
+        selectedIndex < 0 || selectedIndex >= visibleSessions.size() - 1,
+        event -> moveSession(session, false));
+    contextualMenuPanel.addSeparator();
+    contextualMenuPanel.addItem("Delete session…", "", event -> deleteSession(session));
+    contextualMenuPanel.showAtScene(sceneX, sceneY);
+  }
+
   private void refreshSessions() {
-    List<AnalysisSessionSummary> sessions = analysisSessionService.listSessions();
-    sessionList.getItems().setAll(sessions);
+    visibleSessions = analysisSessionService.listSessions();
+    sessionList.getItems().setAll(visibleSessions);
     sessionList.refresh();
-    boolean empty = sessions.isEmpty();
+    boolean empty = visibleSessions.isEmpty();
     emptyStateLabel.setManaged(empty);
     emptyStateLabel.setVisible(empty);
     sessionCountLabel.setText(
-        sessions.size() + (sessions.size() == 1 ? " session in memory" : " sessions in memory"));
+        visibleSessions.size()
+            + (visibleSessions.size() == 1 ? " session in memory" : " sessions in memory"));
   }
 
   private void returnToAnalysis(
@@ -197,8 +219,8 @@ public final class AnalysisSessionsScreenController implements UiScreenControlle
     };
   }
 
-  /** Virtualized row with explicit ordering, open, rename and delete actions. */
-  private final class SessionManagementCell extends ListCell<AnalysisSessionSummary> {
+  /** Virtualized managed-list row whose actions are exposed through its context menu. */
+  private final class SessionManagementCell extends ManagedListCell<AnalysisSessionSummary> {
 
     private static final PseudoClass CURRENT = PseudoClass.getPseudoClass("current");
 
@@ -206,15 +228,10 @@ public final class AnalysisSessionsScreenController implements UiScreenControlle
     private final Label marker = new Label("✓");
     private final Label title = new Label();
     private final Label origin = new Label();
-    private final Button moveUp = new Button("↑");
-    private final Button moveDown = new Button("↓");
-    private final Button open = new Button("Open");
-    private final Button rename = new Button("Rename");
-    private final Button delete = new Button("Delete");
 
     private SessionManagementCell() {
-      getStyleClass().add("session-management-cell");
-      row.getStyleClass().add("session-management-row");
+      getStyleClass().addAll("session-management-cell", "study-library-cell");
+      row.getStyleClass().addAll("session-management-row", "study-library-row");
       row.setAlignment(Pos.CENTER_LEFT);
       marker.getStyleClass().add("session-management-marker");
       title.getStyleClass().add("session-management-title");
@@ -222,23 +239,20 @@ public final class AnalysisSessionsScreenController implements UiScreenControlle
       VBox description = new VBox(4, title, origin);
       description.setMaxWidth(Double.MAX_VALUE);
       HBox.setHgrow(description, Priority.ALWAYS);
-      moveUp.getStyleClass().addAll("session-action-button", "session-order-button");
-      moveDown.getStyleClass().addAll("session-action-button", "session-order-button");
-      moveUp.setAccessibleText("Move session up");
-      moveDown.setAccessibleText("Move session down");
-      open.getStyleClass().addAll("session-action-button", "session-open-button");
-      rename.getStyleClass().addAll("session-action-button", "session-rename-button");
-      delete.getStyleClass().addAll("session-action-button", "session-delete-button");
-      row.getChildren().setAll(marker, description, moveUp, moveDown, open, rename, delete);
-      moveUp.setOnAction(event -> moveSession(getItem(), true));
-      moveDown.setOnAction(event -> moveSession(getItem(), false));
-      open.setOnAction(event -> openSession(getItem()));
-      rename.setOnAction(event -> renameSession(getItem()));
-      delete.setOnAction(event -> deleteSession(getItem()));
+      row.getChildren().setAll(marker, description);
       row.setOnMouseClicked(
           event -> {
-            if (event.getClickCount() == 2 && getItem() != null) {
+            if (event.getButton() == MouseButton.PRIMARY
+                && event.getClickCount() == 2
+                && getItem() != null) {
               openSession(getItem());
+            }
+          });
+      row.setOnContextMenuRequested(
+          event -> {
+            if (getItem() != null) {
+              showSessionActions(getItem(), event.getSceneX(), event.getSceneY());
+              event.consume();
             }
           });
     }
@@ -254,9 +268,6 @@ public final class AnalysisSessionsScreenController implements UiScreenControlle
       marker.setVisible(current);
       title.setText(item.title());
       origin.setText(originLabel(item.origin()) + (current ? " • current" : ""));
-      int sessionIndex = sessionList.getItems().indexOf(item);
-      moveUp.setDisable(sessionIndex <= 0);
-      moveDown.setDisable(sessionIndex < 0 || sessionIndex >= sessionList.getItems().size() - 1);
       row.pseudoClassStateChanged(CURRENT, current);
       setGraphic(row);
     }

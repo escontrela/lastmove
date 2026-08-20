@@ -502,7 +502,10 @@ public class PgnAnalysisScreenController implements UiScreenController {
   }
 
   private void configureSessionContextMenu(AnalysisSessionSummary selected) {
+    int selectedIndex = visibleSessions.indexOf(selected);
     contextualMenuPanel.clearItems();
+    contextualMenuPanel.addItem(
+        "Open session", "", event -> activateSession(selectedIndex));
     contextualMenuPanel.addItem(
         "Rename session…",
         "",
@@ -511,9 +514,12 @@ public class PgnAnalysisScreenController implements UiScreenController {
         "Delete session", "", event -> deleteSession(selected.sessionId()));
     contextualMenuPanel.addSeparator();
     contextualMenuPanel.addItem(
-        "Move session up", "↑", event -> moveSession(selected, true));
+        "Move session up", "↑", selectedIndex <= 0, event -> moveSession(selected, true));
     contextualMenuPanel.addItem(
-        "Move session down", "↓", event -> moveSession(selected, false));
+        "Move session down",
+        "↓",
+        selectedIndex < 0 || selectedIndex >= visibleSessions.size() - 1,
+        event -> moveSession(selected, false));
     contextualMenuPanel.addSeparator();
     contextualMenuPanel.addItem("Open sessions…", "", event -> onShowSessions());
   }
