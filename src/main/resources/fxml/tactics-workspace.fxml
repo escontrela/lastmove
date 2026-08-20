@@ -37,8 +37,8 @@
                     <Label styleClass="card-title" text="Position and solution" />
                     <Label styleClass="card-copy" text="Start with a FEN position, then author its accepted line directly on the board." wrapText="true" />
                     <HBox alignment="CENTER_LEFT" spacing="8.0">
-                        <ToolbarIconButton accessibleText="New tactic from FEN" darkIconResource="/images/code_xml_35dp_FFFFFF.png" lightIconResource="/images/code_xml_35dp_000000.png" onAction="#onAddFromFen" tooltipText="New tactic from FEN" />
-                        <ToolbarIconButton accessibleText="Author solution" darkIconResource="/images/clear_35dp_FFFFFF.png" lightIconResource="/images/clear_35dp_000000.png" onAction="#onToggleAuthoring" tooltipText="Author solution" />
+                        <ToolbarIconButton accessibleText="New tactic from FEN" darkIconResource="/images/upload_35dp_FFFFFF.png" lightIconResource="/images/upload_35dp_000000.png" onAction="#onAddFromFen" tooltipText="New tactic from FEN" />
+                        <ToolbarIconButton accessibleText="Author solution" darkIconResource="/images/edit_35dp_FFFFFF.png" lightIconResource="/images/edit_35dp_000000.png" onAction="#onToggleAuthoring" tooltipText="edit/ solution" />
                     </HBox>
                 </VBox>
                 <VBox spacing="12.0" styleClass="rail-card" VBox.vgrow="ALWAYS">

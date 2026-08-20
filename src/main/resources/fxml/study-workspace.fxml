@@ -41,8 +41,8 @@
                     <Label styleClass="card-title" text="Chapter source" />
                     <Label styleClass="card-copy" text="Build a new chapter, start from a FEN position, or bring in a complete PGN." wrapText="true" />
                     <HBox alignment="CENTER_LEFT" spacing="8.0">
-                        <ToolbarIconButton accessibleText="New chapter" darkIconResource="/images/clear_35dp_FFFFFF.png" lightIconResource="/images/clear_35dp_000000.png" onAction="#onAddChapter" tooltipText="New chapter" />
-                        <ToolbarIconButton accessibleText="Chapter from FEN" darkIconResource="/images/code_xml_35dp_FFFFFF.png" lightIconResource="/images/code_xml_35dp_000000.png" onAction="#onAddChapterFromFen" tooltipText="Chapter from FEN" />
+                        <ToolbarIconButton accessibleText="New chapter" darkIconResource="/images/looks_one_35dp_FFFFFF.png" lightIconResource="/images/looks_one_35dp_000000.png" onAction="#onAddChapter" tooltipText="New chapter" />
+                        <ToolbarIconButton accessibleText="Chapter from FEN" darkIconResource="/images/upload_35dp_FFFFFF.png" lightIconResource="/images/upload_35dp_000000.png" onAction="#onAddChapterFromFen" tooltipText="Chapter from FEN" />
                         <ToolbarIconButton accessibleText="Import PGN as chapter" darkIconResource="/images/file_open_35dp_FFFFFF.png" lightIconResource="/images/file_open_35dp_000000.png" onAction="#onImportPgnChapter" tooltipText="Import PGN" />
                     </HBox>
                 </VBox>
