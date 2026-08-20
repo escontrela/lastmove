@@ -18,8 +18,10 @@ import javafx.scene.control.SkinBase;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.ContextMenuEvent;
+import javafx.scene.input.DragEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.TransferMode;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
@@ -187,7 +189,11 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
         square.setOnMouseClicked(
             event -> {
               if (event.getButton() == MouseButton.PRIMARY) {
-                handleSquareClick(control, currentSquare);
+                if (control.isEditorMode()) {
+                  control.handleEditorSquare(currentSquare);
+                } else {
+                  handleSquareClick(control, currentSquare);
+                }
               }
             });
 
@@ -230,7 +236,28 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
             event.consume();
           }
         });
+    grid.setOnDragOver(event -> handlePaletteDragOver(control, event));
+    grid.setOnDragDropped(event -> handlePaletteDrop(control, event));
     applyOrientation();
+  }
+
+  private void handlePaletteDragOver(ChessBoardControl control, DragEvent event) {
+    if (control.isEditorMode()
+        && BoardPieceDragPayload.decode(event.getDragboard().getString()).isPresent()) {
+      event.acceptTransferModes(TransferMode.COPY);
+    }
+    event.consume();
+  }
+
+  private void handlePaletteDrop(ChessBoardControl control, DragEvent event) {
+    Square target = squareAtCoordinate(event.getX(), event.getY());
+    var payload = BoardPieceDragPayload.decode(event.getDragboard().getString());
+    boolean completed = control.isEditorMode() && target != null && payload.isPresent();
+    if (completed) {
+      control.handlePieceDrop(target, payload.orElseThrow());
+    }
+    event.setDropCompleted(completed);
+    event.consume();
   }
 
   private void updateSquareVisualEffects(boolean enabled) {
@@ -281,6 +308,12 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
   }
 
   private void handleArrowPressed(ChessBoardControl control, MouseEvent event) {
+    if (control.isEditorMode()) {
+      Square target = squareAtCoordinate(event.getX(), event.getY());
+      if (target != null) control.handlePieceRemoval(target);
+      event.consume();
+      return;
+    }
     if (event.getClickCount() >= 2) {
       arrowOriginSquare = null;
       previewArrow = null;
@@ -295,6 +328,7 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
   }
 
   private void handleArrowDragged(MouseEvent event) {
+    if (getSkinnable().isEditorMode()) { event.consume(); return; }
     if (arrowOriginSquare == null) {
       return;
     }
@@ -308,6 +342,7 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
   }
 
   private void handleArrowReleased(ChessBoardControl control, MouseEvent event) {
+    if (control.isEditorMode()) { event.consume(); return; }
     if (arrowOriginSquare == null) {
       event.consume();
       return;

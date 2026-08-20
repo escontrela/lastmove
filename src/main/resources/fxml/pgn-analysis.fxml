@@ -20,7 +20,7 @@
 <?import javafx.scene.layout.VBox?>
 
 <StackPane fx:id="root" onContextMenuRequested="#showContextMenu" styleClass="app-shell" stylesheets="@../css/lastmove.css" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.escontrela.lastmove.ui.controller.PgnAnalysisScreenController">
-<BorderPane styleClass="app-shell">
+<BorderPane styleClass="app-shell" StackPane.alignment="TOP_LEFT">
     <top>
         <HBox alignment="CENTER_LEFT" spacing="16.0" styleClass="workspace-header">
             <VBox spacing="6.0">

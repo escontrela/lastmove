@@ -45,6 +45,13 @@ public class ChessBoardControl extends Control {
       new SimpleObjectProperty<>(this, "onMoveRequested");
   private final ObjectProperty<EventHandler<BoardPromotionEvent>> onPromotionRequested =
       new SimpleObjectProperty<>(this, "onPromotionRequested");
+  private final BooleanProperty editorMode = new SimpleBooleanProperty(this, "editorMode", false);
+  private final ObjectProperty<EventHandler<BoardSquareEvent>> onPieceRemovalRequested =
+      new SimpleObjectProperty<>(this, "onPieceRemovalRequested");
+  private final ObjectProperty<EventHandler<BoardSquareEvent>> onEditorSquareRequested =
+      new SimpleObjectProperty<>(this, "onEditorSquareRequested");
+  private final ObjectProperty<EventHandler<BoardPieceDropEvent>> onPieceDropped =
+      new SimpleObjectProperty<>(this, "onPieceDropped");
 
   public ChessBoardControl() {
 
@@ -208,6 +215,32 @@ public class ChessBoardControl extends Control {
 
   public final EventHandler<BoardPromotionEvent> getOnPromotionRequested() {
     return onPromotionRequested.get();
+  }
+
+  /** Enables free-authoring input. It suppresses analysis arrows and normal promotion prompts. */
+  public final BooleanProperty editorModeProperty() { return editorMode; }
+  public final boolean isEditorMode() { return editorMode.get(); }
+  public final void setEditorMode(boolean value) { editorMode.set(value); }
+  public final ObjectProperty<EventHandler<BoardSquareEvent>> onPieceRemovalRequestedProperty() { return onPieceRemovalRequested; }
+  public final void setOnPieceRemovalRequested(EventHandler<BoardSquareEvent> value) { onPieceRemovalRequested.set(value); }
+  public final void handlePieceRemoval(Square square) {
+    EventHandler<BoardSquareEvent> handler = onPieceRemovalRequested.get();
+    if (handler != null) handler.handle(new BoardSquareEvent(this, this, square));
+  }
+  public final void setOnEditorSquareRequested(EventHandler<BoardSquareEvent> value) { onEditorSquareRequested.set(value); }
+  public final void handleEditorSquare(Square square) {
+    EventHandler<BoardSquareEvent> handler = onEditorSquareRequested.get();
+    if (handler != null) handler.handle(new BoardSquareEvent(this, this, square));
+  }
+  public final void setOnPieceDropped(EventHandler<BoardPieceDropEvent> value) {
+    onPieceDropped.set(value);
+  }
+  public final void handlePieceDrop(Square square, BoardPieceDragPayload payload) {
+    EventHandler<BoardPieceDropEvent> handler = onPieceDropped.get();
+    if (handler != null) {
+      handler.handle(
+          new BoardPieceDropEvent(this, this, square, payload.type(), payload.color()));
+    }
   }
 
   /**

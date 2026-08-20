@@ -110,6 +110,12 @@ public class MainWindowController implements UiScreenController {
         uiFlowManager.show(UiScreenId.PGN_ANALYSIS);
     }
 
+    /** Opens the transient board-authoring workspace. */
+    @FXML
+    public void openPositionEditor() {
+        uiFlowManager.show(UiScreenId.POSITION_EDITOR);
+    }
+
     /** Opens the persistent study library for the selected local player. */
     @FXML
     public void openStudies() {
@@ -161,6 +167,7 @@ public class MainWindowController implements UiScreenController {
     private void configureContextMenu() {
         contextualMenuPanel.clearItems();
         contextualMenuPanel.addItem("Analyse a PGN", "", event -> openPgnAnalysis());
+        contextualMenuPanel.addItem("Position editor", "", event -> openPositionEditor());
         if (currentUserService.activePlayerState().status() == ActivePlayerStatus.ACTIVE) {
             contextualMenuPanel.addItem("My studies", "", event -> openStudies());
             contextualMenuPanel.addItem("Tactic suites", "", event -> openTactics());
