@@ -1050,6 +1050,11 @@
     -fx-font-weight: 700;
     -fx-text-fill: #1c69d4;
 }
+.captured-pieces {
+    -fx-min-height: 24px;
+    -fx-pref-height: 24px;
+    -fx-max-width: Infinity;
+}
 .progressive-status-card { -fx-min-height: 86px; }
 
 .computer-thinking-indicator {

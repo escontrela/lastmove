@@ -2,6 +2,7 @@ package com.escontrela.lastmove.domain.game;
 
 import com.escontrela.lastmove.domain.common.PieceColor;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -17,6 +18,7 @@ public final class Ply {
   private final PositionSnapshot resultingPosition;
   private final int moveNumber;
   private final PieceColor movingColor;
+  private final Optional<PositionPiece> capturedPiece;
 
   public Ply(
       UUID id,
@@ -24,6 +26,16 @@ public final class Ply {
       PositionSnapshot resultingPosition,
       int moveNumber,
       PieceColor movingColor) {
+    this(id, move, resultingPosition, moveNumber, movingColor, Optional.empty());
+  }
+
+  public Ply(
+      UUID id,
+      MoveDescriptor move,
+      PositionSnapshot resultingPosition,
+      int moveNumber,
+      PieceColor movingColor,
+      Optional<PositionPiece> capturedPiece) {
     this.id = Objects.requireNonNull(id, "id must not be null");
     this.move = Objects.requireNonNull(move, "move must not be null");
     this.resultingPosition = Objects.requireNonNull(resultingPosition, "resultingPosition must not be null");
@@ -32,6 +44,7 @@ public final class Ply {
     }
     this.moveNumber = moveNumber;
     this.movingColor = Objects.requireNonNull(movingColor, "movingColor must not be null");
+    this.capturedPiece = Objects.requireNonNull(capturedPiece, "capturedPiece must not be null");
   }
 
   public UUID id() { return id; }
@@ -43,4 +56,7 @@ public final class Ply {
   public int moveNumber() { return moveNumber; }
 
   public PieceColor movingColor() { return movingColor; }
+
+  /** Returns the actual piece removed by this ply, including en-passant and promoted pieces. */
+  public Optional<PositionPiece> capturedPiece() { return capturedPiece; }
 }
