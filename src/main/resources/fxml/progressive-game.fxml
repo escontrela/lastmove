@@ -91,6 +91,6 @@
         </bottom>
     </BorderPane>
     <PromotionPickerControl fx:id="promotionPicker" />
-    <MessageBox fx:id="resultMessageBox" autoHide="false" buttonMode="ACCEPT_CANCEL" closeButtonVisible="true" dragEnabled="true" />
+    <MessageBox fx:id="resultMessageBox" additionalButtonText="Change engine" additionalButtonVisible="true" autoHide="false" buttonMode="ACCEPT_CANCEL" closeButtonVisible="true" dragEnabled="true" onAdditionalAction="#resetModel" />
     <HumanVsComputerSetupOverlay fx:id="setupOverlay" />
 </StackPane>

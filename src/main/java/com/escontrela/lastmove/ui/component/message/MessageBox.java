@@ -42,12 +42,16 @@ public class MessageBox extends StackPane {
             new SimpleStringProperty(this, "acceptText", "Accept");
     private final StringProperty cancelText =
             new SimpleStringProperty(this, "cancelText", "Cancel");
+    private final StringProperty additionalButtonText =
+            new SimpleStringProperty(this, "additionalButtonText", "");
     private final ObjectProperty<MessageBoxButtonMode> buttonMode =
             new SimpleObjectProperty<>(this, "buttonMode", MessageBoxButtonMode.ACCEPT_CANCEL);
     private final BooleanProperty autoHide =
             new SimpleBooleanProperty(this, "autoHide", true);
     private final BooleanProperty closeButtonVisible =
             new SimpleBooleanProperty(this, "closeButtonVisible", true);
+    private final BooleanProperty additionalButtonVisible =
+            new SimpleBooleanProperty(this, "additionalButtonVisible", false);
     private final BooleanProperty dragEnabled =
             new SimpleBooleanProperty(this, "dragEnabled", true);
     private final DoubleProperty cardWidth =
@@ -60,6 +64,8 @@ public class MessageBox extends StackPane {
             new SimpleObjectProperty<>(this, "onAccept");
     private final ObjectProperty<EventHandler<ActionEvent>> onCancel =
             new SimpleObjectProperty<>(this, "onCancel");
+    private final ObjectProperty<EventHandler<ActionEvent>> onAdditionalAction =
+            new SimpleObjectProperty<>(this, "onAdditionalAction");
     private final ObjectProperty<EventHandler<ActionEvent>> onClose =
             new SimpleObjectProperty<>(this, "onClose");
 
@@ -68,6 +74,7 @@ public class MessageBox extends StackPane {
     private final Button closeButton = new Button("×");
     private final Button acceptButton = new Button();
     private final Button cancelButton = new Button();
+    private final Button additionalButton = new Button();
     private final HBox actions = new HBox(10);
     private final VBox card = new VBox();
     private double dragStartSceneX;
@@ -113,8 +120,13 @@ public class MessageBox extends StackPane {
         cancelButton.setCancelButton(true);
         cancelButton.setOnAction(this::handleCancel);
 
+        additionalButton.getStyleClass().addAll(
+                "message-box-button", "message-box-additional-button");
+        additionalButton.textProperty().bind(additionalButtonTextProperty());
+        additionalButton.setOnAction(this::handleAdditionalAction);
+
         Region actionSpacer = new Region();
-        actions.getChildren().setAll(actionSpacer, cancelButton, acceptButton);
+        actions.getChildren().setAll(actionSpacer, additionalButton, cancelButton, acceptButton);
         actions.setAlignment(Pos.CENTER_RIGHT);
         actions.getStyleClass().add("message-box-actions");
         HBox.setHgrow(actionSpacer, javafx.scene.layout.Priority.ALWAYS);
@@ -140,6 +152,8 @@ public class MessageBox extends StackPane {
     private void initialiseBehaviour() {
         visibleProperty().addListener((ignored, oldValue, visible) -> setManaged(visible));
         buttonMode.addListener((ignored, oldValue, newValue) -> updateButtonVisibility());
+        additionalButtonVisible.addListener(
+                (ignored, oldValue, visible) -> setButtonVisible(additionalButton, visible));
         closeButtonVisible.addListener((ignored, oldValue, visible) -> setButtonVisible(closeButton, visible));
         cardWidth.addListener((ignored, oldValue, width) -> updateCardSize());
         contentPadding.addListener((ignored, oldValue, padding) -> updateCardSpacing());
@@ -151,6 +165,7 @@ public class MessageBox extends StackPane {
             }
         });
         updateButtonVisibility();
+        setButtonVisible(additionalButton, isAdditionalButtonVisible());
         setButtonVisible(closeButton, isCloseButtonVisible());
         updateCardSize();
         updateCardSpacing();
@@ -223,6 +238,18 @@ public class MessageBox extends StackPane {
         cancelText.set(value);
     }
 
+    public final StringProperty additionalButtonTextProperty() {
+        return additionalButtonText;
+    }
+
+    public final String getAdditionalButtonText() {
+        return additionalButtonText.get();
+    }
+
+    public final void setAdditionalButtonText(String value) {
+        additionalButtonText.set(value);
+    }
+
     public final ObjectProperty<MessageBoxButtonMode> buttonModeProperty() {
         return buttonMode;
     }
@@ -257,6 +284,18 @@ public class MessageBox extends StackPane {
 
     public final void setCloseButtonVisible(boolean value) {
         closeButtonVisible.set(value);
+    }
+
+    public final BooleanProperty additionalButtonVisibleProperty() {
+        return additionalButtonVisible;
+    }
+
+    public final boolean isAdditionalButtonVisible() {
+        return additionalButtonVisible.get();
+    }
+
+    public final void setAdditionalButtonVisible(boolean value) {
+        additionalButtonVisible.set(value);
     }
 
     public final BooleanProperty dragEnabledProperty() {
@@ -329,6 +368,18 @@ public class MessageBox extends StackPane {
 
     public final void setOnCancel(EventHandler<ActionEvent> value) {
         onCancel.set(value);
+    }
+
+    public final ObjectProperty<EventHandler<ActionEvent>> onAdditionalActionProperty() {
+        return onAdditionalAction;
+    }
+
+    public final EventHandler<ActionEvent> getOnAdditionalAction() {
+        return onAdditionalAction.get();
+    }
+
+    public final void setOnAdditionalAction(EventHandler<ActionEvent> value) {
+        onAdditionalAction.set(value);
     }
 
     public final ObjectProperty<EventHandler<ActionEvent>> onCloseProperty() {
@@ -432,6 +483,16 @@ public class MessageBox extends StackPane {
             hide();
         }
         EventHandler<ActionEvent> handler = getOnCancel();
+        if (handler != null) {
+            handler.handle(event);
+        }
+    }
+
+    private void handleAdditionalAction(ActionEvent event) {
+        if (isAutoHide()) {
+            hide();
+        }
+        EventHandler<ActionEvent> handler = getOnAdditionalAction();
         if (handler != null) {
             handler.handle(event);
         }
