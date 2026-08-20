@@ -12,7 +12,9 @@ import com.escontrela.lastmove.domain.game.GameId;
 import com.escontrela.lastmove.domain.game.GameResult;
 import com.escontrela.lastmove.domain.game.MoveCommand;
 import com.escontrela.lastmove.domain.game.Ply;
+import com.escontrela.lastmove.domain.game.PositionPiece;
 import com.escontrela.lastmove.ui.component.board.ChessBoardControl;
+import com.escontrela.lastmove.ui.component.game.CapturedPiecesControl;
 import com.escontrela.lastmove.ui.component.game.HumanVsComputerSetupOverlay;
 import com.escontrela.lastmove.ui.component.game.ThinkingIndicatorControl;
 import com.escontrela.lastmove.ui.component.game.TypewriterStatusLabel;
@@ -82,6 +84,8 @@ public final class HumanVsComputerScreenController implements UiScreenController
   @FXML private Label humanPlayerLabel;
   @FXML private ImageView opponentPlayerIcon;
   @FXML private ImageView humanPlayerIcon;
+  @FXML private CapturedPiecesControl opponentCapturedPieces;
+  @FXML private CapturedPiecesControl humanCapturedPieces;
   @FXML private Label opponentClockLabel;
   @FXML private Label humanClockLabel;
   @FXML private Label turnLabel;
@@ -446,6 +450,7 @@ public final class HumanVsComputerScreenController implements UiScreenController
       reviewedPlyCount = Math.min(reviewedPlyCount, state.moves().size());
     }
     chessBoard.renderPosition(reviewedPosition());
+    refreshCapturedPieces();
     boolean humanIsWhite = state.humanColor() == PieceColor.WHITE;
     humanPlayerLabel.setText(
         humanIsWhite ? state.whitePlayer().getName() : state.blackPlayer().getName());
@@ -536,6 +541,8 @@ public final class HumanVsComputerScreenController implements UiScreenController
     turnLabel.setText("Configure a new game");
     statusLabel.showImmediately("Choose an opponent, colour and time control");
     moveNotation.setTree(List.of());
+    opponentCapturedPieces.render(List.of());
+    humanCapturedPieces.render(List.of());
     takeBackButton.setDisable(true);
     restartButton.setDisable(true);
     resignButton.setDisable(true);
@@ -662,6 +669,7 @@ public final class HumanVsComputerScreenController implements UiScreenController
 
   private void renderReviewedPosition() {
     chessBoard.renderPosition(reviewedPosition());
+    refreshCapturedPieces();
     refreshNotation(renderedState.moves());
     updateReviewControls();
     if (followingLivePosition) {
@@ -671,6 +679,24 @@ public final class HumanVsComputerScreenController implements UiScreenController
           "Reviewing position %d of %d · clocks continue"
               .formatted(reviewedPlyCount, renderedState.moves().size()));
     }
+  }
+
+  private void refreshCapturedPieces() {
+    if (renderedState == null) {
+      opponentCapturedPieces.render(List.of());
+      humanCapturedPieces.render(List.of());
+      return;
+    }
+    List<PositionPiece> captured =
+        renderedState.moves().stream()
+            .limit(reviewedPlyCount)
+            .flatMap(ply -> ply.capturedPiece().stream())
+            .toList();
+    PieceColor humanColor = renderedState.humanColor();
+    humanCapturedPieces.render(
+        captured.stream().filter(piece -> piece.color() != humanColor).toList());
+    opponentCapturedPieces.render(
+        captured.stream().filter(piece -> piece.color() == humanColor).toList());
   }
 
   private void updateReviewControls() {

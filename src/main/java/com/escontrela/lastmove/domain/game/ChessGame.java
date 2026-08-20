@@ -150,7 +150,8 @@ public final class ChessGame {
             descriptor,
             execution.newSnapshot(),
             previousPosition.fullmoveNumber(),
-            previousPosition.activeColor()));
+            previousPosition.activeColor(),
+            execution.capturedPiece()));
     currentPosition = execution.newSnapshot();
     currentClock = nextClock;
     result = terminalResult(currentPosition).orElse(null);

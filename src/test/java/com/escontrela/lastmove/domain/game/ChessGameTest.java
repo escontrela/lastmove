@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.escontrela.lastmove.domain.common.PieceColor;
+import com.escontrela.lastmove.domain.common.PieceType;
 import com.escontrela.lastmove.domain.common.Square;
 import com.escontrela.lastmove.infrastructure.chesspresso.ChesspressoRulesEngine;
 import java.time.Duration;
@@ -85,6 +86,22 @@ class ChessGameTest {
     assertEquals(initialPosition, game.currentPosition());
     assertTrue(game.moveHistory().isEmpty());
     assertEquals(PieceColor.WHITE, game.currentTurn());
+  }
+
+  @Test
+  void officialHistoryRecordsCapturedPiecesIncludingEnPassant() {
+    ChessGame game = newGame();
+
+    assertTrue(game.move("e4").accepted());
+    assertTrue(game.move("a6").accepted());
+    assertTrue(game.move("e5").accepted());
+    assertTrue(game.move("d5").accepted());
+    assertTrue(game.move("exd6").accepted());
+
+    PositionPiece captured = game.moveHistory().getLast().capturedPiece().orElseThrow();
+    assertEquals(PieceColor.BLACK, captured.color());
+    assertEquals(PieceType.PAWN, captured.type());
+    assertEquals(Square.of("d5"), captured.square());
   }
 
   @Test
