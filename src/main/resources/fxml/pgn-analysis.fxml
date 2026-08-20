@@ -20,7 +20,7 @@
 <?import javafx.scene.layout.VBox?>
 
 <StackPane fx:id="root" onContextMenuRequested="#showContextMenu" styleClass="app-shell" stylesheets="@../css/lastmove.css" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.escontrela.lastmove.ui.controller.PgnAnalysisScreenController">
-<BorderPane styleClass="app-shell">
+<BorderPane styleClass="app-shell" StackPane.alignment="TOP_LEFT">
     <top>
         <HBox alignment="CENTER_LEFT" spacing="16.0" styleClass="workspace-header">
             <VBox spacing="6.0">
@@ -45,14 +45,14 @@
                 <Label styleClass="card-copy" text="Open a portable game notation file to prepare the replay workspace." wrapText="true" />
                 <HBox alignment="CENTER_LEFT" spacing="8.0">
                     <ToolbarIconButton accessibleText="Open PGN file" darkIconResource="/images/file_open_35dp_FFFFFF.png" lightIconResource="/images/file_open_35dp_000000.png" onAction="#onOpenPgn" tooltipText="Open PGN" />
-                    <ToolbarIconButton accessibleText="Start initial position" darkIconResource="/images/clear_35dp_FFFFFF.png" lightIconResource="/images/clear_35dp_000000.png" onAction="#onReset" tooltipText="Start initial position" />
-                    <ToolbarIconButton accessibleText="Start from FEN" darkIconResource="/images/code_xml_35dp_FFFFFF.png" lightIconResource="/images/code_xml_35dp_000000.png" onAction="#onFen" tooltipText="Start from FEN" />
+                    <ToolbarIconButton accessibleText="Start initial position" darkIconResource="/images/looks_one_35dp_FFFFFF.png" lightIconResource="/images/looks_one_35dp_000000.png" onAction="#onReset" tooltipText="Start initial position" />
+                    <ToolbarIconButton accessibleText="Start from FEN" darkIconResource="/images/upload_35dp_FFFFFF.png" lightIconResource="/images/upload_35dp_000000.png" onAction="#onFen" tooltipText="Start from FEN" />
                     <ToolbarIconButton accessibleText="Open sessions" darkIconResource="/images/history_35dp_FFFFFF.png" lightIconResource="/images/history_35dp_000000.png" onAction="#onShowSessions" tooltipText="Open sessions" />
                 </HBox>
                 <HBox alignment="CENTER_LEFT" spacing="8.0">
                     <ToolbarIconButton accessibleText="Export current session as PGN" darkIconResource="/images/file_export_35dp_FFFFFF.png" lightIconResource="/images/file_export_35dp_000000.png" onAction="#onExportSession" tooltipText="Export PGN" />
-                    <ToolbarIconButton fx:id="saveSessionAsStudyButton" accessibleText="Save session as chapter" darkIconResource="/images/copy_35dp_FFFFFF.png" lightIconResource="/images/copy_35dp_000000.png" onAction="#onSaveSessionAsStudy" tooltipText="Save session as chapter" />
-                    <ToolbarIconButton accessibleText="Save current position as tactic" darkIconResource="/images/filter_35dp_FFFFFF.png" lightIconResource="/images/filter_35dp_000000.png" onAction="#onSavePositionAsTactic" tooltipText="Save current position as tactic" />
+                    <ToolbarIconButton fx:id="saveSessionAsStudyButton" accessibleText="Save session as chapter" darkIconResource="/images/menu_book_35dp_FFFFFF.png" lightIconResource="/images/menu_book_35dp_000000.png" onAction="#onSaveSessionAsStudy" tooltipText="Save session as chapter" />
+                    <ToolbarIconButton accessibleText="Save current position as tactic" darkIconResource="/images/graph_2_35dp_FFFFFF.png" lightIconResource="/images/graph_2_35dp_000000.png" onAction="#onSavePositionAsTactic" tooltipText="Save current position as tactic" />
                 </HBox>
             </VBox>
             <VBox spacing="12.0" styleClass="rail-card" VBox.vgrow="ALWAYS">

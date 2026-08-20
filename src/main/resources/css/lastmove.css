@@ -12,7 +12,8 @@
 
 .workspace-header {
     -fx-background-color: #ffffff;
-    -fx-padding: 24px 32px;
+    /* Keep workspace titles clear of the window edge across analysis, studies and the editor. */
+    -fx-padding: 32px 32px 24px 32px;
     -fx-border-color: transparent transparent #e6e6e6 transparent;
     -fx-border-width: 0 0 1px 0;
 }
@@ -547,6 +548,22 @@
 
 .secondary-button:hover, .ghost-button:hover, .icon-button:hover {
     -fx-background-color: #ebebeb;
+}
+
+/* The position-editor palette deliberately exposes the actual chess-set artwork, not text buttons. */
+.piece-palette-item {
+    -fx-alignment: center;
+    -fx-min-width: 42px;
+    -fx-min-height: 42px;
+    -fx-padding: 3px;
+    -fx-border-color: transparent;
+    -fx-border-width: 1px;
+    -fx-cursor: hand;
+}
+
+.piece-palette-item:hover {
+    -fx-background-color: #f4f7fb;
+    -fx-border-color: #1c69d4;
 }
 
 .secondary-on-dark-button {

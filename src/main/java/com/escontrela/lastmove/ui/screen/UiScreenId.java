@@ -5,6 +5,7 @@ public enum UiScreenId {
     MAIN("/fxml/main-window.fxml", 1280.0, 800.0),
     HUMAN_VS_COMPUTER("/fxml/progressive-game.fxml", 1280.0, 800.0),
     PGN_ANALYSIS("/fxml/pgn-analysis.fxml", 1280.0, 800.0),
+    POSITION_EDITOR("/fxml/position-editor.fxml", 1280.0, 800.0),
     ANALYSIS_SESSIONS("/fxml/analysis-sessions.fxml", 1280.0, 800.0),
     STUDIES("/fxml/studies.fxml", 1280.0, 800.0),
     TACTICS("/fxml/tactics.fxml", 1280.0, 800.0),

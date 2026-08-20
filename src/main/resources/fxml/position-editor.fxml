@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import com.escontrela.lastmove.ui.component.board.ChessBoardControl?>
+<?import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.RadioButton?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.Spinner?>
+<?import javafx.scene.control.SpinnerValueFactory.IntegerSpinnerValueFactory?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane fx:id="root" styleClass="app-shell" stylesheets="@../css/lastmove.css" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.escontrela.lastmove.ui.controller.PositionEditorScreenController">
+  <top>
+    <HBox alignment="CENTER_LEFT" spacing="14" styleClass="workspace-header">
+      <VBox spacing="4">
+        <Label styleClass="eyebrow-label" text="AUTHORING WORKSPACE" />
+        <Label styleClass="app-title" text="Position editor" />
+        <Label styleClass="hero-support" text="Compose a position and generate a valid FEN." />
+      </VBox>
+      <Region HBox.hgrow="ALWAYS" />
+      <ToolbarIconButton accessibleText="Back to chess tools" darkIconResource="/images/back_35dp_FFFFFF.png" lightIconResource="/images/back_35dp_000000.png" onAction="#onBack" tooltipText="Back" />
+    </HBox>
+  </top>
+  <center>
+    <HBox alignment="TOP_CENTER" spacing="24" styleClass="workspace-content">
+      <padding><Insets bottom="24" left="36" right="36" top="24" /></padding>
+      <VBox prefWidth="230" spacing="12" styleClass="utility-rail">
+        <padding><Insets bottom="18" left="18" right="18" top="18" /></padding>
+        <Label styleClass="eyebrow-label" text="POSITION" />
+            <HBox alignment="CENTER_LEFT" spacing="8.0">
+               <children>
+                  <ToolbarIconButton fx:id="openAnalysisButton" accessibleText="Save session as chapter" darkIconResource="/images/graph_2_35dp_FFFFFF.png" lightIconResource="/images/graph_2_35dp_000000.png" onAction="#onOpenAnalysis" tooltipText="Open in analysis" />
+                  <ToolbarIconButton fx:id="addStudyButton" accessibleText="Save current position as tactic" darkIconResource="/images/menu_book_35dp_FFFFFF.png" lightIconResource="/images/menu_book_35dp_000000.png" onAction="#onAddStudy" tooltipText="Add to study" />
+               </children>
+            </HBox>
+        <Separator />
+        <Label styleClass="card-title" text="Side to move" />
+        <HBox spacing="8">
+          <RadioButton fx:id="whiteToMove" onAction="#onMetadataDraftChanged" text="White" />
+          <RadioButton fx:id="blackToMove" onAction="#onMetadataDraftChanged" text="Black" />
+        </HBox>
+        <Label styleClass="card-title" text="Castling rights" />
+        <CheckBox fx:id="whiteKingSide" text="White O-O" />
+        <CheckBox fx:id="whiteQueenSide" text="White O-O-O" />
+        <CheckBox fx:id="blackKingSide" text="Black O-O" />
+        <CheckBox fx:id="blackQueenSide" text="Black O-O-O" />
+        <Label styleClass="card-title" text="En passant" />
+        <ComboBox fx:id="enPassantCombo" maxWidth="Infinity" />
+        <Label styleClass="card-title" text="Halfmove / fullmove" />
+        <HBox spacing="6">
+          <Spinner fx:id="halfmoveSpinner"><valueFactory><SpinnerValueFactory.IntegerSpinnerValueFactory initialValue="0" max="999" min="0" /></valueFactory></Spinner>
+          <Spinner fx:id="fullmoveSpinner"><valueFactory><SpinnerValueFactory.IntegerSpinnerValueFactory initialValue="1" max="999" min="1" /></valueFactory></Spinner>
+        </HBox>
+        <Button mnemonicParsing="false" onAction="#onApplyMetadata" styleClass="secondary-button" text="Apply metadata" />
+      </VBox>
+      <VBox alignment="TOP_CENTER" spacing="12">
+        <ChessBoardControl fx:id="chessBoard" prefHeight="620" prefWidth="620" />
+        <Label fx:id="statusLabel" maxWidth="620" styleClass="tool-catalog-status" wrapText="true" />
+      </VBox>
+      <VBox prefWidth="270" spacing="12" styleClass="board-side-card">
+        <padding><Insets bottom="18" left="18" right="18" top="18" /></padding>
+        <Label styleClass="eyebrow-label" text="PIECE PALETTE" />
+        <Label fx:id="selectedPieceLabel" styleClass="card-copy" text="Click or drag a piece onto the board. Right-click removes it." wrapText="true" />
+        <Label styleClass="eyebrow-label" text="WHITE" />
+        <GridPane hgap="8" styleClass="piece-palette" vgap="6">
+          <Label accessibleText="White pawn" onDragDetected="#dragWhitePawn" onMouseClicked="#selectWhitePawn" styleClass="piece-palette-item" GridPane.columnIndex="0" GridPane.rowIndex="0"><graphic><ImageView fitHeight="34" fitWidth="34" preserveRatio="true"><image><Image url="@../chess-pieces/white-pawn.png" /></image></ImageView></graphic></Label>
+          <Label accessibleText="White knight" onDragDetected="#dragWhiteKnight" onMouseClicked="#selectWhiteKnight" styleClass="piece-palette-item" GridPane.columnIndex="1" GridPane.rowIndex="0"><graphic><ImageView fitHeight="34" fitWidth="34" preserveRatio="true"><image><Image url="@../chess-pieces/white-knight.png" /></image></ImageView></graphic></Label>
+          <Label accessibleText="White bishop" onDragDetected="#dragWhiteBishop" onMouseClicked="#selectWhiteBishop" styleClass="piece-palette-item" GridPane.columnIndex="2" GridPane.rowIndex="0"><graphic><ImageView fitHeight="34" fitWidth="34" preserveRatio="true"><image><Image url="@../chess-pieces/white-bishop.png" /></image></ImageView></graphic></Label>
+          <Label accessibleText="White rook" onDragDetected="#dragWhiteRook" onMouseClicked="#selectWhiteRook" styleClass="piece-palette-item" GridPane.columnIndex="3" GridPane.rowIndex="0"><graphic><ImageView fitHeight="34" fitWidth="34" preserveRatio="true"><image><Image url="@../chess-pieces/white-rook.png" /></image></ImageView></graphic></Label>
+          <Label accessibleText="White queen" onDragDetected="#dragWhiteQueen" onMouseClicked="#selectWhiteQueen" styleClass="piece-palette-item" GridPane.columnIndex="0" GridPane.rowIndex="1"><graphic><ImageView fitHeight="34" fitWidth="34" preserveRatio="true"><image><Image url="@../chess-pieces/white-queen.png" /></image></ImageView></graphic></Label>
+          <Label accessibleText="White king" onDragDetected="#dragWhiteKing" onMouseClicked="#selectWhiteKing" styleClass="piece-palette-item" GridPane.columnIndex="1" GridPane.rowIndex="1"><graphic><ImageView fitHeight="34" fitWidth="34" preserveRatio="true"><image><Image url="@../chess-pieces/white-king.png" /></image></ImageView></graphic></Label>
+               <columnConstraints>
+                  <ColumnConstraints />
+                  <ColumnConstraints />
+                  <ColumnConstraints />
+                  <ColumnConstraints />
+               </columnConstraints>
+               <rowConstraints>
+                  <RowConstraints />
+                  <RowConstraints />
+               </rowConstraints>
+        </GridPane>
+        <Label styleClass="eyebrow-label" text="BLACK" />
+        <GridPane hgap="8" styleClass="piece-palette" vgap="6">
+          <Label accessibleText="Black pawn" onDragDetected="#dragBlackPawn" onMouseClicked="#selectBlackPawn" styleClass="piece-palette-item" GridPane.columnIndex="0" GridPane.rowIndex="0"><graphic><ImageView fitHeight="34" fitWidth="34" preserveRatio="true"><image><Image url="@../chess-pieces/black-pawn.png" /></image></ImageView></graphic></Label>
+          <Label accessibleText="Black knight" onDragDetected="#dragBlackKnight" onMouseClicked="#selectBlackKnight" styleClass="piece-palette-item" GridPane.columnIndex="1" GridPane.rowIndex="0"><graphic><ImageView fitHeight="34" fitWidth="34" preserveRatio="true"><image><Image url="@../chess-pieces/black-knight.png" /></image></ImageView></graphic></Label>
+          <Label accessibleText="Black bishop" onDragDetected="#dragBlackBishop" onMouseClicked="#selectBlackBishop" styleClass="piece-palette-item" GridPane.columnIndex="2" GridPane.rowIndex="0"><graphic><ImageView fitHeight="34" fitWidth="34" preserveRatio="true"><image><Image url="@../chess-pieces/black-bishop.png" /></image></ImageView></graphic></Label>
+          <Label accessibleText="Black rook" onDragDetected="#dragBlackRook" onMouseClicked="#selectBlackRook" styleClass="piece-palette-item" GridPane.columnIndex="3" GridPane.rowIndex="0"><graphic><ImageView fitHeight="34" fitWidth="34" preserveRatio="true"><image><Image url="@../chess-pieces/black-rook.png" /></image></ImageView></graphic></Label>
+          <Label accessibleText="Black queen" onDragDetected="#dragBlackQueen" onMouseClicked="#selectBlackQueen" styleClass="piece-palette-item" GridPane.columnIndex="0" GridPane.rowIndex="1"><graphic><ImageView fitHeight="34" fitWidth="34" preserveRatio="true"><image><Image url="@../chess-pieces/black-queen.png" /></image></ImageView></graphic></Label>
+          <Label accessibleText="Black king" onDragDetected="#dragBlackKing" onMouseClicked="#selectBlackKing" styleClass="piece-palette-item" GridPane.columnIndex="1" GridPane.rowIndex="1"><graphic><ImageView fitHeight="34" fitWidth="34" preserveRatio="true"><image><Image url="@../chess-pieces/black-king.png" /></image></ImageView></graphic></Label>
+               <columnConstraints>
+                  <ColumnConstraints />
+                  <ColumnConstraints />
+                  <ColumnConstraints />
+                  <ColumnConstraints />
+               </columnConstraints>
+               <rowConstraints>
+                  <RowConstraints />
+                  <RowConstraints />
+               </rowConstraints>
+        </GridPane>
+        <Separator />
+        <Label styleClass="card-title" text="FEN" />
+        <TextArea fx:id="fenText" prefRowCount="3" wrapText="true" />
+        <HBox spacing="8">
+          <Button mnemonicParsing="false" onAction="#onGenerateFen" styleClass="primary-button" text="Generate" />
+        </HBox>
+            <HBox alignment="CENTER_LEFT" spacing="8.0">
+               <children>
+                  <ToolbarIconButton accessibleText="Export current session as PGN" darkIconResource="/images/upload_35dp_FFFFFF.png" lightIconResource="/images/upload_35dp_000000.png" onAction="#onImportFen" tooltipText="Import" />
+                  <ToolbarIconButton accessibleText="Copy position as FEN" darkIconResource="/images/copy_35dp_FFFFFF.png" lightIconResource="/images/copy_35dp_000000.png" onAction="#onCopyFen" tooltipText="Copy position as FEN" />
+                  <ToolbarIconButton accessibleText="Rotate board" darkIconResource="/images/screen_rotation_up_35dp_FFFFFF.png" lightIconResource="/images/screen_rotation_up_35dp_000000.png" onAction="#onFlip" toggleMode="true" tooltipText="Rotate board" />
+                  <ToolbarIconButton accessibleText="Rotate board" darkIconResource="/images/looks_one_35dp_FFFFFF.png" lightIconResource="/images/looks_one_35dp_000000.png" onAction="#onReset" toggleMode="true" tooltipText="Starting position" />
+                  <ToolbarIconButton accessibleText="Rotate board" darkIconResource="/images/delete_35dp_FFFFFF.png" lightIconResource="/images/delete_35dp_000000.png" onAction="#onClear" toggleMode="true" tooltipText="Clear board" />
+               </children>
+            </HBox>
+      </VBox>
+    </HBox>
+  </center>
+</BorderPane>
