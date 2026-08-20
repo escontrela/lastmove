@@ -484,35 +484,22 @@
     -fx-border-color: #004a9f;
 }
 
-.message-box-cancel-button {
+.message-box-cancel-button,
+.message-box-additional-button {
     -fx-background-color: #ffffff;
     -fx-border-color: #d8dde3;
     -fx-text-fill: #1f242a;
 }
 
-.message-box-cancel-button:hover {
+.message-box-cancel-button:hover,
+.message-box-additional-button:hover {
     -fx-background-color: #f4f7fb;
     -fx-border-color: #c3d3e8;
 }
 
-.message-box-cancel-button:pressed {
-    -fx-background-color: #eaf1fa;
-    -fx-border-color: #8eb5e8;
-}
-
-.message-box-additional-button {
-    -fx-background-color: transparent;
-    -fx-border-color: transparent;
-    -fx-text-fill: #1c69d4;
-}
-
-.message-box-additional-button:hover {
-    -fx-background-color: #edf4fd;
-    -fx-border-color: #c3d3e8;
-}
-
+.message-box-cancel-button:pressed,
 .message-box-additional-button:pressed {
-    -fx-background-color: #dceafb;
+    -fx-background-color: #eaf1fa;
     -fx-border-color: #8eb5e8;
 }
 
@@ -1271,19 +1258,16 @@
 }
 .night-mode .text-input-modal-field:focused { -fx-border-color: #6ba5f0; }
 .night-mode .text-input-modal-validation { -fx-text-fill: #ff9aa6; }
-.night-mode .message-box-cancel-button {
+.night-mode .message-box-cancel-button,
+.night-mode .message-box-additional-button {
     -fx-background-color: #243243;
     -fx-border-color: #465465;
     -fx-text-fill: #f1f3f5;
 }
-.night-mode .message-box-cancel-button:hover {
+.night-mode .message-box-cancel-button:hover,
+.night-mode .message-box-additional-button:hover {
     -fx-background-color: #2b3b4d;
     -fx-border-color: #6ba5f0;
-}
-.night-mode .message-box-additional-button { -fx-text-fill: #8bbcff; }
-.night-mode .message-box-additional-button:hover {
-    -fx-background-color: #22354a;
-    -fx-border-color: #465465;
 }
 .night-mode .button.message-box-close-button { -fx-text-fill: #b8c5d3; }
 .night-mode .button.message-box-close-button:hover {
