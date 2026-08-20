@@ -64,6 +64,7 @@ public final class SessionSelectorSkin extends SkinBase<SessionSelectorControl> 
     private SessionCell(SessionSelectorControl control) {
       this.control = control;
       getStyleClass().add("session-selector-cell");
+      getStyleClass().add("study-library-cell");
       marker.getStyleClass().add("session-active-marker");
       title.getStyleClass().add("session-title");
       title.setMaxWidth(Double.MAX_VALUE);
@@ -71,6 +72,7 @@ public final class SessionSelectorSkin extends SkinBase<SessionSelectorControl> 
       content.setAlignment(Pos.CENTER_LEFT);
       content.getChildren().setAll(marker, title);
       rowButton.getStyleClass().add("session-selector-row");
+      rowButton.getStyleClass().add("study-library-row");
       rowButton.setGraphic(content);
       rowButton.setMaxWidth(Double.MAX_VALUE);
       rowButton.prefWidthProperty().bind(widthProperty().subtract(2));

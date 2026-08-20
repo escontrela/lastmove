@@ -773,8 +773,10 @@
 }
 
 .session-selector {
-    -fx-border-color: #e6e6e6;
+    -fx-border-color: #dfe5ec;
     -fx-border-width: 1px;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
 }
 
 .session-selector-list .session-selector-cell {
@@ -783,9 +785,9 @@
 }
 
 .session-selector-row {
-    -fx-min-height: 46px;
-    -fx-pref-height: 46px;
-    -fx-padding: 0 12px;
+    -fx-min-height: 78px;
+    -fx-pref-height: 78px;
+    -fx-padding: 12 16px;
     -fx-alignment: center-left;
     -fx-background-color: #ffffff;
     -fx-background-radius: 0;
@@ -795,7 +797,10 @@
 }
 
 .session-selector-row:hover {
-    -fx-background-color: #edf4fc;
+    -fx-background-color: #f5f8fc;
+    -fx-border-color: transparent transparent #c5d9ef #1c69d4;
+    -fx-border-width: 0 0 1px 4px;
+    -fx-padding: 12 16px 12 12px;
 }
 
 .session-selector-row:focused {
@@ -804,9 +809,10 @@
 }
 
 .session-selector-row:current {
-    -fx-background-color: #e5f0fc;
-    -fx-border-color: transparent transparent transparent #1c69d4;
-    -fx-border-width: 0 0 0 4px;
+    -fx-background-color: #edf4fc;
+    -fx-border-color: transparent transparent #c5d9ef #1c69d4;
+    -fx-border-width: 0 0 1px 4px;
+    -fx-padding: 12 16px 12 12px;
 }
 
 .session-active-marker {
@@ -839,8 +845,10 @@
 
 .session-management-list {
     -fx-background-color: #ffffff;
-    -fx-border-color: #d8dde3;
+    -fx-border-color: #dfe5ec;
     -fx-border-width: 1px;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
 }
 
 .session-management-list .virtual-flow,
@@ -858,20 +866,26 @@
 }
 
 .session-management-row {
-    -fx-min-height: 76px;
-    -fx-pref-height: 76px;
-    -fx-padding: 0 20px;
+    -fx-min-height: 78px;
+    -fx-pref-height: 78px;
+    -fx-padding: 12 16px;
     -fx-background-color: #ffffff;
     -fx-border-color: transparent transparent #e7ebef transparent;
     -fx-border-width: 0 0 1px 0;
 }
 
-.session-management-row:hover { -fx-background-color: #f5f8fc; }
+.session-management-row:hover {
+    -fx-background-color: #f5f8fc;
+    -fx-border-color: transparent transparent #c5d9ef #1c69d4;
+    -fx-border-width: 0 0 1px 4px;
+    -fx-padding: 12 16px 12 12px;
+}
 
 .session-management-row:current {
     -fx-background-color: #edf4fc;
-    -fx-border-color: transparent transparent transparent #1c69d4;
-    -fx-border-width: 0 0 0 4px;
+    -fx-border-color: transparent transparent #c5d9ef #1c69d4;
+    -fx-border-width: 0 0 1px 4px;
+    -fx-padding: 12 16px 12 12px;
 }
 
 .session-management-marker {
@@ -890,60 +904,6 @@
 .session-management-origin {
     -fx-font-size: 12px;
     -fx-text-fill: #6a7683;
-}
-
-.session-action-button {
-    -fx-background-radius: 5px;
-    -fx-border-radius: 5px;
-    -fx-border-width: 1px;
-    -fx-padding: 8px 14px;
-    -fx-font-weight: 600;
-    -fx-cursor: hand;
-}
-
-.session-order-button {
-    -fx-min-width: 34px;
-    -fx-pref-width: 34px;
-    -fx-padding: 8px 0;
-    -fx-background-color: #ffffff;
-    -fx-border-color: #aeb8c4;
-    -fx-text-fill: #262626;
-}
-
-.session-order-button:hover {
-    -fx-background-color: #eef3f8;
-    -fx-border-color: #1c69d4;
-}
-
-.session-order-button:disabled {
-    -fx-opacity: 0.38;
-}
-
-.session-open-button {
-    -fx-background-color: #1c69d4;
-    -fx-border-color: #1c69d4;
-    -fx-text-fill: #ffffff;
-}
-
-.session-open-button:hover { -fx-background-color: #0653b6; }
-
-.session-rename-button {
-    -fx-background-color: #ffffff;
-    -fx-border-color: #aeb8c4;
-    -fx-text-fill: #262626;
-}
-
-.session-rename-button:hover { -fx-background-color: #eef3f8; }
-
-.session-delete-button {
-    -fx-background-color: #ffffff;
-    -fx-border-color: #d1495b;
-    -fx-text-fill: #a72e3e;
-}
-
-.session-delete-button:hover {
-    -fx-background-color: #fff1f3;
-    -fx-border-color: #a72e3e;
 }
 
 .session-empty-state {
@@ -1361,10 +1321,13 @@
     -fx-background-color: #262e38;
     -fx-border-color: transparent transparent #3b4654 transparent;
 }
-.night-mode .session-selector-row:hover { -fx-background-color: #334151; }
+.night-mode .session-selector-row:hover {
+    -fx-background-color: #243243;
+    -fx-border-color: transparent transparent #465465 #6ba5f0;
+}
 .night-mode .session-selector-row:current {
-    -fx-background-color: #2d4056;
-    -fx-border-color: transparent transparent transparent #6ba5f0;
+    -fx-background-color: #243243;
+    -fx-border-color: transparent transparent #465465 #6ba5f0;
 }
 .night-mode .session-active-marker { -fx-text-fill: #6ba5f0; }
 .night-mode .session-title { -fx-text-fill: #f1f3f5; }
@@ -1385,35 +1348,17 @@
     -fx-background-color: #262e38;
     -fx-border-color: transparent transparent #3b4654 transparent;
 }
-.night-mode .session-management-row:hover { -fx-background-color: #334151; }
+.night-mode .session-management-row:hover {
+    -fx-background-color: #243243;
+    -fx-border-color: transparent transparent #465465 #6ba5f0;
+}
 .night-mode .session-management-row:current {
-    -fx-background-color: #2d4056;
-    -fx-border-color: transparent transparent transparent #6ba5f0;
+    -fx-background-color: #243243;
+    -fx-border-color: transparent transparent #465465 #6ba5f0;
 }
 .night-mode .session-management-marker { -fx-text-fill: #6ba5f0; }
 .night-mode .session-management-title { -fx-text-fill: #f1f3f5; }
 .night-mode .session-management-origin { -fx-text-fill: #aeb8c4; }
-.night-mode .session-rename-button {
-    -fx-background-color: #262e38;
-    -fx-border-color: #6d7783;
-    -fx-text-fill: #ffffff;
-}
-.night-mode .session-order-button {
-    -fx-background-color: #262e38;
-    -fx-border-color: #6d7783;
-    -fx-text-fill: #ffffff;
-}
-.night-mode .session-order-button:hover {
-    -fx-background-color: #3b4654;
-    -fx-border-color: #6ba5f0;
-}
-.night-mode .session-rename-button:hover { -fx-background-color: #3b4654; }
-.night-mode .session-delete-button {
-    -fx-background-color: #262e38;
-    -fx-border-color: #e06a78;
-    -fx-text-fill: #ff9aa6;
-}
-.night-mode .session-delete-button:hover { -fx-background-color: #442932; }
 .night-mode .move-notation {
     -fx-background-color: #262e38;
     -fx-border-color: #3b4654;

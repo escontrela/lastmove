@@ -76,6 +76,15 @@ public class ContextualMenuPanel extends StackPane {
 
     /** Adds a command with an optional shortcut hint. */
     public void addItem(String text, String shortcut, EventHandler<ActionEvent> action) {
+        addItem(text, shortcut, false, action);
+    }
+
+    /** Adds a command with an optional shortcut hint and disabled state. */
+    public void addItem(
+            String text,
+            String shortcut,
+            boolean disabled,
+            EventHandler<ActionEvent> action) {
         Button item = new Button();
         item.getStyleClass().add("context-menu-item");
         item.setMaxWidth(Double.MAX_VALUE);
@@ -91,6 +100,7 @@ public class ContextualMenuPanel extends StackPane {
         HBox.setHgrow(spacer, Priority.ALWAYS);
         item.setGraphic(content);
         item.setContentDisplay(javafx.scene.control.ContentDisplay.GRAPHIC_ONLY);
+        item.setDisable(disabled);
         item.setOnAction(event -> {
             hide();
             if (action != null) {

@@ -2,6 +2,7 @@
 
 <?import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton?>
 <?import com.escontrela.lastmove.ui.component.message.TextInputModal?>
+<?import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ListView?>
@@ -52,4 +53,5 @@
     </bottom>
 </BorderPane>
     <TextInputModal fx:id="textInputModal" />
+    <ContextualMenuPanel fx:id="contextualMenuPanel" />
 </StackPane>
