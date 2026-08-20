@@ -8,17 +8,17 @@ import com.escontrela.lastmove.domain.game.PositionSnapshot;
 import com.escontrela.lastmove.ui.model.BoardMoveInput;
 import com.escontrela.lastmove.ui.service.ChessSound;
 import com.escontrela.lastmove.ui.service.ChessSoundService;
+import java.util.Objects;
+import java.util.Optional;
 import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.scene.control.Control;
 import javafx.scene.control.Skin;
-import java.util.Objects;
-import java.util.Optional;
 
 /**
  * A reusable JavaFX control that renders a chess board.
@@ -218,28 +218,49 @@ public class ChessBoardControl extends Control {
   }
 
   /** Enables free-authoring input. It suppresses analysis arrows and normal promotion prompts. */
-  public final BooleanProperty editorModeProperty() { return editorMode; }
-  public final boolean isEditorMode() { return editorMode.get(); }
-  public final void setEditorMode(boolean value) { editorMode.set(value); }
-  public final ObjectProperty<EventHandler<BoardSquareEvent>> onPieceRemovalRequestedProperty() { return onPieceRemovalRequested; }
-  public final void setOnPieceRemovalRequested(EventHandler<BoardSquareEvent> value) { onPieceRemovalRequested.set(value); }
+  public final BooleanProperty editorModeProperty() {
+    return editorMode;
+  }
+
+  public final boolean isEditorMode() {
+    return editorMode.get();
+  }
+
+  public final void setEditorMode(boolean value) {
+    editorMode.set(value);
+  }
+
+  public final ObjectProperty<EventHandler<BoardSquareEvent>> onPieceRemovalRequestedProperty() {
+    return onPieceRemovalRequested;
+  }
+
+  public final void setOnPieceRemovalRequested(EventHandler<BoardSquareEvent> value) {
+    onPieceRemovalRequested.set(value);
+  }
+
   public final void handlePieceRemoval(Square square) {
     EventHandler<BoardSquareEvent> handler = onPieceRemovalRequested.get();
     if (handler != null) handler.handle(new BoardSquareEvent(this, this, square));
   }
-  public final void setOnEditorSquareRequested(EventHandler<BoardSquareEvent> value) { onEditorSquareRequested.set(value); }
+
+  public final void setOnEditorSquareRequested(EventHandler<BoardSquareEvent> value) {
+    onEditorSquareRequested.set(value);
+  }
+
   public final void handleEditorSquare(Square square) {
+
     EventHandler<BoardSquareEvent> handler = onEditorSquareRequested.get();
     if (handler != null) handler.handle(new BoardSquareEvent(this, this, square));
   }
+
   public final void setOnPieceDropped(EventHandler<BoardPieceDropEvent> value) {
     onPieceDropped.set(value);
   }
+
   public final void handlePieceDrop(Square square, BoardPieceDragPayload payload) {
     EventHandler<BoardPieceDropEvent> handler = onPieceDropped.get();
     if (handler != null) {
-      handler.handle(
-          new BoardPieceDropEvent(this, this, square, payload.type(), payload.color()));
+      handler.handle(new BoardPieceDropEvent(this, this, square, payload.type(), payload.color()));
     }
   }
 
@@ -252,7 +273,8 @@ public class ChessBoardControl extends Control {
    */
   public void handleBoardMoveInput(BoardMoveInput moveInput) {
 
-    BoardMoveInput requiredMoveInput = Objects.requireNonNull(moveInput, "moveInput must not be null");
+    BoardMoveInput requiredMoveInput =
+        Objects.requireNonNull(moveInput, "moveInput must not be null");
     Optional<PieceColor> promotionColor = promotionColorFor(requiredMoveInput);
     EventHandler<BoardPromotionEvent> promotionHandler = getOnPromotionRequested();
     if (promotionColor.isPresent()
@@ -330,7 +352,8 @@ public class ChessBoardControl extends Control {
         ChessBoardControl source, BoardMoveInput moveInput, PieceColor promotingColor) {
       super(source, NULL_SOURCE_TARGET, PROMOTION_REQUESTED);
       this.moveInput = Objects.requireNonNull(moveInput, "moveInput must not be null");
-      this.promotingColor = Objects.requireNonNull(promotingColor, "promotingColor must not be null");
+      this.promotingColor =
+          Objects.requireNonNull(promotingColor, "promotingColor must not be null");
     }
 
     /** Returns the incomplete board gesture that must be completed with a promotion piece. */

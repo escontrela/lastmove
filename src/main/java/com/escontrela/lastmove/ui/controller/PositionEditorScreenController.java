@@ -1,9 +1,9 @@
 package com.escontrela.lastmove.ui.controller;
 
-import com.escontrela.lastmove.application.editor.PositionEditorState;
 import com.escontrela.lastmove.application.service.AnalysisSessionService;
 import com.escontrela.lastmove.application.service.CurrentUserService;
 import com.escontrela.lastmove.application.service.PositionEditorService;
+import com.escontrela.lastmove.application.service.PositionEditorService.PositionEditorState;
 import com.escontrela.lastmove.domain.common.PieceColor;
 import com.escontrela.lastmove.domain.common.PieceType;
 import com.escontrela.lastmove.domain.common.Square;

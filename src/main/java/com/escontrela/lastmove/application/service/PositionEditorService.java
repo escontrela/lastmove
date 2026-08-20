@@ -1,6 +1,5 @@
 package com.escontrela.lastmove.application.service;
 
-import com.escontrela.lastmove.application.editor.PositionEditorState;
 import com.escontrela.lastmove.domain.common.PieceColor;
 import com.escontrela.lastmove.domain.common.PieceType;
 import com.escontrela.lastmove.domain.common.Square;
@@ -22,6 +21,20 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class PositionEditorService {
+  /** Immutable view of the editor state exposed by this service. */
+  public record PositionEditorState(PositionSnapshot position, List<String> validationErrors) {
+    public PositionEditorState {
+      Objects.requireNonNull(position, "position must not be null");
+      validationErrors = List.copyOf(Objects.requireNonNull(validationErrors, "validationErrors must not be null"));
+    }
+
+    public boolean valid() { return validationErrors.isEmpty(); }
+
+    public Optional<String> validationMessage() {
+      return valid() ? Optional.empty() : Optional.of(String.join(" ", validationErrors));
+    }
+  }
+
   private final ChessRulesEngine rulesEngine;
   private final FenService fenService;
   private PositionSnapshot position;
