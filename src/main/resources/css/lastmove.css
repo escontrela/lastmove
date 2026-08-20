@@ -500,6 +500,22 @@
     -fx-border-color: #8eb5e8;
 }
 
+.message-box-additional-button {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-text-fill: #1c69d4;
+}
+
+.message-box-additional-button:hover {
+    -fx-background-color: #edf4fd;
+    -fx-border-color: #c3d3e8;
+}
+
+.message-box-additional-button:pressed {
+    -fx-background-color: #dceafb;
+    -fx-border-color: #8eb5e8;
+}
+
 .hero-panel {
     -fx-background-color: #1a2129;
     -fx-max-width: 900px;
@@ -1263,6 +1279,11 @@
 .night-mode .message-box-cancel-button:hover {
     -fx-background-color: #2b3b4d;
     -fx-border-color: #6ba5f0;
+}
+.night-mode .message-box-additional-button { -fx-text-fill: #8bbcff; }
+.night-mode .message-box-additional-button:hover {
+    -fx-background-color: #22354a;
+    -fx-border-color: #465465;
 }
 .night-mode .button.message-box-close-button { -fx-text-fill: #b8c5d3; }
 .night-mode .button.message-box-close-button:hover {
