@@ -14,13 +14,15 @@ public record PositionAnalysisResult(
     String engineDisplayName,
     Optional<String> bestMoveSan,
     Optional<String> scoreText,
-    Optional<Integer> depth) {
+    Optional<Integer> depth,
+    Optional<Long> nodes) {
 
   public PositionAnalysisResult {
     engineDisplayName = requireText(engineDisplayName, "engineDisplayName");
     bestMoveSan = Objects.requireNonNull(bestMoveSan, "bestMoveSan must not be null");
     scoreText = Objects.requireNonNull(scoreText, "scoreText must not be null");
     depth = Objects.requireNonNull(depth, "depth must not be null");
+    nodes = Objects.requireNonNull(nodes, "nodes must not be null");
   }
 
   private static String requireText(String value, String field) {

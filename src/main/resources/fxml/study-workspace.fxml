@@ -2,13 +2,13 @@
 
 <?import com.escontrela.lastmove.ui.component.board.ChessBoardControl?>
 <?import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel?>
+<?import com.escontrela.lastmove.ui.component.evaluation.EngineEvaluationControl?>
+<?import com.escontrela.lastmove.ui.component.evaluation.EngineSelectorModal?>
 <?import com.escontrela.lastmove.ui.component.message.TextInputModal?>
 <?import com.escontrela.lastmove.ui.component.notation.MoveNotationControl?>
 <?import com.escontrela.lastmove.ui.component.promotion.PromotionPickerControl?>
 <?import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton?>
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.control.CheckBox?>
-<?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ListView?>
 <?import javafx.scene.image.Image?>
@@ -55,12 +55,12 @@
             </VBox>
         </left>
         <center>
-            <HBox spacing="24.0" styleClass="analysis-workspace">
-                <padding><Insets bottom="24.0" left="24.0" right="24.0" top="24.0" /></padding>
+            <HBox spacing="16.0" styleClass="analysis-workspace">
+                <padding><Insets bottom="16.0" left="20.0" right="20.0" top="8.0" /></padding>
                 <StackPane fx:id="boardHost" alignment="CENTER" HBox.hgrow="ALWAYS">
                     <ChessBoardControl fx:id="chessBoard" />
                 </StackPane>
-                <VBox prefWidth="320.0" spacing="16.0" styleClass="board-side-panel">
+                <VBox prefWidth="320.0" spacing="8.0" styleClass="board-side-panel">
                     <VBox spacing="12.0" styleClass="rail-card board-side-card">
                         <padding><Insets bottom="20.0" left="20.0" right="20.0" top="20.0" /></padding>
                         <Label styleClass="eyebrow-label" text="Position" />
@@ -84,12 +84,7 @@
 
                     <VBox spacing="12.0" styleClass="rail-card board-side-card analysis-card">
                         <padding><Insets bottom="20.0" left="20.0" right="20.0" top="20.0" /></padding>
-                        <Label styleClass="eyebrow-label" text="Engine" />
-                        <Label styleClass="card-title" text="Analysis" />
-                        <CheckBox fx:id="analysisEnabledCheckBox" mnemonicParsing="false" styleClass="settings-check-box" text="Analyze position" />
-                        <ComboBox fx:id="analysisEngineCombo" maxWidth="Infinity" />
-                        <Label fx:id="analysisBestMoveLabel" styleClass="analysis-value" text="Best move: —" wrapText="true" />
-                        <Label fx:id="analysisScoreLabel" styleClass="analysis-value" text="Score: —" wrapText="true" />
+                        <EngineEvaluationControl fx:id="engineEvaluation" />
                     </VBox>
                 </VBox>
             </HBox>
@@ -106,4 +101,5 @@
     <TextInputModal fx:id="textInputModal" />
     <PromotionPickerControl fx:id="promotionPicker" />
     <ContextualMenuPanel fx:id="contextualMenuPanel" />
+    <EngineSelectorModal fx:id="engineSelectorModal" />
 </StackPane>

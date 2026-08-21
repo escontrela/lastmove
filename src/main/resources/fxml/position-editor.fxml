@@ -35,8 +35,8 @@
     </HBox>
   </top>
   <center>
-    <HBox alignment="TOP_CENTER" spacing="24" styleClass="workspace-content">
-      <padding><Insets bottom="24" left="36" right="36" top="24" /></padding>
+    <HBox alignment="TOP_CENTER" spacing="16" styleClass="workspace-content">
+      <padding><Insets bottom="16" left="28" right="28" top="8" /></padding>
       <VBox prefWidth="230" spacing="12" styleClass="utility-rail editor-settings-panel">
         <padding><Insets bottom="18" left="18" right="18" top="18" /></padding>
         <Label styleClass="eyebrow-label" text="POSITION" />

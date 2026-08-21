@@ -12,12 +12,16 @@ import java.util.Optional;
  * information, such as a minimal UCI wrapper that only emits {@code bestmove}.
  */
 public record EngineAnalysisResult(
-    Optional<MoveCommand> bestMove, Optional<EngineScore> score, Optional<Integer> depth) {
+    Optional<MoveCommand> bestMove,
+    Optional<EngineScore> score,
+    Optional<Integer> depth,
+    Optional<Long> nodes) {
 
   public EngineAnalysisResult {
     bestMove = Objects.requireNonNull(bestMove, "bestMove must not be null");
     score = Objects.requireNonNull(score, "score must not be null");
     depth = Objects.requireNonNull(depth, "depth must not be null");
+    nodes = Objects.requireNonNull(nodes, "nodes must not be null");
   }
 
   public static EngineAnalysisResult of(
@@ -25,7 +29,7 @@ public record EngineAnalysisResult(
     return new EngineAnalysisResult(
         Optional.of(Objects.requireNonNull(bestMove, "bestMove must not be null")),
         Optional.of(Objects.requireNonNull(score, "score must not be null")),
-        Optional.ofNullable(depth));
+        Optional.ofNullable(depth), Optional.empty());
   }
 
   /** Creates a result carrying only a chosen move, for engines that expose no evaluation. */
@@ -33,11 +37,12 @@ public record EngineAnalysisResult(
     return new EngineAnalysisResult(
         Optional.of(Objects.requireNonNull(bestMove, "bestMove must not be null")),
         Optional.empty(),
-        Optional.empty());
+        Optional.empty(), Optional.empty());
   }
 
   /** Creates an empty result for a position with no legal move and no score information. */
   public static EngineAnalysisResult empty() {
-    return new EngineAnalysisResult(Optional.empty(), Optional.empty(), Optional.empty());
+    return new EngineAnalysisResult(
+        Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
   }
 }
