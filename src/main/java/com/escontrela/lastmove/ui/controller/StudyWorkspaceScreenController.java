@@ -1,13 +1,11 @@
 package com.escontrela.lastmove.ui.controller;
 
-import com.escontrela.lastmove.application.computer.ComputerEngineDescriptor;
 import com.escontrela.lastmove.application.dto.AnalysisNotationNode;
 import com.escontrela.lastmove.application.dto.AnalysisNotationTree;
 import com.escontrela.lastmove.application.dto.PgnImportRequest;
-import com.escontrela.lastmove.application.dto.PositionAnalysisResult;
 import com.escontrela.lastmove.application.service.CurrentUserService;
 import com.escontrela.lastmove.application.service.GameLoadService;
-import com.escontrela.lastmove.application.service.PositionAnalysisService;
+import com.escontrela.lastmove.application.service.EngineEvaluationService;
 import com.escontrela.lastmove.application.service.StudyService;
 import com.escontrela.lastmove.application.study.CreateChapterCommand;
 import com.escontrela.lastmove.application.study.CreateChapterFromFenCommand;
@@ -22,19 +20,21 @@ import com.escontrela.lastmove.domain.analysis.AnalysisNodeId;
 import com.escontrela.lastmove.domain.common.PieceColor;
 import com.escontrela.lastmove.domain.game.MoveCommand;
 import com.escontrela.lastmove.domain.game.MoveExecutionResult;
-import com.escontrela.lastmove.domain.game.PositionSnapshot;
 import com.escontrela.lastmove.domain.notation.Fen;
 import com.escontrela.lastmove.domain.player.PlayerId;
 import com.escontrela.lastmove.domain.study.StudyChapterId;
 import com.escontrela.lastmove.domain.study.StudyId;
 import com.escontrela.lastmove.ui.component.board.ChessBoardControl;
 import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
+import com.escontrela.lastmove.ui.component.evaluation.EngineEvaluationControl;
+import com.escontrela.lastmove.ui.component.evaluation.EngineSelectorModal;
 import com.escontrela.lastmove.ui.component.message.TextInputModal;
 import com.escontrela.lastmove.ui.component.notation.MoveNotationControl;
 import com.escontrela.lastmove.ui.component.notation.MoveNotationEntry;
 import com.escontrela.lastmove.ui.component.notation.MoveNotationNode;
 import com.escontrela.lastmove.ui.component.promotion.PromotionPickerControl;
 import com.escontrela.lastmove.ui.event.OpenStudyWorkspaceEvent;
+import com.escontrela.lastmove.ui.event.UiEventBus;
 import com.escontrela.lastmove.ui.model.BoardMoveInput;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
 import com.escontrela.lastmove.ui.screen.UiScreenController;
@@ -46,15 +46,11 @@ import com.escontrela.lastmove.ui.support.FileChooserFactory;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
-import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
-import javafx.scene.control.CheckBox;
-import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
@@ -67,8 +63,6 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.util.Duration;
-import javafx.util.StringConverter;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -78,21 +72,6 @@ import org.springframework.stereotype.Component;
 public final class StudyWorkspaceScreenController implements UiScreenController {
 
   private static final double BOARD_MAX_SIZE = 720.0;
-
-  private static final StringConverter<ComputerEngineDescriptor> ENGINE_CONVERTER =
-      new StringConverter<>() {
-        @Override
-        public String toString(ComputerEngineDescriptor descriptor) {
-          return descriptor == null
-              ? ""
-              : descriptor.displayName() + " " + descriptor.version();
-        }
-
-        @Override
-        public ComputerEngineDescriptor fromString(String value) {
-          throw new UnsupportedOperationException("The analysis engine selector is not editable");
-        }
-      };
 
   @FXML private StackPane root;
   @FXML private StackPane boardHost;
@@ -105,10 +84,8 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
   @FXML private Label chapterTitleLabel;
   @FXML private Label statusLabel;
   @FXML private ContextualMenuPanel contextualMenuPanel;
-  @FXML private CheckBox analysisEnabledCheckBox;
-  @FXML private ComboBox<ComputerEngineDescriptor> analysisEngineCombo;
-  @FXML private Label analysisBestMoveLabel;
-  @FXML private Label analysisScoreLabel;
+  @FXML private EngineEvaluationControl engineEvaluation;
+  @FXML private EngineSelectorModal engineSelectorModal;
 
   private final StudyService studyService;
   private final CurrentUserService currentUserService;
@@ -117,9 +94,10 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
   private final ChessSoundService chessSoundService;
   private final ClipboardService clipboardService;
   private final BoardAppearancePreferencesService boardAppearancePreferencesService;
-  private final PositionAnalysisService positionAnalysisService;
+  private final EngineEvaluationService engineEvaluationService;
   private final UiFlowManager uiFlowManager;
-  private final PauseTransition analysisDebounce = new PauseTransition(Duration.millis(350));
+  private final UiEventBus uiEventBus;
+  private Runnable removeEvaluationSubscription = () -> {};
 
   private StudyId activeStudyId;
   private StudyChapterId activeChapterId;
@@ -134,7 +112,8 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
       ChessSoundService chessSoundService,
       ClipboardService clipboardService,
       BoardAppearancePreferencesService boardAppearancePreferencesService,
-      PositionAnalysisService positionAnalysisService,
+      EngineEvaluationService engineEvaluationService,
+      UiEventBus uiEventBus,
       @Lazy UiFlowManager uiFlowManager) {
     this.studyService = studyService;
     this.currentUserService = currentUserService;
@@ -143,7 +122,8 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
     this.chessSoundService = chessSoundService;
     this.clipboardService = clipboardService;
     this.boardAppearancePreferencesService = boardAppearancePreferencesService;
-    this.positionAnalysisService = positionAnalysisService;
+    this.engineEvaluationService = engineEvaluationService;
+    this.uiEventBus = uiEventBus;
     this.uiFlowManager = uiFlowManager;
   }
 
@@ -186,8 +166,8 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
 
   @Override
   public void onHide() {
-    analysisDebounce.stop();
-    positionAnalysisService.close();
+    removeEvaluationSubscription.run();
+    engineEvaluationService.cancel();
   }
 
   @FXML
@@ -375,95 +355,22 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
   }
 
   private void configureEngineAnalysis() {
-    analysisEngineCombo.setConverter(ENGINE_CONVERTER);
-    analysisEngineCombo.setItems(
-        FXCollections.observableArrayList(positionAnalysisService.availableEngines()));
-    selectAnalysisEngine(positionAnalysisService.defaultEngineId());
-    analysisEnabledCheckBox.setSelected(true);
-    analysisDebounce.setOnFinished(event -> requestAnalysis());
-
+    removeEvaluationSubscription = engineEvaluationService.subscribe(
+        state -> Platform.runLater(() -> engineEvaluation.render(state)));
+    engineEvaluation.setOnChangeEngine(
+        event -> engineSelectorModal.show(
+            engineEvaluationService.availableEngines(), engineEvaluationService.state().engine().id()));
+    engineSelectorModal.setOnEngineSelected(
+        event -> engineEvaluationService.selectEngine(event.engineId()));
     chessBoard
         .positionProperty()
         .addListener(
             (observable, oldPosition, newPosition) -> {
               if (newPosition != null) {
-                analysisDebounce.playFromStart();
+                engineEvaluationService.analyze(newPosition);
               }
             });
 
-    analysisEnabledCheckBox
-        .selectedProperty()
-        .addListener(
-            (observable, oldValue, enabled) -> {
-              if (enabled) {
-                requestAnalysis();
-              } else {
-                clearAnalysisLabels();
-              }
-            });
-
-    analysisEngineCombo
-        .valueProperty()
-        .addListener(
-            (observable, oldValue, selectedEngine) -> {
-              if (selectedEngine != null && analysisEnabledCheckBox.isSelected()) {
-                requestAnalysis();
-              }
-            });
-  }
-
-  private void selectAnalysisEngine(String engineId) {
-    for (ComputerEngineDescriptor engine : analysisEngineCombo.getItems()) {
-      if (engine.id().equals(engineId)) {
-        analysisEngineCombo.getSelectionModel().select(engine);
-        return;
-      }
-    }
-    analysisEngineCombo.getSelectionModel().selectFirst();
-  }
-
-  private void requestAnalysis() {
-    if (!analysisEnabledCheckBox.isSelected()) {
-      clearAnalysisLabels();
-      return;
-    }
-    ComputerEngineDescriptor selectedEngine = analysisEngineCombo.getValue();
-    PositionSnapshot position = chessBoard.getPosition();
-    if (selectedEngine == null || position == null) {
-      clearAnalysisLabels();
-      return;
-    }
-    analysisBestMoveLabel.setText("Best move: …");
-    analysisScoreLabel.setText("Analysing with " + selectedEngine.displayName() + "…");
-    positionAnalysisService
-        .analyze(position, selectedEngine.id())
-        .whenComplete(
-            (result, failure) ->
-                Platform.runLater(
-                    () -> {
-                      if (failure != null) {
-                        showAnalysisFailure(failure);
-                      } else if (result != null) {
-                        result.ifPresent(this::renderAnalysis);
-                      }
-                    }));
-  }
-
-  private void renderAnalysis(PositionAnalysisResult result) {
-    analysisBestMoveLabel.setText("Best move: " + result.bestMoveSan().orElse("—"));
-    String score = result.scoreText().orElse("—");
-    String depth = result.depth().map(value -> "  ·  depth " + value).orElse("");
-    analysisScoreLabel.setText("Score: " + score + depth);
-  }
-
-  private void showAnalysisFailure(Throwable failure) {
-    analysisBestMoveLabel.setText("Best move: —");
-    analysisScoreLabel.setText("Analysis unavailable");
-  }
-
-  private void clearAnalysisLabels() {
-    analysisBestMoveLabel.setText("Best move: —");
-    analysisScoreLabel.setText("Score: —");
   }
 
   private void refreshWorkspace() {

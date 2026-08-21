@@ -12,8 +12,8 @@
 
 .workspace-header {
     -fx-background-color: #ffffff;
-    /* Keep workspace titles clear of the window edge across analysis, studies and the editor. */
-    -fx-padding: 32px 32px 24px 32px;
+    /* Keep board workspaces compact enough for a normal laptop-height window. */
+    -fx-padding: 16px 28px 14px 28px;
     -fx-border-color: transparent transparent #e6e6e6 transparent;
     -fx-border-width: 0 0 1px 0;
 }
@@ -25,7 +25,7 @@
 }
 
 .app-title {
-    -fx-font-size: 30px;
+    -fx-font-size: 24px;
     -fx-font-weight: 700;
     -fx-text-fill: #262626;
 }
@@ -75,7 +75,7 @@
 
 .hero-support, .card-copy, .status-text {
     -fx-text-fill: #3c3c3c;
-    -fx-font-size: 14px;
+    -fx-font-size: 13px;
 }
 
 .hero-support { -fx-max-width: 640px; }
@@ -784,6 +784,24 @@
     -fx-text-fill: #262626;
 }
 
+.engine-evaluation-control { -fx-padding: 14; -fx-background-color: #f5f8fb; -fx-border-color: #dce5ef; -fx-border-width: 1; }
+.engine-evaluation-mark { -fx-font-size: 22px; -fx-text-fill: #1c69d4; }
+.engine-evaluation-name, .engine-evaluation-metric-value { -fx-font-weight: 800; -fx-text-fill: #262626; }
+.engine-evaluation-version, .engine-evaluation-metric-label, .engine-evaluation-searching { -fx-font-size: 11px; -fx-text-fill: #65717e; }
+.engine-evaluation-metric-value { -fx-font-size: 17px; }
+.engine-evaluation-metric { -fx-min-width: 112px; }
+.engine-evaluation-change { -fx-background-color: transparent; -fx-text-fill: #1c69d4; -fx-font-weight: 700; }
+.engine-evaluation-activity { -fx-background-color: #1c69d4; }
+.engine-evaluation-activity.engine-evaluation-activity-idle { -fx-background-color: #cbd5df; }
+.engine-selector-modal-card { -fx-min-width: 360px; -fx-max-width: 420px; }
+.engine-selector-tile { -fx-min-width: 92px; -fx-min-height: 78px; -fx-background-color: #ffffff; -fx-border-color: #dce5ef; -fx-border-width: 1; -fx-alignment: center; }
+.engine-selector-tile:hover, .engine-selector-tile.selected { -fx-border-color: #1c69d4; -fx-background-color: #edf5ff; }
+.engine-selector-icon { -fx-font-size: 19px; -fx-text-fill: #1c69d4; }
+.engine-selector-name { -fx-font-size: 13px; }
+.engine-selector-version { -fx-font-size: 12px; }
+.engine-selector-name { -fx-font-weight: 800; -fx-text-fill: #262626; }
+.engine-selector-version { -fx-text-fill: #65717e; }
+
 .chess-board {
     -fx-border-color: transparent;
     -fx-border-width: 0;
@@ -1464,6 +1482,11 @@
     -fx-border-color: #3b4654;
 }
 .night-mode .utility-rail { -fx-background-color: #121820; }
+.night-mode .engine-evaluation-control, .night-mode .engine-selector-tile { -fx-background-color: #262e38; -fx-border-color: #3b4654; }
+.night-mode .engine-evaluation-name, .night-mode .engine-evaluation-metric-value, .night-mode .engine-selector-name { -fx-text-fill: #f1f3f5; }
+.night-mode .engine-evaluation-version, .night-mode .engine-evaluation-metric-label, .night-mode .engine-evaluation-searching, .night-mode .engine-selector-version { -fx-text-fill: #b8c5d3; }
+.night-mode .engine-evaluation-activity.engine-evaluation-activity-idle { -fx-background-color: #465465; }
+.night-mode .engine-selector-tile:hover, .night-mode .engine-selector-tile.selected { -fx-background-color: #2b3b4d; -fx-border-color: #6ba5f0; }
 .night-mode .secondary-button {
     -fx-background-color: #262e38;
     -fx-border-color: #6d7783;

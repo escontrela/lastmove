@@ -152,7 +152,7 @@ public final class KnightshadeMoveEngine implements ComputerMoveEngine {
           (System.nanoTime() - startedAt) / 1_000_000L);
       if (result.move() == null) {
         return new EngineAnalysisResult(
-            Optional.empty(), Optional.of(score), Optional.of(result.depth()));
+            Optional.empty(), Optional.of(score), Optional.of(result.depth()), Optional.of(result.nodes()));
       }
       MoveCommand move =
           new MoveCommand(
@@ -160,7 +160,7 @@ public final class KnightshadeMoveEngine implements ComputerMoveEngine {
               result.move().to(),
               Optional.ofNullable(result.move().promotion()));
       return new EngineAnalysisResult(
-          Optional.of(move), Optional.of(score), Optional.of(result.depth()));
+          Optional.of(move), Optional.of(score), Optional.of(result.depth()), Optional.of(result.nodes()));
     } catch (ComputerEngineException exception) {
       log.error("Knightshade search failed", exception);
       throw exception;

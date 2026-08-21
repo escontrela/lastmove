@@ -50,10 +50,10 @@
             </VBox>
         </left>
         <center>
-            <HBox spacing="24.0" styleClass="analysis-workspace">
-                <padding><Insets bottom="24.0" left="24.0" right="24.0" top="24.0" /></padding>
+            <HBox spacing="16.0" styleClass="analysis-workspace">
+                <padding><Insets bottom="16.0" left="20.0" right="20.0" top="8.0" /></padding>
                 <StackPane alignment="CENTER" HBox.hgrow="ALWAYS"><ChessBoardControl fx:id="chessBoard" /></StackPane>
-                <VBox prefWidth="290.0" spacing="16.0" styleClass="board-side-panel">
+                <VBox prefWidth="290.0" spacing="8.0" styleClass="board-side-panel">
                     <VBox spacing="12.0" styleClass="rail-card board-side-card">
                         <padding><Insets bottom="20.0" left="20.0" right="20.0" top="20.0" /></padding>
                         <Label styleClass="eyebrow-label" text="Mode" />

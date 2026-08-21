@@ -160,7 +160,7 @@ public final class PositionAnalysisService {
         descriptor.displayName() + " " + descriptor.version(),
         bestMoveSan,
         scoreText,
-        result.depth());
+        result.depth(), result.nodes());
   }
 
   private Optional<String> toSan(PositionSnapshot position, MoveCommand move) {

@@ -214,7 +214,7 @@ public final class UciProcessEngine implements ComputerMoveEngine {
           if (cancellationRequested.get()) {
             throw new CancellationException("The UCI search was cancelled");
           }
-          return new EngineAnalysisResult(parseBestMoveToken(line), score, depth);
+          return new EngineAnalysisResult(parseBestMoveToken(line), score, depth, Optional.empty());
         }
         if (line.startsWith("info ")) {
           Optional<EngineScore> parsedScore = UciInfoParser.parseScore(line);
