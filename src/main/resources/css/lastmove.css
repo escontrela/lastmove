@@ -147,6 +147,28 @@
 
 .study-destination-row:hover { -fx-background-color: #f5f8fc; }
 
+.study-library-cell:selected .study-destination-row {
+    -fx-background-color: #edf4fc;
+    -fx-border-color: transparent transparent #c5d9ef #1c69d4;
+    -fx-border-width: 0 0 1 4;
+    -fx-padding: 12 16 12 12;
+}
+
+.study-destination-row .study-open-button {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #c7ced7;
+    -fx-border-width: 1;
+    -fx-text-fill: #1f242a;
+    -fx-padding: 8 12;
+}
+.study-destination-row .study-open-button:hover {
+    -fx-background-color: #f4f7fb;
+    -fx-border-color: #1c69d4;
+}
+.study-destination-row .study-open-button:pressed { -fx-background-color: #e8edf4; }
+.study-destination-row .study-open-button:focused { -fx-border-color: #0653b6; }
+.study-destination-row .study-open-button:disabled { -fx-opacity: 0.48; }
+
 .study-library-title, .chapter-title {
     -fx-font-size: 15px;
     -fx-font-weight: 700;
@@ -1252,20 +1274,34 @@
     -fx-background-color: #1c2430;
 }
 .night-mode .study-library-row,
-.night-mode .chapter-row {
+.night-mode .chapter-row,
+.night-mode .study-destination-row {
     -fx-background-color: #1c2430;
     -fx-border-color: transparent transparent #3b4654 transparent;
 }
 .night-mode .study-library-row:hover,
-.night-mode .chapter-row:hover {
+.night-mode .chapter-row:hover,
+.night-mode .study-destination-row:hover {
     -fx-background-color: #243243;
     -fx-border-color: transparent transparent #465465 #6ba5f0;
 }
 .night-mode .study-library-cell:selected .study-library-row,
+.night-mode .study-library-cell:selected .study-destination-row,
 .night-mode .chapter-row-active {
     -fx-background-color: #2d4056;
     -fx-border-color: transparent transparent #50657c #6ba5f0;
 }
+.night-mode .study-destination-row .study-open-button {
+    -fx-background-color: #243243;
+    -fx-border-color: #5c6a79;
+    -fx-text-fill: #f1f3f5;
+}
+.night-mode .study-destination-row .study-open-button:hover {
+    -fx-background-color: #2d4056;
+    -fx-border-color: #79aeef;
+}
+.night-mode .study-destination-row .study-open-button:pressed { -fx-background-color: #334b64; }
+.night-mode .study-destination-row .study-open-button:focused { -fx-border-color: #9fc8f7; }
 .night-mode .study-library-title,
 .night-mode .chapter-title { -fx-text-fill: #f1f3f5; }
 .night-mode .study-library-summary,

@@ -30,7 +30,7 @@
             <VBox spacing="16.0" styleClass="studies-workspace">
                 <padding><Insets bottom="48.0" left="48.0" right="48.0" top="32.0" /></padding>
                 <Label styleClass="sessions-section-title" text="Existing studies" />
-                <StackPane>
+                <StackPane styleClass="library-card">
                     <ListView fx:id="studyList" styleClass="study-library-list" />
                     <Label fx:id="emptyStateLabel" styleClass="session-empty-state" text="Create a study to save this session as its first chapter." wrapText="true" />
                 </StackPane>

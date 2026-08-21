@@ -165,6 +165,7 @@ public final class StudyDestinationScreenController implements UiScreenControlle
     private final Button choose = new Button("Add chapter");
 
     private DestinationStudyCell() {
+      getStyleClass().add("study-library-cell");
       row.getStyleClass().add("study-destination-row");
       row.setAlignment(Pos.CENTER_LEFT);
       title.getStyleClass().add("study-library-title");
