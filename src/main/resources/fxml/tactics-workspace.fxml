@@ -41,7 +41,7 @@
                         <ToolbarIconButton accessibleText="Author solution" darkIconResource="/images/edit_35dp_FFFFFF.png" lightIconResource="/images/edit_35dp_000000.png" onAction="#onToggleAuthoring" tooltipText="edit/ solution" />
                     </HBox>
                 </VBox>
-                <VBox spacing="12.0" styleClass="rail-card" VBox.vgrow="ALWAYS">
+                <VBox spacing="12.0" styleClass="rail-card collection-card" VBox.vgrow="ALWAYS">
                     <padding><Insets bottom="20.0" left="20.0" right="20.0" top="20.0" /></padding>
                     <Label styleClass="eyebrow-label" text="Exercises" />
                     <Label styleClass="card-title" text="Suite tactics" />

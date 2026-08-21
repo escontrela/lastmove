@@ -34,7 +34,7 @@
                     <Label styleClass="sessions-section-title" text="Your saved studies" />
                     <Label fx:id="studyCountLabel" styleClass="sessions-section-copy" text="0 studies" />
                 </VBox>
-                <StackPane>
+                <StackPane styleClass="library-card">
                     <ListView fx:id="studyList" styleClass="study-library-list" />
                     <Label fx:id="emptyStateLabel" styleClass="session-empty-state" text="Create a study to start collecting persistent chapters." wrapText="true" />
                 </StackPane>

@@ -37,7 +37,7 @@
   <center>
     <HBox alignment="TOP_CENTER" spacing="24" styleClass="workspace-content">
       <padding><Insets bottom="24" left="36" right="36" top="24" /></padding>
-      <VBox prefWidth="230" spacing="12" styleClass="utility-rail">
+      <VBox prefWidth="230" spacing="12" styleClass="utility-rail editor-settings-panel">
         <padding><Insets bottom="18" left="18" right="18" top="18" /></padding>
         <Label styleClass="eyebrow-label" text="POSITION" />
             <HBox alignment="CENTER_LEFT" spacing="8.0">
@@ -46,23 +46,23 @@
                   <ToolbarIconButton fx:id="addStudyButton" accessibleText="Save current position as tactic" darkIconResource="/images/menu_book_35dp_FFFFFF.png" lightIconResource="/images/menu_book_35dp_000000.png" onAction="#onAddStudy" tooltipText="Add to study" />
                </children>
             </HBox>
-        <Separator />
-        <Label styleClass="card-title" text="Side to move" />
+        <Separator styleClass="editor-separator" />
+        <Label styleClass="card-title editor-section-title" text="Side to move" />
         <HBox spacing="8">
-          <RadioButton fx:id="whiteToMove" onAction="#onMetadataDraftChanged" text="White" />
-          <RadioButton fx:id="blackToMove" onAction="#onMetadataDraftChanged" text="Black" />
+          <RadioButton fx:id="whiteToMove" onAction="#onMetadataDraftChanged" styleClass="editor-radio" text="White" />
+          <RadioButton fx:id="blackToMove" onAction="#onMetadataDraftChanged" styleClass="editor-radio" text="Black" />
         </HBox>
-        <Label styleClass="card-title" text="Castling rights" />
-        <CheckBox fx:id="whiteKingSide" text="White O-O" />
-        <CheckBox fx:id="whiteQueenSide" text="White O-O-O" />
-        <CheckBox fx:id="blackKingSide" text="Black O-O" />
-        <CheckBox fx:id="blackQueenSide" text="Black O-O-O" />
-        <Label styleClass="card-title" text="En passant" />
-        <ComboBox fx:id="enPassantCombo" maxWidth="Infinity" />
-        <Label styleClass="card-title" text="Halfmove / fullmove" />
+        <Label styleClass="card-title editor-section-title" text="Castling rights" />
+        <CheckBox fx:id="whiteKingSide" styleClass="editor-check-box" text="White O-O" />
+        <CheckBox fx:id="whiteQueenSide" styleClass="editor-check-box" text="White O-O-O" />
+        <CheckBox fx:id="blackKingSide" styleClass="editor-check-box" text="Black O-O" />
+        <CheckBox fx:id="blackQueenSide" styleClass="editor-check-box" text="Black O-O-O" />
+        <Label styleClass="card-title editor-section-title" text="En passant" />
+        <ComboBox fx:id="enPassantCombo" maxWidth="Infinity" styleClass="editor-field" />
+        <Label styleClass="card-title editor-section-title" text="Halfmove / fullmove" />
         <HBox spacing="6">
-          <Spinner fx:id="halfmoveSpinner"><valueFactory><SpinnerValueFactory.IntegerSpinnerValueFactory initialValue="0" max="999" min="0" /></valueFactory></Spinner>
-          <Spinner fx:id="fullmoveSpinner"><valueFactory><SpinnerValueFactory.IntegerSpinnerValueFactory initialValue="1" max="999" min="1" /></valueFactory></Spinner>
+          <Spinner fx:id="halfmoveSpinner" styleClass="editor-field"><valueFactory><SpinnerValueFactory.IntegerSpinnerValueFactory initialValue="0" max="999" min="0" /></valueFactory></Spinner>
+          <Spinner fx:id="fullmoveSpinner" styleClass="editor-field"><valueFactory><SpinnerValueFactory.IntegerSpinnerValueFactory initialValue="1" max="999" min="1" /></valueFactory></Spinner>
         </HBox>
         <Button mnemonicParsing="false" onAction="#onApplyMetadata" styleClass="secondary-button" text="Apply metadata" />
       </VBox>
@@ -70,7 +70,7 @@
         <ChessBoardControl fx:id="chessBoard" prefHeight="620" prefWidth="620" />
         <Label fx:id="statusLabel" maxWidth="620" styleClass="tool-catalog-status" wrapText="true" />
       </VBox>
-      <VBox prefWidth="270" spacing="12" styleClass="board-side-card">
+      <VBox prefWidth="270" spacing="12" styleClass="board-side-card piece-palette-card">
         <padding><Insets bottom="18" left="18" right="18" top="18" /></padding>
         <Label styleClass="eyebrow-label" text="PIECE PALETTE" />
         <Label fx:id="selectedPieceLabel" styleClass="card-copy" text="Click or drag a piece onto the board. Right-click removes it." wrapText="true" />
@@ -112,9 +112,9 @@
                   <RowConstraints />
                </rowConstraints>
         </GridPane>
-        <Separator />
-        <Label styleClass="card-title" text="FEN" />
-        <TextArea fx:id="fenText" prefRowCount="3" wrapText="true" />
+        <Separator styleClass="editor-separator" />
+        <Label styleClass="card-title editor-section-title" text="FEN" />
+        <TextArea fx:id="fenText" prefRowCount="3" styleClass="editor-text-area" wrapText="true" />
         <HBox spacing="8">
           <Button mnemonicParsing="false" onAction="#onGenerateFen" styleClass="primary-button" text="Generate" />
         </HBox>

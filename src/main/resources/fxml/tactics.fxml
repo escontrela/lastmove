@@ -34,7 +34,7 @@
                     <Label styleClass="sessions-section-title" text="Your tactical collections" />
                     <Label fx:id="suiteCountLabel" styleClass="sessions-section-copy" text="0 suites" />
                 </VBox>
-                <StackPane>
+                <StackPane styleClass="library-card">
                     <ListView fx:id="suiteList" styleClass="study-library-list" />
                     <Label fx:id="emptyStateLabel" styleClass="session-empty-state" text="Create a suite to start your tactical collection." wrapText="true" />
                 </StackPane>
