@@ -105,6 +105,8 @@ public class SqliteStudyRepository implements StudyRepository {
     assertAvailable();
     Objects.requireNonNull(study, "study must not be null");
     String studyId = study.id().value().toString();
+    Map<String, String> chapterComments = existingChapterComments(studyId);
+    Map<String, String> moveComments = existingMoveComments(studyId);
     List<Integer> existingOrders =
         jdbcTemplate.query(
             "SELECT display_order FROM studies WHERE id = ?", (resultSet, rowNum) -> resultSet.getInt(1), studyId);
@@ -137,7 +139,39 @@ public class SqliteStudyRepository implements StudyRepository {
     for (int index = 0; index < chapters.size(); index++) {
       insertChapter(studyId, chapters.get(index), index);
     }
+    restoreComments(chapterComments, moveComments);
     return study;
+  }
+
+  private Map<String, String> existingChapterComments(String studyId) {
+    Map<String, String> result = new LinkedHashMap<>();
+    jdbcTemplate.query(
+        "SELECT cc.chapter_id, cc.comment FROM study_chapter_comments cc JOIN study_chapters c ON c.id=cc.chapter_id WHERE c.study_id=?",
+        rs -> result.put(rs.getString(1), rs.getString(2)), studyId);
+    return result;
+  }
+
+  private Map<String, String> existingMoveComments(String studyId) {
+    Map<String, String> result = new LinkedHashMap<>();
+    jdbcTemplate.query(
+        "SELECT mc.node_id, mc.comment FROM study_move_comments mc JOIN study_chapters c ON c.id=mc.chapter_id WHERE c.study_id=?",
+        rs -> result.put(rs.getString(1), rs.getString(2)), studyId);
+    return result;
+  }
+
+  private void restoreComments(Map<String, String> chapterComments, Map<String, String> moveComments) {
+    long now = Instant.now().toEpochMilli();
+    chapterComments.forEach((chapterId, comment) -> {
+      if (!jdbcTemplate.queryForList("SELECT id FROM study_chapters WHERE id=?", chapterId).isEmpty()) {
+        jdbcTemplate.update("INSERT INTO study_chapter_comments(chapter_id,comment,updated_at) VALUES(?,?,?)", chapterId, comment, now);
+      }
+    });
+    moveComments.forEach((nodeId, comment) -> {
+      List<Map<String, Object>> rows = jdbcTemplate.queryForList("SELECT chapter_id FROM study_chapter_nodes WHERE id=?", nodeId);
+      if (!rows.isEmpty()) {
+        jdbcTemplate.update("INSERT INTO study_move_comments(chapter_id,node_id,comment,updated_at) VALUES(?,?,?,?)", rows.getFirst().get("chapter_id"), nodeId, comment, now);
+      }
+    });
   }
 
   @Override

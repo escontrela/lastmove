@@ -7,6 +7,7 @@ import com.escontrela.lastmove.application.service.CurrentUserService;
 import com.escontrela.lastmove.application.service.GameLoadService;
 import com.escontrela.lastmove.application.service.EngineEvaluationService;
 import com.escontrela.lastmove.application.service.StudyService;
+import com.escontrela.lastmove.application.service.StudyAnnotationService;
 import com.escontrela.lastmove.application.study.CreateChapterCommand;
 import com.escontrela.lastmove.application.study.CreateChapterFromFenCommand;
 import com.escontrela.lastmove.application.study.DeleteChapterCommand;
@@ -26,9 +27,12 @@ import com.escontrela.lastmove.domain.study.StudyChapterId;
 import com.escontrela.lastmove.domain.study.StudyId;
 import com.escontrela.lastmove.ui.component.board.ChessBoardControl;
 import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
+import com.escontrela.lastmove.ui.component.comment.CommentPanel;
 import com.escontrela.lastmove.ui.component.evaluation.EngineEvaluationControl;
 import com.escontrela.lastmove.ui.component.evaluation.EngineSelectorModal;
 import com.escontrela.lastmove.ui.component.message.TextInputModal;
+import com.escontrela.lastmove.ui.component.message.MultilineTextInputModal;
+import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton;
 import com.escontrela.lastmove.ui.component.notation.MoveNotationControl;
 import com.escontrela.lastmove.ui.component.notation.MoveNotationEntry;
 import com.escontrela.lastmove.ui.component.notation.MoveNotationNode;
@@ -86,8 +90,12 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
   @FXML private ContextualMenuPanel contextualMenuPanel;
   @FXML private EngineEvaluationControl engineEvaluation;
   @FXML private EngineSelectorModal engineSelectorModal;
+  @FXML private CommentPanel commentPanel;
+  @FXML private MultilineTextInputModal commentEditor;
+  @FXML private ToolbarIconButton moveCommentButton;
 
   private final StudyService studyService;
+  private final StudyAnnotationService annotationService;
   private final CurrentUserService currentUserService;
   private final GameLoadService gameLoadService;
   private final FileChooserFactory fileChooserFactory;
@@ -103,9 +111,12 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
   private StudyChapterId activeChapterId;
   private BoardMoveInput pendingPromotionMove;
   private List<StudyChapterSummary> visibleChapters = List.of();
+  private AnalysisNodeId currentNodeId;
+  private Runnable editCurrentComment = () -> {};
 
   public StudyWorkspaceScreenController(
       StudyService studyService,
+      StudyAnnotationService annotationService,
       CurrentUserService currentUserService,
       GameLoadService gameLoadService,
       FileChooserFactory fileChooserFactory,
@@ -116,6 +127,7 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
       UiEventBus uiEventBus,
       @Lazy UiFlowManager uiFlowManager) {
     this.studyService = studyService;
+    this.annotationService = annotationService;
     this.currentUserService = currentUserService;
     this.gameLoadService = gameLoadService;
     this.fileChooserFactory = fileChooserFactory;
@@ -303,6 +315,57 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
     statusLabel.setText(flipped ? "Board rotated: Black at bottom" : "Board rotated: White at bottom");
   }
 
+  @FXML
+  public void onStudyComment() {
+    activeOwner().ifPresent(owner -> showComment("Study comment",
+        annotationService.studyComment(owner, activeStudyId).orElse(""),
+        text -> annotationService.saveStudyComment(owner, activeStudyId, text)));
+  }
+
+  @FXML
+  public void onMoveComment() {
+    if (currentNodeId == null) return;
+    AnalysisNodeId annotatedNodeId = currentNodeId;
+    activeOwner().ifPresent(owner -> {
+      String san = selectedSan().orElse("move");
+      showComment("Move comment · " + san,
+          annotationService.moveComment(owner, activeStudyId, activeChapterId, annotatedNodeId).orElse(""),
+          text -> annotationService.saveMoveComment(owner, activeStudyId, activeChapterId, annotatedNodeId, text));
+    });
+  }
+
+  private void showChapterComment(StudyChapterSummary chapter) {
+    activeOwner().ifPresent(owner -> showComment("Chapter comment · " + chapter.title(),
+        annotationService.chapterComment(owner, activeStudyId, chapter.chapterId()).orElse(""),
+        text -> annotationService.saveChapterComment(owner, activeStudyId, chapter.chapterId(), text)));
+  }
+
+  private void showComment(String title, String value, java.util.function.Consumer<String> saveAction) {
+    commentPanel.setTitle(title); commentPanel.setContent(value);
+    editCurrentComment = () -> commentEditor.show(title, commentPanel.getContent(), event -> {
+      saveAction.accept(commentEditor.getText());
+      commentPanel.setContent(commentEditor.getText().strip());
+      commentEditor.hide();
+      statusLabel.setText(commentPanel.getContent().isBlank() ? "Comment removed" : "Comment saved");
+    });
+    commentPanel.setOnEdit(event -> editCurrentComment.run());
+    commentPanel.show();
+  }
+
+  private Optional<String> selectedSan() {
+    if (currentNodeId == null) return Optional.empty();
+    return findSan(moveNotation.getTree(), currentNodeId.value());
+  }
+
+  private Optional<String> findSan(List<MoveNotationNode> nodes, java.util.UUID id) {
+    for (MoveNotationNode node : nodes) {
+      if (node.entry().nodeId().equals(id)) return Optional.of(node.entry().san());
+      Optional<String> nested = findSan(node.continuations(), id);
+      if (nested.isPresent()) return nested;
+    }
+    return Optional.empty();
+  }
+
   private void attemptMove(BoardMoveInput moveInput) {
     activeOwner().ifPresent(
         owner -> {
@@ -401,6 +464,11 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
     AnalysisNotationTree tree = studyService.notationTree(owner, activeStudyId, activeChapterId);
     moveNotation.setTree(tree.roots().stream().map(this::toNotationNode).toList());
     moveNotation.setSelectedNodeId(tree.currentNodeId().map(id -> id.value()).orElse(null));
+    currentNodeId = tree.currentNodeId().orElse(null);
+    moveCommentButton.setDisable(currentNodeId == null);
+    if (commentPanel.isVisible() && commentPanel.getTitle().startsWith("Move comment")) {
+      onMoveComment();
+    }
   }
 
   private MoveNotationNode toNotationNode(AnalysisNotationNode node) {
@@ -523,6 +591,7 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
   private void showChapterActions(StudyChapterSummary chapter, double sceneX, double sceneY) {
     contextualMenuPanel.clearItems();
     contextualMenuPanel.addItem("Rename chapter…", "", event -> renameChapter(chapter));
+    contextualMenuPanel.addItem("Comments / Edit comment…", "", event -> showChapterComment(chapter));
     contextualMenuPanel.addSeparator();
     contextualMenuPanel.addItem("Move chapter up", "↑", event -> moveChapter(chapter, -1));
     contextualMenuPanel.addItem("Move chapter down", "↓", event -> moveChapter(chapter, 1));
