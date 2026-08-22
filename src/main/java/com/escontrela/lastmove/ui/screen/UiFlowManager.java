@@ -1,11 +1,14 @@
 package com.escontrela.lastmove.ui.screen;
 
 import com.escontrela.lastmove.application.service.CurrentUserService;
+import com.escontrela.lastmove.application.notification.GameNotificationRepository;
 import com.escontrela.lastmove.ui.component.header.ApplicationHeader;
 import com.escontrela.lastmove.ui.component.header.HeaderAction;
 import com.escontrela.lastmove.ui.component.header.HeaderBreadcrumb;
 import com.escontrela.lastmove.ui.component.header.HeaderConfiguration;
 import com.escontrela.lastmove.ui.component.message.MessageBox;
+import com.escontrela.lastmove.ui.event.UiEventBus;
+import com.escontrela.lastmove.ui.event.ToggleNotificationsPanelEvent;
 import com.escontrela.lastmove.ui.service.ApplicationThemeService;
 import java.util.List;
 import java.util.Optional;
@@ -17,15 +20,19 @@ public class UiFlowManager {
     private final UiScreenFactory screenFactory;
     private final ApplicationThemeService themeService;
     private final CurrentUserService currentUserService;
+    private final GameNotificationRepository notifications;
+    private final UiEventBus eventBus;
     private UiScreen currentScreen;
 
     public UiFlowManager(
             UiScreenFactory screenFactory,
             ApplicationThemeService themeService,
-            CurrentUserService currentUserService) {
+            CurrentUserService currentUserService, GameNotificationRepository notifications, UiEventBus eventBus) {
         this.screenFactory = screenFactory;
         this.themeService = themeService;
         this.currentUserService = currentUserService;
+        this.notifications = notifications;
+        this.eventBus = eventBus;
     }
 
     public void show(UiScreenId screenId) {
@@ -58,6 +65,12 @@ public class UiFlowManager {
                 .showThemeToggle(home)
                 .onThemeToggle(event -> themeService.setNightMode(!themeService.currentThemeMode().isNightMode()))
                 .contextActions(home ? List.of(new HeaderAction(
+                        "Open game notifications",
+                        "Notifications",
+                        currentUserService.selectedPlayerId().filter(notifications::hasUnread).isPresent() ? "/images/notification_sound_35dp_000000.png" : "/images/notifications_35dp_000000.png",
+                        currentUserService.selectedPlayerId().filter(notifications::hasUnread).isPresent() ? "/images/notification_sound_35dp_FFFFFF.png" : "/images/notifications_35dp_FFFFFF_.png",
+                        event -> eventBus.publish(new ToggleNotificationsPanelEvent()),
+                        false), new HeaderAction(
                         "Open settings",
                         "Settings",
                         "/images/settings_35dp_000000.png",
@@ -98,6 +111,7 @@ public class UiFlowManager {
             case STUDY_WORKSPACE -> "Study Workspace";
             case SETUP -> "Setup";
             case PLAYERS -> "Player Profiles";
+            case MY_GAMES -> "My Games";
             case MAIN -> "Home";
         };
     }

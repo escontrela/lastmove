@@ -815,6 +815,9 @@
     -fx-alignment: center-left;
 }
 
+.board-column { -fx-alignment: top-center; }
+.board-controls { -fx-padding: 4 0 0 0; -fx-alignment: center; }
+
 .board-card {
     -fx-padding: 0;
     -fx-alignment: center;
@@ -1407,6 +1410,11 @@
     -fx-border-color: #9fc8f7;
 }
 .night-mode .editor-section-title { -fx-text-fill: #f1f3f5; }
+.night-mode .editor-settings-panel .editor-section-title,
+.night-mode .piece-palette-card .editor-section-title { -fx-text-fill: #f4f7fb; }
+.night-mode .editor-settings-panel .eyebrow-label,
+.night-mode .piece-palette-card .eyebrow-label { -fx-text-fill: #b8c5d3; }
+.night-mode .piece-palette-card .card-copy { -fx-text-fill: #d5dee8; }
 .night-mode .editor-check-box,
 .night-mode .editor-radio { -fx-text-fill: #e5ebf1; }
 .night-mode .editor-check-box .box,
@@ -1940,3 +1948,23 @@
 .night-mode .speaker-notes-heading { -fx-text-fill: #d6bd7f; }
 .night-mode .speaker-notes-empty { -fx-text-fill: #aeb8c3; }
 .night-mode .speaker-notes-section, .night-mode .speaker-notes-move { -fx-border-color: transparent transparent #3b4654 transparent; }
+
+/* Persistent game notifications use the same contained-overlay language as speaker notes. */
+.notifications-overlay { -fx-background-color: rgba(24, 31, 40, 0.34); }
+.notifications-card { -fx-background-color: #fffdf7; -fx-background-radius: 18 0 0 18; -fx-border-color: #d9c98f; -fx-border-radius: 18 0 0 18; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.28), 18, 0.18, -3, 0); }
+.notifications-title { -fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #26313d; }
+.notifications-close { -fx-background-color: transparent; -fx-font-size: 28px; -fx-font-weight: bold; -fx-text-fill: #26313d; -fx-cursor: hand; }
+.notifications-scroll, .notifications-scroll > .viewport, .notifications-content { -fx-background-color: transparent; -fx-background: transparent; }
+.notifications-row { -fx-padding: 12 4 14 4; -fx-border-color: transparent transparent #e3dcc7 transparent; }
+.notifications-heading { -fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #6b5a2d; }
+.notifications-detail { -fx-font-size: 14px; -fx-text-fill: #3c4650; }
+.notifications-open, .notifications-clear { -fx-background-color: #2f76c2; -fx-text-fill: white; -fx-background-radius: 7; -fx-cursor: hand; }
+.notifications-delete { -fx-background-color: transparent; -fx-border-color: #c8bfa5; -fx-border-radius: 7; -fx-text-fill: #5e5040; -fx-cursor: hand; }
+.notifications-empty { -fx-padding: 18 0 0 0; -fx-font-style: italic; -fx-text-fill: #7c858e; }
+.night-mode .notifications-overlay { -fx-background-color: rgba(0,0,0,0.56); }
+.night-mode .notifications-card { -fx-background-color: #1c2430; -fx-border-color: #4b596a; }
+.night-mode .notifications-title, .night-mode .notifications-close, .night-mode .notifications-detail { -fx-text-fill: #f1f3f5; }
+.night-mode .notifications-heading { -fx-text-fill: #d6bd7f; }
+.night-mode .notifications-row { -fx-border-color: transparent transparent #3b4654 transparent; }
+.night-mode .notifications-delete { -fx-border-color: #657386; -fx-text-fill: #dfe6ed; }
+.night-mode .notifications-empty { -fx-text-fill: #aeb8c3; }

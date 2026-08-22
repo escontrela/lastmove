@@ -48,6 +48,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 /**
@@ -157,6 +158,16 @@ public final class HumanVsComputerScreenController implements UiScreenController
         computerGameService.availableEngines(),
         currentUserService.currentUser().name(),
         computerEngineSettingsService::thinkingTime);
+  }
+
+  /** Restores a persisted game requested by a history/notification surface through the UI bus. */
+  @EventListener
+  public void resumeSavedGame(com.escontrela.lastmove.ui.event.ResumeComputerGameEvent event) {
+    computerGameService.resumeGame(event.gameId()).whenComplete((state, failure) -> {
+      if (failure == null) {
+        Platform.runLater(() -> activateGame(state));
+      }
+    });
   }
 
   @Override

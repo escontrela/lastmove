@@ -1,6 +1,8 @@
 package com.escontrela.lastmove.bootstrap;
 
 import com.escontrela.lastmove.application.service.CurrentUserService;
+import com.escontrela.lastmove.application.notification.GameNotificationRepository;
+import com.escontrela.lastmove.ui.event.UiEventBus;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
 import com.escontrela.lastmove.ui.screen.UiScreenFactory;
 import com.escontrela.lastmove.ui.service.ApplicationThemeService;
@@ -27,7 +29,9 @@ public class LastMoveUiConfiguration {
     public UiFlowManager uiFlowManager(
             UiScreenFactory screenFactory,
             ApplicationThemeService themeService,
-            CurrentUserService currentUserService) {
-        return new UiFlowManager(screenFactory, themeService, currentUserService);
+            CurrentUserService currentUserService,
+            GameNotificationRepository notifications,
+            UiEventBus eventBus) {
+        return new UiFlowManager(screenFactory, themeService, currentUserService, notifications, eventBus);
     }
 }

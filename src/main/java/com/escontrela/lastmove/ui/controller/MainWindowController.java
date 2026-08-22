@@ -1,6 +1,16 @@
 package com.escontrela.lastmove.ui.controller;
 
 import com.escontrela.lastmove.application.service.CurrentUserService;
+import com.escontrela.lastmove.application.notification.GameNotificationRepository;
+import com.escontrela.lastmove.application.notification.GameNotification;
+import com.escontrela.lastmove.application.repository.SavedGameRepository;
+import com.escontrela.lastmove.application.game.SavedGameSummary;
+import com.escontrela.lastmove.application.service.AnalysisSessionService;
+import com.escontrela.lastmove.ui.component.notification.NotificationsPanel;
+import com.escontrela.lastmove.ui.event.ToggleNotificationsPanelEvent;
+import com.escontrela.lastmove.ui.event.OpenAnalysisSessionEvent;
+import com.escontrela.lastmove.ui.event.ResumeComputerGameEvent;
+import com.escontrela.lastmove.ui.event.UiEventBus;
 import com.escontrela.lastmove.application.service.CurrentUserService.ActivePlayerStatus;
 import com.escontrela.lastmove.ui.component.profile.CurrentUserAvatarControl;
 import com.escontrela.lastmove.ui.component.message.MessageBox;
@@ -37,6 +47,10 @@ public class MainWindowController implements UiScreenController {
     private final UiFlowManager uiFlowManager;
     private final ChessSoundService chessSoundService;
     private final CurrentUserService currentUserService;
+    private final GameNotificationRepository notifications;
+    private final SavedGameRepository savedGames;
+    private final AnalysisSessionService analysisSessionService;
+    private final UiEventBus uiEventBus;
 
     @FXML
     private AnchorPane root;
@@ -66,6 +80,7 @@ public class MainWindowController implements UiScreenController {
     private ContextualMenuPanel contextualMenuPanel;
     @FXML
     private CurrentUserAvatarControl currentUserAvatar;
+    @FXML private NotificationsPanel notificationsPanel;
 
     private final ListChangeListener<String> themeStyleListener = change -> updateThemeAssets();
     private boolean startupMessageShown;
@@ -73,10 +88,15 @@ public class MainWindowController implements UiScreenController {
     public MainWindowController(
             @Lazy UiFlowManager uiFlowManager,
             ChessSoundService chessSoundService,
-            CurrentUserService currentUserService) {
+            CurrentUserService currentUserService, GameNotificationRepository notifications, SavedGameRepository savedGames,
+            AnalysisSessionService analysisSessionService, UiEventBus uiEventBus) {
         this.uiFlowManager = uiFlowManager;
         this.chessSoundService = chessSoundService;
         this.currentUserService = currentUserService;
+        this.notifications = notifications;
+        this.savedGames = savedGames;
+        this.analysisSessionService = analysisSessionService;
+        this.uiEventBus = uiEventBus;
     }
 
     @FXML
@@ -87,6 +107,9 @@ public class MainWindowController implements UiScreenController {
         updateThemeAssets();
         updateCurrentUserAvatar();
         configureContextMenu();
+        notificationsPanel.setOnOpen(this::openNotificationGame);
+        notificationsPanel.setOnDelete(notification -> { currentUserService.selectedPlayerId().ifPresent(owner -> notifications.deleteById(owner, notification.id())); refreshNotifications(); });
+        notificationsPanel.setOnClear(() -> { currentUserService.selectedPlayerId().ifPresent(notifications::deleteAll); refreshNotifications(); });
         startupMessageBox.setOnAccept(event -> openPgnAnalysis());
         startupMessageBox.setOnCancel(event ->
                 featureStatusLabel.setText("Welcome to LastMove Chess."));
@@ -98,6 +121,7 @@ public class MainWindowController implements UiScreenController {
     public void onShow() {
         updateCurrentUserAvatar();
         updateStudiesAvailability();
+        refreshNotifications();
         if (!startupMessageShown) {
             startupMessageShown = true;
             chessSoundService.play(ChessSound.NOTIFY);
@@ -143,6 +167,53 @@ public class MainWindowController implements UiScreenController {
     }
 
     @FXML
+    public void openMyGames() {
+        if (currentUserService.activePlayerState().status() != ActivePlayerStatus.ACTIVE) {
+            featureStatusLabel.setText("Select an active player profile before opening your games.");
+            return;
+        }
+        uiFlowManager.show(UiScreenId.MY_GAMES);
+    }
+
+    @org.springframework.context.event.EventListener
+    public void toggleNotifications(ToggleNotificationsPanelEvent event) {
+        if (notificationsPanel.isShowing()) { notificationsPanel.hide(); return; }
+        refreshNotifications(); notificationsPanel.show();
+    }
+    private void refreshNotifications() {
+        currentUserService.selectedPlayerId().ifPresentOrElse(owner -> {
+            Map<com.escontrela.lastmove.domain.game.GameId, SavedGameSummary> summaries = savedGames.listSummaries(owner).stream().collect(java.util.stream.Collectors.toMap(SavedGameSummary::gameId, summary -> summary));
+            notificationsPanel.setNotifications(notifications.findByOwner(owner).stream().map(notification -> notificationEntry(notification, summaries.get(notification.gameId()))).toList());
+        }, () -> notificationsPanel.setNotifications(java.util.List.of()));
+    }
+    private NotificationsPanel.NotificationEntry notificationEntry(GameNotification notification, SavedGameSummary game) {
+        if (game == null) return new NotificationsPanel.NotificationEntry(notification, "Saved game", "Game no longer available", "Open");
+        String players = game.whiteName() + " vs " + game.blackName();
+        String outcome = game.finished() ? game.result().map(this::resultLabel).orElse("Finished") : "In progress";
+        boolean resumable = !game.finished() && currentUserService.selectedPlayerId()
+            .flatMap(owner -> savedGames.findSaved(notification.gameId()).flatMap(saved -> saved.context().ownerPlayerId()).filter(owner::equals)).isPresent();
+        return new NotificationsPanel.NotificationEntry(notification, players, outcome, resumable ? "Resume" : "Open");
+    }
+    private void openNotificationGame(GameNotification notification) {
+        var saved = savedGames.findSaved(notification.gameId()).orElse(null);
+        if (saved == null) { refreshNotifications(); return; }
+        boolean resumable = saved.game().result().isEmpty() && currentUserService.selectedPlayerId()
+            .flatMap(owner -> saved.context().ownerPlayerId().filter(owner::equals)).isPresent();
+        notificationsPanel.hide();
+        if (resumable) {
+            uiFlowManager.show(UiScreenId.HUMAN_VS_COMPUTER);
+            uiEventBus.publish(new ResumeComputerGameEvent(notification.gameId()));
+            return;
+        }
+        var session = analysisSessionService.createFromGame(saved.game().toRecord());
+        uiEventBus.publish(new OpenAnalysisSessionEvent(session.sessionId(), "Opened game from notification"));
+        uiFlowManager.show(UiScreenId.PGN_ANALYSIS);
+    }
+    private String resultLabel(com.escontrela.lastmove.domain.game.GameResult result) {
+        return switch (result) { case WHITE_WINS -> "White wins"; case BLACK_WINS -> "Black wins"; case DRAW -> "Draw"; case UNKNOWN -> "Result unknown"; };
+    }
+
+    @FXML
     public void openSetup() {
         uiFlowManager.show(UiScreenId.SETUP);
     }
@@ -170,6 +241,7 @@ public class MainWindowController implements UiScreenController {
         contextualMenuPanel.addItem("Position editor", "", event -> openPositionEditor());
         if (currentUserService.activePlayerState().status() == ActivePlayerStatus.ACTIVE) {
             contextualMenuPanel.addItem("My studies", "", event -> openStudies());
+            contextualMenuPanel.addItem("My games", "", event -> openMyGames());
             contextualMenuPanel.addItem("Tactic suites", "", event -> openTactics());
         }
         contextualMenuPanel.addItem("Human vs computer", "", event -> openHumanVsComputer());
