@@ -11,7 +11,7 @@ import org.springframework.stereotype.Repository;
 
 /** Updates annotations independently, without rewriting a study's move tree. */
 @Repository
-public final class SqliteStudyAnnotationRepository implements StudyAnnotationRepository {
+public class SqliteStudyAnnotationRepository implements StudyAnnotationRepository {
   private final JdbcTemplate jdbc;
   private final PersistenceAvailability availability;
 
