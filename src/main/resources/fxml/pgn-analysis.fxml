@@ -2,10 +2,12 @@
 
 <?import com.escontrela.lastmove.ui.component.board.ChessBoardControl?>
 <?import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel?>
+<?import com.escontrela.lastmove.ui.component.comment.CommentPanel?>
 <?import com.escontrela.lastmove.ui.component.header.ApplicationHeader?>
 <?import com.escontrela.lastmove.ui.component.evaluation.EngineEvaluationControl?>
 <?import com.escontrela.lastmove.ui.component.evaluation.EngineSelectorModal?>
 <?import com.escontrela.lastmove.ui.component.message.TextInputModal?>
+<?import com.escontrela.lastmove.ui.component.message.MultilineTextInputModal?>
 <?import com.escontrela.lastmove.ui.component.notation.MoveNotationControl?>
 <?import com.escontrela.lastmove.ui.component.promotion.PromotionPickerControl?>
 <?import com.escontrela.lastmove.ui.component.session.SessionSelectorControl?>
@@ -86,6 +88,7 @@
                     <HBox alignment="CENTER_LEFT" spacing="8.0">
                         <ToolbarIconButton accessibleText="Copy position as FEN" darkIconResource="/images/copy_35dp_FFFFFF.png" lightIconResource="/images/copy_35dp_000000.png" onAction="#onCopyFen" tooltipText="Copy position as FEN" />
                         <ToolbarIconButton accessibleText="Rotate board" darkIconResource="/images/screen_rotation_up_35dp_FFFFFF.png" lightIconResource="/images/screen_rotation_up_35dp_000000.png" onAction="#onRotateBoard" toggleMode="true" tooltipText="Rotate board" />
+                        <ToolbarIconButton fx:id="moveCommentButton" accessibleText="Current move comments" darkIconResource="/images/mode_comment_35dp_FFFFFF.png" lightIconResource="/images/mode_comment_35dp_000000.png" onAction="#onMoveComment" tooltipText="Move comments" />
                     </HBox>
                 </VBox>
 
@@ -117,4 +120,6 @@
     <TextInputModal fx:id="textInputModal" />
     <PromotionPickerControl fx:id="promotionPicker" />
     <EngineSelectorModal fx:id="engineSelectorModal" />
+    <CommentPanel fx:id="commentPanel" />
+    <MultilineTextInputModal fx:id="commentEditor" />
 </StackPane>

@@ -104,6 +104,7 @@ public final class AnalysisDocumentFactory {
             originalPly.movingColor());
     AnalysisNode newNode =
         newParent == null ? destination.addRoot(newPly) : destination.addChild(newParent, newPly);
+    node.comment().ifPresent(newNode::setComment);
     remapping.put(node.id(), newNode.id());
     for (AnalysisNode child : source.continuations(node.id())) {
       copySubtree(source, child, newNode.id(), destination, remapping);

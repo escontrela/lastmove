@@ -10,12 +10,15 @@ import com.escontrela.lastmove.application.service.CurrentUserService;
 import com.escontrela.lastmove.application.service.PgnExportService;
 import com.escontrela.lastmove.application.service.EngineEvaluationService;
 import com.escontrela.lastmove.domain.analysis.AnalysisSessionId;
+import com.escontrela.lastmove.domain.analysis.AnalysisNodeId;
 import com.escontrela.lastmove.domain.game.MoveCommand;
 import com.escontrela.lastmove.domain.game.MoveExecutionResult;
 import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
+import com.escontrela.lastmove.ui.component.comment.CommentPanel;
 import com.escontrela.lastmove.ui.component.evaluation.EngineEvaluationControl;
 import com.escontrela.lastmove.ui.component.evaluation.EngineSelectorModal;
 import com.escontrela.lastmove.ui.component.message.TextInputModal;
+import com.escontrela.lastmove.ui.component.message.MultilineTextInputModal;
 import com.escontrela.lastmove.ui.component.notation.MoveNotationControl;
 import com.escontrela.lastmove.ui.component.notation.MoveNotationEntry;
 import com.escontrela.lastmove.ui.component.notation.MoveNotationNode;
@@ -40,6 +43,7 @@ import com.escontrela.lastmove.ui.support.FileChooserFactory;
 import com.escontrela.lastmove.ui.support.PgnFileWriter;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.ListChangeListener;
@@ -68,6 +72,10 @@ public class PgnAnalysisScreenController implements UiScreenController {
   private static final String NIGHT_MODE_STYLE_CLASS = "night-mode";
   private static final String LIGHT_LOGO_RESOURCE = "/images/lastmove-chess-logo.png";
   private static final String DARK_LOGO_RESOURCE = "/images/lastmove-chess-logo-dark.png";
+  private static final String EMPTY_COMMENT_LIGHT_ICON = "/images/mode_comment_35dp_000000.png";
+  private static final String EMPTY_COMMENT_DARK_ICON = "/images/mode_comment_35dp_FFFFFF.png";
+  private static final String COMMENT_LIGHT_ICON = "/images/comment_35dp_000000.png";
+  private static final String COMMENT_DARK_ICON = "/images/comment_35dp_FFFFFF.png";
 
   private static final double BOARD_MAX_SIZE = 720.0;
 
@@ -84,6 +92,9 @@ public class PgnAnalysisScreenController implements UiScreenController {
   @FXML private com.escontrela.lastmove.ui.component.board.ChessBoardControl chessBoard;
   @FXML private EngineEvaluationControl engineEvaluation;
   @FXML private EngineSelectorModal engineSelectorModal;
+  @FXML private CommentPanel commentPanel;
+  @FXML private MultilineTextInputModal commentEditor;
+  @FXML private ToolbarIconButton moveCommentButton;
 
   private final GameLoadService gameLoadService;
   private final AnalysisSessionService analysisSessionService;
@@ -104,6 +115,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
   private AnalysisSessionId activeAnalysisSessionId;
   private String pendingStatusMessage;
   private BoardMoveInput pendingPromotionMove;
+  private AnalysisNodeId currentNodeId;
 
   private List<AnalysisSessionSummary> visibleSessions = List.of();
 
@@ -414,6 +426,57 @@ public class PgnAnalysisScreenController implements UiScreenController {
     statusLabel.setText(flipped ? "Board rotated: Black at bottom" : "Board rotated: White at bottom");
   }
 
+  /** Opens the annotation associated with the SAN move currently selected in the session. */
+  @FXML
+  public void onMoveComment() {
+    if (currentNodeId == null) {
+      return;
+    }
+    AnalysisNodeId annotatedNodeId = currentNodeId;
+    String title = "Move comment · " + selectedSan().orElse("move");
+    commentPanel.setTitle(title);
+    commentPanel.setContent(
+        analysisSessionService
+            .moveComment(activeAnalysisSessionId, annotatedNodeId)
+            .orElse(""));
+    commentPanel.setOnEdit(
+        event ->
+            commentEditor.show(
+                title,
+                commentPanel.getContent(),
+                saveEvent -> {
+                  analysisSessionService.saveMoveComment(
+                      activeAnalysisSessionId, annotatedNodeId, commentEditor.getText());
+                  commentPanel.setContent(commentEditor.getText().strip());
+                  commentEditor.hide();
+                  refreshMoveCommentIcon();
+                  statusLabel.setText(
+                      commentPanel.getContent().isBlank()
+                          ? "Move comment removed"
+                          : "Move comment saved");
+                }));
+    commentPanel.show();
+  }
+
+  private Optional<String> selectedSan() {
+    return currentNodeId == null
+        ? Optional.empty()
+        : findSan(moveNotation.getTree(), currentNodeId.value());
+  }
+
+  private Optional<String> findSan(List<MoveNotationNode> nodes, java.util.UUID nodeId) {
+    for (MoveNotationNode node : nodes) {
+      if (node.entry().nodeId().equals(nodeId)) {
+        return Optional.of(node.entry().san());
+      }
+      Optional<String> nested = findSan(node.continuations(), nodeId);
+      if (nested.isPresent()) {
+        return nested;
+      }
+    }
+    return Optional.empty();
+  }
+
   @FXML
   public void backToMain() {
     uiFlowManager.show(UiScreenId.MAIN);
@@ -644,6 +707,12 @@ public class PgnAnalysisScreenController implements UiScreenController {
     moveNotation.setTree(notationTree.roots().stream().map(this::toNotationNode).toList());
     moveNotation.setSelectedNodeId(
         notationTree.currentNodeId().map(nodeId -> nodeId.value()).orElse(null));
+    currentNodeId = notationTree.currentNodeId().orElse(null);
+    moveCommentButton.setDisable(currentNodeId == null);
+    refreshMoveCommentIcon();
+    if (commentPanel.isVisible() && commentPanel.getTitle().startsWith("Move comment")) {
+      onMoveComment();
+    }
   }
 
   private MoveNotationNode toNotationNode(AnalysisNotationNode node) {
@@ -656,6 +725,18 @@ public class PgnAnalysisScreenController implements UiScreenController {
             ply.move().san().getValue(),
             node.activeLine()),
         node.continuations().stream().map(this::toNotationNode).toList());
+  }
+
+  private void refreshMoveCommentIcon() {
+    boolean hasComment =
+        currentNodeId != null
+            && analysisSessionService
+                .moveComment(activeAnalysisSessionId, currentNodeId)
+                .isPresent();
+    moveCommentButton.setLightIconResource(
+        hasComment ? COMMENT_LIGHT_ICON : EMPTY_COMMENT_LIGHT_ICON);
+    moveCommentButton.setDarkIconResource(
+        hasComment ? COMMENT_DARK_ICON : EMPTY_COMMENT_DARK_ICON);
   }
 
   private void updateStatusBrandLogo() {

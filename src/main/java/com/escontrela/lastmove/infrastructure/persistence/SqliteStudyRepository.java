@@ -81,8 +81,8 @@ public class SqliteStudyRepository implements StudyRepository {
       "SELECT id, study_id, title, origin, initial_fen, source_result, display_order, created_at, updated_at "
           + "FROM study_chapters";
   private static final String SELECT_NODES_SQL =
-      "SELECT id, chapter_id, parent_node_id, ply_id, move_from, move_to, promotion_piece, san, capture, castle, en_passant, moving_color, move_number, resulting_fen, display_order "
-          + "FROM study_chapter_nodes WHERE chapter_id = ?";
+      "SELECT n.id, n.chapter_id, n.parent_node_id, n.ply_id, n.move_from, n.move_to, n.promotion_piece, n.san, n.capture, n.castle, n.en_passant, n.moving_color, n.move_number, n.resulting_fen, n.display_order, mc.comment "
+          + "FROM study_chapter_nodes n LEFT JOIN study_move_comments mc ON mc.chapter_id=n.chapter_id AND mc.node_id=n.id WHERE n.chapter_id = ?";
 
   private final JdbcTemplate jdbcTemplate;
   private final PersistenceAvailability availability;
@@ -105,6 +105,8 @@ public class SqliteStudyRepository implements StudyRepository {
     assertAvailable();
     Objects.requireNonNull(study, "study must not be null");
     String studyId = study.id().value().toString();
+    Map<String, String> chapterComments = existingChapterComments(studyId);
+    Map<String, String> moveComments = existingMoveComments(studyId);
     List<Integer> existingOrders =
         jdbcTemplate.query(
             "SELECT display_order FROM studies WHERE id = ?", (resultSet, rowNum) -> resultSet.getInt(1), studyId);
@@ -137,7 +139,49 @@ public class SqliteStudyRepository implements StudyRepository {
     for (int index = 0; index < chapters.size(); index++) {
       insertChapter(studyId, chapters.get(index), index);
     }
+    restoreComments(chapterComments, moveComments);
     return study;
+  }
+
+  private Map<String, String> existingChapterComments(String studyId) {
+    Map<String, String> result = new LinkedHashMap<>();
+    jdbcTemplate
+        .query(
+            "SELECT cc.chapter_id, cc.comment FROM study_chapter_comments cc JOIN study_chapters c ON c.id=cc.chapter_id WHERE c.study_id=?",
+            (resultSet, rowNumber) ->
+                Map.entry(resultSet.getString("chapter_id"), resultSet.getString("comment")),
+            studyId)
+        .forEach(entry -> result.put(entry.getKey(), entry.getValue()));
+    return result;
+  }
+
+  private Map<String, String> existingMoveComments(String studyId) {
+    Map<String, String> result = new LinkedHashMap<>();
+    jdbcTemplate
+        .query(
+            "SELECT mc.node_id, mc.comment FROM study_move_comments mc JOIN study_chapters c ON c.id=mc.chapter_id WHERE c.study_id=?",
+            (resultSet, rowNumber) ->
+                Map.entry(resultSet.getString("node_id"), resultSet.getString("comment")),
+            studyId)
+        .forEach(entry -> result.put(entry.getKey(), entry.getValue()));
+    return result;
+  }
+
+  private void restoreComments(Map<String, String> chapterComments, Map<String, String> moveComments) {
+    long now = Instant.now().toEpochMilli();
+    chapterComments.forEach((chapterId, comment) -> {
+      if (!jdbcTemplate.queryForList("SELECT id FROM study_chapters WHERE id=?", chapterId).isEmpty()) {
+        jdbcTemplate.update("INSERT INTO study_chapter_comments(chapter_id,comment,updated_at) VALUES(?,?,?)", chapterId, comment, now);
+      }
+    });
+    moveComments.forEach((nodeId, comment) -> {
+      List<Map<String, Object>> rows = jdbcTemplate.queryForList("SELECT chapter_id FROM study_chapter_nodes WHERE id=?", nodeId);
+      if (!rows.isEmpty()) {
+        jdbcTemplate.update(
+            "INSERT INTO study_move_comments(chapter_id,node_id,comment,updated_at) VALUES(?,?,?,?) ON CONFLICT(chapter_id,node_id) DO UPDATE SET comment=excluded.comment,updated_at=excluded.updated_at",
+            rows.getFirst().get("chapter_id"), nodeId, comment, now);
+      }
+    });
   }
 
   @Override
@@ -292,6 +336,15 @@ public class SqliteStudyRepository implements StudyRepository {
         ply.moveNumber(),
         fenService.fromSnapshot(ply.resultingPosition()).getValue(),
         displayOrder);
+    node.comment()
+        .ifPresent(
+            comment ->
+                jdbcTemplate.update(
+                    "INSERT INTO study_move_comments(chapter_id,node_id,comment,updated_at) VALUES(?,?,?,?) ON CONFLICT(chapter_id,node_id) DO UPDATE SET comment=excluded.comment,updated_at=excluded.updated_at",
+                    chapterId,
+                    node.id().value().toString(),
+                    comment,
+                    Instant.now().toEpochMilli()));
     List<AnalysisNode> children = tree.children(node.id());
     for (int index = 0; index < children.size(); index++) {
       insertNode(chapterId, tree, children.get(index), node.id(), index);
@@ -362,6 +415,7 @@ public class SqliteStudyRepository implements StudyRepository {
     AnalysisNodeId nodeId = new AnalysisNodeId(UUID.fromString(row.id));
     AnalysisNode node =
         parentId == null ? tree.addRoot(ply, nodeId) : tree.addChild(parentId, ply, nodeId);
+    node.setComment(row.comment);
     for (NodeRow child : childrenByParent.getOrDefault(row.id, List.of())) {
       insertNodeRow(tree, child, node.id(), childrenByParent);
     }
@@ -493,7 +547,8 @@ public class SqliteStudyRepository implements StudyRepository {
             resultSet.getString("moving_color"),
             resultSet.getInt("move_number"),
             resultSet.getString("resulting_fen"),
-            resultSet.getInt("display_order"));
+            resultSet.getInt("display_order"),
+            resultSet.getString("comment"));
   }
 
   private RowMapper<NavigationRow> navigationRowMapper() {
@@ -548,7 +603,8 @@ public class SqliteStudyRepository implements StudyRepository {
       String movingColor,
       int moveNumber,
       String resultingFen,
-      int displayOrder) {}
+      int displayOrder,
+      String comment) {}
 
   private record NavigationRow(String currentNodeId, String selectedRootNodeId, long updatedAt) {
 

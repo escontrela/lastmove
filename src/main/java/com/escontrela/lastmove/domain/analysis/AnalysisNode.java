@@ -19,6 +19,7 @@ public final class AnalysisNode {
   private final AnalysisNodeId parentId;
   private final Ply ply;
   private final List<AnalysisNodeId> continuationIds = new ArrayList<>();
+  private String comment = "";
 
   AnalysisNode(AnalysisNodeId id, AnalysisNodeId parentId, Ply ply) {
     this.id = Objects.requireNonNull(id, "id must not be null");
@@ -40,6 +41,16 @@ public final class AnalysisNode {
 
   public List<AnalysisNodeId> continuationIds() {
     return List.copyOf(continuationIds);
+  }
+
+  /** Optional PGN-style text annotation attached to this move. */
+  public Optional<String> comment() {
+    return comment.isBlank() ? Optional.empty() : Optional.of(comment);
+  }
+
+  /** Creates, replaces or clears this move's text annotation. */
+  public void setComment(String value) {
+    comment = value == null ? "" : value.strip();
   }
 
   void addContinuation(AnalysisNodeId continuationId) {

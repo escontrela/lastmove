@@ -54,6 +54,7 @@ class AnalysisDocumentTest {
     AnalysisDocument source = newDocument();
     source.apply(accepted("e2", "e4", "e4", blackToMove()));
     AnalysisNode e4 = source.currentNode().orElseThrow();
+    e4.setComment("Controls the centre");
     source.apply(accepted("e7", "e5", "e5", initial()));
     source.previous();
     source.apply(accepted("c7", "c5", "c5", initial()));
@@ -65,6 +66,7 @@ class AnalysisDocumentTest {
     assertNotEquals(e4.id(), copiedCursor.id());
     assertEquals(List.of("e5", "c5"), nodeSans(copy.continuations(copiedCursor.id())));
     assertEquals(List.of("e4", "e5"), plySans(copy.notationLine()));
+    assertEquals("Controls the centre", copiedCursor.comment().orElseThrow());
 
     copy.apply(accepted("d2", "d4", "d4", initial()));
 
