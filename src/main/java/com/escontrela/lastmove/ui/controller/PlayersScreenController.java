@@ -71,6 +71,8 @@ public class PlayersScreenController implements UiScreenController {
 
     private Optional<byte[]> selectedPhoto = Optional.empty();
     private Optional<PlayerSummary> editedPlayer = Optional.empty();
+    /** The profile targeted by the most recent contextual action, separate from the active player. */
+    private Optional<PlayerId> contextSelectedPlayerId = Optional.empty();
 
     public PlayersScreenController(@Lazy UiFlowManager uiFlowManager, PlayerService playerService,
             CurrentUserService currentUserService, FileChooserFactory fileChooserFactory) {
@@ -222,6 +224,9 @@ public class PlayersScreenController implements UiScreenController {
         card.setMaxWidth(Double.MAX_VALUE);
         card.getStyleClass().add("player-row");
         if (selected) card.getStyleClass().add("player-row-active");
+        if (contextSelectedPlayerId.map(player.id()::equals).orElse(false)) {
+            card.getStyleClass().add("player-row-context-selected");
+        }
         ImageView photoView = new ImageView();
         photoView.setFitHeight(CARD_PHOTO_RADIUS * 2);
         photoView.setFitWidth(CARD_PHOTO_RADIUS * 2);
@@ -240,11 +245,17 @@ public class PlayersScreenController implements UiScreenController {
         Label actionsHint = new Label("Right-click for actions");
         actionsHint.getStyleClass().add("player-row-actions-hint");
         card.setOnContextMenuRequested(event -> {
+            selectContextRow(player);
             showPlayerActions(player, selected, event.getSceneX(), event.getSceneY());
             event.consume();
         });
         card.getChildren().addAll(photoView, details, spacer, active, actionsHint);
         return card;
+    }
+
+    private void selectContextRow(PlayerSummary player) {
+        contextSelectedPlayerId = Optional.of(player.id());
+        loadPlayers();
     }
 
     private void showPlayerActions(PlayerSummary player, boolean selected, double sceneX, double sceneY) {

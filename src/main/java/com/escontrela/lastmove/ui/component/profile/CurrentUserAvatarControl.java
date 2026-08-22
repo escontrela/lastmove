@@ -7,6 +7,8 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tooltip;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Circle;
 
@@ -19,6 +21,8 @@ public final class CurrentUserAvatarControl extends Button {
     private final Circle outerRing = new Circle(19.0);
     private final Circle avatarFace = new Circle(16.0);
     private final Label initialsLabel = new Label();
+    private final ImageView fallbackFace = new ImageView(new Image(Objects.requireNonNull(
+            CurrentUserAvatarControl.class.getResource("/images/face_35dp_FFFFFF.png")).toExternalForm()));
     private final StringProperty displayName = new SimpleStringProperty(this, "displayName", "");
 
     public CurrentUserAvatarControl() {
@@ -31,7 +35,11 @@ public final class CurrentUserAvatarControl extends Button {
         outerRing.getStyleClass().add("current-user-avatar-ring");
         avatarFace.getStyleClass().add("current-user-avatar-face");
         initialsLabel.getStyleClass().add("current-user-avatar-initials");
-        avatarGraphic.getChildren().setAll(outerRing, avatarFace, initialsLabel);
+        fallbackFace.setFitWidth(22.0);
+        fallbackFace.setFitHeight(22.0);
+        fallbackFace.setPreserveRatio(true);
+        fallbackFace.setMouseTransparent(true);
+        avatarGraphic.getChildren().setAll(outerRing, avatarFace, fallbackFace, initialsLabel);
         setGraphic(avatarGraphic);
 
         setMinSize(42.0, 42.0);
@@ -56,6 +64,9 @@ public final class CurrentUserAvatarControl extends Button {
     private void refresh() {
         String name = getDisplayName();
         initialsLabel.setText(CurrentUserAvatarText.initialsFor(name));
+        boolean fallback = name.isBlank() || "unknown".equalsIgnoreCase(name);
+        fallbackFace.setVisible(fallback);
+        initialsLabel.setVisible(!fallback);
         getStyleClass().removeIf(style -> style.startsWith("current-user-avatar-tone-"));
         avatarFace.getStyleClass().removeIf(style -> style.startsWith("current-user-avatar-tone-"));
         int tone = Math.floorMod(Objects.requireNonNullElse(name, "").toLowerCase(java.util.Locale.ROOT).hashCode(), TONE_COUNT);

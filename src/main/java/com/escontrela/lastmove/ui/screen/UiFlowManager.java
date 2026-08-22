@@ -1,15 +1,31 @@
 package com.escontrela.lastmove.ui.screen;
 
+import com.escontrela.lastmove.application.service.CurrentUserService;
+import com.escontrela.lastmove.ui.component.header.ApplicationHeader;
+import com.escontrela.lastmove.ui.component.header.HeaderAction;
+import com.escontrela.lastmove.ui.component.header.HeaderBreadcrumb;
+import com.escontrela.lastmove.ui.component.header.HeaderConfiguration;
+import com.escontrela.lastmove.ui.component.message.MessageBox;
+import com.escontrela.lastmove.ui.service.ApplicationThemeService;
+import java.util.List;
 import java.util.Optional;
+import javafx.scene.Parent;
 
 /** Coordinates navigation between views hosted by the single primary window. */
 public class UiFlowManager {
 
     private final UiScreenFactory screenFactory;
+    private final ApplicationThemeService themeService;
+    private final CurrentUserService currentUserService;
     private UiScreen currentScreen;
 
-    public UiFlowManager(UiScreenFactory screenFactory) {
+    public UiFlowManager(
+            UiScreenFactory screenFactory,
+            ApplicationThemeService themeService,
+            CurrentUserService currentUserService) {
         this.screenFactory = screenFactory;
+        this.themeService = themeService;
+        this.currentUserService = currentUserService;
     }
 
     public void show(UiScreenId screenId) {
@@ -17,6 +33,7 @@ public class UiFlowManager {
         if (currentScreen != null) {
             currentScreen.controller().onHide();
         }
+        configureHeader(nextScreen.scene().getRoot(), screenId);
         nextScreen.show();
         currentScreen = nextScreen;
     }
@@ -24,5 +41,64 @@ public class UiFlowManager {
     /** Returns the active primary-window view, if one has already been shown. */
     public Optional<UiScreen> currentScreen() {
         return Optional.ofNullable(currentScreen);
+    }
+
+    private void configureHeader(Parent root, UiScreenId screenId) {
+        ApplicationHeader header = (ApplicationHeader) root.lookup(".application-header");
+        if (header == null) {
+            return;
+        }
+        boolean home = screenId == UiScreenId.MAIN;
+        header.configure(HeaderConfiguration.builder()
+                .showBackButton(!home)
+                .onBack(event -> show(UiScreenId.MAIN))
+                .breadcrumbs(breadcrumbsFor(screenId))
+                .showStatistics(home)
+                .onStatistics(event -> showStatisticsMessageBox(root))
+                .showThemeToggle(home)
+                .onThemeToggle(event -> themeService.setNightMode(!themeService.currentThemeMode().isNightMode()))
+                .contextActions(home ? List.of(new HeaderAction(
+                        "Open settings",
+                        "Settings",
+                        "/images/settings_35dp_000000.png",
+                        "/images/settings_35dp_FFFFFF.png",
+                        event -> show(UiScreenId.SETUP),
+                        false)) : List.of())
+                .onAvatar(event -> show(UiScreenId.PLAYERS))
+                .currentUserName(currentUserService.currentUser().name())
+                .build());
+    }
+
+    private void showStatisticsMessageBox(Parent root) {
+        MessageBox messageBox = (MessageBox) root.lookup("#statisticsMessageBox");
+        if (messageBox != null) {
+            messageBox.show();
+        }
+    }
+
+    private List<HeaderBreadcrumb> breadcrumbsFor(UiScreenId screenId) {
+        if (screenId == UiScreenId.MAIN) {
+            return List.of();
+        }
+        return List.of(
+                HeaderBreadcrumb.link("Home", event -> show(UiScreenId.MAIN)),
+                HeaderBreadcrumb.current(titleFor(screenId)));
+    }
+
+    private String titleFor(UiScreenId screenId) {
+        return switch (screenId) {
+            case HUMAN_VS_COMPUTER -> "Human vs Computer";
+            case PGN_ANALYSIS -> "PGN Analysis";
+            case POSITION_EDITOR -> "Position Editor";
+            case ANALYSIS_SESSIONS -> "Analysis Sessions";
+            case STUDIES -> "My Studies";
+            case TACTICS -> "Tactic Suites";
+            case TACTICS_WORKSPACE -> "Tactics Workspace";
+            case STUDY_DESTINATION -> "Choose a Study";
+            case STUDY_WORKSPACE -> "Study Workspace";
+            case SETUP -> "Setup";
+            case PLAYERS -> "Player Profiles";
+            case MAIN -> "Home";
+        };
     }
 }
