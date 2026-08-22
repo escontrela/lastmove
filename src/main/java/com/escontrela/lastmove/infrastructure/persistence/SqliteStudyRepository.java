@@ -145,17 +145,25 @@ public class SqliteStudyRepository implements StudyRepository {
 
   private Map<String, String> existingChapterComments(String studyId) {
     Map<String, String> result = new LinkedHashMap<>();
-    jdbcTemplate.query(
-        "SELECT cc.chapter_id, cc.comment FROM study_chapter_comments cc JOIN study_chapters c ON c.id=cc.chapter_id WHERE c.study_id=?",
-        rs -> result.put(rs.getString(1), rs.getString(2)), studyId);
+    jdbcTemplate
+        .query(
+            "SELECT cc.chapter_id, cc.comment FROM study_chapter_comments cc JOIN study_chapters c ON c.id=cc.chapter_id WHERE c.study_id=?",
+            (resultSet, rowNumber) ->
+                Map.entry(resultSet.getString("chapter_id"), resultSet.getString("comment")),
+            studyId)
+        .forEach(entry -> result.put(entry.getKey(), entry.getValue()));
     return result;
   }
 
   private Map<String, String> existingMoveComments(String studyId) {
     Map<String, String> result = new LinkedHashMap<>();
-    jdbcTemplate.query(
-        "SELECT mc.node_id, mc.comment FROM study_move_comments mc JOIN study_chapters c ON c.id=mc.chapter_id WHERE c.study_id=?",
-        rs -> result.put(rs.getString(1), rs.getString(2)), studyId);
+    jdbcTemplate
+        .query(
+            "SELECT mc.node_id, mc.comment FROM study_move_comments mc JOIN study_chapters c ON c.id=mc.chapter_id WHERE c.study_id=?",
+            (resultSet, rowNumber) ->
+                Map.entry(resultSet.getString("node_id"), resultSet.getString("comment")),
+            studyId)
+        .forEach(entry -> result.put(entry.getKey(), entry.getValue()));
     return result;
   }
 
