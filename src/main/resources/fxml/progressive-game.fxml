@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import com.escontrela.lastmove.ui.component.board.ChessBoardControl?>
+<?import com.escontrela.lastmove.ui.component.header.ApplicationHeader?>
 <?import com.escontrela.lastmove.ui.component.game.HumanVsComputerSetupOverlay?>
 <?import com.escontrela.lastmove.ui.component.game.CapturedPiecesControl?>
 <?import com.escontrela.lastmove.ui.component.game.ThinkingIndicatorControl?>
@@ -22,7 +23,8 @@
 <StackPane fx:id="root" styleClass="app-shell" stylesheets="@../css/lastmove.css" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.escontrela.lastmove.ui.controller.HumanVsComputerScreenController">
     <BorderPane styleClass="app-shell" StackPane.alignment="TOP_LEFT">
         <top>
-            <HBox alignment="CENTER_LEFT" spacing="16.0" styleClass="workspace-header">
+            <VBox><ApplicationHeader />
+            <HBox managed="false" visible="false" alignment="CENTER_LEFT" spacing="16.0" styleClass="workspace-header">
                 <VBox spacing="6.0">
                     <Label styleClass="eyebrow-label" text="Play workspace" />
                     <Label styleClass="app-title" text="Human vs Computer" />
@@ -31,7 +33,7 @@
                 <Region HBox.hgrow="ALWAYS" />
                 <ToolbarIconButton accessibleText="Reset the computer model" darkIconResource="/images/compare_arrows_35dp_FFFFFF.png" lightIconResource="/images/compare_arrows_35dp_000000.png" onAction="#resetModel" tooltipText="Back" />
             <ToolbarIconButton accessibleText="Back to chess tools" darkIconResource="/images/back_35dp_FFFFFF.png" layoutX="1070.0" layoutY="55.0" lightIconResource="/images/back_35dp_000000.png" onAction="#backToMain" tooltipText="Back" />
-            </HBox>
+            </HBox></VBox>
         </top>
         <center>
             <HBox spacing="16.0" styleClass="analysis-workspace progressive-game-workspace">

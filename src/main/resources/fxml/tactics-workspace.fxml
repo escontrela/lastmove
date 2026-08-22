@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import com.escontrela.lastmove.ui.component.board.ChessBoardControl?>
+<?import com.escontrela.lastmove.ui.component.header.ApplicationHeader?>
 <?import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel?>
 <?import com.escontrela.lastmove.ui.component.message.TextInputModal?>
 <?import com.escontrela.lastmove.ui.component.promotion.PromotionPickerControl?>
@@ -18,7 +19,8 @@
 <StackPane fx:id="root" styleClass="app-shell" stylesheets="@../css/lastmove.css" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.escontrela.lastmove.ui.controller.TacticsWorkspaceScreenController">
     <BorderPane styleClass="app-shell">
         <top>
-            <HBox alignment="CENTER_LEFT" spacing="16.0" styleClass="workspace-header">
+            <VBox><ApplicationHeader />
+            <HBox managed="false" visible="false" alignment="CENTER_LEFT" spacing="16.0" styleClass="workspace-header">
                 <VBox spacing="5.0">
                     <Label styleClass="eyebrow-label" text="Tactic suite" />
                     <Label fx:id="suiteTitleLabel" styleClass="app-title" text="Suite" />
@@ -26,7 +28,7 @@
                 </VBox>
                 <Region HBox.hgrow="ALWAYS" />
                 <ToolbarIconButton accessibleText="Back to tactic suites" darkIconResource="/images/back_35dp_FFFFFF.png" lightIconResource="/images/back_35dp_000000.png" onAction="#backToSuites" tooltipText="Tactic suites" />
-            </HBox>
+            </HBox></VBox>
         </top>
         <left>
             <VBox prefWidth="292.0" spacing="16.0" styleClass="utility-rail">

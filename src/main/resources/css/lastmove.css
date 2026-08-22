@@ -18,6 +18,61 @@
     -fx-border-width: 0 0 1px 0;
 }
 
+.application-header {
+    -fx-background-color: #ffffff;
+    -fx-padding: 13px 28px;
+    -fx-min-height: 74px;
+    -fx-pref-height: 74px;
+    -fx-border-color: transparent transparent #e6eaf0 transparent;
+    -fx-border-width: 0 0 1px 0;
+}
+
+.application-header-branding { -fx-min-width: 260px; }
+.application-header-logo { -fx-fit-width: 48px; -fx-fit-height: 48px; }
+.application-header-brand-name, .application-header-brand-edition {
+    -fx-font-size: 25px;
+    -fx-font-weight: 700;
+}
+.application-header-brand-name { -fx-text-fill: #14213d; }
+.application-header-brand-edition {
+    -fx-font-size: 22px;
+    -fx-text-fill: #0b63e8;
+}
+.application-header-back, .application-header-breadcrumb-link {
+    -fx-background-color: transparent;
+    -fx-cursor: hand;
+}
+.application-header-back {
+    -fx-font-size: 32px;
+    -fx-text-fill: #0b63e8;
+    -fx-padding: 0 10px 4px 10px;
+    -fx-background-radius: 8px;
+    -fx-border-color: #e6eaf0;
+    -fx-border-radius: 8px;
+}
+.application-header-back:hover, .application-header-breadcrumb-link:hover { -fx-background-color: #edf4ff; }
+.application-header-breadcrumb-link, .application-header-breadcrumb-current {
+    -fx-font-size: 15px;
+    -fx-font-weight: 600;
+}
+.application-header-breadcrumb-link { -fx-text-fill: #0b63e8; -fx-padding: 6px 4px; }
+.application-header-breadcrumb-current { -fx-text-fill: #172033; }
+.application-header-breadcrumb-separator { -fx-text-fill: #9ba6b5; }
+
+.night-mode .application-header {
+    -fx-background-color: #172033;
+    -fx-border-color: transparent transparent #34445b transparent;
+}
+.night-mode .application-header-brand-name,
+.night-mode .application-header-breadcrumb-current { -fx-text-fill: #f4f7fb; }
+.night-mode .application-header-brand-edition,
+.night-mode .application-header-breadcrumb-link,
+.night-mode .application-header-back { -fx-text-fill: #68a9ff; }
+.night-mode .application-header-breadcrumb-separator { -fx-text-fill: #8ea1b8; }
+.night-mode .application-header-back { -fx-border-color: #41546e; }
+.night-mode .application-header-back:hover,
+.night-mode .application-header-breadcrumb-link:hover { -fx-background-color: #263750; }
+
 .eyebrow-label {
     -fx-font-size: 12px;
     -fx-font-weight: 700;
@@ -1727,6 +1782,11 @@
     -fx-padding: 14 18 14 14;
 }
 
+.player-row-context-selected {
+    -fx-background-color: #e8f1ff;
+    -fx-border-color: transparent transparent #c7d9f0 transparent;
+}
+
 .player-row-status {
     -fx-font-size: 11px;
     -fx-font-weight: 700;
@@ -1778,6 +1838,10 @@
 .night-mode .player-row-active {
     -fx-background-color: #243243;
     -fx-border-color: transparent transparent #465465 #6ba5f0;
+}
+.night-mode .player-row-context-selected {
+    -fx-background-color: #29415f;
+    -fx-border-color: transparent transparent #496887 transparent;
 }
 .night-mode .player-row-status { -fx-text-fill: #79aeef; }
 .night-mode .player-row-actions-hint { -fx-text-fill: #aeb8c3; }

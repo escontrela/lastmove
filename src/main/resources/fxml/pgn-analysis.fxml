@@ -2,6 +2,7 @@
 
 <?import com.escontrela.lastmove.ui.component.board.ChessBoardControl?>
 <?import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel?>
+<?import com.escontrela.lastmove.ui.component.header.ApplicationHeader?>
 <?import com.escontrela.lastmove.ui.component.evaluation.EngineEvaluationControl?>
 <?import com.escontrela.lastmove.ui.component.evaluation.EngineSelectorModal?>
 <?import com.escontrela.lastmove.ui.component.message.TextInputModal?>
@@ -22,7 +23,8 @@
 <StackPane fx:id="root" onContextMenuRequested="#showContextMenu" styleClass="app-shell" stylesheets="@../css/lastmove.css" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.escontrela.lastmove.ui.controller.PgnAnalysisScreenController">
 <BorderPane styleClass="app-shell" StackPane.alignment="TOP_LEFT">
     <top>
-        <HBox alignment="CENTER_LEFT" spacing="16.0" styleClass="workspace-header">
+        <VBox><ApplicationHeader />
+        <HBox managed="false" visible="false" alignment="CENTER_LEFT" spacing="16.0" styleClass="workspace-header">
             <VBox spacing="6.0">
                 <Label styleClass="eyebrow-label" text="Study workspace" />
                 <Label styleClass="app-title" text="PGN analysis" />
@@ -33,7 +35,7 @@
                 <ToolbarIconButton accessibleText="Back to main window" darkIconResource="/images/back_35dp_FFFFFF.png" lightIconResource="/images/back_35dp_000000.png" onAction="#backToMain" tooltipText="Back" />
                 <ToolbarIconButton accessibleText="Open setup" darkIconResource="/images/settings_35dp_FFFFFF.png" lightIconResource="/images/settings_35dp_000000.png" onAction="#openSetup" tooltipText="Setup" />
             </HBox>
-        </HBox>
+        </HBox></VBox>
     </top>
     <left>
         <VBox prefWidth="256.0" spacing="16.0" styleClass="utility-rail">

@@ -6,6 +6,8 @@ import com.escontrela.lastmove.application.computer.ComputerEngineIds;
 import com.escontrela.lastmove.application.service.ComputerEngineHealthService;
 import com.escontrela.lastmove.application.service.ComputerEngineSettingsService;
 import com.escontrela.lastmove.application.service.PositionAnalysisService;
+import com.escontrela.lastmove.ui.component.header.ApplicationHeader;
+import com.escontrela.lastmove.ui.component.header.HeaderAction;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
 import com.escontrela.lastmove.ui.screen.UiScreenController;
 import com.escontrela.lastmove.ui.screen.UiScreenId;
@@ -50,7 +52,7 @@ public class SetupScreenController implements UiScreenController {
     @FXML
     private CheckBox boardVisualEffectsCheckBox;
     @FXML
-    private Button applyButton;
+    private ApplicationHeader applicationHeader;
     @FXML
     private TextField sunfishExecutablePathField;
     @FXML
@@ -147,7 +149,6 @@ public class SetupScreenController implements UiScreenController {
     @FXML
     public void initialize() {
         root.getProperties().put("controller", this);
-        applyButton.getStyleClass().addAll("message-box-button", "message-box-accept-button");
         nightModeCheckBox.selectedProperty().addListener((ignored, oldValue, newValue) ->
                 updateApplyButtonVisibility());
         showSplashCheckBox.selectedProperty().addListener((ignored, oldValue, newValue) ->
@@ -309,18 +310,14 @@ public class SetupScreenController implements UiScreenController {
     }
 
     private void updateApplyButtonVisibility() {
-        boolean hasUnsavedChanges = nightModeCheckBox.isSelected() != savedNightMode
-                || showSplashCheckBox.isSelected() != savedSplashScreen
-                || boardVisualEffectsCheckBox.isSelected() != savedBoardVisualEffects
-                || !sunfishExecutablePathField.getText().trim().equals(savedSunfishExecutablePath)
-                || !trimmed(maiaExecutablePathField.getText()).equals(savedMaiaExecutablePath)
-                || !trimmed(maiaWeightsPathField.getText()).equals(savedMaiaWeightsPath)
-                || !Objects.equals(
-                        knightshadeThinkingTimeCombo.getValue(), savedKnightshadeThinkingTime)
-                || !Objects.equals(
-                        effectiveAnalysisEngineDefaultId(), savedAnalysisEngineDefaultId);
-        applyButton.setVisible(hasUnsavedChanges);
-        applyButton.setManaged(hasUnsavedChanges);
+        boolean hasUnsavedChanges = hasUnsavedChanges();
+        applicationHeader.setContextActions(List.of(new HeaderAction(
+                "Apply setup changes",
+                "Apply settings",
+                "/images/save_35dp_000000.png",
+                "/images/save_35dp_FFFFFF.png",
+                event -> applySettings(),
+                !hasUnsavedChanges)));
         testSunfishButton.setDisable(hasUnsavedChanges || savedSunfishExecutablePath == null);
         testMaiaButton.setDisable(hasUnsavedChanges);
         if (hasUnsavedChanges
@@ -332,6 +329,19 @@ public class SetupScreenController implements UiScreenController {
                         || !trimmed(maiaWeightsPathField.getText()).equals(savedMaiaWeightsPath))) {
             showMaiaValidation("Apply the Maia settings before testing the connection.", null);
         }
+    }
+
+    private boolean hasUnsavedChanges() {
+        return nightModeCheckBox.isSelected() != savedNightMode
+                || showSplashCheckBox.isSelected() != savedSplashScreen
+                || boardVisualEffectsCheckBox.isSelected() != savedBoardVisualEffects
+                || !sunfishExecutablePathField.getText().trim().equals(savedSunfishExecutablePath)
+                || !trimmed(maiaExecutablePathField.getText()).equals(savedMaiaExecutablePath)
+                || !trimmed(maiaWeightsPathField.getText()).equals(savedMaiaWeightsPath)
+                || !Objects.equals(
+                        knightshadeThinkingTimeCombo.getValue(), savedKnightshadeThinkingTime)
+                || !Objects.equals(
+                        effectiveAnalysisEngineDefaultId(), savedAnalysisEngineDefaultId);
     }
 
     private void finishSunfishCheck(ComputerEngineHealth health, Throwable failure) {

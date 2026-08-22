@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel?>
+<?import com.escontrela.lastmove.ui.component.header.ApplicationHeader?>
 <?import com.escontrela.lastmove.ui.component.message.MessageBox?>
 <?import com.escontrela.lastmove.ui.component.profile.CurrentUserAvatarControl?>
 <?import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton?>
@@ -20,19 +21,24 @@
 <AnchorPane fx:id="root" onContextMenuRequested="#showContextMenu" styleClass="app-shell" stylesheets="@../css/lastmove.css" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.escontrela.lastmove.ui.controller.MainWindowController">
 <BorderPane styleClass="app-shell" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
     <top>
-        <HBox alignment="CENTER_LEFT" spacing="16.0" styleClass="workspace-header">
+        <VBox><ApplicationHeader />
+        <HBox managed="false" visible="false" alignment="CENTER_LEFT" spacing="16.0" styleClass="workspace-header">
+            <ImageView fx:id="pgnToolIcon1" fitHeight="60.0" fitWidth="58.0" preserveRatio="true" smooth="true">
+               <image>
+                  <Image url="@../images/last-move-logo.png" />
+               </image>
+            </ImageView>
             <VBox spacing="6.0">
-                <Label styleClass="eyebrow-label" text="Chess workspace" />
                 <HBox alignment="CENTER_LEFT" spacing="8.0" styleClass="app-brand">
-                    <CurrentUserAvatarControl fx:id="currentUserAvatar" accessibleText="Open player profiles" onAction="#openPlayers" />
                     <Label styleClass="app-brand-name" text="LastMove" />
                     <Label styleClass="app-brand-edition" text="Chess" />
                 </HBox>
             </VBox>
             <Region HBox.hgrow="ALWAYS" />
-            <ToolbarIconButton accessibleText="Open players" darkIconResource="/images/face_35dp_FFFFFF.png" lightIconResource="/images/face_35dp_000000.png" onAction="#openPlayers" tooltipText="Players" />
             <ToolbarIconButton accessibleText="Open setup" darkIconResource="/images/settings_35dp_FFFFFF.png" lightIconResource="/images/settings_35dp_000000.png" onAction="#openSetup" tooltipText="Setup" />
-        </HBox>
+            <ToolbarIconButton accessibleText="Open players" darkIconResource="/images/face_35dp_FFFFFF.png" lightIconResource="/images/face_35dp_000000.png" onAction="#openPlayers" tooltipText="Players" />
+              <CurrentUserAvatarControl fx:id="currentUserAvatar" accessibleText="Open player profiles" onAction="#openPlayers" />
+        </HBox></VBox>
     </top>
     <center>
         <StackPane>
@@ -72,6 +78,7 @@
                 <Label fx:id="featureStatusLabel" styleClass="tool-catalog-status" text="Select Analyse a PGN to start." />
             </VBox>
             <MessageBox fx:id="startupMessageBox" acceptText="Open PGN analysis" autoHide="true" buttonMode="ACCEPT_CANCEL" cancelText="Not now" cardWidth="460.0" contentPadding="20.0" contentSpacing="12.0" dragEnabled="true" message="Would you like to open the PGN analysis workspace and replay a recorded game?" title="Welcome to LastMove Chess" />
+            <MessageBox fx:id="statisticsMessageBox" acceptText="Accept" autoHide="true" buttonMode="ACCEPT" cardWidth="460.0" contentPadding="20.0" contentSpacing="12.0" dragEnabled="true" message="Statistics are coming soon. This feature will be available in an upcoming release." title="Statistics" />
         </StackPane>
     </center>
     <bottom>
