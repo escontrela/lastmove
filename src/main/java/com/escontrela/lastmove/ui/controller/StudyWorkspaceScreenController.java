@@ -28,6 +28,7 @@ import com.escontrela.lastmove.domain.study.StudyId;
 import com.escontrela.lastmove.ui.component.board.ChessBoardControl;
 import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
 import com.escontrela.lastmove.ui.component.comment.CommentPanel;
+import com.escontrela.lastmove.ui.component.comment.SpeakerNotesPanel;
 import com.escontrela.lastmove.ui.component.evaluation.EngineEvaluationControl;
 import com.escontrela.lastmove.ui.component.evaluation.EngineSelectorModal;
 import com.escontrela.lastmove.ui.component.message.TextInputModal;
@@ -48,6 +49,7 @@ import com.escontrela.lastmove.ui.service.ChessSoundService;
 import com.escontrela.lastmove.ui.service.ClipboardService;
 import com.escontrela.lastmove.ui.support.FileChooserFactory;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import javafx.application.Platform;
@@ -95,9 +97,11 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
   @FXML private EngineEvaluationControl engineEvaluation;
   @FXML private EngineSelectorModal engineSelectorModal;
   @FXML private CommentPanel commentPanel;
+  @FXML private SpeakerNotesPanel speakerNotesPanel;
   @FXML private MultilineTextInputModal commentEditor;
   @FXML private ToolbarIconButton studyCommentButton;
   @FXML private ToolbarIconButton moveCommentButton;
+  @FXML private ToolbarIconButton speakerNotesButton;
 
   private final StudyService studyService;
   private final StudyAnnotationService annotationService;
@@ -339,6 +343,49 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
           text -> annotationService.saveMoveComment(owner, activeStudyId, activeChapterId, annotatedNodeId, text),
           this::refreshCommentIcons);
     });
+  }
+
+  @FXML
+  public void onSpeakerNotes() {
+    activeOwner().ifPresent(
+        owner -> {
+          StudyChapterWorkspace workspace = studyService.openChapter(owner, activeStudyId, activeChapterId);
+          Map<AnalysisNodeId, String> moveComments =
+              annotationService.moveComments(owner, activeStudyId, activeChapterId);
+          speakerNotesPanel.showNotes(
+              annotationService.studyComment(owner, activeStudyId).orElse(""),
+              workspace.title(),
+              annotationService.chapterComment(owner, activeStudyId, activeChapterId).orElse(""),
+              speakerNotes(workspace.notationTree().roots(), moveComments, 0));
+          speakerNotesPanel.show();
+        });
+  }
+
+  private List<SpeakerNotesPanel.MoveNote> speakerNotes(
+      List<AnalysisNotationNode> nodes, Map<AnalysisNodeId, String> moveComments, int variationDepth) {
+    return nodes.stream()
+        .flatMap(
+            node ->
+                java.util.stream.Stream.concat(
+                    moveComments.getOrDefault(node.nodeId(), "").isBlank()
+                        ? java.util.stream.Stream.empty()
+                        : java.util.stream.Stream.of(
+                            new SpeakerNotesPanel.MoveNote(
+                                moveReference(node),
+                                moveComments.get(node.nodeId()),
+                                variationDepth)),
+                    speakerNotes(
+                            node.continuations(),
+                            moveComments,
+                            node.mainContinuation() ? variationDepth : variationDepth + 1)
+                        .stream()))
+        .toList();
+  }
+
+  private static String moveReference(AnalysisNotationNode node) {
+    boolean whiteMove = node.ply().movingColor() == PieceColor.WHITE;
+    String turn = node.ply().moveNumber() + (whiteMove ? "." : "...");
+    return turn + " " + (whiteMove ? "White" : "Black") + " · " + node.ply().move().san().getValue();
   }
 
   private void showChapterComment(StudyChapterSummary chapter) {

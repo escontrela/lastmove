@@ -9,6 +9,7 @@ import com.escontrela.lastmove.domain.study.StudyChapterId;
 import com.escontrela.lastmove.domain.study.StudyId;
 import com.escontrela.lastmove.domain.study.StudyRepository;
 import java.util.NoSuchElementException;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
@@ -38,6 +39,13 @@ public final class StudyAnnotationService {
     StudyChapter chapter = ownedChapter(owner, studyId, chapterId);
     requireNode(chapter, nodeId);
     return annotations.moveComment(chapterId, nodeId);
+  }
+
+  /** Returns every saved move annotation for an owned chapter in one repository read. */
+  public Map<AnalysisNodeId, String> moveComments(
+      PlayerId owner, StudyId studyId, StudyChapterId chapterId) {
+    ownedChapter(owner, studyId, chapterId);
+    return annotations.moveComments(chapterId);
   }
 
   public void saveStudyComment(PlayerId owner, StudyId studyId, String comment) {

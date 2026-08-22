@@ -1912,3 +1912,31 @@
 .night-mode .comment-panel-title, .night-mode .comment-panel-content { -fx-text-fill: #f1f3f5; }
 .night-mode .comment-panel-empty { -fx-text-fill: #aeb8c3; }
 .night-mode .comment-panel-close { -fx-text-fill: #f1f3f5; }
+.speaker-notes-overlay {
+    -fx-background-color: rgba(8, 15, 24, 0.18);
+    -fx-padding: 78 24 58 24;
+}
+.speaker-notes-card {
+    -fx-background-color: #fffdf7;
+    -fx-background-radius: 16 4 16 16;
+    -fx-border-color: #d8cda9;
+    -fx-border-radius: 16 4 16 16;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.24), 20, 0.15, -4, 5);
+}
+.speaker-notes-title { -fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #26313d; }
+.speaker-notes-close { -fx-background-color: transparent; -fx-font-size: 20px; -fx-cursor: hand; }
+.speaker-notes-scroll { -fx-background-color: transparent; -fx-background: transparent; }
+.speaker-notes-scroll > .viewport { -fx-background-color: transparent; }
+.speaker-notes-content { -fx-background-color: transparent; }
+.speaker-notes-section { -fx-padding: 0 0 14 0; -fx-border-color: transparent transparent #e3dcc7 transparent; }
+.speaker-notes-heading { -fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #6b5a2d; }
+.speaker-notes-move { -fx-padding: 8 0 8 0; -fx-border-color: transparent transparent #eee8d7 transparent; }
+.speaker-notes-san { -fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #26313d; }
+.speaker-notes-comment { -fx-font-size: 14px; -fx-text-fill: #3c4650; }
+.speaker-notes-empty { -fx-font-style: italic; -fx-text-fill: #7c858e; }
+.night-mode .speaker-notes-card { -fx-background-color: #1c2430; -fx-border-color: #4b596a; }
+.night-mode .speaker-notes-title, .night-mode .speaker-notes-san, .night-mode .speaker-notes-comment { -fx-text-fill: #f1f3f5; }
+.night-mode .speaker-notes-close { -fx-text-fill: #f1f3f5; }
+.night-mode .speaker-notes-heading { -fx-text-fill: #d6bd7f; }
+.night-mode .speaker-notes-empty { -fx-text-fill: #aeb8c3; }
+.night-mode .speaker-notes-section, .night-mode .speaker-notes-move { -fx-border-color: transparent transparent #3b4654 transparent; }

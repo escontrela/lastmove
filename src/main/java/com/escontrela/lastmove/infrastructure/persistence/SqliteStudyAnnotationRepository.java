@@ -5,8 +5,11 @@ import com.escontrela.lastmove.domain.analysis.AnalysisNodeId;
 import com.escontrela.lastmove.domain.study.StudyChapterId;
 import com.escontrela.lastmove.domain.study.StudyId;
 import java.time.Instant;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.stereotype.Repository;
 
 /** Updates annotations independently, without rewriting a study's move tree. */
@@ -23,6 +26,21 @@ public class SqliteStudyAnnotationRepository implements StudyAnnotationRepositor
   public Optional<String> studyComment(StudyId id) { return value("SELECT comment FROM study_comments WHERE study_id = ?", id.value().toString()); }
   public Optional<String> chapterComment(StudyChapterId id) { return value("SELECT comment FROM study_chapter_comments WHERE chapter_id = ?", id.value().toString()); }
   public Optional<String> moveComment(StudyChapterId chapterId, AnalysisNodeId nodeId) { return value("SELECT comment FROM study_move_comments WHERE chapter_id = ? AND node_id = ?", chapterId.value().toString(), nodeId.value().toString()); }
+
+  @Override
+  public Map<AnalysisNodeId, String> moveComments(StudyChapterId chapterId) {
+    assertAvailable();
+    Map<AnalysisNodeId, String> comments = new LinkedHashMap<>();
+    jdbc.query(
+        "SELECT node_id, comment FROM study_move_comments WHERE chapter_id = ? ORDER BY updated_at",
+        (RowCallbackHandler)
+            resultSet ->
+            comments.put(
+                new AnalysisNodeId(java.util.UUID.fromString(resultSet.getString("node_id"))),
+                resultSet.getString("comment")),
+        chapterId.value().toString());
+    return Map.copyOf(comments);
+  }
 
   public void saveStudyComment(StudyId id, String comment) { save("study_comments", "study_id", id.value().toString(), null, comment); }
   public void saveChapterComment(StudyChapterId id, String comment) { save("study_chapter_comments", "chapter_id", id.value().toString(), null, comment); }

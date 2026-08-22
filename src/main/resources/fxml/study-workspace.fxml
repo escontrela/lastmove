@@ -4,6 +4,7 @@
 <?import com.escontrela.lastmove.ui.component.header.ApplicationHeader?>
 <?import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel?>
 <?import com.escontrela.lastmove.ui.component.comment.CommentPanel?>
+<?import com.escontrela.lastmove.ui.component.comment.SpeakerNotesPanel?>
 <?import com.escontrela.lastmove.ui.component.evaluation.EngineEvaluationControl?>
 <?import com.escontrela.lastmove.ui.component.evaluation.EngineSelectorModal?>
 <?import com.escontrela.lastmove.ui.component.message.TextInputModal?>
@@ -80,6 +81,7 @@
                             <ToolbarIconButton accessibleText="Copy position as FEN" darkIconResource="/images/copy_35dp_FFFFFF.png" lightIconResource="/images/copy_35dp_000000.png" onAction="#onCopyFen" tooltipText="Copy FEN" />
                             <ToolbarIconButton accessibleText="Rotate board" darkIconResource="/images/screen_rotation_up_35dp_FFFFFF.png" lightIconResource="/images/screen_rotation_up_35dp_000000.png" onAction="#onRotateBoard" toggleMode="true" tooltipText="Rotate board" />
                             <ToolbarIconButton fx:id="moveCommentButton" accessibleText="Current move comments" darkIconResource="/images/mode_comment_35dp_FFFFFF.png" lightIconResource="/images/mode_comment_35dp_000000.png" onAction="#onMoveComment" tooltipText="Move comments" />
+                            <ToolbarIconButton fx:id="speakerNotesButton" accessibleText="PGN speaker notes" darkIconResource="/images/speaker_notes_35dp_FFFFFF.png" lightIconResource="/images/speaker_notes_35dp_000000.png" onAction="#onSpeakerNotes" tooltipText="PGN speaker notes" />
                         </HBox>
                     </VBox>
                     <VBox spacing="12.0" styleClass="rail-card board-side-card" VBox.vgrow="ALWAYS">
@@ -109,5 +111,6 @@
     <ContextualMenuPanel fx:id="contextualMenuPanel" />
     <EngineSelectorModal fx:id="engineSelectorModal" />
     <CommentPanel fx:id="commentPanel" />
+    <SpeakerNotesPanel fx:id="speakerNotesPanel" />
     <MultilineTextInputModal fx:id="commentEditor" />
 </StackPane>
