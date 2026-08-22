@@ -11,6 +11,8 @@ import com.escontrela.lastmove.application.tactics.TacticExerciseSummary;
 import com.escontrela.lastmove.application.tactics.TacticSuiteSummary;
 import com.escontrela.lastmove.domain.player.PlayerId;
 import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
+import com.escontrela.lastmove.ui.component.header.ApplicationHeader;
+import com.escontrela.lastmove.ui.component.header.HeaderAction;
 import com.escontrela.lastmove.ui.component.list.ManagedListCell;
 import com.escontrela.lastmove.ui.component.message.TextInputModal;
 import com.escontrela.lastmove.ui.event.OpenTacticsWorkspaceEvent;
@@ -44,6 +46,7 @@ public final class TacticsScreenController implements UiScreenController {
       DateTimeFormatter.ofPattern("d MMM uuuu, HH:mm").withZone(ZoneId.systemDefault());
 
   @FXML private StackPane root;
+  @FXML private ApplicationHeader applicationHeader;
   @FXML private ListView<TacticSuiteSummary> suiteList;
   @FXML private Label suiteCountLabel;
   @FXML private Label emptyStateLabel;
@@ -188,7 +191,9 @@ public final class TacticsScreenController implements UiScreenController {
 
   private void refresh() {
     ownerId = currentUserService.activePlayerState().playerId();
-    if (ownerId.isEmpty()) {
+    boolean available = ownerId.isPresent();
+    configureCreateSuiteAction(available);
+    if (!available) {
       visibleSuites = List.of();
       suiteList.getItems().clear();
       suiteCountLabel.setText("0 suites");
@@ -208,6 +213,18 @@ public final class TacticsScreenController implements UiScreenController {
         visibleSuites.isEmpty()
             ? "Ready to create your first tactic suite"
             : "Open a suite to train");
+  }
+
+  private void configureCreateSuiteAction(boolean available) {
+    applicationHeader.setContextActions(
+        List.of(
+            new HeaderAction(
+                "Create tactic suite",
+                "Create tactic suite",
+                "/images/add_35dp_000000.png",
+                "/images/add_35dp_FFFFFFpng.png",
+                event -> onCreateSuite(),
+                !available)));
   }
 
   private void openSuite(TacticSuiteSummary suite) {

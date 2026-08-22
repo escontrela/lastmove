@@ -15,6 +15,8 @@ import com.escontrela.lastmove.domain.player.PlayerId;
 import com.escontrela.lastmove.domain.study.StudyChapterId;
 import com.escontrela.lastmove.domain.study.StudyId;
 import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
+import com.escontrela.lastmove.ui.component.header.ApplicationHeader;
+import com.escontrela.lastmove.ui.component.header.HeaderAction;
 import com.escontrela.lastmove.ui.component.list.ManagedListCell;
 import com.escontrela.lastmove.ui.component.message.TextInputModal;
 import com.escontrela.lastmove.ui.event.OpenStudyWorkspaceEvent;
@@ -47,6 +49,7 @@ public final class StudiesScreenController implements UiScreenController {
       DateTimeFormatter.ofPattern("d MMM uuuu, HH:mm").withZone(ZoneId.systemDefault());
 
   @FXML private StackPane root;
+  @FXML private ApplicationHeader applicationHeader;
   @FXML private ListView<StudySummary> studyList;
   @FXML private Label profileStateLabel;
   @FXML private Label studyCountLabel;
@@ -134,6 +137,7 @@ public final class StudiesScreenController implements UiScreenController {
     ownerId = state.playerId();
     boolean available = state.status() == ActivePlayerStatus.ACTIVE;
     createStudyButton.setDisable(!available);
+    configureCreateStudyAction(available);
 
     if (!available) {
 
@@ -169,6 +173,18 @@ public final class StudiesScreenController implements UiScreenController {
         visibleStudies.isEmpty()
             ? "Ready to create your first study"
             : "Choose a study to continue");
+  }
+
+  private void configureCreateStudyAction(boolean available) {
+    applicationHeader.setContextActions(
+        List.of(
+            new HeaderAction(
+                "Create study",
+                "Create study",
+                "/images/add_35dp_000000.png",
+                "/images/add_35dp_FFFFFFpng.png",
+                event -> onCreateStudy(),
+                !available)));
   }
 
   private void openStudy(StudySummary summary) {

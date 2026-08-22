@@ -815,6 +815,9 @@
     -fx-alignment: center-left;
 }
 
+.board-column { -fx-alignment: top-center; }
+.board-controls { -fx-padding: 4 0 0 0; -fx-alignment: center; }
+
 .board-card {
     -fx-padding: 0;
     -fx-alignment: center;
@@ -1407,6 +1410,11 @@
     -fx-border-color: #9fc8f7;
 }
 .night-mode .editor-section-title { -fx-text-fill: #f1f3f5; }
+.night-mode .editor-settings-panel .editor-section-title,
+.night-mode .piece-palette-card .editor-section-title { -fx-text-fill: #f4f7fb; }
+.night-mode .editor-settings-panel .eyebrow-label,
+.night-mode .piece-palette-card .eyebrow-label { -fx-text-fill: #b8c5d3; }
+.night-mode .piece-palette-card .card-copy { -fx-text-fill: #d5dee8; }
 .night-mode .editor-check-box,
 .night-mode .editor-radio { -fx-text-fill: #e5ebf1; }
 .night-mode .editor-check-box .box,
