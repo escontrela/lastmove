@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel?>
+<?import com.escontrela.lastmove.ui.component.header.ApplicationHeader?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<StackPane fx:id="root" styleClass="app-shell" stylesheets="@../css/lastmove.css" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.escontrela.lastmove.ui.controller.MyGamesScreenController">
+  <BorderPane styleClass="app-shell">
+    <top><ApplicationHeader /></top>
+    <center><VBox spacing="16" styleClass="studies-workspace"><padding><Insets top="32" right="48" bottom="48" left="48"/></padding>
+      <VBox spacing="6"><Label text="Your games" styleClass="sessions-section-title"/><Label fx:id="gameCountLabel" text="0 games" styleClass="sessions-section-copy"/></VBox>
+      <StackPane styleClass="library-card"><ListView fx:id="gamesList" styleClass="study-library-list"/><Label fx:id="emptyLabel" text="Play a game to find it here." wrapText="true" styleClass="session-empty-state"/></StackPane>
+    </VBox></center>
+    <bottom><HBox alignment="CENTER_LEFT" spacing="12" styleClass="status-rail"><Label text="Status" styleClass="eyebrow-label"/><Label fx:id="statusLabel" text="Ready" styleClass="status-text"/><Region HBox.hgrow="ALWAYS"/></HBox></bottom>
+  </BorderPane>
+  <ContextualMenuPanel fx:id="contextualMenuPanel"/>
+</StackPane>

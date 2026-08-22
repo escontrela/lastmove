@@ -3,6 +3,7 @@
 <?import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel?>
 <?import com.escontrela.lastmove.ui.component.header.ApplicationHeader?>
 <?import com.escontrela.lastmove.ui.component.message.MessageBox?>
+<?import com.escontrela.lastmove.ui.component.notification.NotificationsPanel?>
 <?import com.escontrela.lastmove.ui.component.profile.CurrentUserAvatarControl?>
 <?import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton?>
 <?import javafx.geometry.Insets?>
@@ -63,6 +64,9 @@
                 <Button accessibleText="Human vs computer" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" onAction="#openHumanVsComputer" styleClass="tool-card-button">
                     <graphic><HBox alignment="CENTER_LEFT" spacing="16.0"><ImageView fx:id="localGameToolIcon" fitHeight="34.0" fitWidth="34.0" preserveRatio="true" smooth="true"><image><Image url="@../images/swords_35dp_000000.png" /></image></ImageView><VBox spacing="5.0"><Label styleClass="tool-card-title" text="Human vs computer" /><Label styleClass="tool-card-description" text="Play a progressive game against Sunfish." /></VBox><Region HBox.hgrow="ALWAYS" /><Label styleClass="tool-card-state tool-card-state-ready" text="›" /></HBox></graphic>
                 </Button>
+                <Button accessibleText="My games" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" onAction="#openMyGames" styleClass="tool-card-button">
+                    <graphic><HBox alignment="CENTER_LEFT" spacing="16.0"><ImageView fitHeight="34.0" fitWidth="34.0" preserveRatio="true" smooth="true"><image><Image url="@../images/history_35dp_000000.png" /></image></ImageView><VBox spacing="5.0"><Label styleClass="tool-card-title" text="My games" /><Label styleClass="tool-card-description" text="Resume or review your saved games." /></VBox><Region HBox.hgrow="ALWAYS" /><Label styleClass="tool-card-state tool-card-state-ready" text="›" /></HBox></graphic>
+                </Button>
                 <Button accessibleText="Opening explorer" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" onAction="#showComingSoon" styleClass="tool-card-button">
                     <graphic><HBox alignment="CENTER_LEFT" spacing="16.0"><ImageView fx:id="openingToolIcon" fitHeight="34.0" fitWidth="34.0" preserveRatio="true" smooth="true"><image><Image url="@../images/search_35dp_000000.png" /></image></ImageView><VBox spacing="5.0"><Label styleClass="tool-card-title" text="Opening explorer" /><Label styleClass="tool-card-description" text="Browse your repertoire and lines." /></VBox><Region HBox.hgrow="ALWAYS" /><Label styleClass="tool-card-state" text="Coming soon" /></HBox></graphic>
                 </Button>
@@ -77,6 +81,7 @@
                 </HBox>
                 <Label fx:id="featureStatusLabel" styleClass="tool-catalog-status" text="Select Analyse a PGN to start." />
             </VBox>
+            <NotificationsPanel fx:id="notificationsPanel" />
             <MessageBox fx:id="startupMessageBox" acceptText="Open PGN analysis" autoHide="true" buttonMode="ACCEPT_CANCEL" cancelText="Not now" cardWidth="460.0" contentPadding="20.0" contentSpacing="12.0" dragEnabled="true" message="Would you like to open the PGN analysis workspace and replay a recorded game?" title="Welcome to LastMove Chess" />
             <MessageBox fx:id="statisticsMessageBox" acceptText="Accept" autoHide="true" buttonMode="ACCEPT" cardWidth="460.0" contentPadding="20.0" contentSpacing="12.0" dragEnabled="true" message="Statistics are coming soon. This feature will be available in an upcoming release." title="Statistics" />
         </StackPane>
