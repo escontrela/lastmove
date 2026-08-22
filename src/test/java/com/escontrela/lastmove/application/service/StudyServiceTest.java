@@ -134,6 +134,7 @@ class StudyServiceTest {
                 AnalysisOrigin.INITIAL_POSITION,
                 gameFactory.createAnalysisGame().currentPosition());
         session.apply(acceptedMove(gameFactory, session.currentPosition(), "e2", "e4"));
+        session.currentNode().orElseThrow().setComment("King pawn opening");
         sessionRepository.save(session);
         StudyId studyId = service.createStudy(new CreateStudyCommand(owner, "Archive", Optional.empty())).studyId();
 
@@ -143,6 +144,11 @@ class StudyServiceTest {
 
         assertEquals("Archived", chapter.title());
         assertEquals(1, chapter.moveCount());
+        assertEquals(
+            "King pawn opening",
+            studyRepository.findByIdAndOwner(studyId, owner).orElseThrow()
+                .chapter(chapter.chapterId()).orElseThrow()
+                .document().rootVariations().getFirst().comment().orElseThrow());
 
         service.attemptMove(
             owner,

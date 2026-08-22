@@ -125,6 +125,19 @@ class AnalysisSessionServiceTest {
   }
 
   @Test
+  void createsUpdatesAndClearsMoveComments() {
+    AnalysisSessionSummary session = service.createInitialSession();
+    service.attemptMove(session.sessionId(), new MoveCommand(Square.of("e2"), Square.of("e4"), Optional.empty()));
+    var nodeId = service.notationTree(session.sessionId()).currentNodeId().orElseThrow();
+
+    service.saveMoveComment(session.sessionId(), nodeId, "  Main opening idea  ");
+    assertEquals("Main opening idea", service.moveComment(session.sessionId(), nodeId).orElseThrow());
+
+    service.saveMoveComment(session.sessionId(), nodeId, "  ");
+    assertTrue(service.moveComment(session.sessionId(), nodeId).isEmpty());
+  }
+
+  @Test
   void exposesImportedVariationsAsSelectableNodes() throws Exception {
     var imported =
         new ChesspressoPgnReader()

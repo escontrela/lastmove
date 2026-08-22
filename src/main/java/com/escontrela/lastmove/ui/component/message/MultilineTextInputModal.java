@@ -27,7 +27,7 @@ public final class MultilineTextInputModal extends StackPane {
     title.getStyleClass().add("message-box-title");
     input.getStyleClass().add("multiline-input-area");
     input.setWrapText(true);
-    input.setPrefRowCount(8);
+    input.setPrefRowCount(6);
     Button cancel = new Button("Cancel");
     Button close = new Button("×");
     close.getStyleClass().add("message-box-close-button");
@@ -41,7 +41,11 @@ public final class MultilineTextInputModal extends StackPane {
     HBox actions = new HBox(10, actionSpace, cancel, save); actions.setAlignment(Pos.CENTER_RIGHT);
     VBox card = new VBox(14, header, input, actions);
     card.getStyleClass().addAll("message-box-card", "multiline-input-card");
-    card.setPadding(new Insets(22)); card.setPrefWidth(580); card.setMaxWidth(580);
+    card.setPadding(new Insets(20));
+    card.setPrefWidth(560);
+    card.setMaxWidth(560);
+    card.setMinHeight(Region.USE_PREF_SIZE);
+    card.setMaxHeight(Region.USE_PREF_SIZE);
     getChildren().add(card); hide();
   }
   public void show(String heading, String value, EventHandler<ActionEvent> handler) {

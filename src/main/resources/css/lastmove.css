@@ -1200,6 +1200,11 @@
     -fx-pref-height: 24px;
     -fx-max-width: Infinity;
 }
+.captured-piece-group {
+    -fx-min-height: 24px;
+    -fx-pref-height: 24px;
+    -fx-max-height: 24px;
+}
 .progressive-status-card { -fx-min-height: 86px; }
 
 .computer-thinking-indicator {
@@ -1875,7 +1880,34 @@
 .comment-panel-empty { -fx-font-style: italic; -fx-text-fill: #7c858e; }
 .comment-panel-close { -fx-background-color: transparent; -fx-font-size: 20px; -fx-cursor: hand; }
 .comment-panel-edit { -fx-background-color: #2f76c2; -fx-text-fill: white; -fx-background-radius: 7; -fx-cursor: hand; }
-.multiline-input-area { -fx-pref-height: 210px; }
+.multiline-input-area {
+    -fx-min-height: 160px;
+    -fx-pref-height: 160px;
+    -fx-max-height: 160px;
+    -fx-background-color: #ffffff;
+    -fx-control-inner-background: #ffffff;
+    -fx-border-color: #aeb8c4;
+    -fx-border-width: 1px;
+    -fx-text-fill: #1f242a;
+}
+.multiline-input-area:focused { -fx-border-color: #1c69d4; -fx-border-width: 2px; }
+.night-mode .multiline-input-area,
+.night-mode .multiline-input-area .content {
+    -fx-background-color: #151d26;
+    -fx-control-inner-background: #151d26;
+    -fx-border-color: #5c6a79;
+    -fx-text-fill: #f1f3f5;
+    -fx-prompt-text-fill: #93a0ae;
+}
+.night-mode .multiline-input-area:focused { -fx-border-color: #6ba5f0; }
+.chapter-comment-button {
+    -fx-min-width: 32px;
+    -fx-min-height: 32px;
+    -fx-pref-width: 32px;
+    -fx-pref-height: 32px;
+    -fx-max-width: 32px;
+    -fx-max-height: 32px;
+}
 .night-mode .comment-panel-card { -fx-background-color: #1c2430; -fx-border-color: #4b596a; }
 .night-mode .comment-panel-title, .night-mode .comment-panel-content { -fx-text-fill: #f1f3f5; }
 .night-mode .comment-panel-empty { -fx-text-fill: #aeb8c3; }

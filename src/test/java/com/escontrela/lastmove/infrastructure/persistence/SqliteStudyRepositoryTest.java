@@ -73,6 +73,8 @@ class SqliteStudyRepositoryTest {
     @Test
     void savesAndLoadsStudyWithChaptersMovesAndNavigation() {
         Study study = studyWithChapterMoves("e2", "e4", "e7", "e5");
+        study.chapters().getFirst().document().rootVariations().getFirst()
+                .setComment("Claims space in the centre");
         repository.save(study);
 
         Optional<Study> loaded = repository.findByIdAndOwner(study.id(), ownerId);
@@ -91,6 +93,9 @@ class SqliteStudyRepositoryTest {
         assertEquals(
             "e5",
             chapter.document().currentPly().orElseThrow().move().san().getValue());
+        assertEquals(
+            "Claims space in the centre",
+            chapter.document().rootVariations().getFirst().comment().orElseThrow());
     }
 
     @Test

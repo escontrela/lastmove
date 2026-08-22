@@ -76,6 +76,10 @@ import org.springframework.stereotype.Component;
 public final class StudyWorkspaceScreenController implements UiScreenController {
 
   private static final double BOARD_MAX_SIZE = 720.0;
+  private static final String EMPTY_COMMENT_LIGHT_ICON = "/images/mode_comment_35dp_000000.png";
+  private static final String EMPTY_COMMENT_DARK_ICON = "/images/mode_comment_35dp_FFFFFF.png";
+  private static final String COMMENT_LIGHT_ICON = "/images/comment_35dp_000000.png";
+  private static final String COMMENT_DARK_ICON = "/images/comment_35dp_FFFFFF.png";
 
   @FXML private StackPane root;
   @FXML private StackPane boardHost;
@@ -92,6 +96,7 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
   @FXML private EngineSelectorModal engineSelectorModal;
   @FXML private CommentPanel commentPanel;
   @FXML private MultilineTextInputModal commentEditor;
+  @FXML private ToolbarIconButton studyCommentButton;
   @FXML private ToolbarIconButton moveCommentButton;
 
   private final StudyService studyService;
@@ -319,7 +324,8 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
   public void onStudyComment() {
     activeOwner().ifPresent(owner -> showComment("Study comment",
         annotationService.studyComment(owner, activeStudyId).orElse(""),
-        text -> annotationService.saveStudyComment(owner, activeStudyId, text)));
+        text -> annotationService.saveStudyComment(owner, activeStudyId, text),
+        this::refreshCommentIcons));
   }
 
   @FXML
@@ -330,22 +336,29 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
       String san = selectedSan().orElse("move");
       showComment("Move comment · " + san,
           annotationService.moveComment(owner, activeStudyId, activeChapterId, annotatedNodeId).orElse(""),
-          text -> annotationService.saveMoveComment(owner, activeStudyId, activeChapterId, annotatedNodeId, text));
+          text -> annotationService.saveMoveComment(owner, activeStudyId, activeChapterId, annotatedNodeId, text),
+          this::refreshCommentIcons);
     });
   }
 
   private void showChapterComment(StudyChapterSummary chapter) {
     activeOwner().ifPresent(owner -> showComment("Chapter comment · " + chapter.title(),
         annotationService.chapterComment(owner, activeStudyId, chapter.chapterId()).orElse(""),
-        text -> annotationService.saveChapterComment(owner, activeStudyId, chapter.chapterId(), text)));
+        text -> annotationService.saveChapterComment(owner, activeStudyId, chapter.chapterId(), text),
+        this::refreshCommentIcons));
   }
 
-  private void showComment(String title, String value, java.util.function.Consumer<String> saveAction) {
+  private void showComment(
+      String title,
+      String value,
+      java.util.function.Consumer<String> saveAction,
+      Runnable afterSave) {
     commentPanel.setTitle(title); commentPanel.setContent(value);
     editCurrentComment = () -> commentEditor.show(title, commentPanel.getContent(), event -> {
       saveAction.accept(commentEditor.getText());
       commentPanel.setContent(commentEditor.getText().strip());
       commentEditor.hide();
+      afterSave.run();
       statusLabel.setText(commentPanel.getContent().isBlank() ? "Comment removed" : "Comment saved");
     });
     commentPanel.setOnEdit(event -> editCurrentComment.run());
@@ -453,6 +466,7 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
     chessBoard.renderPosition(workspace.currentPosition());
     refreshMoveList();
     chapterList.refresh();
+    refreshCommentIcons();
     statusLabel.setText("Editing " + workspace.title());
   }
 
@@ -466,6 +480,7 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
     moveNotation.setSelectedNodeId(tree.currentNodeId().map(id -> id.value()).orElse(null));
     currentNodeId = tree.currentNodeId().orElse(null);
     moveCommentButton.setDisable(currentNodeId == null);
+    refreshMoveCommentIcon();
     if (commentPanel.isVisible() && commentPanel.getTitle().startsWith("Move comment")) {
       onMoveComment();
     }
@@ -481,6 +496,41 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
             ply.move().san().getValue(),
             node.activeLine()),
         node.continuations().stream().map(this::toNotationNode).toList());
+  }
+
+  private void refreshCommentIcons() {
+    refreshStudyCommentIcon();
+    refreshMoveCommentIcon();
+    chapterList.refresh();
+  }
+
+  private void refreshStudyCommentIcon() {
+    boolean hasComment =
+        activeStudyId != null
+            && activeOwner()
+                .map(owner -> annotationService.studyComment(owner, activeStudyId).isPresent())
+                .orElse(false);
+    setCommentIcon(studyCommentButton, hasComment);
+  }
+
+  private void refreshMoveCommentIcon() {
+    boolean hasComment =
+        currentNodeId != null
+            && activeStudyId != null
+            && activeChapterId != null
+            && activeOwner()
+                .map(
+                    owner ->
+                        annotationService
+                            .moveComment(owner, activeStudyId, activeChapterId, currentNodeId)
+                            .isPresent())
+                .orElse(false);
+    setCommentIcon(moveCommentButton, hasComment);
+  }
+
+  private static void setCommentIcon(ToolbarIconButton button, boolean hasComment) {
+    button.setLightIconResource(hasComment ? COMMENT_LIGHT_ICON : EMPTY_COMMENT_LIGHT_ICON);
+    button.setDarkIconResource(hasComment ? COMMENT_DARK_ICON : EMPTY_COMMENT_DARK_ICON);
   }
 
   private void activateChapter(StudyChapterSummary chapter) {
@@ -607,6 +657,7 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
     private final Label activeMarker = new Label("✓");
     private final Label title = new Label();
     private final Label summary = new Label();
+    private final ToolbarIconButton commentButton = new ToolbarIconButton();
 
     private ChapterCell() {
       row.getStyleClass().add("chapter-row");
@@ -614,10 +665,15 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
       activeMarker.getStyleClass().add("session-active-marker");
       title.getStyleClass().add("chapter-title");
       summary.getStyleClass().add("chapter-summary");
+      commentButton.getStyleClass().add("chapter-comment-button");
+      commentButton.setAccessibleText("Chapter comments");
+      commentButton.setTooltipText("Chapter comments");
+      commentButton.setOnAction(event -> showChapterComment(getItem()));
+      commentButton.setOnMouseClicked(event -> event.consume());
       details.getChildren().addAll(title, summary);
       details.setMaxWidth(Double.MAX_VALUE);
       HBox.setHgrow(details, Priority.ALWAYS);
-      row.getChildren().addAll(activeMarker, details);
+      row.getChildren().addAll(activeMarker, details, commentButton);
       row.setOnMouseClicked(
           event -> {
             if (event.getButton() == MouseButton.PRIMARY && getItem() != null) {
@@ -649,6 +705,12 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
       activeMarker.setManaged(active);
       title.setText(item.title());
       summary.setText(item.origin().name().replace('_', ' ') + " · " + item.moveCount() + " moves");
+      boolean hasComment =
+          activeStudyId != null
+              && activeOwner()
+                  .map(owner -> annotationService.chapterComment(owner, activeStudyId, item.chapterId()).isPresent())
+                  .orElse(false);
+      setCommentIcon(commentButton, hasComment);
       setGraphic(row);
     }
   }

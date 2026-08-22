@@ -202,6 +202,19 @@ public final class AnalysisSessionService {
         currentNodeId);
   }
 
+  /** Returns the annotation attached to one move in an ephemeral analysis session. */
+  public Optional<String> moveComment(AnalysisSessionId sessionId, AnalysisNodeId nodeId) {
+    return node(session(sessionId), nodeId).comment();
+  }
+
+  /** Creates, replaces or clears one move annotation and retains it with the session. */
+  public void saveMoveComment(
+      AnalysisSessionId sessionId, AnalysisNodeId nodeId, String comment) {
+    AnalysisSession session = session(sessionId);
+    node(session, nodeId).setComment(comment);
+    sessionRepository.save(session);
+  }
+
   /** Returns the selectable variations that begin at the initial position. */
   public List<AnalysisNodeSummary> rootVariations(AnalysisSessionId sessionId) {
     AnalysisSession session = session(sessionId);
@@ -305,6 +318,13 @@ public final class AnalysisSessionService {
   private AnalysisSession session(AnalysisSessionId sessionId) {
     AnalysisSessionId required = Objects.requireNonNull(sessionId, "sessionId must not be null");
     return sessionRepository.findById(required).orElseThrow(() -> unknownSession(required));
+  }
+
+  private AnalysisNode node(AnalysisSession session, AnalysisNodeId nodeId) {
+    return session.document().content().tree().find(Objects.requireNonNull(nodeId))
+        .orElseThrow(
+            () -> new IllegalArgumentException(
+                "The node does not belong to session " + session.id().value()));
   }
 
   private NoSuchElementException unknownSession(AnalysisSessionId sessionId) {
