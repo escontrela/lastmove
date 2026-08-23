@@ -7,6 +7,7 @@ import com.escontrela.lastmove.application.service.ComputerGameService;
 import com.escontrela.lastmove.application.service.ComputerEngineSettingsService;
 import com.escontrela.lastmove.application.service.AnalysisSessionService;
 import com.escontrela.lastmove.application.service.CurrentUserService;
+import com.escontrela.lastmove.application.service.OpeningPracticeService;
 import com.escontrela.lastmove.domain.common.PieceColor;
 import com.escontrela.lastmove.domain.game.GameId;
 import com.escontrela.lastmove.domain.game.GameResult;
@@ -71,6 +72,7 @@ public final class HumanVsComputerScreenController implements UiScreenController
   private final CurrentUserService currentUserService;
   private final BoardAppearancePreferencesService boardAppearancePreferencesService;
   private final ComputerEngineSettingsService computerEngineSettingsService;
+  private final OpeningPracticeService openingPracticeService;
   private Timeline clockRefresh;
   private final ListChangeListener<String> themeStyleListener = change -> updatePlayerIcons();
 
@@ -116,7 +118,8 @@ public final class HumanVsComputerScreenController implements UiScreenController
       ChessSoundService chessSoundService,
       CurrentUserService currentUserService,
       BoardAppearancePreferencesService boardAppearancePreferencesService,
-      ComputerEngineSettingsService computerEngineSettingsService) {
+      ComputerEngineSettingsService computerEngineSettingsService,
+      OpeningPracticeService openingPracticeService) {
     this.uiFlowManager = uiFlowManager;
     this.computerGameService = computerGameService;
     this.analysisSessionService = analysisSessionService;
@@ -125,6 +128,7 @@ public final class HumanVsComputerScreenController implements UiScreenController
     this.currentUserService = currentUserService;
     this.boardAppearancePreferencesService = boardAppearancePreferencesService;
     this.computerEngineSettingsService = computerEngineSettingsService;
+    this.openingPracticeService = openingPracticeService;
   }
 
   @FXML
@@ -310,7 +314,18 @@ public final class HumanVsComputerScreenController implements UiScreenController
 
   private void configureSetupOverlay() {
     setupOverlay.setOnCancel(event -> backToMain());
-    setupOverlay.setOnStartGame(event -> startGame(event.configuration()));
+    setupOverlay.setOnStartGame(
+        event -> {
+          try {
+            startGame(
+                openingPracticeService.configure(
+                    event.configuration(),
+                    event.openingPracticeLine(),
+                    event.openingPracticeThreshold()));
+          } catch (IllegalArgumentException exception) {
+            setupOverlay.showError(exception.getMessage());
+          }
+        });
   }
 
   private void startGame(ComputerGameConfiguration configuration) {
