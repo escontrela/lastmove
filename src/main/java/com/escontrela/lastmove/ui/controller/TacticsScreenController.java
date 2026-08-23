@@ -15,6 +15,8 @@ import com.escontrela.lastmove.ui.component.header.ApplicationHeader;
 import com.escontrela.lastmove.ui.component.header.HeaderAction;
 import com.escontrela.lastmove.ui.component.list.ManagedListCell;
 import com.escontrela.lastmove.ui.component.message.TextInputModal;
+import com.escontrela.lastmove.ui.component.search.RegexSearchControl;
+import com.escontrela.lastmove.ui.component.search.RegexSearchFilter;
 import com.escontrela.lastmove.ui.event.OpenTacticsWorkspaceEvent;
 import com.escontrela.lastmove.ui.event.SelectTacticDestinationEvent;
 import com.escontrela.lastmove.ui.event.UiEventBus;
@@ -48,6 +50,7 @@ public final class TacticsScreenController implements UiScreenController {
   @FXML private StackPane root;
   @FXML private ApplicationHeader applicationHeader;
   @FXML private ListView<TacticSuiteSummary> suiteList;
+  @FXML private RegexSearchControl regexSearch;
   @FXML private Label suiteCountLabel;
   @FXML private Label emptyStateLabel;
   @FXML private Label statusLabel;
@@ -60,6 +63,7 @@ public final class TacticsScreenController implements UiScreenController {
   private final UiFlowManager uiFlowManager;
   private Optional<PlayerId> ownerId = Optional.empty();
   private List<TacticSuiteSummary> visibleSuites = List.of();
+  private List<TacticSuiteSummary> allSuites = List.of();
   private com.escontrela.lastmove.domain.analysis.AnalysisSessionId pendingAnalysisSessionId;
 
   public TacticsScreenController(
@@ -77,6 +81,7 @@ public final class TacticsScreenController implements UiScreenController {
   public void initialize() {
     root.getProperties().put("controller", this);
     suiteList.setCellFactory(ignored -> new SuiteCell());
+    regexSearch.setOnSearch(event -> showSuites(event.pattern()));
   }
 
   @Override
@@ -194,6 +199,7 @@ public final class TacticsScreenController implements UiScreenController {
     boolean available = ownerId.isPresent();
     configureCreateSuiteAction(available);
     if (!available) {
+      allSuites = List.of();
       visibleSuites = List.of();
       suiteList.getItems().clear();
       suiteCountLabel.setText("0 suites");
@@ -202,11 +208,20 @@ public final class TacticsScreenController implements UiScreenController {
       emptyStateLabel.setManaged(true);
       return;
     }
-    visibleSuites = tacticService.listSuites(ownerId.orElseThrow());
+    allSuites = tacticService.listSuites(ownerId.orElseThrow());
+    if (regexSearch.isValid()) {
+      regexSearch.submit();
+    }
+  }
+
+  private void showSuites(java.util.regex.Pattern pattern) {
+    visibleSuites = allSuites.stream()
+        .filter(suite -> RegexSearchFilter.matches(pattern, suite.title(), suite.description().orElse(""), Integer.toString(suite.exerciseCount())))
+        .toList();
     suiteList.getItems().setAll(visibleSuites);
     suiteCountLabel.setText(
         visibleSuites.size() + (visibleSuites.size() == 1 ? " suite" : " suites"));
-    emptyStateLabel.setText("Create a suite, then add a position and author its solution line.");
+    emptyStateLabel.setText(allSuites.isEmpty() ? "Create a suite, then add a position and author its solution line." : "No tactic suites match this search.");
     emptyStateLabel.setVisible(visibleSuites.isEmpty());
     emptyStateLabel.setManaged(visibleSuites.isEmpty());
     statusLabel.setText(

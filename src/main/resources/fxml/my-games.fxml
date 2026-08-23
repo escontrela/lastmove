@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel?>
 <?import com.escontrela.lastmove.ui.component.header.ApplicationHeader?>
+<?import com.escontrela.lastmove.ui.component.search.RegexSearchControl?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ListView?>
@@ -14,6 +15,7 @@
     <top><ApplicationHeader /></top>
     <center><VBox spacing="16" styleClass="studies-workspace"><padding><Insets top="32" right="48" bottom="48" left="48"/></padding>
       <VBox spacing="6"><Label text="Your games" styleClass="sessions-section-title"/><Label fx:id="gameCountLabel" text="0 games" styleClass="sessions-section-copy"/></VBox>
+      <RegexSearchControl fx:id="regexSearch" />
       <StackPane styleClass="library-card"><ListView fx:id="gamesList" styleClass="study-library-list"/><Label fx:id="emptyLabel" text="Play a game to find it here." wrapText="true" styleClass="session-empty-state"/></StackPane>
     </VBox></center>
     <bottom><HBox alignment="CENTER_LEFT" spacing="12" styleClass="status-rail"><Label text="Status" styleClass="eyebrow-label"/><Label fx:id="statusLabel" text="Ready" styleClass="status-text"/><Region HBox.hgrow="ALWAYS"/></HBox></bottom>

@@ -19,6 +19,8 @@ import com.escontrela.lastmove.ui.component.header.ApplicationHeader;
 import com.escontrela.lastmove.ui.component.header.HeaderAction;
 import com.escontrela.lastmove.ui.component.list.ManagedListCell;
 import com.escontrela.lastmove.ui.component.message.TextInputModal;
+import com.escontrela.lastmove.ui.component.search.RegexSearchControl;
+import com.escontrela.lastmove.ui.component.search.RegexSearchFilter;
 import com.escontrela.lastmove.ui.event.OpenStudyWorkspaceEvent;
 import com.escontrela.lastmove.ui.event.UiEventBus;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
@@ -51,6 +53,7 @@ public final class StudiesScreenController implements UiScreenController {
   @FXML private StackPane root;
   @FXML private ApplicationHeader applicationHeader;
   @FXML private ListView<StudySummary> studyList;
+  @FXML private RegexSearchControl regexSearch;
   @FXML private Label profileStateLabel;
   @FXML private Label studyCountLabel;
   @FXML private Label emptyStateLabel;
@@ -65,6 +68,7 @@ public final class StudiesScreenController implements UiScreenController {
   private final UiFlowManager uiFlowManager;
   private Optional<PlayerId> ownerId = Optional.empty();
   private List<StudySummary> visibleStudies = List.of();
+  private List<StudySummary> allStudies = List.of();
 
   public StudiesScreenController(
       StudyService studyService,
@@ -81,6 +85,7 @@ public final class StudiesScreenController implements UiScreenController {
   public void initialize() {
     root.getProperties().put("controller", this);
     studyList.setCellFactory(ignored -> new StudyCell());
+    regexSearch.setOnSearch(event -> showStudies(event.pattern()));
   }
 
   @Override
@@ -141,6 +146,7 @@ public final class StudiesScreenController implements UiScreenController {
 
     if (!available) {
 
+      allStudies = List.of();
       visibleStudies = List.of();
       studyList.getItems().clear();
       studyList.setPrefHeight(116.0);
@@ -160,12 +166,21 @@ public final class StudiesScreenController implements UiScreenController {
       return;
     }
 
-    visibleStudies = studyService.listStudies(ownerId.orElseThrow());
+    allStudies = studyService.listStudies(ownerId.orElseThrow());
+    if (regexSearch.isValid()) {
+      regexSearch.submit();
+    }
+  }
+
+  private void showStudies(java.util.regex.Pattern pattern) {
+    visibleStudies = allStudies.stream()
+        .filter(study -> RegexSearchFilter.matches(pattern, study.title(), study.description().orElse(""), Integer.toString(study.chapterCount())))
+        .toList();
     studyList.getItems().setAll(visibleStudies);
     studyList.setPrefHeight(Math.max(92.0, Math.min(468.0, visibleStudies.size() * 82.0 + 2.0)));
     studyCountLabel.setText(
         visibleStudies.size() + (visibleStudies.size() == 1 ? " study" : " studies"));
-    emptyStateLabel.setText("Create a study to start collecting persistent chapters.");
+    emptyStateLabel.setText(allStudies.isEmpty() ? "Create a study to start collecting persistent chapters." : "No studies match this search.");
     emptyStateLabel.setVisible(visibleStudies.isEmpty());
     emptyStateLabel.setManaged(visibleStudies.isEmpty());
     profileStateLabel.setText("Studies for active player");
