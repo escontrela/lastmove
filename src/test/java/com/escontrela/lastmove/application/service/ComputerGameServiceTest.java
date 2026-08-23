@@ -12,6 +12,10 @@ import com.escontrela.lastmove.application.computer.ComputerGamePhase;
 import com.escontrela.lastmove.application.computer.ComputerMoveEngine;
 import com.escontrela.lastmove.application.computer.ComputerMoveEngineProvider;
 import com.escontrela.lastmove.application.computer.ComputerMoveRequest;
+import com.escontrela.lastmove.application.computer.EngineAnalysisResult;
+import com.escontrela.lastmove.application.computer.EngineScore;
+import com.escontrela.lastmove.application.computer.OpeningPracticeConfiguration;
+import com.escontrela.lastmove.application.computer.OpeningPracticeState;
 import com.escontrela.lastmove.domain.common.PieceColor;
 import com.escontrela.lastmove.domain.common.Square;
 import com.escontrela.lastmove.domain.game.ChessGameFactory;
@@ -96,6 +100,56 @@ class ComputerGameServiceTest {
     assertEquals(List.of("e4"), sans(state));
     assertEquals(PieceColor.BLACK, state.gameState().whoseTurn());
     assertTrue(state.canMove());
+  }
+
+  @Test
+  void followsASafeGuidedMoveAndCompletesTheOpeningLine() {
+    engineProvider.analyses.add(analysis(move("e7", "e5"), 35));
+    // Evaluation after the guided move is from White's perspective, hence the negative score.
+    engineProvider.analyses.add(analysis(move("g1", "f3"), -20));
+    var created = service.createGame(practiceConfiguration(List.of(move("e2", "e4"), move("e7", "e5")), 20))
+        .toCompletableFuture().join();
+
+    var state = service.playHumanMove(created.gameId(), move("e2", "e4"))
+        .toCompletableFuture().join();
+
+    assertEquals(List.of("e4", "e5"), sans(state));
+    assertEquals(OpeningPracticeState.COMPLETED, state.openingPracticeState());
+  }
+
+  @Test
+  void rejectsAHarmfulGuidedMoveAndUsesTheBestMove() {
+    engineProvider.analyses.add(analysis(move("c7", "c5"), 70));
+    engineProvider.analyses.add(analysis(move("g1", "f3"), 10));
+    var created = service.createGame(practiceConfiguration(List.of(move("e2", "e4"), move("e7", "e5")), 50))
+        .toCompletableFuture().join();
+
+    var state = service.playHumanMove(created.gameId(), move("e2", "e4"))
+        .toCompletableFuture().join();
+
+    assertEquals(List.of("e4", "c5"), sans(state));
+    assertEquals(OpeningPracticeState.ABANDONED_BY_SAFETY_THRESHOLD, state.openingPracticeState());
+  }
+
+  @Test
+  void aHumanDeviationEndsGuidanceAndNormalSearchContinues() {
+    engineProvider.moves.add(move("d7", "d5"));
+    var created = service.createGame(practiceConfiguration(List.of(move("e2", "e4"), move("e7", "e5")), 50))
+        .toCompletableFuture().join();
+
+    var state = service.playHumanMove(created.gameId(), move("d2", "d4"))
+        .toCompletableFuture().join();
+
+    assertEquals(List.of("d4", "d5"), sans(state));
+    assertEquals(OpeningPracticeState.ABANDONED_BY_DEVIATION, state.openingPracticeState());
+    assertEquals(1, engineProvider.lastEngine.chooseMoveCalls);
+  }
+
+  @Test
+  void rejectsAnIllegalConfiguredOpeningBeforeStartingTheEngine() {
+    assertThrows(IllegalArgumentException.class,
+        () -> service.createGame(practiceConfiguration(List.of(move("e2", "e5")), 50)));
+    assertTrue(engineProvider.createdEngines.isEmpty());
   }
 
   @Test
@@ -288,7 +342,7 @@ class ComputerGameServiceTest {
         "Human",
         humanColor,
         TimeControl.of(Duration.ofMinutes(5), Duration.ZERO),
-        "fake",
+        "knightshade",
         Duration.ofMillis(100));
   }
 
@@ -298,8 +352,19 @@ class ComputerGameServiceTest {
         humanColor,
         TimeControl.of(Duration.ofMinutes(5), Duration.ZERO),
         Optional.of(startingFen),
-        "fake",
+        "knightshade",
         Duration.ofMillis(100));
+  }
+
+  private ComputerGameConfiguration practiceConfiguration(List<MoveCommand> line, int threshold) {
+    return new ComputerGameConfiguration(
+        "Human", PieceColor.WHITE, TimeControl.of(Duration.ofMinutes(5), Duration.ZERO),
+        Optional.empty(), "knightshade", Duration.ofMillis(100),
+        Optional.of(new OpeningPracticeConfiguration(line, threshold)));
+  }
+
+  private static EngineAnalysisResult analysis(MoveCommand move, int score) {
+    return EngineAnalysisResult.of(move, EngineScore.centipawns(score), 4);
   }
 
   private static List<String> sans(
@@ -313,10 +378,11 @@ class ComputerGameServiceTest {
 
   private static final class FakeEngineProvider implements ComputerMoveEngineProvider {
     private final ComputerEngineDescriptor descriptor =
-        new ComputerEngineDescriptor("fake", "Test engine", "1");
+        new ComputerEngineDescriptor("knightshade", "Test engine", "1");
     private final Queue<MoveCommand> moves = new ArrayDeque<>();
     private FakeEngine lastEngine;
     private boolean deferReplies;
+    private final Queue<EngineAnalysisResult> analyses = new ArrayDeque<>();
     private final java.util.ArrayList<FakeEngine> createdEngines = new java.util.ArrayList<>();
 
     @Override
@@ -326,7 +392,7 @@ class ComputerGameServiceTest {
 
     @Override
     public ComputerMoveEngine create() {
-      lastEngine = new FakeEngine(descriptor, moves, deferReplies);
+      lastEngine = new FakeEngine(descriptor, moves, analyses, deferReplies);
       createdEngines.add(lastEngine);
       return lastEngine;
     }
@@ -335,6 +401,7 @@ class ComputerGameServiceTest {
   private static final class FakeEngine implements ComputerMoveEngine {
     private final ComputerEngineDescriptor descriptor;
     private final Queue<MoveCommand> moves;
+    private final Queue<EngineAnalysisResult> analyses;
     private int chooseMoveCalls;
     private boolean running;
     private final boolean deferReplies;
@@ -343,10 +410,20 @@ class ComputerGameServiceTest {
     private int cancelSearchCalls;
 
     private FakeEngine(
-        ComputerEngineDescriptor descriptor, Queue<MoveCommand> moves, boolean deferReplies) {
+        ComputerEngineDescriptor descriptor, Queue<MoveCommand> moves,
+        Queue<EngineAnalysisResult> analyses, boolean deferReplies) {
       this.descriptor = descriptor;
       this.moves = moves;
+      this.analyses = analyses;
       this.deferReplies = deferReplies;
+    }
+
+    @Override
+    public CompletionStage<EngineAnalysisResult> analyze(ComputerMoveRequest request) {
+      EngineAnalysisResult result = analyses.poll();
+      return result == null
+          ? ComputerMoveEngine.super.analyze(request)
+          : CompletableFuture.completedFuture(result);
     }
 
     @Override
