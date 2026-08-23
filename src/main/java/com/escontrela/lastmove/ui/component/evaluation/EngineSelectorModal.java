@@ -10,6 +10,8 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
@@ -29,6 +31,8 @@ public final class EngineSelectorModal extends StackPane {
     getStyleClass().addAll("message-box-overlay", "engine-selector-modal");
     setAlignment(Pos.CENTER);
     setPickOnBounds(true);
+    setFocusTraversable(true);
+    setOnKeyPressed(this::handleEscape);
     title.getStyleClass().add("message-box-title");
     message.getStyleClass().add("message-box-message");
     Button close = new Button("×");
@@ -89,6 +93,13 @@ public final class EngineSelectorModal extends StackPane {
       hide();
     });
     return choice;
+  }
+
+  private void handleEscape(KeyEvent event) {
+    if (event.getCode() == KeyCode.ESCAPE) {
+      cancel(new ActionEvent(this, this));
+      event.consume();
+    }
   }
 
   private void cancel(ActionEvent event) { hide(); if (onCancel != null) onCancel.handle(event); }
