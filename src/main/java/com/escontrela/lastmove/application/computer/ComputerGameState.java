@@ -30,6 +30,7 @@ public record ComputerGameState(
     Optional<GameTerminationReason> terminationReason,
     boolean canMove,
     boolean canTakeBack,
+    OpeningPracticeState openingPracticeState,
     Optional<String> message) {
 
   public ComputerGameState {
@@ -44,6 +45,7 @@ public record ComputerGameState(
     Objects.requireNonNull(gameState, "gameState must not be null");
     Objects.requireNonNull(clock, "clock must not be null");
     Objects.requireNonNull(phase, "phase must not be null");
+    Objects.requireNonNull(openingPracticeState, "openingPracticeState must not be null");
     result = Objects.requireNonNull(result, "result must not be null");
     terminationReason =
         Objects.requireNonNull(terminationReason, "terminationReason must not be null");

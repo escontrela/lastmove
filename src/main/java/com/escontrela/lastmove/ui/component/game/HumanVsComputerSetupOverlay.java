@@ -1,7 +1,9 @@
 package com.escontrela.lastmove.ui.component.game;
 
 import com.escontrela.lastmove.application.computer.ComputerEngineDescriptor;
+import com.escontrela.lastmove.application.computer.ComputerEngineIds;
 import com.escontrela.lastmove.application.computer.ComputerGameConfiguration;
+import com.escontrela.lastmove.application.service.OpeningPracticeService;
 import com.escontrela.lastmove.domain.common.PieceColor;
 import com.escontrela.lastmove.domain.game.TimeControl;
 import com.escontrela.lastmove.domain.notation.Fen;
@@ -19,6 +21,7 @@ import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ToggleButton;
@@ -51,6 +54,11 @@ public final class HumanVsComputerSetupOverlay extends StackPane {
   private final ToggleButton fenPositionButton = new ToggleButton("FEN");
   private final TextField fenField = new TextField();
   private final VBox fenInput = new VBox(8);
+  private final CheckBox openingPracticeCheck = new CheckBox("Practise an opening line");
+  private final TextField openingLineField = new TextField();
+  private final TextField safetyThresholdField =
+      new TextField(Integer.toString(OpeningPracticeService.DEFAULT_SAFETY_THRESHOLD_CENTIPAWNS));
+  private final VBox openingPracticeInput = new VBox(8);
   private final Button cancelButton = new Button("Cancel");
   private final Button startButton = new Button("Start game");
   private final Label validationLabel = new Label();
@@ -136,6 +144,33 @@ public final class HumanVsComputerSetupOverlay extends StackPane {
           }
         });
 
+    openingPracticeCheck.setWrapText(true);
+    openingLineField.setPromptText("e4 e5 Nf3 Nc6");
+    openingLineField.setMaxWidth(Double.MAX_VALUE);
+    openingLineField.getStyleClass().add("settings-text-field");
+    safetyThresholdField.setPromptText(
+        Integer.toString(OpeningPracticeService.DEFAULT_SAFETY_THRESHOLD_CENTIPAWNS));
+    safetyThresholdField.setMaxWidth(120);
+    safetyThresholdField.getStyleClass().add("settings-text-field");
+    HBox safetyThreshold =
+        new HBox(8, safetyThresholdField, new Label("centipawns maximum loss"));
+    safetyThreshold.setAlignment(Pos.CENTER_LEFT);
+    openingPracticeInput
+        .getChildren()
+        .setAll(
+            fieldLabel("Opening line (SAN)"),
+            openingLineField,
+            fieldLabel("Knightshade safety threshold"),
+            safetyThreshold);
+    openingPracticeInput.setVisible(false);
+    openingPracticeInput.setManaged(false);
+    openingPracticeCheck
+        .selectedProperty()
+        .addListener((ignored, previous, selected) -> updateOpeningPracticeVisibility());
+    engineSelector
+        .valueProperty()
+        .addListener((ignored, previous, selected) -> updateOpeningPracticeVisibility());
+
     timeSelector.setItems(FXCollections.observableArrayList(TimePreset.values()));
     timeSelector.getSelectionModel().select(TimePreset.TEN_MINUTES);
     timeSelector.setMaxWidth(Double.MAX_VALUE);
@@ -162,6 +197,8 @@ public final class HumanVsComputerSetupOverlay extends StackPane {
             description,
             fieldLabel("Computer opponent"),
             engineSelector,
+            openingPracticeCheck,
+            openingPracticeInput,
             fieldLabel("Play as"),
             colors,
             fieldLabel("Time control"),
@@ -214,6 +251,11 @@ public final class HumanVsComputerSetupOverlay extends StackPane {
     timeSelector.getSelectionModel().select(TimePreset.TEN_MINUTES);
     initialPositionButton.setSelected(true);
     fenField.clear();
+    openingPracticeCheck.setSelected(false);
+    openingLineField.clear();
+    safetyThresholdField.setText(
+        Integer.toString(OpeningPracticeService.DEFAULT_SAFETY_THRESHOLD_CENTIPAWNS));
+    updateOpeningPracticeVisibility();
     setBusy(false);
     validationLabel.setText(required.isEmpty() ? "No computer engine is configured." : "");
     startButton.setDisable(required.isEmpty());
@@ -232,6 +274,9 @@ public final class HumanVsComputerSetupOverlay extends StackPane {
     initialPositionButton.setDisable(busy);
     fenPositionButton.setDisable(busy);
     fenField.setDisable(busy);
+    openingPracticeCheck.setDisable(busy || !supportsOpeningPractice());
+    openingLineField.setDisable(busy);
+    safetyThresholdField.setDisable(busy);
     cancelButton.setDisable(busy);
     startButton.setDisable(busy || engineSelector.getItems().isEmpty());
     startButton.setText(busy ? "Starting…" : "Start game");
@@ -289,7 +334,9 @@ public final class HumanVsComputerSetupOverlay extends StackPane {
                   time.timeControl,
                   startingFen,
                   engine.id(),
-                  thinkingTime)));
+                  thinkingTime),
+              openingPracticeCheck.isSelected() ? openingLineField.getText() : "",
+              safetyThresholdField.getText()));
     }
   }
 
@@ -304,6 +351,23 @@ public final class HumanVsComputerSetupOverlay extends StackPane {
     Label label = new Label(text);
     label.getStyleClass().add("settings-field-label");
     return label;
+  }
+
+  private boolean supportsOpeningPractice() {
+    ComputerEngineDescriptor engine = engineSelector.getValue();
+    return engine != null && ComputerEngineIds.KNIGHTSHADE.equals(engine.id());
+  }
+
+  private void updateOpeningPracticeVisibility() {
+    boolean supported = supportsOpeningPractice();
+    if (!supported) {
+      openingPracticeCheck.setSelected(false);
+    }
+    openingPracticeCheck.setVisible(supported);
+    openingPracticeCheck.setManaged(supported);
+    boolean showInput = supported && openingPracticeCheck.isSelected();
+    openingPracticeInput.setVisible(showInput);
+    openingPracticeInput.setManaged(showInput);
   }
 
   private enum TimePreset {
@@ -330,15 +394,30 @@ public final class HumanVsComputerSetupOverlay extends StackPane {
   public static final class StartGameEvent extends javafx.event.Event {
 
     private final ComputerGameConfiguration configuration;
+    private final String openingPracticeLine;
+    private final String openingPracticeThreshold;
 
     private StartGameEvent(
-        HumanVsComputerSetupOverlay source, ComputerGameConfiguration configuration) {
+        HumanVsComputerSetupOverlay source,
+        ComputerGameConfiguration configuration,
+        String openingPracticeLine,
+        String openingPracticeThreshold) {
       super(source, NULL_SOURCE_TARGET, javafx.event.Event.ANY);
       this.configuration = configuration;
+      this.openingPracticeLine = Objects.requireNonNullElse(openingPracticeLine, "");
+      this.openingPracticeThreshold = Objects.requireNonNullElse(openingPracticeThreshold, "");
     }
 
     public ComputerGameConfiguration configuration() {
       return configuration;
+    }
+
+    public String openingPracticeLine() {
+      return openingPracticeLine;
+    }
+
+    public String openingPracticeThreshold() {
+      return openingPracticeThreshold;
     }
   }
 }

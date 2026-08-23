@@ -14,7 +14,8 @@ public record ComputerGameConfiguration(
     TimeControl timeControl,
     Optional<Fen> startingFen,
     String engineId,
-    Duration engineThinkingTime) {
+    Duration engineThinkingTime,
+    Optional<OpeningPracticeConfiguration> openingPractice) {
 
   public ComputerGameConfiguration {
     humanName = requireText(humanName, "humanName");
@@ -29,6 +30,16 @@ public record ComputerGameConfiguration(
     if (engineThinkingTime.isZero() || engineThinkingTime.isNegative()) {
       throw new IllegalArgumentException("engineThinkingTime must be positive");
     }
+    openingPractice = Objects.requireNonNull(openingPractice, "openingPractice must not be null");
+    if (openingPractice.isPresent() && !ComputerEngineIds.KNIGHTSHADE.equals(engineId)) {
+      throw new IllegalArgumentException("opening practice is available only with Knightshade");
+    }
+  }
+
+  public ComputerGameConfiguration(
+      String humanName, PieceColor humanColor, TimeControl timeControl, Optional<Fen> startingFen,
+      String engineId, Duration engineThinkingTime) {
+    this(humanName, humanColor, timeControl, startingFen, engineId, engineThinkingTime, Optional.empty());
   }
 
   /** Creates the former default configuration, starting from the normal initial position. */
@@ -44,7 +55,8 @@ public record ComputerGameConfiguration(
         timeControl,
         Optional.empty(),
         engineId,
-        engineThinkingTime);
+        engineThinkingTime,
+        Optional.empty());
   }
 
   private static String requireText(String value, String field) {

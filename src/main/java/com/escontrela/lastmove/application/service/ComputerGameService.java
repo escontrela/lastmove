@@ -7,6 +7,10 @@ import com.escontrela.lastmove.application.computer.ComputerGameState;
 import com.escontrela.lastmove.application.computer.ComputerMoveEngine;
 import com.escontrela.lastmove.application.computer.ComputerMoveEngineProvider;
 import com.escontrela.lastmove.application.computer.ComputerMoveRequest;
+import com.escontrela.lastmove.application.computer.EngineAnalysisResult;
+import com.escontrela.lastmove.application.computer.EngineScore;
+import com.escontrela.lastmove.application.computer.OpeningPracticeConfiguration;
+import com.escontrela.lastmove.application.computer.OpeningPracticeState;
 import com.escontrela.lastmove.application.repository.ProgressiveGameRepository;
 import com.escontrela.lastmove.application.repository.SavedGameRepository;
 import com.escontrela.lastmove.application.event.ComputerGameFinishedEvent;
@@ -131,6 +135,7 @@ public final class ComputerGameService {
                 () ->
                     gameFactory.createInitial(
                         white, black, Optional.of(required.timeControl())));
+    validateOpeningLine(game.initialPosition(), required.openingPractice());
     ComputerMoveEngine engine = provider.create();
     RuntimeContext context = new RuntimeContext(game, required, engine, provider.descriptor(), selectedPlayer());
     save(game, context);
@@ -223,6 +228,7 @@ public final class ComputerGameService {
         context.message = result.rejectionReason();
         return CompletableFuture.completedFuture(stateOf(game, context));
       }
+      advanceOpeningAfterMove(context, command, game.moveHistory().size() - 1);
       save(game, context);
       context.message = Optional.empty();
       context.turnStartedAt = clock.instant();
@@ -256,6 +262,7 @@ public final class ComputerGameService {
           game.requestTakeback(context.configuration.humanColor(), pliesToUndo);
       request.accept(context.configuration.humanColor().opposite());
       game.takeBack(request);
+      restoreOpeningProgress(context, game.moveHistory());
       save(game, context);
       context.phase = ComputerGamePhase.WAITING_FOR_HUMAN;
       context.turnStartedAt = clock.instant();
@@ -332,8 +339,7 @@ public final class ComputerGameService {
       thinkingTime = permittedEngineThinkingTime(game, context);
       searchVersion = ++context.searchVersion;
     }
-    return context.engine
-        .chooseMove(new ComputerMoveRequest(searchedPosition, thinkingTime))
+    return chooseComputerMove(context, searchedPosition, thinkingTime)
         .handle(
             (move, failure) -> {
               synchronized (context) {
@@ -360,6 +366,7 @@ public final class ComputerGameService {
                       Optional.of("The engine returned an illegal move: " + move);
                   return stateOf(game, context);
                 }
+                advanceOpeningAfterMove(context, move, game.moveHistory().size() - 1);
                 save(game, context);
                 context.message = Optional.empty();
                 context.turnStartedAt = clock.instant();
@@ -412,7 +419,102 @@ public final class ComputerGameService {
             && game.currentTurn() == humanColor
             && game.result().isEmpty(),
         canTakeBack(moves, humanColor),
+        context.openingPracticeState,
         context.message);
+  }
+
+  private CompletionStage<MoveCommand> chooseComputerMove(
+      RuntimeContext context, PositionSnapshot position, Duration thinkingTime) {
+    OpeningPracticeConfiguration practice = context.configuration.openingPractice().orElse(null);
+    if (practice == null || context.openingPracticeState != OpeningPracticeState.FOLLOWING) {
+      return context.engine.chooseMove(new ComputerMoveRequest(position, thinkingTime));
+    }
+    MoveCommand guided = practice.line().get(context.openingPlyIndex);
+    ChessGame candidateGame = gameFactory.createAnalysisGame(position);
+    var execution = candidateGame.move(guided);
+    if (!execution.accepted()) {
+      context.openingPracticeState = OpeningPracticeState.ABANDONED_BY_DEVIATION;
+      return context.engine.chooseMove(new ComputerMoveRequest(position, thinkingTime));
+    }
+    ComputerMoveRequest bestRequest = new ComputerMoveRequest(position, thinkingTime);
+    ComputerMoveRequest guidedRequest = new ComputerMoveRequest(candidateGame.currentPosition(), thinkingTime);
+    return context.engine.analyze(bestRequest).thenCompose(best ->
+        context.engine.analyze(guidedRequest).thenApply(afterGuided -> {
+          if (withinThreshold(best, afterGuided, practice.safetyThresholdCentipawns())) {
+            return guided;
+          }
+          context.openingPracticeState = OpeningPracticeState.ABANDONED_BY_SAFETY_THRESHOLD;
+          return best.bestMove().orElseThrow(
+              () -> new IllegalStateException("The engine found no playable move"));
+        }));
+  }
+
+  private static boolean withinThreshold(
+      EngineAnalysisResult best, EngineAnalysisResult afterGuided, int threshold) {
+    if (best.score().isEmpty() || afterGuided.score().isEmpty()) {
+      return false; // Safety cannot be established without evaluations.
+    }
+    int bestValue = comparableScore(best.score().orElseThrow());
+    int guidedValue = -comparableScore(afterGuided.score().orElseThrow());
+    return (long) bestValue - guidedValue <= threshold;
+  }
+
+  private static int comparableScore(EngineScore score) {
+    if (!score.isMate()) {
+      return score.value();
+    }
+    return score.value() >= 0 ? 1_000_000 - score.value() : -1_000_000 - score.value();
+  }
+
+  private void validateOpeningLine(
+      PositionSnapshot initialPosition, Optional<OpeningPracticeConfiguration> practice) {
+    if (practice.isEmpty()) {
+      return;
+    }
+    ChessGame validationGame = gameFactory.createAnalysisGame(initialPosition);
+    for (MoveCommand move : practice.orElseThrow().line()) {
+      if (!validationGame.move(move).accepted()) {
+        throw new IllegalArgumentException("opening practice line contains an illegal move: " + move);
+      }
+    }
+  }
+
+  private static void advanceOpeningAfterMove(
+      RuntimeContext context, MoveCommand played, int playedPlyIndex) {
+    if (context.openingPracticeState != OpeningPracticeState.FOLLOWING) {
+      return;
+    }
+    List<MoveCommand> line = context.configuration.openingPractice().orElseThrow().line();
+    if (playedPlyIndex != context.openingPlyIndex || !line.get(playedPlyIndex).equals(played)) {
+      context.openingPracticeState = OpeningPracticeState.ABANDONED_BY_DEVIATION;
+      return;
+    }
+    context.openingPlyIndex++;
+    if (context.openingPlyIndex == line.size()) {
+      context.openingPracticeState = OpeningPracticeState.COMPLETED;
+    }
+  }
+
+  private static void restoreOpeningProgress(RuntimeContext context, List<Ply> history) {
+    if (context.configuration.openingPractice().isEmpty()) {
+      return;
+    }
+    List<MoveCommand> line = context.configuration.openingPractice().orElseThrow().line();
+    int matching = 0;
+    while (matching < history.size() && matching < line.size()) {
+      var descriptor = history.get(matching).move();
+      MoveCommand played =
+          new MoveCommand(descriptor.from(), descriptor.to(), descriptor.promotion());
+      if (!line.get(matching).equals(played)) {
+        context.openingPlyIndex = matching;
+        context.openingPracticeState = OpeningPracticeState.ABANDONED_BY_DEVIATION;
+        return;
+      }
+      matching++;
+    }
+    context.openingPlyIndex = matching;
+    context.openingPracticeState =
+        matching == line.size() ? OpeningPracticeState.COMPLETED : OpeningPracticeState.FOLLOWING;
   }
 
   private GameClockSnapshot displayedClock(ChessGame game, RuntimeContext context) {
@@ -515,13 +617,27 @@ public final class ComputerGameService {
     ComputerGameConfiguration configuration = saved.context().computerConfiguration().orElseThrow();
     if (game.result().isPresent()) {
       ComputerMoveEngineProvider provider = provider(configuration.engineId());
-      RuntimeContext context = new RuntimeContext(game, configuration, provider.create(), provider.descriptor(), saved.context().ownerPlayerId());
+      RuntimeContext context =
+          new RuntimeContext(
+              game,
+              configuration,
+              provider.create(),
+              provider.descriptor(),
+              saved.context().ownerPlayerId());
+      restoreOpeningProgress(context, game.moveHistory());
       context.phase = ComputerGamePhase.FINISHED;
       runtimes.put(game.id(), context);
       return CompletableFuture.completedFuture(stateOf(game, context));
     }
     ComputerMoveEngineProvider provider = provider(configuration.engineId());
-    RuntimeContext context = new RuntimeContext(game, configuration, provider.create(), provider.descriptor(), saved.context().ownerPlayerId());
+    RuntimeContext context =
+        new RuntimeContext(
+            game,
+            configuration,
+            provider.create(),
+            provider.descriptor(),
+            saved.context().ownerPlayerId());
+    restoreOpeningProgress(context, game.moveHistory());
     runtimes.put(game.id(), context);
     return context.engine.start().thenCompose(ignored -> {
       synchronized (context) {
@@ -580,6 +696,8 @@ public final class ComputerGameService {
     private Instant turnStartedAt;
     private long searchVersion;
     private Optional<String> message = Optional.empty();
+    private int openingPlyIndex;
+    private OpeningPracticeState openingPracticeState;
     private boolean finishedEventPublished;
 
     private RuntimeContext(
@@ -592,6 +710,8 @@ public final class ComputerGameService {
       this.configuration = configuration;
       this.engine = engine;
       this.descriptor = descriptor;
+      this.openingPracticeState = configuration.openingPractice().isPresent()
+          ? OpeningPracticeState.FOLLOWING : OpeningPracticeState.NOT_CONFIGURED;
       this.ownerPlayerId = Objects.requireNonNull(ownerPlayerId, "ownerPlayerId must not be null");
     }
   }
