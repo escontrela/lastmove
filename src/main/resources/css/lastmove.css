@@ -1099,10 +1099,52 @@
     -fx-border-width: 1px;
 }
 
+.move-notation-content { -fx-background-color: #ffffff; }
+
+.move-notation-header {
+    -fx-min-height: 42px;
+    -fx-pref-height: 42px;
+    -fx-max-height: 42px;
+    -fx-background-color: #ffffff;
+    -fx-border-color: transparent transparent #cccccc transparent;
+    -fx-border-width: 0 0 1px 0;
+}
+
+.move-notation-header .variation-header-spacer {
+    -fx-min-width: 24px;
+    -fx-pref-width: 24px;
+    -fx-max-width: 24px;
+}
+
+.move-notation-column-header {
+    -fx-min-height: 42px;
+    -fx-pref-height: 42px;
+    -fx-alignment: center-left;
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #3c3c3c;
+}
+
+.move-notation-header .move-number-header {
+    -fx-min-width: 44px;
+    -fx-pref-width: 44px;
+    -fx-max-width: 44px;
+    -fx-alignment: center;
+}
+
+.move-notation-header .move-color-header { -fx-padding: 0 14px; }
+
 .move-notation-list,
 .move-notation-list .virtual-flow,
 .move-notation-list .viewport {
     -fx-background-color: #ffffff;
+}
+
+.move-notation-list {
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
 }
 
 .move-notation-list .move-notation-cell {
@@ -1111,11 +1153,14 @@
 }
 
 .move-notation-row {
-    -fx-min-height: 44px;
-    -fx-pref-height: 44px;
+    -fx-min-height: 46px;
+    -fx-pref-height: 46px;
+    -fx-background-color: #ffffff;
     -fx-border-color: transparent transparent #eeeeee transparent;
     -fx-border-width: 0 0 1px 0;
 }
+
+.move-notation-row:hover { -fx-background-color: #f7f7f7; }
 
 .move-notation-row:variation {
     -fx-background-color: #f8fbff;
@@ -1123,6 +1168,12 @@
 
 .move-notation-row:active-line {
     -fx-border-color: transparent transparent #d9e8fa transparent;
+}
+
+.move-notation-row:current-row {
+    -fx-background-color: #edf4fc;
+    -fx-border-color: transparent transparent #c5d9ef #1c69d4;
+    -fx-border-width: 0 0 1px 4px;
 }
 
 .move-notation-row .variation-marker {
@@ -1142,41 +1193,47 @@
     -fx-alignment: center;
     -fx-font-size: 14px;
     -fx-text-fill: #8a8a8a;
-    -fx-background-color: #f7f7f7;
+    -fx-background-color: transparent;
 }
 
 .move-notation-row .notation-move {
-    -fx-min-height: 44px;
-    -fx-pref-height: 44px;
+    -fx-min-height: 45px;
+    -fx-pref-height: 45px;
     -fx-alignment: center-left;
     -fx-padding: 0 14px;
-    -fx-background-color: #ffffff;
+    -fx-background-color: transparent;
     -fx-background-radius: 0;
-    -fx-border-color: transparent transparent transparent #eeeeee;
-    -fx-border-width: 0 0 0 1px;
-    -fx-font-size: 17px;
-    -fx-font-weight: 600;
+    -fx-border-color: transparent;
+    -fx-border-width: 2px;
+    -fx-font-size: 16px;
+    -fx-font-weight: 400;
     -fx-text-fill: #262626;
     -fx-cursor: hand;
 }
 
 .move-notation-row .notation-move:hover {
-    -fx-background-color: #edf4fc;
+    -fx-background-color: rgba(28, 105, 212, 0.08);
 }
 
 .move-notation-row .notation-move:focused {
-    -fx-border-color: #7aa9e6;
+    -fx-border-color: #1c69d4;
     -fx-border-width: 2px;
 }
 
 .move-notation-row .notation-move:current {
-    -fx-background-color: #1c69d4;
-    -fx-text-fill: #ffffff;
+    -fx-background-color: transparent;
+    -fx-font-weight: 700;
+    -fx-text-fill: #0653b6;
+}
+
+.move-notation-row:current-row .move-number {
+    -fx-font-weight: 700;
+    -fx-text-fill: #1c69d4;
 }
 
 .move-notation-row .notation-move.empty,
 .move-notation-row .notation-move.empty:disabled {
-    -fx-background-color: #fbfbfb;
+    -fx-background-color: transparent;
     -fx-cursor: default;
     -fx-opacity: 1;
 }
@@ -1241,8 +1298,6 @@
     -fx-pref-height: 24px;
     -fx-max-height: 24px;
 }
-.progressive-status-card { -fx-min-height: 86px; }
-
 .computer-thinking-indicator {
     -fx-min-height: 6px;
     -fx-pref-height: 6px;
@@ -1258,7 +1313,7 @@
     -fx-background-color: #1c69d4;
     -fx-background-radius: 2px;
 }
-.progressive-moves-card { -fx-min-height: 220px; }
+.progressive-moves-card { -fx-min-height: 300px; }
 .progressive-navigation-row { -fx-padding: 0 0 2px 0; }
 .progressive-action-button {
     -fx-min-height: 42px;
@@ -1699,6 +1754,12 @@
     -fx-background-color: #262e38;
     -fx-border-color: #3b4654;
 }
+.night-mode .move-notation-content,
+.night-mode .move-notation-header {
+    -fx-background-color: #262e38;
+}
+.night-mode .move-notation-header { -fx-border-color: transparent transparent #536171 transparent; }
+.night-mode .move-notation-column-header { -fx-text-fill: #c6ccd3; }
 .night-mode .move-notation-list,
 .night-mode .move-notation-list .virtual-flow,
 .night-mode .move-notation-list .viewport,
@@ -1708,36 +1769,44 @@
     -fx-border-width: 0;
 }
 .night-mode .move-notation-row {
+    -fx-background-color: #262e38;
     -fx-border-color: transparent transparent #3b4654 transparent;
 }
+.night-mode .move-notation-row:hover { -fx-background-color: #2d3743; }
 .night-mode .move-notation-row:variation {
     -fx-background-color: #1f2934;
 }
 .night-mode .move-notation-row:active-line {
     -fx-border-color: transparent transparent #40566d transparent;
 }
+.night-mode .move-notation-row:current-row {
+    -fx-background-color: #2d4056;
+    -fx-border-color: transparent transparent #50657c #6ba5f0;
+    -fx-border-width: 0 0 1px 4px;
+}
 .night-mode .move-notation-row .variation-marker {
     -fx-text-fill: #93a0ae;
 }
 .night-mode .move-notation-row .move-number {
-    -fx-background-color: #1f2731;
+    -fx-background-color: transparent;
     -fx-text-fill: #93a0ae;
 }
 .night-mode .move-notation-row .notation-move {
-    -fx-background-color: #262e38;
-    -fx-border-color: transparent transparent transparent #3b4654;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
     -fx-text-fill: #f1f3f5;
 }
 .night-mode .move-notation-row .notation-move:hover {
-    -fx-background-color: #334151;
+    -fx-background-color: rgba(107, 165, 240, 0.14);
 }
 .night-mode .move-notation-row .notation-move:current {
-    -fx-background-color: #4389df;
-    -fx-text-fill: #ffffff;
+    -fx-background-color: transparent;
+    -fx-text-fill: #9fc8f7;
 }
+.night-mode .move-notation-row:current-row .move-number { -fx-text-fill: #9fc8f7; }
 .night-mode .move-notation-row .notation-move.empty,
 .night-mode .move-notation-row .notation-move.empty:disabled {
-    -fx-background-color: #232b35;
+    -fx-background-color: transparent;
 }
 .night-mode .settings-check-box { -fx-text-fill: #ffffff; }
 .night-mode .settings-field-label { -fx-text-fill: #c6ccd3; }
@@ -1752,7 +1821,6 @@
 .night-mode .settings-validation-message.settings-validation-error { -fx-text-fill: #ff9aa6; }
 .night-mode .settings-validation-message.settings-validation-success { -fx-text-fill: #7edca7; }
 .night-mode .progressive-player-card,
-.night-mode .progressive-status-card,
 .night-mode .progressive-moves-card {
     -fx-background-color: #262e38;
     -fx-border-color: #3b4654;

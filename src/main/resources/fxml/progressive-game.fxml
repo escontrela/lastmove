@@ -52,11 +52,6 @@
                         <Label fx:id="opponentClockLabel" styleClass="progressive-player-clock" text="--:--" />
                         <CapturedPiecesControl fx:id="opponentCapturedPieces" />
                     </VBox>
-                    <VBox spacing="8.0" styleClass="rail-card progressive-status-card">
-                        <padding><Insets bottom="14.0" left="18.0" right="18.0" top="14.0" /></padding>
-                        <Label styleClass="eyebrow-label" text="Game status" />
-                        <Label fx:id="turnLabel" styleClass="card-title" text="Configure a new game" />
-                    </VBox>
                     <HBox alignment="CENTER_LEFT" spacing="10.0" styleClass="progressive-navigation-row">
                         <ToolbarIconButton fx:id="firstMoveButton" accessibleText="First move" darkIconResource="/images/first_page_35dp_FFFFFF.png" lightIconResource="/images/first_page_35dp_000000.png" onAction="#reviewFirstMove" tooltipText="First move" />
                         <ToolbarIconButton fx:id="previousMoveButton" accessibleText="Previous move" darkIconResource="/images/arrow_left_alt_35dp_FFFFFF.png" lightIconResource="/images/arrow_left_alt_35dp_000000.png" onAction="#reviewPreviousMove" tooltipText="Previous move" />
