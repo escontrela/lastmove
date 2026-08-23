@@ -9,13 +9,15 @@ import com.escontrela.lastmove.ui.event.ResumeComputerGameEvent;
 import com.escontrela.lastmove.ui.event.UiEventBus;
 import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
 import com.escontrela.lastmove.ui.component.list.ManagedListCell;
+import com.escontrela.lastmove.ui.component.search.RegexSearchControl;
+import com.escontrela.lastmove.ui.component.search.RegexSearchFilter;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
 import com.escontrela.lastmove.ui.screen.UiScreenController;
 import com.escontrela.lastmove.ui.screen.UiScreenId;
 import java.util.List;
-import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
+import javafx.fxml.FXML;
 import javafx.scene.input.MouseButton;
 import javafx.geometry.Pos;
 import javafx.scene.layout.HBox;
@@ -30,14 +32,16 @@ import org.springframework.stereotype.Component;
 public final class MyGamesScreenController implements UiScreenController {
   private final SavedGameRepository games; private final CurrentUserService currentUser;
   private final AnalysisSessionService analyses; private final UiEventBus events; private final UiFlowManager flow;
-  @FXML private StackPane root; @FXML private ListView<SavedGameSummary> gamesList; @FXML private Label emptyLabel; @FXML private Label gameCountLabel; @FXML private Label statusLabel; @FXML private ContextualMenuPanel contextualMenuPanel;
+  @FXML private StackPane root; @FXML private ListView<SavedGameSummary> gamesList; @FXML private RegexSearchControl regexSearch; @FXML private Label emptyLabel; @FXML private Label gameCountLabel; @FXML private Label statusLabel; @FXML private ContextualMenuPanel contextualMenuPanel;
+  private List<SavedGameSummary> allGames = List.of();
   public MyGamesScreenController(SavedGameRepository games, CurrentUserService currentUser, AnalysisSessionService analyses, UiEventBus events, @Lazy UiFlowManager flow) {
     this.games=games; this.currentUser=currentUser; this.analyses=analyses; this.events=events; this.flow=flow;
   }
-  @FXML public void initialize() { root.getProperties().put("controller",this); gamesList.setCellFactory(v -> new Cell()); }
+  @FXML public void initialize() { root.getProperties().put("controller",this); gamesList.setCellFactory(v -> new Cell()); regexSearch.setOnSearch(event -> showGames(event.pattern())); }
   @Override public void onShow() { refresh(); }
   @FXML public void backToHome() { flow.show(UiScreenId.MAIN); }
-  private void refresh() { List<SavedGameSummary> rows=currentUser.selectedPlayerId().map(games::listSummaries).orElse(List.of()); gamesList.getItems().setAll(rows); gameCountLabel.setText(rows.size() + (rows.size() == 1 ? " game" : " games")); emptyLabel.setVisible(rows.isEmpty()); emptyLabel.setManaged(rows.isEmpty()); statusLabel.setText(rows.isEmpty() ? "Ready to start your first game" : "Open a game to resume or review it"); }
+  private void refresh() { allGames=currentUser.selectedPlayerId().map(games::listSummaries).orElse(List.of()); if (regexSearch.isValid()) { regexSearch.submit(); } }
+  private void showGames(java.util.regex.Pattern pattern) { List<SavedGameSummary> rows=allGames.stream().filter(game -> RegexSearchFilter.matches(pattern, game.whiteName(), game.blackName(), game.gameType().name(), game.finished() ? "finished" : "in progress", game.result().map(Enum::name).orElse(""))).toList(); gamesList.getItems().setAll(rows); gameCountLabel.setText(rows.size() + (rows.size() == 1 ? " game" : " games")); emptyLabel.setText(allGames.isEmpty() ? "Play a game to find it here." : "No games match this search."); emptyLabel.setVisible(rows.isEmpty()); emptyLabel.setManaged(rows.isEmpty()); statusLabel.setText(rows.isEmpty() ? (allGames.isEmpty() ? "Ready to start your first game" : "No games match the current search") : "Open a game to resume or review it"); }
   private void open(SavedGameSummary game) {
     if (!game.finished()) { flow.show(UiScreenId.HUMAN_VS_COMPUTER); events.publish(new ResumeComputerGameEvent(game.gameId())); return; }
     var session=analyses.createFromGame(games.findSaved(game.gameId()).orElseThrow().game().toRecord());
