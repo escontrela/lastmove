@@ -91,7 +91,6 @@ public final class HumanVsComputerScreenController implements UiScreenController
   @FXML private CapturedPiecesControl humanCapturedPieces;
   @FXML private Label opponentClockLabel;
   @FXML private Label humanClockLabel;
-  @FXML private Label turnLabel;
   @FXML private TypewriterStatusLabel statusLabel;
   @FXML private ThinkingIndicatorControl opponentThinkingIndicator;
   @FXML private Button takeBackButton;
@@ -489,7 +488,6 @@ public final class HumanVsComputerScreenController implements UiScreenController
         formatClock(
             humanIsWhite ? state.clock().blackRemaining() : state.clock().whiteRemaining()));
     String currentTurnText = turnText(state);
-    turnLabel.setText(currentTurnText);
     boolean enteredHumanTurn =
         state.phase() == ComputerGamePhase.WAITING_FOR_HUMAN
             && (previousState == null
@@ -564,7 +562,6 @@ public final class HumanVsComputerScreenController implements UiScreenController
     humanPlayerLabel.setText(currentUserService.currentUser().name());
     opponentClockLabel.setText("--:--");
     humanClockLabel.setText("--:--");
-    turnLabel.setText("Configure a new game");
     statusLabel.showImmediately("Choose an opponent, colour and time control");
     moveNotation.setTree(List.of());
     opponentCapturedPieces.render(List.of());
@@ -645,7 +642,6 @@ public final class HumanVsComputerScreenController implements UiScreenController
 
   private void showTransitionState(String message) {
     clockRefresh.stop();
-    turnLabel.setText(message);
     statusLabel.showImmediately(message);
     takeBackButton.setDisable(true);
     restartButton.setDisable(true);
