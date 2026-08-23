@@ -12,6 +12,9 @@ import com.escontrela.lastmove.ui.service.ApplicationThemeService;
 import java.util.List;
 import java.util.Optional;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 
 /** Coordinates navigation between views hosted by the single primary window. */
 public class UiFlowManager {
@@ -22,6 +25,7 @@ public class UiFlowManager {
     private final GameNotificationRepository notifications;
     private final UiEventBus eventBus;
     private UiScreen currentScreen;
+    private boolean escapeHandlerInstalled;
 
     public UiFlowManager(
             UiScreenFactory screenFactory,
@@ -40,6 +44,7 @@ public class UiFlowManager {
             currentScreen.controller().onHide();
         }
         configureHeader(nextScreen.scene().getRoot(), screenId);
+        installEscapeShortcut(nextScreen.scene());
         nextScreen.show();
         currentScreen = nextScreen;
     }
@@ -47,6 +52,21 @@ public class UiFlowManager {
     /** Returns the active primary-window view, if one has already been shown. */
     public Optional<UiScreen> currentScreen() {
         return Optional.ofNullable(currentScreen);
+    }
+
+    /** Registers the ESC shortcut that returns from any secondary screen to the main window. */
+    private void installEscapeShortcut(Scene scene) {
+        if (escapeHandlerInstalled) {
+            return;
+        }
+        scene.addEventHandler(KeyEvent.KEY_PRESSED, event -> {
+            if (event.getCode() == KeyCode.ESCAPE
+                    && currentScreen != null
+                    && currentScreen.id() != UiScreenId.MAIN) {
+                show(UiScreenId.MAIN);
+            }
+        });
+        escapeHandlerInstalled = true;
     }
 
     private void configureHeader(Parent root, UiScreenId screenId) {

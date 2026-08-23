@@ -93,8 +93,12 @@
                     <VBox maxWidth="680.0" spacing="12.0" styleClass="setup-card">
                         <padding><Insets bottom="32.0" left="32.0" right="32.0" top="32.0" /></padding>
                         <Label styleClass="eyebrow-label" text="Navigation" />
-                        <Label styleClass="card-title" text="Analysis keyboard shortcuts" />
-                        <Label styleClass="card-copy" text="Available in the PGN analysis workspace when no modal dialog or text field is active." wrapText="true" />
+                        <Label styleClass="card-title" text="Keyboard shortcuts" />
+                        <Label styleClass="card-copy" text="Navigate analysis with the arrow keys in the PGN analysis and study workspaces. Press ESC on any secondary screen to return to the main window." wrapText="true" />
+                        <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="shortcut-reference-row">
+                            <Label styleClass="shortcut-reference-key" text="Esc" />
+                            <Label styleClass="shortcut-reference-action" text="Return to the main window" />
+                        </HBox>
                         <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="shortcut-reference-row">
                             <Label styleClass="shortcut-reference-key" text="↑" />
                             <Label styleClass="shortcut-reference-action" text="First move" />

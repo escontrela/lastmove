@@ -8,6 +8,8 @@ import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -47,6 +49,14 @@ public final class MultilineTextInputModal extends StackPane {
     card.setMinHeight(Region.USE_PREF_SIZE);
     card.setMaxHeight(Region.USE_PREF_SIZE);
     getChildren().add(card); hide();
+    setOnKeyPressed(this::handleEscape);
+  }
+
+  private void handleEscape(KeyEvent event) {
+    if (event.getCode() == KeyCode.ESCAPE) {
+      hide();
+      event.consume();
+    }
   }
   public void show(String heading, String value, EventHandler<ActionEvent> handler) {
     title.setText(heading); input.setText(value == null ? "" : value); onSave = handler;
