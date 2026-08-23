@@ -8,6 +8,8 @@ import com.escontrela.lastmove.application.game.SavedGameSummary;
 import com.escontrela.lastmove.application.service.AnalysisSessionService;
 import com.escontrela.lastmove.ui.component.notification.NotificationsPanel;
 import com.escontrela.lastmove.ui.event.ToggleNotificationsPanelEvent;
+import com.escontrela.lastmove.application.event.ComputerGameFinishedEvent;
+import com.escontrela.lastmove.application.event.ComputerOpponentMovedEvent;
 import com.escontrela.lastmove.ui.event.OpenAnalysisSessionEvent;
 import com.escontrela.lastmove.ui.event.ResumeComputerGameEvent;
 import com.escontrela.lastmove.ui.event.UiEventBus;
@@ -24,6 +26,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import javafx.collections.ListChangeListener;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.event.ActionEvent;
 import javafx.scene.input.ContextMenuEvent;
@@ -180,6 +183,15 @@ public class MainWindowController implements UiScreenController {
         if (notificationsPanel.isShowing()) { notificationsPanel.hide(); return; }
         refreshNotifications(); notificationsPanel.show();
     }
+    /** Refreshes in-place notifications when a background game finishes away from its screen. */
+    @org.springframework.context.event.EventListener
+    public void computerGameFinished(ComputerGameFinishedEvent event) {
+        Platform.runLater(this::refreshNotifications);
+    }
+    @org.springframework.context.event.EventListener
+    public void computerOpponentMoved(ComputerOpponentMovedEvent event) {
+        Platform.runLater(this::refreshNotifications);
+    }
     private void refreshNotifications() {
         currentUserService.selectedPlayerId().ifPresentOrElse(owner -> {
             Map<com.escontrela.lastmove.domain.game.GameId, SavedGameSummary> summaries = savedGames.listSummaries(owner).stream().collect(java.util.stream.Collectors.toMap(SavedGameSummary::gameId, summary -> summary));
@@ -192,7 +204,7 @@ public class MainWindowController implements UiScreenController {
         String outcome = game.finished() ? game.result().map(this::resultLabel).orElse("Finished") : "In progress";
         boolean resumable = !game.finished() && currentUserService.selectedPlayerId()
             .flatMap(owner -> savedGames.findSaved(notification.gameId()).flatMap(saved -> saved.context().ownerPlayerId()).filter(owner::equals)).isPresent();
-        return new NotificationsPanel.NotificationEntry(notification, players, outcome, resumable ? "Resume" : "Open");
+        return new NotificationsPanel.NotificationEntry(notification, players, outcome, resumable ? "Resume" : "View event");
     }
     private void openNotificationGame(GameNotification notification) {
         var saved = savedGames.findSaved(notification.gameId()).orElse(null);
@@ -206,7 +218,7 @@ public class MainWindowController implements UiScreenController {
             return;
         }
         var session = analysisSessionService.createFromGame(saved.game().toRecord());
-        uiEventBus.publish(new OpenAnalysisSessionEvent(session.sessionId(), "Opened game from notification"));
+        uiEventBus.publish(new OpenAnalysisSessionEvent(session.sessionId(), "Opened completed game from notification"));
         uiFlowManager.show(UiScreenId.PGN_ANALYSIS);
     }
     private String resultLabel(com.escontrela.lastmove.domain.game.GameResult result) {

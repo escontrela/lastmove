@@ -45,7 +45,7 @@ public final class NotificationsPanel extends StackPane {
   private VBox row(NotificationEntry entry) {
     GameNotification notification = entry.notification();
     Label heading = new Label(entry.players()); heading.getStyleClass().add("notifications-heading");
-    String event = "GAME_FINISHED".equals(notification.kind()) ? "Finished" : "In progress";
+    String event = switch (notification.kind()) { case "GAME_FINISHED" -> "Finished"; case "OPPONENT_MOVED" -> "Opponent moved"; default -> "In progress"; };
     Label detail = new Label(event + " · " + entry.outcome() + " · " + DATE.format(notification.createdAt())); detail.setWrapText(true); detail.getStyleClass().add("notifications-detail");
     Button open = new Button(entry.actionLabel()); open.getStyleClass().add("notifications-open"); open.setOnAction(e -> onOpen.accept(notification));
     Button delete = new Button("Delete"); delete.getStyleClass().add("notifications-delete"); delete.setOnAction(e -> onDelete.accept(notification));
