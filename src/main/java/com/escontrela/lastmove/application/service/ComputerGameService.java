@@ -13,6 +13,9 @@ import com.escontrela.lastmove.application.computer.OpeningPracticeConfiguration
 import com.escontrela.lastmove.application.computer.OpeningPracticeState;
 import com.escontrela.lastmove.application.repository.ProgressiveGameRepository;
 import com.escontrela.lastmove.application.repository.SavedGameRepository;
+import com.escontrela.lastmove.application.event.ComputerGameFinishedEvent;
+import com.escontrela.lastmove.application.event.ComputerOpponentMovedEvent;
+import com.escontrela.lastmove.application.notification.GameNotificationRepository;
 import com.escontrela.lastmove.application.game.GameType;
 import com.escontrela.lastmove.application.game.SavedGameContext;
 import com.escontrela.lastmove.domain.common.PieceColor;
@@ -38,6 +41,10 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 /**
@@ -55,14 +62,26 @@ public final class ComputerGameService {
   private final Map<String, ComputerMoveEngineProvider> engineProviders;
   private final Clock clock;
   private final CurrentUserService currentUserService;
+  private final ApplicationEventPublisher events;
+  private final GameNotificationRepository notifications;
   private final Map<GameId, RuntimeContext> runtimes = new ConcurrentHashMap<>();
+  private final ScheduledExecutorService runtimeTicker;
 
   public ComputerGameService(
       SavedGameRepository gameRepository,
       ChessGameFactory gameFactory,
       List<ComputerMoveEngineProvider> engineProviders,
       Clock clock) {
-    this(gameRepository, gameFactory, engineProviders, clock, null);
+    this(gameRepository, gameFactory, engineProviders, clock, null, null, null);
+  }
+
+  public ComputerGameService(
+      SavedGameRepository gameRepository,
+      ChessGameFactory gameFactory,
+      List<ComputerMoveEngineProvider> engineProviders,
+      Clock clock,
+      CurrentUserService currentUserService) {
+    this(gameRepository, gameFactory, engineProviders, clock, currentUserService, null, null);
   }
 
   @org.springframework.beans.factory.annotation.Autowired
@@ -71,7 +90,9 @@ public final class ComputerGameService {
       ChessGameFactory gameFactory,
       List<ComputerMoveEngineProvider> engineProviders,
       Clock clock,
-      CurrentUserService currentUserService) {
+      CurrentUserService currentUserService,
+      ApplicationEventPublisher events,
+      GameNotificationRepository notifications) {
     this.gameRepository =
         Objects.requireNonNull(gameRepository, "gameRepository must not be null");
     this.gameFactory = Objects.requireNonNull(gameFactory, "gameFactory must not be null");
@@ -83,6 +104,14 @@ public final class ComputerGameService {
                     provider -> provider.descriptor().id(), provider -> provider));
     this.clock = Objects.requireNonNull(clock, "clock must not be null");
     this.currentUserService = currentUserService;
+    this.events = events;
+    this.notifications = notifications;
+    this.runtimeTicker = Executors.newSingleThreadScheduledExecutor(task -> {
+      Thread thread = new Thread(task, "lastmove-game-clock");
+      thread.setDaemon(true);
+      return thread;
+    });
+    runtimeTicker.scheduleAtFixedRate(this::advanceActiveGames, 200, 200, TimeUnit.MILLISECONDS);
   }
 
   /** Creates a progressive game, starts its engine and plays the opening engine move if necessary. */
@@ -108,8 +137,8 @@ public final class ComputerGameService {
                         white, black, Optional.of(required.timeControl())));
     validateOpeningLine(game.initialPosition(), required.openingPractice());
     ComputerMoveEngine engine = provider.create();
-    RuntimeContext context = new RuntimeContext(required, engine, provider.descriptor());
-    gameRepository.save(game, savedContext(required));
+    RuntimeContext context = new RuntimeContext(game, required, engine, provider.descriptor(), selectedPlayer());
+    save(game, context);
     runtimes.put(game.id(), context);
 
     return engine
@@ -261,7 +290,8 @@ public final class ComputerGameService {
 
   /** Exports the completed or in-progress official line for later analysis. */
   public GameRecord gameRecord(GameId gameId) {
-    return game(gameId).toRecord();
+    RuntimeContext context = runtimes.get(Objects.requireNonNull(gameId, "gameId must not be null"));
+    return context != null ? context.game.toRecord() : gameRepository.findSaved(gameId).orElseThrow(() -> new NoSuchElementException("Unknown progressive game: " + gameId)).game().toRecord();
   }
 
   /** Stops the engine and removes a progressive game from the process-local catalogue. */
@@ -279,8 +309,20 @@ public final class ComputerGameService {
 
   @PreDestroy
   void closeEngines() {
+    runtimeTicker.shutdownNow();
     runtimes.values().forEach(context -> context.engine.close());
     runtimes.clear();
+  }
+
+  /** Keeps clocks authoritative even while no JavaFX game screen is visible. */
+  private void advanceActiveGames() {
+    runtimes.keySet().forEach(gameId -> {
+      try {
+        state(gameId);
+      } catch (RuntimeException ignored) {
+        // The game may have been removed concurrently; the next tick observes the new catalogue.
+      }
+    });
   }
 
   private CompletionStage<ComputerGameState> requestComputerMove(
@@ -332,6 +374,9 @@ public final class ComputerGameService {
                     game.result().isPresent()
                         ? ComputerGamePhase.FINISHED
                         : ComputerGamePhase.WAITING_FOR_HUMAN;
+                if (game.result().isEmpty()) {
+                  notifyOpponentMoved(game, context);
+                }
                 return stateOf(game, context);
               }
             });
@@ -553,14 +598,17 @@ public final class ComputerGameService {
   }
 
   private ChessGame game(GameId gameId) {
-    GameId required = Objects.requireNonNull(gameId, "gameId must not be null");
-    return gameRepository.findSaved(required).map(com.escontrela.lastmove.application.game.SavedGame::game)
-        .orElseThrow(() -> new NoSuchElementException("Unknown progressive game: " + required));
+    return runtime(gameId).game;
   }
 
   /** Restores a saved human-vs-computer game and recreates its runtime lazily. */
   public CompletionStage<ComputerGameState> resumeGame(GameId gameId) {
-    var saved = gameRepository.findSaved(Objects.requireNonNull(gameId, "gameId must not be null"))
+    GameId requiredGameId = Objects.requireNonNull(gameId, "gameId must not be null");
+    RuntimeContext existing = runtimes.get(requiredGameId);
+    if (existing != null) {
+      synchronized (existing) { return CompletableFuture.completedFuture(stateOf(existing.game, existing)); }
+    }
+    var saved = gameRepository.findSaved(requiredGameId)
         .orElseThrow(() -> new NoSuchElementException("Unknown saved game: " + gameId));
     if (saved.context().gameType() != GameType.HUMAN_VS_COMPUTER) {
       throw new IllegalArgumentException("Saved game is not Human vs Computer: " + gameId);
@@ -569,14 +617,26 @@ public final class ComputerGameService {
     ComputerGameConfiguration configuration = saved.context().computerConfiguration().orElseThrow();
     if (game.result().isPresent()) {
       ComputerMoveEngineProvider provider = provider(configuration.engineId());
-      RuntimeContext context = new RuntimeContext(configuration, provider.create(), provider.descriptor());
+      RuntimeContext context =
+          new RuntimeContext(
+              game,
+              configuration,
+              provider.create(),
+              provider.descriptor(),
+              saved.context().ownerPlayerId());
       restoreOpeningProgress(context, game.moveHistory());
       context.phase = ComputerGamePhase.FINISHED;
       runtimes.put(game.id(), context);
       return CompletableFuture.completedFuture(stateOf(game, context));
     }
     ComputerMoveEngineProvider provider = provider(configuration.engineId());
-    RuntimeContext context = new RuntimeContext(configuration, provider.create(), provider.descriptor());
+    RuntimeContext context =
+        new RuntimeContext(
+            game,
+            configuration,
+            provider.create(),
+            provider.descriptor(),
+            saved.context().ownerPlayerId());
     restoreOpeningProgress(context, game.moveHistory());
     runtimes.put(game.id(), context);
     return context.engine.start().thenCompose(ignored -> {
@@ -588,11 +648,23 @@ public final class ComputerGameService {
     });
   }
 
-  private void save(ChessGame game, RuntimeContext context) { gameRepository.save(game, savedContext(context.configuration)); }
-  private SavedGameContext savedContext(ComputerGameConfiguration configuration) {
-    return new SavedGameContext(GameType.HUMAN_VS_COMPUTER,
-        currentUserService == null ? Optional.empty() : currentUserService.selectedPlayerId(), Optional.of(configuration));
+  private void save(ChessGame game, RuntimeContext context) {
+    gameRepository.save(game, savedContext(context));
+    if (game.result().isPresent() && !context.finishedEventPublished) {
+      context.finishedEventPublished = true;
+      if (events != null) events.publishEvent(new ComputerGameFinishedEvent(game.id()));
+    }
   }
+  private void notifyOpponentMoved(ChessGame game, RuntimeContext context) {
+    context.ownerPlayerId.ifPresent(owner -> {
+      if (notifications != null) notifications.notify(owner, game.id(), "OPPONENT_MOVED");
+    });
+    if (events != null) events.publishEvent(new ComputerOpponentMovedEvent(game.id()));
+  }
+  private SavedGameContext savedContext(RuntimeContext context) {
+    return new SavedGameContext(GameType.HUMAN_VS_COMPUTER, context.ownerPlayerId, Optional.of(context.configuration));
+  }
+  private Optional<com.escontrela.lastmove.domain.player.PlayerId> selectedPlayer() { return currentUserService == null ? Optional.empty() : currentUserService.selectedPlayerId(); }
 
   private RuntimeContext runtime(GameId gameId) {
     RuntimeContext context = runtimes.get(Objects.requireNonNull(gameId, "gameId must not be null"));
@@ -615,25 +687,32 @@ public final class ComputerGameService {
   }
 
   private static final class RuntimeContext {
+    private final ChessGame game;
     private final ComputerGameConfiguration configuration;
     private final ComputerMoveEngine engine;
     private final ComputerEngineDescriptor descriptor;
+    private final Optional<com.escontrela.lastmove.domain.player.PlayerId> ownerPlayerId;
     private ComputerGamePhase phase = ComputerGamePhase.STARTING;
     private Instant turnStartedAt;
     private long searchVersion;
     private Optional<String> message = Optional.empty();
     private int openingPlyIndex;
     private OpeningPracticeState openingPracticeState;
+    private boolean finishedEventPublished;
 
     private RuntimeContext(
+        ChessGame game,
         ComputerGameConfiguration configuration,
         ComputerMoveEngine engine,
-        ComputerEngineDescriptor descriptor) {
+        ComputerEngineDescriptor descriptor,
+        Optional<com.escontrela.lastmove.domain.player.PlayerId> ownerPlayerId) {
+      this.game = Objects.requireNonNull(game, "game must not be null");
       this.configuration = configuration;
       this.engine = engine;
       this.descriptor = descriptor;
       this.openingPracticeState = configuration.openingPractice().isPresent()
           ? OpeningPracticeState.FOLLOWING : OpeningPracticeState.NOT_CONFIGURED;
+      this.ownerPlayerId = Objects.requireNonNull(ownerPlayerId, "ownerPlayerId must not be null");
     }
   }
 }

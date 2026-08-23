@@ -249,6 +249,16 @@ class ComputerGameServiceTest {
   }
 
   @Test
+  void resumingAnAlreadyLiveGameDoesNotRestartItsClock() {
+    var created = service.createGame(configuration(PieceColor.WHITE)).toCompletableFuture().join();
+    clock.advance(Duration.ofSeconds(37));
+
+    var resumed = service.resumeGame(created.gameId()).toCompletableFuture().join();
+
+    assertEquals(Duration.ofMinutes(4).plusSeconds(23), resumed.clock().whiteRemaining().orElseThrow());
+  }
+
+  @Test
   void clockTimeoutCancelsABlockedComputerSearchAndIgnoresItsLateReply() {
     engineProvider.moves.add(move("e7", "e5"));
     engineProvider.deferReplies = true;

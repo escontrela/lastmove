@@ -6,7 +6,6 @@ import com.escontrela.lastmove.ui.component.header.ApplicationHeader;
 import com.escontrela.lastmove.ui.component.header.HeaderAction;
 import com.escontrela.lastmove.ui.component.header.HeaderBreadcrumb;
 import com.escontrela.lastmove.ui.component.header.HeaderConfiguration;
-import com.escontrela.lastmove.ui.component.message.MessageBox;
 import com.escontrela.lastmove.ui.event.UiEventBus;
 import com.escontrela.lastmove.ui.event.ToggleNotificationsPanelEvent;
 import com.escontrela.lastmove.ui.service.ApplicationThemeService;
@@ -61,7 +60,7 @@ public class UiFlowManager {
                 .onBack(event -> show(UiScreenId.MAIN))
                 .breadcrumbs(breadcrumbsFor(screenId))
                 .showStatistics(home)
-                .onStatistics(event -> showStatisticsMessageBox(root))
+                .onStatistics(event -> show(UiScreenId.GAME_STATISTICS))
                 .showThemeToggle(home)
                 .onThemeToggle(event -> themeService.setNightMode(!themeService.currentThemeMode().isNightMode()))
                 .contextActions(home ? List.of(new HeaderAction(
@@ -80,13 +79,6 @@ public class UiFlowManager {
                 .onAvatar(event -> show(UiScreenId.PLAYERS))
                 .currentUserName(currentUserService.currentUser().name())
                 .build());
-    }
-
-    private void showStatisticsMessageBox(Parent root) {
-        MessageBox messageBox = (MessageBox) root.lookup("#statisticsMessageBox");
-        if (messageBox != null) {
-            messageBox.show();
-        }
     }
 
     private List<HeaderBreadcrumb> breadcrumbsFor(UiScreenId screenId) {
@@ -112,6 +104,7 @@ public class UiFlowManager {
             case SETUP -> "Setup";
             case PLAYERS -> "Player Profiles";
             case MY_GAMES -> "My Games";
+            case GAME_STATISTICS -> "Game Statistics";
             case MAIN -> "Home";
         };
     }
