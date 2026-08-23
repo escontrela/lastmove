@@ -57,7 +57,14 @@ public final class EngineSelectorModal extends StackPane {
   }
 
   public void show(List<ComputerEngineDescriptor> engines, String selectedId) {
+    show(engines, selectedId, "Choose engine", "Select the engine used for position evaluation.");
+  }
+
+  /** Shows the existing engine picker with wording suitable for another engine-scoped workflow. */
+  public void show(List<ComputerEngineDescriptor> engines, String selectedId, String titleText, String messageText) {
     Objects.requireNonNull(engines, "engines");
+    title.setText(Objects.requireNonNull(titleText, "titleText"));
+    message.setText(Objects.requireNonNull(messageText, "messageText"));
     options.getChildren().setAll(engines.stream().map(engine -> option(engine, selectedId)).toList());
     setManaged(true);
     setVisible(true);

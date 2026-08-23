@@ -83,7 +83,6 @@
             </VBox>
             <NotificationsPanel fx:id="notificationsPanel" />
             <MessageBox fx:id="startupMessageBox" acceptText="Open PGN analysis" autoHide="true" buttonMode="ACCEPT_CANCEL" cancelText="Not now" cardWidth="460.0" contentPadding="20.0" contentSpacing="12.0" dragEnabled="true" message="Would you like to open the PGN analysis workspace and replay a recorded game?" title="Welcome to LastMove Chess" />
-            <MessageBox fx:id="statisticsMessageBox" acceptText="Accept" autoHide="true" buttonMode="ACCEPT" cardWidth="460.0" contentPadding="20.0" contentSpacing="12.0" dragEnabled="true" message="Statistics are coming soon. This feature will be available in an upcoming release." title="Statistics" />
         </StackPane>
     </center>
     <bottom>
