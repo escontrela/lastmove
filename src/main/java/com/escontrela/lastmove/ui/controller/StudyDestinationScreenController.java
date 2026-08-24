@@ -6,11 +6,13 @@ import com.escontrela.lastmove.application.service.CurrentUserService;
 import com.escontrela.lastmove.application.service.StudyService;
 import com.escontrela.lastmove.application.study.CopySessionChapterCommand;
 import com.escontrela.lastmove.application.study.CreateStudyCommand;
+import com.escontrela.lastmove.application.study.StudyChapterSummary;
 import com.escontrela.lastmove.application.study.StudySummary;
 import com.escontrela.lastmove.domain.analysis.AnalysisSessionId;
 import com.escontrela.lastmove.domain.player.PlayerId;
 import com.escontrela.lastmove.ui.component.message.TextInputModal;
 import com.escontrela.lastmove.ui.event.OpenAnalysisSessionEvent;
+import com.escontrela.lastmove.ui.event.OpenStudyWorkspaceEvent;
 import com.escontrela.lastmove.ui.event.SelectStudyDestinationEvent;
 import com.escontrela.lastmove.ui.event.UiEventBus;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
@@ -49,6 +51,8 @@ public final class StudyDestinationScreenController implements UiScreenControlle
   private final UiEventBus uiEventBus;
   private final UiFlowManager uiFlowManager;
   private AnalysisSessionId pendingSessionId;
+  private SelectStudyDestinationEvent.PostCopyDestination postCopyDestination =
+      SelectStudyDestinationEvent.PostCopyDestination.RETURN_TO_ANALYSIS;
   private Optional<PlayerId> ownerId = Optional.empty();
 
   public StudyDestinationScreenController(
@@ -73,6 +77,7 @@ public final class StudyDestinationScreenController implements UiScreenControlle
   @EventListener
   public void onSelectStudyDestination(SelectStudyDestinationEvent event) {
     pendingSessionId = event.sessionId();
+    postCopyDestination = event.postCopyDestination();
   }
 
   @Override
@@ -131,9 +136,15 @@ public final class StudyDestinationScreenController implements UiScreenControlle
     PlayerId owner = ownerId.orElseThrow();
     AnalysisSessionSummary session = pendingSession();
     try {
-      studyService.copySessionChapter(
+      StudyChapterSummary chapter = studyService.copySessionChapter(
           new CopySessionChapterCommand(owner, study.studyId(), session.title(), pendingSessionId));
-      returnToAnalysis("Added “" + session.title() + "” to " + study.title());
+      if (postCopyDestination
+          == SelectStudyDestinationEvent.PostCopyDestination.OPEN_STUDY_WORKSPACE) {
+        uiEventBus.publish(new OpenStudyWorkspaceEvent(study.studyId(), chapter.chapterId()));
+        uiFlowManager.show(UiScreenId.STUDY_WORKSPACE);
+      } else {
+        returnToAnalysis("Added “" + session.title() + "” to " + study.title());
+      }
     } catch (RuntimeException exception) {
       statusLabel.setText(messageOf(exception, "Unable to add the session as a chapter."));
     }
