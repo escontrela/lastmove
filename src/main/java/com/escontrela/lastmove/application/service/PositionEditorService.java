@@ -47,6 +47,10 @@ public class PositionEditorService {
   }
 
   public PositionEditorState state() { return new PositionEditorState(position, validate(position)); }
+  /** Replaces the transient editor canvas with an existing valid chapter position. */
+  public void load(PositionSnapshot value) {
+    position = Objects.requireNonNull(value, "position must not be null");
+  }
   public void reset() { position = rulesEngine.startingPosition(); }
   public void clear() { position = snapshot(List.of(), PieceColor.WHITE, CastlingRights.none(), Optional.empty(), 0, 1); }
   public void place(Square square, PieceType type, PieceColor color) {

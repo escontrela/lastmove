@@ -11,6 +11,7 @@ import com.escontrela.lastmove.application.study.CreateChapterFromFenCommand;
 import com.escontrela.lastmove.application.study.CreateStudyCommand;
 import com.escontrela.lastmove.application.study.DeleteChapterCommand;
 import com.escontrela.lastmove.application.study.DeleteStudyCommand;
+import com.escontrela.lastmove.application.study.EditChapterInitialPositionCommand;
 import com.escontrela.lastmove.application.study.ImportPgnChapterCommand;
 import com.escontrela.lastmove.application.study.MoveChapterCommand;
 import com.escontrela.lastmove.application.study.RenameChapterCommand;
@@ -240,6 +241,40 @@ class StudyServiceTest {
         assertEquals(PieceColor.WHITE, service.currentPosition(owner, studyId, chapter.chapterId()).activeColor());
         service.next(owner, studyId, chapter.chapterId());
         assertEquals(PieceColor.BLACK, service.currentPosition(owner, studyId, chapter.chapterId()).activeColor());
+    }
+
+    @Test
+    void requiresConfirmationBeforeReplacingAChapterPositionWithMoves() {
+        StudyId studyId = service.createStudy(new CreateStudyCommand(owner, "Tactics", Optional.empty())).studyId();
+        StudyChapterSummary chapter = service.createChapter(new CreateChapterCommand(owner, studyId, "Line"));
+        service.attemptMove(owner, studyId, chapter.chapterId(), move("e2", "e4"));
+        var replacement =
+            gameFactory
+                .createAnalysisGame(Fen.of("8/8/8/8/8/8/8/K6k b - - 0 1"))
+                .currentPosition();
+
+        var confirmation =
+            service.updateChapterInitialPosition(
+                new EditChapterInitialPositionCommand(
+                    owner, studyId, chapter.chapterId(), replacement, false));
+
+        assertTrue(confirmation.requiresMoveReset());
+        assertFalse(confirmation.updated());
+        assertEquals(1, confirmation.discardedMoveCount());
+        assertEquals(
+            "e4",
+            service.openChapter(owner, studyId, chapter.chapterId()).notationTree().roots().getFirst()
+                .ply().move().san().getValue());
+
+        var saved =
+            service.updateChapterInitialPosition(
+                new EditChapterInitialPositionCommand(
+                    owner, studyId, chapter.chapterId(), replacement, true));
+
+        assertTrue(saved.updated());
+        assertEquals(1, saved.discardedMoveCount());
+        assertTrue(service.openChapter(owner, studyId, chapter.chapterId()).notationTree().roots().isEmpty());
+        assertEquals(replacement, service.currentPosition(owner, studyId, chapter.chapterId()));
     }
 
     @Test

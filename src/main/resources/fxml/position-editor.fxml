@@ -3,6 +3,7 @@
 
 <?import com.escontrela.lastmove.ui.component.board.ChessBoardControl?>
 <?import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton?>
+<?import com.escontrela.lastmove.ui.component.message.MessageBox?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.CheckBox?>
@@ -21,9 +22,11 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<BorderPane fx:id="root" styleClass="app-shell" stylesheets="@../css/lastmove.css" xmlns="http://javafx.com/javafx/22.0.2" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.escontrela.lastmove.ui.controller.PositionEditorScreenController">
+<StackPane fx:id="root" styleClass="app-shell" stylesheets="@../css/lastmove.css" xmlns="http://javafx.com/javafx/22.0.2" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.escontrela.lastmove.ui.controller.PositionEditorScreenController">
+<BorderPane styleClass="app-shell">
   <top>
     <VBox><ApplicationHeader />
     <HBox managed="false" visible="false" alignment="CENTER_LEFT" spacing="14" styleClass="workspace-header">
@@ -46,6 +49,7 @@
                <children>
                   <ToolbarIconButton fx:id="openAnalysisButton" accessibleText="Save session as chapter" darkIconResource="/images/graph_2_35dp_FFFFFF.png" lightIconResource="/images/graph_2_35dp_000000.png" onAction="#onOpenAnalysis" tooltipText="Open in analysis" />
                   <ToolbarIconButton fx:id="addStudyButton" accessibleText="Save current position as tactic" darkIconResource="/images/menu_book_35dp_FFFFFF.png" lightIconResource="/images/menu_book_35dp_000000.png" onAction="#onAddStudy" tooltipText="Add to study" />
+                  <ToolbarIconButton fx:id="saveChapterPositionButton" accessibleText="Save chapter position and return" darkIconResource="/images/save_35dp_FFFFFF.png" lightIconResource="/images/save_35dp_FFFFFF.png" managed="false" onAction="#onSaveChapterPosition" styleClass="prominent-toolbar-icon-button" tooltipText="Save chapter position and return" visible="false" />
                </children>
             </HBox>
         <Separator styleClass="editor-separator" />
@@ -133,3 +137,5 @@
     </HBox>
   </center>
 </BorderPane>
+  <MessageBox fx:id="discardMovesConfirmation" />
+</StackPane>

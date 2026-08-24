@@ -27,7 +27,7 @@ import java.util.UUID;
  */
 public final class AnalysisDocument {
 
-  private final AnalysisContent content;
+  private AnalysisContent content;
   private ChapterNavigation navigation;
   private PositionSnapshot currentPosition;
   private GameResult result;
@@ -215,6 +215,20 @@ public final class AnalysisDocument {
     rememberSelectedLine(nodeId);
     refreshCurrentState();
     return true;
+  }
+
+  /** Replaces the initial position and safely clears every move and variation. */
+  public int replaceInitialPosition(PositionSnapshot initialPosition) {
+    PositionSnapshot required =
+        Objects.requireNonNull(initialPosition, "initialPosition must not be null");
+    if (content.initialPosition().equals(required)) {
+      return 0;
+    }
+    int removedMoveCount = content.tree().size();
+    content = new AnalysisContent(required, content.sourceResult(), new AnalysisTree());
+    navigation = new ChapterNavigation();
+    refreshCurrentState();
+    return removedMoveCount;
   }
 
   /** Deletes a complete branch and moves the cursor to its surviving parent or the start. */
