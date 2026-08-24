@@ -61,4 +61,10 @@ public final class AnalysisNode {
     }
     continuationIds.add(child);
   }
+
+  void removeContinuation(AnalysisNodeId continuationId) {
+    if (!continuationIds.remove(Objects.requireNonNull(continuationId))) {
+      throw new IllegalStateException("The continuation is not registered");
+    }
+  }
 }

@@ -217,6 +217,16 @@ public final class AnalysisDocument {
     return true;
   }
 
+  /** Deletes a complete branch and moves the cursor to its surviving parent or the start. */
+  public AnalysisBranchDeletion deleteBranch(AnalysisNodeId nodeId) {
+    AnalysisBranchDeletion deletion = content.tree().removeBranch(nodeId);
+    navigation = new ChapterNavigation();
+    selectPreferredLine();
+    deletion.parentNodeId().ifPresentOrElse(this::select, this::first);
+    refreshCurrentState();
+    return deletion;
+  }
+
   /**
    * Restores the tree's first-child line as the active route without moving the current cursor.
    *

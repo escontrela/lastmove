@@ -94,6 +94,30 @@ public final class AnalysisTree {
     return List.copyOf(line);
   }
 
+  /** Atomically removes one node and its complete descendant branch. */
+  public AnalysisBranchDeletion removeBranch(AnalysisNodeId nodeId) {
+    AnalysisNode root = node(Objects.requireNonNull(nodeId, "nodeId must not be null"));
+    List<AnalysisNodeId> removedIds = new ArrayList<>();
+    collectBranchIds(root.id(), removedIds);
+    root.parentId()
+        .ifPresentOrElse(
+            parentId -> node(parentId).removeContinuation(root.id()),
+            () -> rootIds.remove(root.id()));
+    for (AnalysisNodeId removedId : removedIds) {
+      AnalysisNode removed = nodesById.remove(removedId);
+      nodeIdsByPlyId.remove(removed.ply().id());
+    }
+    return new AnalysisBranchDeletion(root.id(), root.parentId(), removedIds);
+  }
+
+  private void collectBranchIds(AnalysisNodeId nodeId, List<AnalysisNodeId> target) {
+    AnalysisNode node = node(nodeId);
+    target.add(node.id());
+    for (AnalysisNodeId childId : node.continuationIds()) {
+      collectBranchIds(childId, target);
+    }
+  }
+
   private AnalysisNode add(AnalysisNodeId parentId, Ply ply, AnalysisNodeId nodeId) {
     Ply requiredPly = Objects.requireNonNull(ply, "ply must not be null");
     if (nodeIdsByPlyId.containsKey(requiredPly.id())) {

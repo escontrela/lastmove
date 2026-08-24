@@ -202,6 +202,25 @@ class SqliteStudyRepositoryTest {
         assertEquals(0, nodes);
     }
 
+    @Test
+    void savingADeletedBranchRemovesOnlyItsOrphanedMoveComments() {
+        Study study = studyWithChapterMoves("e2", "e4", "e7", "e5");
+        repository.save(study);
+        StudyChapter chapter = study.chapters().getFirst();
+        AnalysisNode e4 = chapter.document().rootVariations().getFirst();
+        AnalysisNode e5 = chapter.document().continuations(e4.id()).getFirst();
+        SqliteStudyAnnotationRepository annotations =
+            new SqliteStudyAnnotationRepository(jdbcTemplate, PersistenceAvailability.available());
+        annotations.saveMoveComment(chapter.id(), e4.id(), "Keep this note");
+        annotations.saveMoveComment(chapter.id(), e5.id(), "Delete this note");
+
+        chapter.document().deleteBranch(e5.id());
+        repository.save(study);
+
+        assertEquals("Keep this note", annotations.moveComment(chapter.id(), e4.id()).orElseThrow());
+        assertTrue(annotations.moveComment(chapter.id(), e5.id()).isEmpty());
+    }
+
     private Study studyWithChapterMoves(String from1, String to1, String from2, String to2) {
         Study study = Study.create(ownerId, "Repertoire");
         StudyChapter chapter =

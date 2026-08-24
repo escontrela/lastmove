@@ -184,6 +184,7 @@ public final class MoveNotationSkin extends SkinBase<MoveNotationControl> {
         button.setDisable(true);
         button.setMouseTransparent(true);
         button.setOnAction(null);
+        button.setOnContextMenuRequested(null);
         button.pseudoClassStateChanged(CURRENT, false);
         if (!button.getStyleClass().contains("empty")) {
           button.getStyleClass().add("empty");
@@ -201,6 +202,11 @@ public final class MoveNotationSkin extends SkinBase<MoveNotationControl> {
       button.pseudoClassStateChanged(
           CURRENT, move.nodeId().equals(control.getSelectedNodeId()));
       button.setOnAction(event -> control.requestSelection(move));
+      button.setOnContextMenuRequested(
+          event -> {
+            control.requestContextMenu(move, event.getSceneX(), event.getSceneY());
+            event.consume();
+          });
     }
   }
 }

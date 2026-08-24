@@ -109,7 +109,7 @@ class StudyServiceTest {
     }
 
     @Test
-    void importsPgnAsChapterAndNavigatesIt() throws Exception {
+  void importsPgnAsChapterAndNavigatesIt() throws Exception {
         StudyId studyId = service.createStudy(new CreateStudyCommand(owner, "Repertoire", Optional.empty())).studyId();
         var imported =
             new ChesspressoPgnReader()
@@ -123,6 +123,29 @@ class StudyServiceTest {
         assertEquals(
             "e4",
             service.notationTree(owner, studyId, chapter.chapterId()).roots().getFirst().ply().move().san().getValue());
+    }
+
+    @Test
+    void deletesACompleteChapterVariationAndPersistsTheParentCursor() throws Exception {
+        StudyId studyId = service.createStudy(new CreateStudyCommand(owner, "Repertoire", Optional.empty())).studyId();
+        var imported =
+            new ChesspressoPgnReader()
+                .readImportedFirst("[Event \"Variation\"]\n\n1. e4 e5 2. Nf3 Nc6 (2... d6 3. d4) *");
+        StudyChapterSummary chapter =
+            service.importPgnChapter(new ImportPgnChapterCommand(owner, studyId, imported));
+        var tree = service.notationTree(owner, studyId, chapter.chapterId());
+        var nf3 = tree.roots().getFirst().continuations().getFirst().continuations().getFirst();
+        var d6 = nf3.continuations().getLast();
+
+        var deletion = service.deleteBranch(owner, studyId, chapter.chapterId(), d6.nodeId());
+
+        assertTrue(deletion.variation());
+        var reloaded = service.openChapter(owner, studyId, chapter.chapterId());
+        assertEquals(nf3.nodeId(), reloaded.notationTree().currentNodeId().orElseThrow());
+        assertEquals(List.of("Nc6"),
+            reloaded.notationTree().roots().getFirst().continuations().getFirst()
+                .continuations().getFirst().continuations().stream()
+                .map(node -> node.ply().move().san().getValue()).toList());
     }
 
     @Test

@@ -163,6 +163,11 @@ public final class AnalysisSession {
     return document.select(nodeId);
   }
 
+  /** Deletes one move and every continuation below it. */
+  public AnalysisBranchDeletion deleteBranch(AnalysisNodeId nodeId) {
+    return document.deleteBranch(nodeId);
+  }
+
   /**
    * Restores the tree's first-child line as the active route without moving the current cursor.
    *

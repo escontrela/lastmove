@@ -29,6 +29,8 @@ public final class MoveNotationControl extends Control {
       new SimpleObjectProperty<>(this, "selectedNodeId");
   private final ObjectProperty<EventHandler<PlySelectedEvent>> onPlySelected =
       new SimpleObjectProperty<>(this, "onPlySelected");
+  private final ObjectProperty<EventHandler<PlyContextRequestedEvent>> onPlyContextRequested =
+      new SimpleObjectProperty<>(this, "onPlyContextRequested");
 
   public MoveNotationControl() {
     getStyleClass().add("move-notation");
@@ -69,7 +71,7 @@ public final class MoveNotationControl extends Control {
 
   /** Updates the visual current-ply marker without emitting a selection request. */
   public void setSelectedNodeId(UUID value) {
-    if (value != null && !containsNode(roots, value)) {
+    if (value != null && !MoveNotationNode.contains(roots, value)) {
       throw new IllegalArgumentException("selectedNodeId must identify a visible node or be null");
     }
     selectedNodeId.set(value);
@@ -91,6 +93,18 @@ public final class MoveNotationControl extends Control {
     return onPlySelected;
   }
 
+  public EventHandler<PlyContextRequestedEvent> getOnPlyContextRequested() {
+    return onPlyContextRequested.get();
+  }
+
+  public void setOnPlyContextRequested(EventHandler<PlyContextRequestedEvent> handler) {
+    onPlyContextRequested.set(handler);
+  }
+
+  public ObjectProperty<EventHandler<PlyContextRequestedEvent>> onPlyContextRequestedProperty() {
+    return onPlyContextRequested;
+  }
+
   void requestSelection(MoveNotationEntry entry) {
     MoveNotationEntry required = Objects.requireNonNull(entry, "entry must not be null");
     setSelectedNodeId(required.nodeId());
@@ -100,22 +114,23 @@ public final class MoveNotationControl extends Control {
     }
   }
 
+  void requestContextMenu(MoveNotationEntry entry, double sceneX, double sceneY) {
+    MoveNotationEntry required = Objects.requireNonNull(entry, "entry must not be null");
+    if (!MoveNotationNode.contains(roots, required.nodeId())) {
+      return;
+    }
+    EventHandler<PlyContextRequestedEvent> handler = getOnPlyContextRequested();
+    if (handler != null) {
+      handler.handle(new PlyContextRequestedEvent(this, required, sceneX, sceneY));
+    }
+  }
+
   private static void collectIdentifiers(MoveNotationNode node, Set<UUID> identifiers) {
     MoveNotationNode required = Objects.requireNonNull(node, "tree must not contain null");
     if (!identifiers.add(required.entry().nodeId())) {
       throw new IllegalArgumentException("tree must not contain duplicate node identifiers");
     }
     required.continuations().forEach(child -> collectIdentifiers(child, identifiers));
-  }
-
-  private static boolean containsNode(List<MoveNotationNode> nodes, UUID identifier) {
-    for (MoveNotationNode node : nodes) {
-      if (node.entry().nodeId().equals(identifier)
-          || containsNode(node.continuations(), identifier)) {
-        return true;
-      }
-    }
-    return false;
   }
 
   /** JavaFX event emitted when the user activates one SAN cell. */
@@ -133,6 +148,37 @@ public final class MoveNotationControl extends Control {
 
     public MoveNotationEntry getEntry() {
       return entry;
+    }
+  }
+
+  /** JavaFX event emitted when the user requests actions for one SAN cell. */
+  public static final class PlyContextRequestedEvent extends Event {
+
+    public static final EventType<PlyContextRequestedEvent> PLY_CONTEXT_REQUESTED =
+        new EventType<>(Event.ANY, "PLY_CONTEXT_REQUESTED");
+
+    private final MoveNotationEntry entry;
+    private final double sceneX;
+    private final double sceneY;
+
+    private PlyContextRequestedEvent(
+        MoveNotationControl source, MoveNotationEntry entry, double sceneX, double sceneY) {
+      super(source, NULL_SOURCE_TARGET, PLY_CONTEXT_REQUESTED);
+      this.entry = entry;
+      this.sceneX = sceneX;
+      this.sceneY = sceneY;
+    }
+
+    public MoveNotationEntry getEntry() {
+      return entry;
+    }
+
+    public double getSceneX() {
+      return sceneX;
+    }
+
+    public double getSceneY() {
+      return sceneY;
     }
   }
 }

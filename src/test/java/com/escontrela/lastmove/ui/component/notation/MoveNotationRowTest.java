@@ -1,6 +1,7 @@
 package com.escontrela.lastmove.ui.component.notation;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -64,6 +65,16 @@ class MoveNotationRowTest {
             .orElseThrow();
     assertEquals(1, variationRow.depth());
     assertTrue(variationRow.variationStart());
+  }
+
+  @Test
+  void identifiesWhetherAnEventStillReferencesAVisibleTreeNode() {
+    MoveNotationEntry visible = entry(1, true, "e4");
+    MoveNotationEntry removed = entry(1, false, "e5");
+    List<MoveNotationNode> currentTree = List.of(node(visible));
+
+    assertTrue(MoveNotationNode.contains(currentTree, visible.nodeId()));
+    assertFalse(MoveNotationNode.contains(currentTree, removed.nodeId()));
   }
 
   private static MoveNotationEntry entry(int moveNumber, boolean whiteMove, String san) {

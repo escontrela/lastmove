@@ -18,6 +18,7 @@ import com.escontrela.lastmove.application.study.StudyChapterSummary;
 import com.escontrela.lastmove.application.study.StudyChapterWorkspace;
 import com.escontrela.lastmove.application.study.StudyDetails;
 import com.escontrela.lastmove.application.study.StudySummary;
+import com.escontrela.lastmove.domain.analysis.AnalysisBranchDeletion;
 import com.escontrela.lastmove.domain.analysis.AnalysisDocument;
 import com.escontrela.lastmove.domain.analysis.AnalysisNode;
 import com.escontrela.lastmove.domain.analysis.AnalysisNodeId;
@@ -357,6 +358,22 @@ public final class StudyService {
     }
     persistNavigation(chapter);
     return chapter.document().currentPosition();
+  }
+
+  /** Deletes one move and its complete descendant variation, including persisted annotations. */
+  public AnalysisBranchDeletion deleteBranch(
+      PlayerId ownerId,
+      StudyId studyId,
+      StudyChapterId chapterId,
+      AnalysisNodeId nodeId) {
+    assertAvailable();
+    Study study = ownedStudy(ownerId, studyId);
+    StudyChapter chapter = ownedChapter(study, chapterId);
+    AnalysisBranchDeletion deletion = chapter.document().deleteBranch(nodeId);
+    chapter.touch();
+    study.touch();
+    studyRepository.save(study);
+    return deletion;
   }
 
   private void persistNavigation(StudyChapter chapter) {
