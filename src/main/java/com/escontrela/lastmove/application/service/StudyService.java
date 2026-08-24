@@ -4,17 +4,20 @@ import com.escontrela.lastmove.application.dto.AnalysisNotationNode;
 import com.escontrela.lastmove.application.dto.AnalysisNotationTree;
 import com.escontrela.lastmove.application.repository.AnalysisSessionRepository;
 import com.escontrela.lastmove.application.study.CopySessionChapterCommand;
+import com.escontrela.lastmove.application.study.ChapterInitialPositionUpdate;
 import com.escontrela.lastmove.application.study.CreateChapterCommand;
 import com.escontrela.lastmove.application.study.CreateChapterFromFenCommand;
 import com.escontrela.lastmove.application.study.CreateStudyCommand;
 import com.escontrela.lastmove.application.study.DeleteChapterCommand;
 import com.escontrela.lastmove.application.study.DeleteStudyCommand;
+import com.escontrela.lastmove.application.study.EditChapterInitialPositionCommand;
 import com.escontrela.lastmove.application.study.ImportPgnChapterCommand;
 import com.escontrela.lastmove.application.study.MoveChapterCommand;
 import com.escontrela.lastmove.application.study.MoveStudyCommand;
 import com.escontrela.lastmove.application.study.RenameChapterCommand;
 import com.escontrela.lastmove.application.study.RenameStudyCommand;
 import com.escontrela.lastmove.application.study.StudyChapterSummary;
+import com.escontrela.lastmove.application.study.StudyChapterPositionEditContext;
 import com.escontrela.lastmove.application.study.StudyChapterWorkspace;
 import com.escontrela.lastmove.application.study.StudyDetails;
 import com.escontrela.lastmove.application.study.StudySummary;
@@ -273,6 +276,46 @@ public final class StudyService {
         chapter.document().currentPosition(),
         chapter.document().sourceResult(),
         notationTree(chapter.document()));
+  }
+
+  /** Loads the immutable context required to edit a chapter's initial position. */
+  public StudyChapterPositionEditContext chapterPositionEditContext(
+      PlayerId ownerId, StudyId studyId, StudyChapterId chapterId) {
+    assertAvailable();
+    StudyChapter chapter = ownedChapter(ownedStudy(ownerId, studyId), chapterId);
+    return new StudyChapterPositionEditContext(
+        ownerId,
+        studyId,
+        chapterId,
+        chapter.document().initialPosition(),
+        chapter.document().content().tree().size() > 0);
+  }
+
+  /**
+   * Replaces a chapter's initial position after explicit confirmation when its move tree exists.
+   *
+   * <p>The confirmed update clears the complete tree, allowing persistence to remove move-level
+   * annotations that no longer have a node.
+   */
+  public ChapterInitialPositionUpdate updateChapterInitialPosition(
+      EditChapterInitialPositionCommand command) {
+    assertAvailable();
+    EditChapterInitialPositionCommand required =
+        Objects.requireNonNull(command, "command must not be null");
+    Study study = ownedStudy(required.ownerId(), required.studyId());
+    StudyChapter chapter = ownedChapter(study, required.chapterId());
+    if (chapter.document().initialPosition().equals(required.initialPosition())) {
+      return new ChapterInitialPositionUpdate(false, false, 0);
+    }
+    int retainedMoveCount = chapter.document().content().tree().size();
+    if (retainedMoveCount > 0 && !required.discardExistingMoves()) {
+      return new ChapterInitialPositionUpdate(false, true, retainedMoveCount);
+    }
+    int discardedMoveCount = chapter.document().replaceInitialPosition(required.initialPosition());
+    chapter.touch();
+    study.touch();
+    studyRepository.save(study);
+    return new ChapterInitialPositionUpdate(true, false, discardedMoveCount);
   }
 
   /** Returns the position currently selected by the chapter cursor. */

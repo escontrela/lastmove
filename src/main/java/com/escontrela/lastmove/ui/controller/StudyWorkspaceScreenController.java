@@ -40,6 +40,7 @@ import com.escontrela.lastmove.ui.component.notation.MoveNotationEntry;
 import com.escontrela.lastmove.ui.component.notation.MoveNotationNode;
 import com.escontrela.lastmove.ui.component.promotion.PromotionPickerControl;
 import com.escontrela.lastmove.ui.event.OpenStudyWorkspaceEvent;
+import com.escontrela.lastmove.ui.event.OpenChapterPositionEditorEvent;
 import com.escontrela.lastmove.ui.event.UiEventBus;
 import com.escontrela.lastmove.ui.model.BoardMoveInput;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
@@ -231,6 +232,23 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
     textInputModal.show();
   }
 
+  /** Creates a provisional chapter and lets the author compose its initial position. */
+  @FXML
+  public void onAddChapterPosition() {
+    activeOwner().ifPresent(
+        owner -> {
+          var chapter =
+              studyService.createChapter(
+                  new CreateChapterCommand(owner, activeStudyId, "Unknown chapter"));
+          activeChapterId = chapter.chapterId();
+          uiEventBus.publish(
+              new OpenChapterPositionEditorEvent(
+                  studyService.chapterPositionEditContext(
+                      owner, activeStudyId, chapter.chapterId())));
+          uiFlowManager.show(UiScreenId.POSITION_EDITOR);
+        });
+  }
+
   @FXML
   public void onAddChapterFromFen() {
     textInputModal.setTitle("Chapter from FEN");
@@ -361,16 +379,44 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
               annotationService.studyComment(owner, activeStudyId).orElse(""),
               workspace.title(),
               annotationService.chapterComment(owner, activeStudyId, activeChapterId).orElse(""),
-              speakerNotes(workspace.notationTree().roots(), moveComments));
+              speakerTreeNotes(workspace.notationTree().roots(), moveComments),
+              speakerStoryLines(workspace.notationTree().roots(), moveComments));
           speakerNotesPanel.show();
         });
   }
 
-  private List<SpeakerNotesPanel.MoveNote> speakerNotes(
+  private List<SpeakerNotesPanel.MoveNote> speakerTreeNotes(
       List<AnalysisNotationNode> nodes, Map<AnalysisNodeId, String> moveComments) {
     List<SpeakerNotesPanel.MoveNote> notes = new ArrayList<>();
     appendSpeakerNotes(nodes, moveComments, "", notes);
     return List.copyOf(notes);
+  }
+
+  private List<SpeakerNotesPanel.StoryLine> speakerStoryLines(
+      List<AnalysisNotationNode> nodes, Map<AnalysisNodeId, String> moveComments) {
+    List<SpeakerNotesPanel.StoryLine> lines = new ArrayList<>();
+    appendSpeakerStoryLines(nodes, moveComments, List.of(), lines);
+    return List.copyOf(lines);
+  }
+
+  private void appendSpeakerStoryLines(
+      List<AnalysisNotationNode> nodes,
+      Map<AnalysisNodeId, String> moveComments,
+      List<SpeakerNotesPanel.MoveNote> precedingMoves,
+      List<SpeakerNotesPanel.StoryLine> lines) {
+    for (AnalysisNotationNode node : nodes) {
+      List<SpeakerNotesPanel.MoveNote> line = new ArrayList<>(precedingMoves);
+      line.add(
+          new SpeakerNotesPanel.MoveNote(
+              node.nodeId().value(), moveReference(node), moveComments.getOrDefault(node.nodeId(), ""), ""));
+      if (node.continuations().isEmpty()) {
+        if (line.stream().anyMatch(note -> !note.comment().isBlank())) {
+          lines.add(new SpeakerNotesPanel.StoryLine(line));
+        }
+      } else {
+        appendSpeakerStoryLines(node.continuations(), moveComments, line, lines);
+      }
+    }
   }
 
   private void appendSpeakerNotes(
@@ -782,6 +828,8 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
 
   private void showChapterActions(StudyChapterSummary chapter, double sceneX, double sceneY) {
     contextualMenuPanel.clearItems();
+    contextualMenuPanel.addItem(
+        "Edit chapter position…", "", event -> editChapterPosition(chapter));
     contextualMenuPanel.addItem("Rename chapter…", "", event -> renameChapter(chapter));
     contextualMenuPanel.addItem("Comments / Edit comment…", "", event -> showChapterComment(chapter));
     contextualMenuPanel.addSeparator();
@@ -790,6 +838,17 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
     contextualMenuPanel.addSeparator();
     contextualMenuPanel.addItem("Delete chapter…", "", event -> deleteChapter(chapter));
     contextualMenuPanel.showAtScene(sceneX, sceneY);
+  }
+
+  private void editChapterPosition(StudyChapterSummary chapter) {
+    activeOwner().ifPresent(
+        owner -> {
+          uiEventBus.publish(
+              new OpenChapterPositionEditorEvent(
+                  studyService.chapterPositionEditContext(
+                      owner, activeStudyId, chapter.chapterId())));
+          uiFlowManager.show(UiScreenId.POSITION_EDITOR);
+        });
   }
 
   private final class ChapterCell extends ListCell<StudyChapterSummary> {

@@ -74,6 +74,11 @@ public final class AnalysisTree {
     return rootIds.stream().map(nodesById::get).toList();
   }
 
+  /** Returns the total number of moves retained across every variation. */
+  public int size() {
+    return nodesById.size();
+  }
+
   /** Returns a node's continuations in preferred-continuation order. */
   public List<AnalysisNode> children(AnalysisNodeId parentId) {
     return node(parentId).continuationIds().stream().map(nodesById::get).toList();

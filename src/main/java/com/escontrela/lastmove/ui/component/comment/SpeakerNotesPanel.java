@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.event.Event;
@@ -23,9 +24,24 @@ import javafx.scene.layout.VBox;
 /** Read-only, scrollable overview of the annotations that accompany one chapter's PGN. */
 public final class SpeakerNotesPanel extends StackPane {
   private final VBox content = new VBox(18);
+  private final ToolbarIconButton viewModeButton = new ToolbarIconButton();
   private final Button closeButton = new Button("×");
   private final ObjectProperty<EventHandler<MoveNoteSelectedEvent>> onMoveNoteSelected =
       new SimpleObjectProperty<>(this, "onMoveNoteSelected");
+  private String studyComment = "";
+  private String chapterTitle = "";
+  private String chapterComment = "";
+  private List<MoveNote> treeNotes = List.of();
+  private List<StoryLine> storyLines = List.of();
+  private boolean storyMode = true;
+  private double dragStartSceneX;
+  private double dragStartSceneY;
+  private double dragStartTranslateX;
+  private double dragStartTranslateY;
+  private double resizeStartSceneX;
+  private double resizeStartSceneY;
+  private double resizeStartWidth;
+  private double resizeStartHeight;
 
   public SpeakerNotesPanel() {
     getStyleClass().add("speaker-notes-overlay");
@@ -33,13 +49,16 @@ public final class SpeakerNotesPanel extends StackPane {
 
     Label title = new Label("PGN speaker notes");
     title.getStyleClass().add("speaker-notes-title");
+    viewModeButton.getStyleClass().add("speaker-notes-view-mode");
+    viewModeButton.setOnAction(event -> toggleViewMode());
     closeButton.getStyleClass().add("speaker-notes-close");
     closeButton.setAccessibleText("Close PGN speaker notes");
     closeButton.setOnAction(event -> hide());
     Region spacer = new Region();
     HBox.setHgrow(spacer, Priority.ALWAYS);
-    HBox header = new HBox(10, title, spacer, closeButton);
+    HBox header = new HBox(10, title, spacer, viewModeButton, closeButton);
     header.setAlignment(Pos.CENTER_LEFT);
+    header.getStyleClass().add("speaker-notes-header");
 
     content.getStyleClass().add("speaker-notes-content");
     content.setPadding(new Insets(2, 4, 2, 2));
@@ -50,24 +69,62 @@ public final class SpeakerNotesPanel extends StackPane {
     scrollPane.getStyleClass().add("speaker-notes-scroll");
     VBox.setVgrow(scrollPane, Priority.ALWAYS);
 
-    VBox card = new VBox(16, header, scrollPane);
+    Label resizeHandle = new Label("◢");
+    resizeHandle.getStyleClass().add("speaker-notes-resize-handle");
+    resizeHandle.setAccessibleText("Resize speaker notes");
+    HBox resizeBar = new HBox(resizeHandle);
+    resizeBar.setAlignment(Pos.CENTER_RIGHT);
+
+    VBox card = new VBox(16, header, scrollPane, resizeBar);
     card.getStyleClass().add("speaker-notes-card");
     card.setPadding(new Insets(22));
+    card.setMinWidth(320);
+    card.setMinHeight(360);
     card.setPrefWidth(420);
-    card.setMaxWidth(420);
     card.setPrefHeight(560);
-    card.setMaxHeight(560);
+    card.setMaxWidth(Region.USE_PREF_SIZE);
+    card.setMaxHeight(Region.USE_PREF_SIZE);
+    configureDrag(header, card);
+    configureResize(resizeHandle, card);
     getChildren().add(card);
     hide();
   }
 
-  public void showNotes(String studyComment, String chapterTitle, String chapterComment, List<MoveNote> notes) {
-    Objects.requireNonNull(notes, "notes must not be null");
+  public void showNotes(
+      String studyComment,
+      String chapterTitle,
+      String chapterComment,
+      List<MoveNote> treeNotes,
+      List<StoryLine> storyLines) {
+    this.studyComment = Objects.requireNonNullElse(studyComment, "");
+    this.chapterTitle = Objects.requireNonNullElse(chapterTitle, "");
+    this.chapterComment = Objects.requireNonNullElse(chapterComment, "");
+    this.treeNotes = List.copyOf(Objects.requireNonNull(treeNotes, "treeNotes must not be null"));
+    this.storyLines = List.copyOf(Objects.requireNonNull(storyLines, "storyLines must not be null"));
+    renderNotes();
+  }
+
+  private void toggleViewMode() {
+    storyMode = !storyMode;
+    renderNotes();
+  }
+
+  private void renderNotes() {
+    viewModeButton.setLightIconResource(
+        storyMode ? "/images/graph_2_35dp_000000.png" : "/images/speaker_notes_35dp_000000.png");
+    viewModeButton.setDarkIconResource(
+        storyMode ? "/images/graph_2_35dp_FFFFFF.png" : "/images/speaker_notes_35dp_FFFFFF.png");
+    viewModeButton.setAccessibleText(
+        storyMode ? "Show notes as an ASCII tree" : "Show notes as a sequential story");
+    viewModeButton.setTooltipText(
+        storyMode ? "Show ASCII tree" : "Show sequential story");
     List<javafx.scene.Node> sections = new ArrayList<>();
     addSection(sections, "Study comment", studyComment);
     addSection(sections, "Chapter comment · " + chapterTitle, chapterComment);
-    if (!notes.isEmpty()) {
-      sections.add(movesSection(notes));
+    if (storyMode && !storyLines.isEmpty()) {
+      sections.add(storySection(storyLines));
+    } else if (!storyMode && !treeNotes.isEmpty()) {
+      sections.add(movesSection(treeNotes));
     }
     if (sections.isEmpty()) {
       sections.add(message("No comments recorded for this chapter.", "speaker-notes-empty"));
@@ -104,6 +161,73 @@ public final class SpeakerNotesPanel extends StackPane {
       section.getChildren().add(move);
     }
     return section;
+  }
+
+  private VBox storySection(List<StoryLine> lines) {
+    VBox section = new VBox(12);
+    section.getStyleClass().add("speaker-notes-section");
+    Label heading = new Label("Story by variation");
+    heading.getStyleClass().add("speaker-notes-heading");
+    section.getChildren().add(heading);
+    for (int index = 0; index < lines.size(); index++) {
+      VBox line = new VBox(5);
+      line.getStyleClass().add("speaker-notes-story-line");
+      Label lineHeading = new Label("Variation " + (index + 1));
+      lineHeading.getStyleClass().add("speaker-notes-story-heading");
+      VBox sequence = new VBox(6);
+      sequence.getStyleClass().add("speaker-notes-story-sequence");
+      line.getChildren().addAll(lineHeading, sequence);
+      for (MoveNote note : lines.get(index).moves()) {
+        Button san = new Button(note.moveReference());
+        san.getStyleClass().add("speaker-notes-san-link");
+        san.setMinWidth(Region.USE_PREF_SIZE);
+        san.setMaxWidth(Region.USE_PREF_SIZE);
+        san.setAccessibleText("Go to " + note.moveReference());
+        san.setOnAction(event -> requestSelection(note));
+        HBox step = new HBox(8, san);
+        step.getStyleClass().add("speaker-notes-story-step");
+        step.setAlignment(Pos.TOP_LEFT);
+        if (!note.comment().isBlank()) {
+          Label comment = message(note.comment(), "speaker-notes-comment");
+          comment.getStyleClass().add("speaker-notes-story-comment");
+          HBox.setHgrow(comment, Priority.ALWAYS);
+          step.getChildren().add(comment);
+        }
+        sequence.getChildren().add(step);
+      }
+      section.getChildren().add(line);
+    }
+    return section;
+  }
+
+  private void configureDrag(HBox header, VBox card) {
+    header.setOnMousePressed(
+        event -> {
+          dragStartSceneX = event.getSceneX();
+          dragStartSceneY = event.getSceneY();
+          dragStartTranslateX = card.getTranslateX();
+          dragStartTranslateY = card.getTranslateY();
+        });
+    header.setOnMouseDragged(
+        event -> {
+          card.setTranslateX(dragStartTranslateX + event.getSceneX() - dragStartSceneX);
+          card.setTranslateY(dragStartTranslateY + event.getSceneY() - dragStartSceneY);
+        });
+  }
+
+  private void configureResize(Label handle, VBox card) {
+    handle.setOnMousePressed(
+        event -> {
+          resizeStartSceneX = event.getSceneX();
+          resizeStartSceneY = event.getSceneY();
+          resizeStartWidth = card.getWidth();
+          resizeStartHeight = card.getHeight();
+        });
+    handle.setOnMouseDragged(
+        event -> {
+          card.setPrefWidth(Math.max(card.getMinWidth(), resizeStartWidth + event.getSceneX() - resizeStartSceneX));
+          card.setPrefHeight(Math.max(card.getMinHeight(), resizeStartHeight + event.getSceneY() - resizeStartSceneY));
+        });
   }
 
   private VBox section(String headingText, String value) {
@@ -152,6 +276,16 @@ public final class SpeakerNotesPanel extends StackPane {
       moveReference = Objects.requireNonNullElse(moveReference, "Move");
       comment = Objects.requireNonNullElse(comment, "");
       treePrefix = Objects.requireNonNullElse(treePrefix, "");
+    }
+  }
+
+  /** One complete root-to-leaf variation, presented as a sequential narrative. */
+  public record StoryLine(List<MoveNote> moves) {
+    public StoryLine {
+      moves = List.copyOf(Objects.requireNonNull(moves, "moves must not be null"));
+      if (moves.isEmpty()) {
+        throw new IllegalArgumentException("moves must not be empty");
+      }
     }
   }
 
