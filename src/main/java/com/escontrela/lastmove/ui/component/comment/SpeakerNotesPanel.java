@@ -3,6 +3,12 @@ package com.escontrela.lastmove.ui.component.comment;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.event.Event;
+import javafx.event.EventHandler;
+import javafx.event.EventType;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -18,6 +24,8 @@ import javafx.scene.layout.VBox;
 public final class SpeakerNotesPanel extends StackPane {
   private final VBox content = new VBox(18);
   private final Button closeButton = new Button("×");
+  private final ObjectProperty<EventHandler<MoveNoteSelectedEvent>> onMoveNoteSelected =
+      new SimpleObjectProperty<>(this, "onMoveNoteSelected");
 
   public SpeakerNotesPanel() {
     getStyleClass().add("speaker-notes-overlay");
@@ -82,11 +90,17 @@ public final class SpeakerNotesPanel extends StackPane {
     for (MoveNote note : notes) {
       VBox move = new VBox(4);
       move.getStyleClass().add("speaker-notes-move");
-      move.setStyle("-fx-padding: 0 0 0 " + (note.variationDepth() * 14) + ";");
-      Label san = new Label(note.moveReference());
-      san.getStyleClass().add("speaker-notes-san");
+      Label treePrefix = new Label(note.treePrefix());
+      treePrefix.getStyleClass().add("speaker-notes-tree-prefix");
+      Button san = new Button(note.moveReference());
+      san.getStyleClass().add("speaker-notes-san-link");
+      san.setAccessibleText("Go to " + note.moveReference());
+      san.setOnAction(event -> requestSelection(note));
+      HBox moveHeader = new HBox(6, treePrefix, san);
+      moveHeader.setAlignment(Pos.CENTER_LEFT);
       Label comment = message(note.comment(), "speaker-notes-comment");
-      move.getChildren().addAll(san, comment);
+      comment.getStyleClass().add("speaker-notes-move-comment");
+      move.getChildren().addAll(moveHeader, comment);
       section.getChildren().add(move);
     }
     return section;
@@ -112,11 +126,47 @@ public final class SpeakerNotesPanel extends StackPane {
 
   public void show() { setManaged(true); setVisible(true); toFront(); }
   public void hide() { setManaged(false); setVisible(false); }
-  public record MoveNote(String moveReference, String comment, int variationDepth) {
+
+  public EventHandler<MoveNoteSelectedEvent> getOnMoveNoteSelected() {
+    return onMoveNoteSelected.get();
+  }
+
+  public void setOnMoveNoteSelected(EventHandler<MoveNoteSelectedEvent> handler) {
+    onMoveNoteSelected.set(handler);
+  }
+
+  public ObjectProperty<EventHandler<MoveNoteSelectedEvent>> onMoveNoteSelectedProperty() {
+    return onMoveNoteSelected;
+  }
+
+  private void requestSelection(MoveNote note) {
+    EventHandler<MoveNoteSelectedEvent> handler = getOnMoveNoteSelected();
+    if (handler != null) {
+      handler.handle(new MoveNoteSelectedEvent(this, note));
+    }
+  }
+
+  public record MoveNote(UUID nodeId, String moveReference, String comment, String treePrefix) {
     public MoveNote {
+      Objects.requireNonNull(nodeId, "nodeId must not be null");
       moveReference = Objects.requireNonNullElse(moveReference, "Move");
       comment = Objects.requireNonNullElse(comment, "");
-      if (variationDepth < 0) throw new IllegalArgumentException("variationDepth must not be negative");
+      treePrefix = Objects.requireNonNullElse(treePrefix, "");
+    }
+  }
+
+  public static final class MoveNoteSelectedEvent extends Event {
+    public static final EventType<MoveNoteSelectedEvent> MOVE_NOTE_SELECTED =
+        new EventType<>(Event.ANY, "MOVE_NOTE_SELECTED");
+    private final MoveNote note;
+
+    private MoveNoteSelectedEvent(SpeakerNotesPanel source, MoveNote note) {
+      super(source, NULL_SOURCE_TARGET, MOVE_NOTE_SELECTED);
+      this.note = note;
+    }
+
+    public MoveNote getNote() {
+      return note;
     }
   }
 }

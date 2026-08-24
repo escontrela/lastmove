@@ -33,6 +33,7 @@ import com.escontrela.lastmove.ui.component.evaluation.EngineEvaluationControl;
 import com.escontrela.lastmove.ui.component.evaluation.EngineSelectorModal;
 import com.escontrela.lastmove.ui.component.message.TextInputModal;
 import com.escontrela.lastmove.ui.component.message.MultilineTextInputModal;
+import com.escontrela.lastmove.ui.component.message.MessageBox;
 import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton;
 import com.escontrela.lastmove.ui.component.notation.MoveNotationControl;
 import com.escontrela.lastmove.ui.component.notation.MoveNotationEntry;
@@ -48,6 +49,7 @@ import com.escontrela.lastmove.ui.service.BoardAppearancePreferencesService;
 import com.escontrela.lastmove.ui.service.ChessSoundService;
 import com.escontrela.lastmove.ui.service.ClipboardService;
 import com.escontrela.lastmove.ui.support.FileChooserFactory;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -91,6 +93,7 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
   @FXML private TextInputModal textInputModal;
   @FXML private ListView<StudyChapterSummary> chapterList;
   @FXML private Label studyTitleLabel;
+  @FXML private Label studySourceTitleLabel;
   @FXML private Label chapterTitleLabel;
   @FXML private Label statusLabel;
   @FXML private ContextualMenuPanel contextualMenuPanel;
@@ -99,6 +102,7 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
   @FXML private CommentPanel commentPanel;
   @FXML private SpeakerNotesPanel speakerNotesPanel;
   @FXML private MultilineTextInputModal commentEditor;
+  @FXML private MessageBox moveDeleteConfirmation;
   @FXML private ToolbarIconButton studyCommentButton;
   @FXML private ToolbarIconButton moveCommentButton;
   @FXML private ToolbarIconButton speakerNotesButton;
@@ -159,6 +163,7 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
     chapterList.setCellFactory(ignored -> new ChapterCell());
     configurePromotionPicker();
     configureNotation();
+    configureSpeakerNotes();
     configureEngineAnalysis();
     chessBoard.setOnPromotionRequested(
         event -> {
@@ -356,30 +361,41 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
               annotationService.studyComment(owner, activeStudyId).orElse(""),
               workspace.title(),
               annotationService.chapterComment(owner, activeStudyId, activeChapterId).orElse(""),
-              speakerNotes(workspace.notationTree().roots(), moveComments, 0));
+              speakerNotes(workspace.notationTree().roots(), moveComments));
           speakerNotesPanel.show();
         });
   }
 
   private List<SpeakerNotesPanel.MoveNote> speakerNotes(
-      List<AnalysisNotationNode> nodes, Map<AnalysisNodeId, String> moveComments, int variationDepth) {
-    return nodes.stream()
-        .flatMap(
-            node ->
-                java.util.stream.Stream.concat(
-                    moveComments.getOrDefault(node.nodeId(), "").isBlank()
-                        ? java.util.stream.Stream.empty()
-                        : java.util.stream.Stream.of(
-                            new SpeakerNotesPanel.MoveNote(
-                                moveReference(node),
-                                moveComments.get(node.nodeId()),
-                                variationDepth)),
-                    speakerNotes(
-                            node.continuations(),
-                            moveComments,
-                            node.mainContinuation() ? variationDepth : variationDepth + 1)
-                        .stream()))
-        .toList();
+      List<AnalysisNotationNode> nodes, Map<AnalysisNodeId, String> moveComments) {
+    List<SpeakerNotesPanel.MoveNote> notes = new ArrayList<>();
+    appendSpeakerNotes(nodes, moveComments, "", notes);
+    return List.copyOf(notes);
+  }
+
+  private void appendSpeakerNotes(
+      List<AnalysisNotationNode> nodes,
+      Map<AnalysisNodeId, String> moveComments,
+      String ancestorPrefix,
+      List<SpeakerNotesPanel.MoveNote> notes) {
+    for (int index = 0; index < nodes.size(); index++) {
+      AnalysisNotationNode node = nodes.get(index);
+      boolean last = index == nodes.size() - 1;
+      boolean variation = index > 0;
+      String treePrefix =
+          variation ? ancestorPrefix + (last ? "└─ " : "├─ ") : ancestorPrefix;
+      String comment = moveComments.getOrDefault(node.nodeId(), "");
+      if (!comment.isBlank()) {
+        notes.add(
+            new SpeakerNotesPanel.MoveNote(
+                node.nodeId().value(), moveReference(node), comment, treePrefix));
+      }
+      appendSpeakerNotes(
+          node.continuations(),
+          moveComments,
+          variation ? ancestorPrefix + (last ? "   " : "│  ") : ancestorPrefix,
+          notes);
+    }
   }
 
   private static String moveReference(AnalysisNotationNode node) {
@@ -475,6 +491,84 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
                 refreshMoveList();
               });
         });
+    moveNotation.setOnPlyContextRequested(this::showMoveContextMenu);
+  }
+
+  private void configureSpeakerNotes() {
+    speakerNotesPanel.setOnMoveNoteSelected(
+        event ->
+            activeOwner()
+                .ifPresent(
+                    owner -> {
+                      AnalysisNodeId nodeId = new AnalysisNodeId(event.getNote().nodeId());
+                      chessBoard.renderPosition(
+                          studyService.select(owner, activeStudyId, activeChapterId, nodeId));
+                      refreshMoveList();
+                      statusLabel.setText("Selected " + event.getNote().moveReference());
+                    }));
+  }
+
+  private void showMoveContextMenu(MoveNotationControl.PlyContextRequestedEvent event) {
+    MoveNotationNode node = findNotationNode(moveNotation.getTree(), event.getEntry().nodeId());
+    if (node == null) {
+      refreshMoveList();
+      return;
+    }
+    int branchSize = branchSize(node);
+    String action = branchSize == 1 ? "Delete move" : "Delete variation";
+    contextualMenuPanel.clearItems();
+    contextualMenuPanel.addItem(
+        action,
+        "",
+        ignored -> confirmMoveDeletion(event.getEntry(), branchSize));
+    contextualMenuPanel.showAtScene(event.getSceneX(), event.getSceneY());
+  }
+
+  private void confirmMoveDeletion(MoveNotationEntry entry, int branchSize) {
+    boolean variation = branchSize > 1;
+    moveDeleteConfirmation.setTitle(variation ? "Delete variation?" : "Delete move?");
+    moveDeleteConfirmation.setMessage(
+        variation
+            ? "Delete " + entry.san() + " and its " + (branchSize - 1) + " continuation moves? This cannot be undone."
+            : "Delete " + entry.san() + "? This cannot be undone.");
+    moveDeleteConfirmation.setAcceptText(variation ? "Delete variation" : "Delete move");
+    moveDeleteConfirmation.setCancelText("Cancel");
+    moveDeleteConfirmation.setOnAccept(
+        ignored ->
+            activeOwner()
+                .ifPresent(
+                    owner -> {
+                      boolean refreshOpenNotes = speakerNotesPanel.isVisible();
+                      studyService.deleteBranch(
+                          owner, activeStudyId, activeChapterId, new AnalysisNodeId(entry.nodeId()));
+                      chessBoard.renderPosition(
+                          studyService.currentPosition(owner, activeStudyId, activeChapterId));
+                      commentPanel.hide();
+                      refreshMoveList();
+                      if (refreshOpenNotes) {
+                        onSpeakerNotes();
+                      }
+                      statusLabel.setText(variation ? "Variation deleted" : "Move deleted");
+                    }));
+    moveDeleteConfirmation.setOnCancel(
+        ignored -> statusLabel.setText(variation ? "Variation kept" : "Move kept"));
+    moveDeleteConfirmation.show();
+  }
+
+  private static MoveNotationNode findNotationNode(List<MoveNotationNode> nodes, java.util.UUID id) {
+    for (MoveNotationNode node : nodes) {
+      if (node.entry().nodeId().equals(id)) return node;
+      MoveNotationNode child = findNotationNode(node.continuations(), id);
+      if (child != null) return child;
+    }
+    return null;
+  }
+
+  private static int branchSize(MoveNotationNode node) {
+    return 1
+        + node.continuations().stream()
+            .mapToInt(StudyWorkspaceScreenController::branchSize)
+            .sum();
   }
 
   private void configureEngineAnalysis() {
@@ -509,6 +603,7 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
     }
     StudyChapterWorkspace workspace = studyService.openChapter(owner, activeStudyId, activeChapterId);
     studyTitleLabel.setText(study.study().title());
+    studySourceTitleLabel.setText(study.study().title());
     chapterTitleLabel.setText(workspace.title());
     chessBoard.renderPosition(workspace.currentPosition());
     refreshMoveList();
@@ -711,6 +806,8 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
       row.setAlignment(Pos.CENTER_LEFT);
       activeMarker.getStyleClass().add("session-active-marker");
       title.getStyleClass().add("chapter-title");
+      title.setWrapText(true);
+      title.setMaxWidth(Double.MAX_VALUE);
       summary.getStyleClass().add("chapter-summary");
       commentButton.getStyleClass().add("chapter-comment-button");
       commentButton.setAccessibleText("Chapter comments");
@@ -718,9 +815,12 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
       commentButton.setOnAction(event -> showChapterComment(getItem()));
       commentButton.setOnMouseClicked(event -> event.consume());
       details.getChildren().addAll(title, summary);
+      details.setMinWidth(0);
       details.setMaxWidth(Double.MAX_VALUE);
       HBox.setHgrow(details, Priority.ALWAYS);
       row.getChildren().addAll(activeMarker, details, commentButton);
+      row.setMaxWidth(Double.MAX_VALUE);
+      row.prefWidthProperty().bind(widthProperty().subtract(2));
       row.setOnMouseClicked(
           event -> {
             if (event.getButton() == MouseButton.PRIMARY && getItem() != null) {

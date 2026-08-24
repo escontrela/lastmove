@@ -268,12 +268,15 @@
 }
 
 .chapter-row {
-    -fx-padding: 10 8;
+    -fx-padding: 10 6;
 }
 
 .chapter-row-active {
-    -fx-padding: 10 8 10 4;
+    -fx-padding: 10 6 10 2;
 }
+
+.chapter-title { -fx-font-size: 13px; }
+.chapter-summary { -fx-font-size: 11px; }
 
 .setup-scroll-pane {
     -fx-background-color: #f7f7f7;
@@ -2068,11 +2071,29 @@
 .speaker-notes-section { -fx-padding: 0 0 14 0; -fx-border-color: transparent transparent #e3dcc7 transparent; }
 .speaker-notes-heading { -fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #6b5a2d; }
 .speaker-notes-move { -fx-padding: 8 0 8 0; -fx-border-color: transparent transparent #eee8d7 transparent; }
-.speaker-notes-san { -fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #26313d; }
+.speaker-notes-tree-prefix { -fx-font-family: monospace; -fx-font-size: 13px; -fx-text-fill: #80765b; }
+.speaker-notes-san-link {
+    -fx-background-color: rgba(7,95,189,0.08);
+    -fx-background-radius: 999;
+    -fx-border-color: rgba(7,95,189,0.24);
+    -fx-border-radius: 999;
+    -fx-padding: 3 8;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #075fbd;
+    -fx-cursor: hand;
+}
+.speaker-notes-san-link:hover { -fx-underline: true; -fx-background-color: rgba(7,95,189,0.16); }
+.speaker-notes-san-link:focused { -fx-border-color: #075fbd; -fx-border-radius: 4; }
 .speaker-notes-comment { -fx-font-size: 14px; -fx-text-fill: #3c4650; }
+.speaker-notes-move-comment { -fx-padding: 0 0 0 28; }
 .speaker-notes-empty { -fx-font-style: italic; -fx-text-fill: #7c858e; }
 .night-mode .speaker-notes-card { -fx-background-color: #1c2430; -fx-border-color: #4b596a; }
-.night-mode .speaker-notes-title, .night-mode .speaker-notes-san, .night-mode .speaker-notes-comment { -fx-text-fill: #f1f3f5; }
+.night-mode .speaker-notes-title, .night-mode .speaker-notes-comment { -fx-text-fill: #f1f3f5; }
+.night-mode .speaker-notes-tree-prefix { -fx-text-fill: #9da9b7; }
+.night-mode .speaker-notes-san-link { -fx-text-fill: #74b4ff; -fx-background-color: rgba(116,180,255,0.10); -fx-border-color: rgba(116,180,255,0.28); }
+.night-mode .speaker-notes-san-link:hover { -fx-background-color: rgba(116,180,255,0.12); }
+.night-mode .speaker-notes-san-link:focused { -fx-border-color: #74b4ff; }
 .night-mode .speaker-notes-close { -fx-text-fill: #f1f3f5; }
 .night-mode .speaker-notes-heading { -fx-text-fill: #d6bd7f; }
 .night-mode .speaker-notes-empty { -fx-text-fill: #aeb8c3; }

@@ -75,6 +75,44 @@ class AnalysisDocumentTest {
     assertEquals(3, copy.continuations(copiedCursor.id()).size());
   }
 
+  @Test
+  void deletesACompleteVariationAndSelectsItsSurvivingParent() {
+    AnalysisDocument document = newDocument();
+    document.apply(accepted("e2", "e4", "e4", blackToMove()));
+    AnalysisNode parent = document.currentNode().orElseThrow();
+    document.apply(accepted("e7", "e5", "e5", initial()));
+    AnalysisNode deletedRoot = document.currentNode().orElseThrow();
+    document.apply(accepted("g1", "f3", "Nf3", blackToMove()));
+    AnalysisNode deletedChild = document.currentNode().orElseThrow();
+    document.select(parent.id());
+    document.apply(accepted("c7", "c5", "c5", initial()));
+    AnalysisNode survivingAlternative = document.currentNode().orElseThrow();
+
+    AnalysisBranchDeletion deletion = document.deleteBranch(deletedRoot.id());
+
+    assertEquals(parent.id(), document.currentNode().orElseThrow().id());
+    assertEquals(List.of("c5"), nodeSans(document.continuations(parent.id())));
+    assertEquals(List.of(deletedRoot.id(), deletedChild.id()), deletion.removedNodeIds());
+    assertTrue(deletion.variation());
+    assertFalse(document.select(deletedRoot.id()));
+    assertFalse(document.select(deletedChild.id()));
+    assertTrue(document.select(survivingAlternative.id()));
+  }
+
+  @Test
+  void deletingARootLeafReturnsToTheInitialPosition() {
+    AnalysisDocument document = newDocument();
+    document.apply(accepted("e2", "e4", "e4", blackToMove()));
+    AnalysisNode root = document.currentNode().orElseThrow();
+
+    AnalysisBranchDeletion deletion = document.deleteBranch(root.id());
+
+    assertTrue(document.currentNode().isEmpty());
+    assertEquals(document.initialPosition(), document.currentPosition());
+    assertTrue(document.rootVariations().isEmpty());
+    assertFalse(deletion.variation());
+  }
+
   private AnalysisDocument newDocument() {
     return factory.fromPosition(initial(), Optional.empty());
   }

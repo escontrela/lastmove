@@ -6,6 +6,7 @@ import com.escontrela.lastmove.application.dto.AnalysisNotationTree;
 import com.escontrela.lastmove.application.dto.AnalysisSessionSummary;
 import com.escontrela.lastmove.application.repository.AnalysisSessionRepository;
 import com.escontrela.lastmove.domain.analysis.AnalysisNode;
+import com.escontrela.lastmove.domain.analysis.AnalysisBranchDeletion;
 import com.escontrela.lastmove.domain.analysis.AnalysisNodeId;
 import com.escontrela.lastmove.domain.analysis.AnalysisOrigin;
 import com.escontrela.lastmove.domain.analysis.AnalysisSession;
@@ -282,6 +283,15 @@ public final class AnalysisSessionService {
     }
     sessionRepository.save(session);
     return session.currentPosition();
+  }
+
+  /** Deletes one move and its complete descendant variation from a retained session. */
+  public AnalysisBranchDeletion deleteBranch(
+      AnalysisSessionId sessionId, AnalysisNodeId nodeId) {
+    AnalysisSession session = session(sessionId);
+    AnalysisBranchDeletion deletion = session.deleteBranch(nodeId);
+    sessionRepository.save(session);
+    return deletion;
   }
 
   private AnalysisSessionSummary register(

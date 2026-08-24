@@ -168,6 +168,32 @@ class AnalysisSessionServiceTest {
   }
 
   @Test
+  void deletesASelectedMoveAndItsSessionComment() throws Exception {
+    var imported =
+        new ChesspressoPgnReader()
+            .readImportedFirst("[Event \"Variation\"]\n\n1. e4 e5 2. Nf3 (2. Bc4) *");
+    AnalysisSessionSummary session = service.createPgnSession(imported);
+    var e5 =
+        service
+            .notationTree(session.sessionId())
+            .roots().getFirst()
+            .continuations().getFirst();
+    var deleted = e5.continuations().getLast();
+    service.saveMoveComment(session.sessionId(), deleted.nodeId(), "Italian idea");
+
+    var result = service.deleteBranch(session.sessionId(), deleted.nodeId());
+
+    assertEquals(e5.nodeId(), result.parentNodeId().orElseThrow());
+    assertEquals(e5.nodeId(), service.notationTree(session.sessionId()).currentNodeId().orElseThrow());
+    assertEquals(List.of("Nf3"),
+        service.continuations(session.sessionId(), e5.nodeId()).stream()
+            .map(node -> node.ply().move().san().getValue()).toList());
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> service.moveComment(session.sessionId(), deleted.nodeId()));
+  }
+
+  @Test
   void appliesMovesAndNavigatesOnlyWithinTheSelectedSession() {
     AnalysisSessionSummary session = service.createInitialSession();
 

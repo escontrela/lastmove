@@ -19,6 +19,7 @@ import com.escontrela.lastmove.ui.component.evaluation.EngineEvaluationControl;
 import com.escontrela.lastmove.ui.component.evaluation.EngineSelectorModal;
 import com.escontrela.lastmove.ui.component.message.TextInputModal;
 import com.escontrela.lastmove.ui.component.message.MultilineTextInputModal;
+import com.escontrela.lastmove.ui.component.message.MessageBox;
 import com.escontrela.lastmove.ui.component.notation.MoveNotationControl;
 import com.escontrela.lastmove.ui.component.notation.MoveNotationEntry;
 import com.escontrela.lastmove.ui.component.notation.MoveNotationNode;
@@ -95,6 +96,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
   @FXML private CommentPanel commentPanel;
   @FXML private MultilineTextInputModal commentEditor;
   @FXML private ToolbarIconButton moveCommentButton;
+  @FXML private MessageBox moveDeleteConfirmation;
 
   private final GameLoadService gameLoadService;
   private final AnalysisSessionService analysisSessionService;
@@ -661,6 +663,63 @@ public class PgnAnalysisScreenController implements UiScreenController {
           refreshMoveList();
           statusLabel.setText("Selected " + event.getEntry().san());
         });
+    moveNotation.setOnPlyContextRequested(this::showMoveContextMenu);
+  }
+
+  private void showMoveContextMenu(MoveNotationControl.PlyContextRequestedEvent event) {
+    MoveNotationNode node = findNotationNode(moveNotation.getTree(), event.getEntry().nodeId());
+    if (node == null) {
+      refreshMoveList();
+      return;
+    }
+    int branchSize = branchSize(node);
+    String action = branchSize == 1 ? "Delete move" : "Delete variation";
+    contextualMenuPanel.clearItems();
+    contextualMenuPanel.addItem(
+        action,
+        "",
+        ignored -> confirmMoveDeletion(event.getEntry(), branchSize));
+    contextualMenuPanel.showAtScene(event.getSceneX(), event.getSceneY());
+  }
+
+  private void confirmMoveDeletion(MoveNotationEntry entry, int branchSize) {
+    boolean variation = branchSize > 1;
+    moveDeleteConfirmation.setTitle(variation ? "Delete variation?" : "Delete move?");
+    moveDeleteConfirmation.setMessage(
+        variation
+            ? "Delete " + entry.san() + " and its " + (branchSize - 1) + " continuation moves? This cannot be undone."
+            : "Delete " + entry.san() + "? This cannot be undone.");
+    moveDeleteConfirmation.setAcceptText(variation ? "Delete variation" : "Delete move");
+    moveDeleteConfirmation.setCancelText("Cancel");
+    moveDeleteConfirmation.setOnAccept(
+        ignored -> {
+          analysisSessionService.deleteBranch(
+              activeAnalysisSessionId, new AnalysisNodeId(entry.nodeId()));
+          chessBoard.renderPosition(
+              analysisSessionService.currentPosition(activeAnalysisSessionId));
+          commentPanel.hide();
+          refreshMoveList();
+          statusLabel.setText(variation ? "Variation deleted" : "Move deleted");
+        });
+    moveDeleteConfirmation.setOnCancel(
+        ignored -> statusLabel.setText(variation ? "Variation kept" : "Move kept"));
+    moveDeleteConfirmation.show();
+  }
+
+  private static MoveNotationNode findNotationNode(List<MoveNotationNode> nodes, java.util.UUID id) {
+    for (MoveNotationNode node : nodes) {
+      if (node.entry().nodeId().equals(id)) return node;
+      MoveNotationNode child = findNotationNode(node.continuations(), id);
+      if (child != null) return child;
+    }
+    return null;
+  }
+
+  private static int branchSize(MoveNotationNode node) {
+    return 1
+        + node.continuations().stream()
+            .mapToInt(PgnAnalysisScreenController::branchSize)
+            .sum();
   }
 
   private void refreshWorkspace() {
