@@ -27,8 +27,10 @@ import com.escontrela.lastmove.ui.component.promotion.PromotionPickerControl;
 import com.escontrela.lastmove.ui.component.session.SessionSelectorControl;
 import com.escontrela.lastmove.ui.component.session.SessionSelectorEntry;
 import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton;
+import com.escontrela.lastmove.ui.component.tree.MoveTreeOverlay;
 import com.escontrela.lastmove.ui.event.OpenSessionManagementEvent;
 import com.escontrela.lastmove.ui.event.OpenAnalysisSessionEvent;
+import com.escontrela.lastmove.ui.event.OpenAnalysisSessionTacticEvent;
 import com.escontrela.lastmove.ui.event.ReturnToAnalysisSessionEvent;
 import com.escontrela.lastmove.ui.event.SelectStudyDestinationEvent;
 import com.escontrela.lastmove.ui.event.SelectTacticDestinationEvent;
@@ -97,6 +99,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
   @FXML private MultilineTextInputModal commentEditor;
   @FXML private ToolbarIconButton moveCommentButton;
   @FXML private MessageBox moveDeleteConfirmation;
+  @FXML private MoveTreeOverlay moveTreeOverlay;
 
   private final GameLoadService gameLoadService;
   private final AnalysisSessionService analysisSessionService;
@@ -169,6 +172,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
     chessBoard.renderPosition(analysisSessionService.currentPosition(activeAnalysisSessionId));
     configureSessionPicker();
     configureMoveNotation();
+    configureMoveTreeOverlay();
     refreshWorkspace();
     if (pendingStatusMessage != null && !pendingStatusMessage.isBlank()) {
       statusLabel.setText(pendingStatusMessage);
@@ -545,6 +549,15 @@ public class PgnAnalysisScreenController implements UiScreenController {
   private void configureSessionContextMenu(AnalysisSessionSummary selected) {
     int selectedIndex = visibleSessions.indexOf(selected);
     contextualMenuPanel.clearItems();
+    contextualMenuPanel.addItem("Visualize tree", "", ignored -> showMoveTree());
+    contextualMenuPanel.addItem(
+        "Run session as tactic",
+        "",
+        ignored -> {
+          uiEventBus.publish(new OpenAnalysisSessionTacticEvent(selected.sessionId()));
+          uiFlowManager.show(UiScreenId.TACTICS_WORKSPACE);
+        });
+    contextualMenuPanel.addSeparator();
     contextualMenuPanel.addItem(
         "Open session", "", event -> activateSession(selectedIndex));
     contextualMenuPanel.addItem(
@@ -563,6 +576,23 @@ public class PgnAnalysisScreenController implements UiScreenController {
         event -> moveSession(selected, false));
     contextualMenuPanel.addSeparator();
     contextualMenuPanel.addItem("Open sessions…", "", event -> onShowSessions());
+  }
+
+  private void configureMoveTreeOverlay() {
+    moveTreeOverlay.setOnNodeConfirmed(
+        event -> {
+          AnalysisNodeId nodeId = new AnalysisNodeId(event.getNode().nodeId());
+          chessBoard.renderPosition(analysisSessionService.select(activeAnalysisSessionId, nodeId));
+          moveTreeOverlay.hide();
+          refreshMoveList();
+          statusLabel.setText("Selected " + event.getNode().moveReference());
+        });
+  }
+
+  private void showMoveTree() {
+    AnalysisNotationTree tree = analysisSessionService.notationTree(activeAnalysisSessionId);
+    moveTreeOverlay.setTree(tree.roots().stream().map(this::toMoveTreeNode).toList());
+    moveTreeOverlay.show();
   }
 
   private void moveSession(AnalysisSessionSummary session, boolean up) {
@@ -784,6 +814,22 @@ public class PgnAnalysisScreenController implements UiScreenController {
             ply.move().san().getValue(),
             node.activeLine()),
         node.continuations().stream().map(this::toNotationNode).toList());
+  }
+
+  private MoveTreeOverlay.TreeNode toMoveTreeNode(AnalysisNotationNode node) {
+    var ply = node.ply();
+    String reference =
+        ply.movingColor() == com.escontrela.lastmove.domain.common.PieceColor.WHITE
+            ? ply.moveNumber() + ". " + ply.move().san().getValue()
+            : ply.moveNumber() + "... " + ply.move().san().getValue();
+    return new MoveTreeOverlay.TreeNode(
+        node.nodeId().value(),
+        reference,
+        node.mainContinuation(),
+        node.current(),
+        analysisSessionService.moveComment(activeAnalysisSessionId, node.nodeId()).orElse(""),
+        node.ply().resultingPosition(),
+        node.continuations().stream().map(this::toMoveTreeNode).toList());
   }
 
   private void refreshMoveCommentIcon() {

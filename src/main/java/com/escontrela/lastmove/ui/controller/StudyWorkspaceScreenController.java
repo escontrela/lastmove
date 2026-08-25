@@ -35,11 +35,13 @@ import com.escontrela.lastmove.ui.component.message.TextInputModal;
 import com.escontrela.lastmove.ui.component.message.MultilineTextInputModal;
 import com.escontrela.lastmove.ui.component.message.MessageBox;
 import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton;
+import com.escontrela.lastmove.ui.component.tree.MoveTreeOverlay;
 import com.escontrela.lastmove.ui.component.notation.MoveNotationControl;
 import com.escontrela.lastmove.ui.component.notation.MoveNotationEntry;
 import com.escontrela.lastmove.ui.component.notation.MoveNotationNode;
 import com.escontrela.lastmove.ui.component.promotion.PromotionPickerControl;
 import com.escontrela.lastmove.ui.event.OpenStudyWorkspaceEvent;
+import com.escontrela.lastmove.ui.event.OpenStudyChapterTacticEvent;
 import com.escontrela.lastmove.ui.event.OpenChapterPositionEditorEvent;
 import com.escontrela.lastmove.ui.event.UiEventBus;
 import com.escontrela.lastmove.ui.model.BoardMoveInput;
@@ -107,6 +109,7 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
   @FXML private ToolbarIconButton studyCommentButton;
   @FXML private ToolbarIconButton moveCommentButton;
   @FXML private ToolbarIconButton speakerNotesButton;
+  @FXML private MoveTreeOverlay moveTreeOverlay;
 
   private final StudyService studyService;
   private final StudyAnnotationService annotationService;
@@ -165,6 +168,7 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
     configurePromotionPicker();
     configureNotation();
     configureSpeakerNotes();
+    configureMoveTreeOverlay();
     configureEngineAnalysis();
     chessBoard.setOnPromotionRequested(
         event -> {
@@ -450,6 +454,25 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
     return turn + " " + (whiteMove ? "White" : "Black") + " · " + node.ply().move().san().getValue();
   }
 
+  private MoveTreeOverlay.TreeNode toMoveTreeNode(
+      AnalysisNotationNode node, Map<AnalysisNodeId, String> comments) {
+    return new MoveTreeOverlay.TreeNode(
+        node.nodeId().value(),
+        treeMoveReference(node),
+        node.mainContinuation(),
+        node.current(),
+        comments.getOrDefault(node.nodeId(), ""),
+        node.ply().resultingPosition(),
+        node.continuations().stream().map(child -> toMoveTreeNode(child, comments)).toList());
+  }
+
+  private static String treeMoveReference(AnalysisNotationNode node) {
+    boolean whiteMove = node.ply().movingColor() == PieceColor.WHITE;
+    return node.ply().moveNumber()
+        + (whiteMove ? ". " : "... ")
+        + node.ply().move().san().getValue();
+  }
+
   private void showChapterComment(StudyChapterSummary chapter) {
     activeOwner().ifPresent(owner -> showComment("Chapter comment · " + chapter.title(),
         annotationService.chapterComment(owner, activeStudyId, chapter.chapterId()).orElse(""),
@@ -554,6 +577,24 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
                     }));
   }
 
+  private void configureMoveTreeOverlay() {
+    moveTreeOverlay.setOnNodeConfirmed(
+        event ->
+            activeOwner()
+                .ifPresent(
+                    owner -> {
+                      chessBoard.renderPosition(
+                          studyService.select(
+                              owner,
+                              activeStudyId,
+                              activeChapterId,
+                              new AnalysisNodeId(event.getNode().nodeId())));
+                      moveTreeOverlay.hide();
+                      refreshMoveList();
+                      statusLabel.setText("Selected " + event.getNode().moveReference());
+                    }));
+  }
+
   private void showMoveContextMenu(MoveNotationControl.PlyContextRequestedEvent event) {
     MoveNotationNode node = findNotationNode(moveNotation.getTree(), event.getEntry().nodeId());
     if (node == null) {
@@ -563,11 +604,25 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
     int branchSize = branchSize(node);
     String action = branchSize == 1 ? "Delete move" : "Delete variation";
     contextualMenuPanel.clearItems();
+    contextualMenuPanel.addItem("Visualize tree", "", ignored -> showMoveTree());
+    contextualMenuPanel.addSeparator();
     contextualMenuPanel.addItem(
         action,
         "",
         ignored -> confirmMoveDeletion(event.getEntry(), branchSize));
     contextualMenuPanel.showAtScene(event.getSceneX(), event.getSceneY());
+  }
+
+  private void showMoveTree() {
+    activeOwner().ifPresent(
+        owner -> {
+          AnalysisNotationTree tree = studyService.notationTree(owner, activeStudyId, activeChapterId);
+          Map<AnalysisNodeId, String> comments =
+              annotationService.moveComments(owner, activeStudyId, activeChapterId);
+          moveTreeOverlay.setTree(
+              tree.roots().stream().map(node -> toMoveTreeNode(node, comments)).toList());
+          moveTreeOverlay.show();
+        });
   }
 
   private void confirmMoveDeletion(MoveNotationEntry entry, int branchSize) {
@@ -832,6 +887,8 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
         "Edit chapter position…", "", event -> editChapterPosition(chapter));
     contextualMenuPanel.addItem("Rename chapter…", "", event -> renameChapter(chapter));
     contextualMenuPanel.addItem("Comments / Edit comment…", "", event -> showChapterComment(chapter));
+    contextualMenuPanel.addItem("Visualize tree", "", event -> showChapterTree(chapter));
+    contextualMenuPanel.addItem("Run chapter as tactic", "", event -> runChapterAsTactic(chapter));
     contextualMenuPanel.addSeparator();
     contextualMenuPanel.addItem("Move chapter up", "↑", event -> moveChapter(chapter, -1));
     contextualMenuPanel.addItem("Move chapter down", "↓", event -> moveChapter(chapter, 1));
@@ -849,6 +906,20 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
                       owner, activeStudyId, chapter.chapterId())));
           uiFlowManager.show(UiScreenId.POSITION_EDITOR);
         });
+  }
+
+  private void runChapterAsTactic(StudyChapterSummary chapter) {
+    if (activeStudyId == null) return;
+    uiEventBus.publish(new OpenStudyChapterTacticEvent(activeStudyId, chapter.chapterId()));
+    uiFlowManager.show(UiScreenId.TACTICS_WORKSPACE);
+  }
+
+  private void showChapterTree(StudyChapterSummary chapter) {
+    if (!chapter.chapterId().equals(activeChapterId)) {
+      activeChapterId = chapter.chapterId();
+      refreshWorkspace();
+    }
+    showMoveTree();
   }
 
   private final class ChapterCell extends ListCell<StudyChapterSummary> {

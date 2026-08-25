@@ -2,6 +2,8 @@ package com.escontrela.lastmove.ui.controller;
 
 import com.escontrela.lastmove.application.service.CurrentUserService;
 import com.escontrela.lastmove.application.service.TacticService;
+import com.escontrela.lastmove.application.service.StudyService;
+import com.escontrela.lastmove.application.service.AnalysisSessionService;
 import com.escontrela.lastmove.application.tactics.AppendTacticSolutionMoveCommand;
 import com.escontrela.lastmove.application.tactics.CreateTacticExerciseFromFenCommand;
 import com.escontrela.lastmove.application.tactics.DeleteTacticExerciseCommand;
@@ -13,18 +15,27 @@ import com.escontrela.lastmove.application.tactics.TacticHint;
 import com.escontrela.lastmove.application.tactics.TacticMoveOutcome;
 import com.escontrela.lastmove.application.tactics.TacticSuiteDetails;
 import com.escontrela.lastmove.application.tactics.TacticWorkspace;
+import com.escontrela.lastmove.application.tactics.TemporaryTacticSession;
 import com.escontrela.lastmove.domain.analysis.AnalysisNodeId;
+import com.escontrela.lastmove.domain.analysis.AnalysisSessionId;
 import com.escontrela.lastmove.domain.common.PieceColor;
 import com.escontrela.lastmove.domain.game.MoveCommand;
 import com.escontrela.lastmove.domain.notation.Fen;
 import com.escontrela.lastmove.domain.player.PlayerId;
 import com.escontrela.lastmove.domain.tactics.TacticExerciseId;
 import com.escontrela.lastmove.domain.tactics.TacticSuiteId;
+import com.escontrela.lastmove.domain.study.StudyChapterId;
+import com.escontrela.lastmove.domain.study.StudyId;
 import com.escontrela.lastmove.ui.component.board.ChessBoardControl;
 import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
 import com.escontrela.lastmove.ui.component.message.TextInputModal;
 import com.escontrela.lastmove.ui.component.promotion.PromotionPickerControl;
 import com.escontrela.lastmove.ui.event.OpenTacticsWorkspaceEvent;
+import com.escontrela.lastmove.ui.event.OpenStudyChapterTacticEvent;
+import com.escontrela.lastmove.ui.event.OpenAnalysisSessionTacticEvent;
+import com.escontrela.lastmove.ui.event.OpenAnalysisSessionEvent;
+import com.escontrela.lastmove.ui.event.OpenStudyWorkspaceEvent;
+import com.escontrela.lastmove.ui.event.UiEventBus;
 import com.escontrela.lastmove.ui.model.BoardMoveInput;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
 import com.escontrela.lastmove.ui.screen.UiScreenController;
@@ -33,6 +44,7 @@ import com.escontrela.lastmove.ui.service.BoardAppearancePreferencesService;
 import com.escontrela.lastmove.ui.service.ChessSoundService;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import javafx.fxml.FXML;
 import javafx.animation.FadeTransition;
 import javafx.animation.ScaleTransition;
@@ -71,28 +83,44 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
   @FXML private Label resultDetailLabel;
   @FXML private Button hintButton;
   @FXML private Button nextExerciseButton;
+  @FXML private Button backToStudyButton;
+  @FXML private VBox exerciseRail;
 
   private final TacticService tacticService;
+  private final StudyService studyService;
+  private final AnalysisSessionService analysisSessionService;
   private final CurrentUserService currentUserService;
   private final ChessSoundService chessSoundService;
   private final BoardAppearancePreferencesService boardAppearancePreferencesService;
   private final UiFlowManager uiFlowManager;
+  private final UiEventBus uiEventBus;
   private TacticSuiteId activeSuiteId;
   private TacticExerciseId activeExerciseId;
   private Optional<AnalysisNodeId> authorParentNodeId = Optional.empty();
   private BoardMoveInput pendingPromotionMove;
   private boolean authoring;
+  private UUID temporarySessionId;
+  private StudyId temporaryStudyId;
+  private StudyChapterId temporaryChapterId;
+  private AnalysisSessionId temporaryAnalysisSessionId;
+  private TacticWorkspace temporaryWorkspace;
 
   public TacticsWorkspaceScreenController(
       TacticService tacticService,
+      StudyService studyService,
+      AnalysisSessionService analysisSessionService,
       CurrentUserService currentUserService,
       ChessSoundService chessSoundService,
       BoardAppearancePreferencesService boardAppearancePreferencesService,
+      UiEventBus uiEventBus,
       @Lazy UiFlowManager uiFlowManager) {
     this.tacticService = tacticService;
+    this.studyService = studyService;
+    this.analysisSessionService = analysisSessionService;
     this.currentUserService = currentUserService;
     this.chessSoundService = chessSoundService;
     this.boardAppearancePreferencesService = boardAppearancePreferencesService;
+    this.uiEventBus = uiEventBus;
     this.uiFlowManager = uiFlowManager;
   }
 
@@ -123,14 +151,50 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
 
   @EventListener
   public void onOpenTacticsWorkspace(OpenTacticsWorkspaceEvent event) {
+    clearTemporaryState();
     activeSuiteId = event.suiteId();
     activeExerciseId = event.exerciseId().orElse(null);
     authoring = false;
     authorParentNodeId = Optional.empty();
   }
 
+  @EventListener
+  public void onOpenStudyChapterTactic(OpenStudyChapterTacticEvent event) {
+    clearTemporaryState();
+    Optional<PlayerId> owner = activeOwner();
+    if (owner.isEmpty()) return;
+    var source = studyService.chapterTacticSource(owner.orElseThrow(), event.studyId(), event.chapterId());
+    TemporaryTacticSession session = tacticService.startTemporaryExercise(source.title(), source.document());
+    temporarySessionId = session.sessionId();
+    temporaryStudyId = event.studyId();
+    temporaryChapterId = event.chapterId();
+    temporaryWorkspace = session.workspace();
+    activeSuiteId = null;
+    activeExerciseId = null;
+    authoring = false;
+    authorParentNodeId = Optional.empty();
+  }
+
+  @EventListener
+  public void onOpenAnalysisSessionTactic(OpenAnalysisSessionTacticEvent event) {
+    clearTemporaryState();
+    var source = analysisSessionService.sessionTacticSource(event.sessionId());
+    TemporaryTacticSession session = tacticService.startTemporaryExercise(source.title(), source.document());
+    temporarySessionId = session.sessionId();
+    temporaryAnalysisSessionId = event.sessionId();
+    temporaryWorkspace = session.workspace();
+    activeSuiteId = null;
+    activeExerciseId = null;
+    authoring = false;
+    authorParentNodeId = Optional.empty();
+  }
+
   @Override
   public void onShow() {
+    if (isTemporaryExercise()) {
+      showTemporaryExercise();
+      return;
+    }
     if (activeSuiteId == null || activeOwner().isEmpty()) {
       uiFlowManager.show(UiScreenId.TACTICS);
       return;
@@ -140,6 +204,21 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
 
   @FXML
   public void backToSuites() {
+    if (isTemporaryExercise()) {
+      StudyId studyId = temporaryStudyId;
+      StudyChapterId chapterId = temporaryChapterId;
+      AnalysisSessionId analysisSessionId = temporaryAnalysisSessionId;
+      clearTemporaryState();
+      if (analysisSessionId != null) {
+        uiEventBus.publish(
+            new OpenAnalysisSessionEvent(analysisSessionId, "Returned from tactic practice"));
+        uiFlowManager.show(UiScreenId.PGN_ANALYSIS);
+      } else {
+        uiEventBus.publish(new OpenStudyWorkspaceEvent(studyId, chapterId));
+        uiFlowManager.show(UiScreenId.STUDY_WORKSPACE);
+      }
+      return;
+    }
     uiFlowManager.show(UiScreenId.TACTICS);
   }
 
@@ -157,6 +236,7 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
 
   @FXML
   public void onToggleAuthoring() {
+    if (isTemporaryExercise()) return;
     if (activeExerciseId == null) return;
     authoring = !authoring;
     authorParentNodeId = Optional.empty();
@@ -166,6 +246,12 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
 
   @FXML
   public void onRestart() {
+    if (isTemporaryExercise()) {
+      chessBoard.clearHintSquare();
+      temporaryWorkspace = tacticService.restartTemporaryExercise(temporarySessionId);
+      render(temporaryWorkspace);
+      return;
+    }
     if (activeExerciseId != null) {
       authorParentNodeId = Optional.empty();
       chessBoard.clearHintSquare();
@@ -175,6 +261,13 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
 
   @FXML
   public void onHint() {
+    if (isTemporaryExercise()) {
+      TacticHint hint = tacticService.requestTemporaryHint(temporarySessionId);
+      chessBoard.setHintSquare(hint.sourceSquare().orElse(null));
+      temporaryWorkspace = hint.workspace();
+      render(temporaryWorkspace);
+      return;
+    }
     if (activeExerciseId == null || authoring) return;
     TacticHint hint =
         tacticService.requestHint(activeOwner().orElseThrow(), activeSuiteId, activeExerciseId);
@@ -184,6 +277,7 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
 
   @FXML
   public void onNextExercise() {
+    if (isTemporaryExercise()) return;
     if (activeExerciseId == null) return;
     int currentIndex =
         java.util.stream.IntStream.range(0, exerciseList.getItems().size())
@@ -303,6 +397,15 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
   }
 
   private void submitMove(BoardMoveInput input) {
+    if (isTemporaryExercise()) {
+      chessBoard.clearHintSquare();
+      TacticMoveOutcome outcome =
+          tacticService.attemptTemporaryMove(
+              temporarySessionId, new MoveCommand(input.fromSquare(), input.toSquare(), input.promotionPiece()));
+      temporaryWorkspace = outcome.workspace();
+      render(temporaryWorkspace);
+      return;
+    }
     if (activeExerciseId == null) return;
     chessBoard.clearHintSquare();
     MoveCommand move = new MoveCommand(input.fromSquare(), input.toSquare(), input.promotionPiece());
@@ -334,6 +437,37 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
     chessBoard.renderPosition(workspace.position());
     statusLabel.setText(workspace.status());
     renderResult(workspace);
+  }
+
+  private boolean isTemporaryExercise() {
+    return temporarySessionId != null;
+  }
+
+  private void showTemporaryExercise() {
+    exerciseRail.setManaged(false);
+    exerciseRail.setVisible(false);
+    backToStudyButton.setManaged(true);
+    backToStudyButton.setVisible(true);
+    suiteTitleLabel.setText("Study chapter tactic");
+    exerciseList.getItems().clear();
+    render(temporaryWorkspace);
+  }
+
+  private void clearTemporaryState() {
+    if (temporarySessionId != null) tacticService.closeTemporaryExercise(temporarySessionId);
+    temporarySessionId = null;
+    temporaryStudyId = null;
+    temporaryChapterId = null;
+    temporaryAnalysisSessionId = null;
+    temporaryWorkspace = null;
+    if (exerciseRail != null) {
+      exerciseRail.setManaged(true);
+      exerciseRail.setVisible(true);
+    }
+    if (backToStudyButton != null) {
+      backToStudyButton.setManaged(false);
+      backToStudyButton.setVisible(false);
+    }
   }
 
   private void renderResult(TacticWorkspace workspace) {

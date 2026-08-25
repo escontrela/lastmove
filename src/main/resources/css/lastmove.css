@@ -899,6 +899,13 @@
 .engine-evaluation-change { -fx-background-color: transparent; -fx-text-fill: #1c69d4; -fx-font-weight: 700; }
 .engine-evaluation-activity { -fx-background-color: #1c69d4; }
 .engine-evaluation-activity.engine-evaluation-activity-idle { -fx-background-color: #cbd5df; }
+.engine-evaluation-host-minimized { -fx-padding: 0; }
+.engine-evaluation-control:empty { -fx-padding: 0; }
+.engine-evaluation-compact-content { -fx-padding: 9 12; -fx-background-color: #f5f8fb; -fx-border-color: #dce5ef; -fx-border-width: 1; }
+.engine-evaluation-compact-name, .engine-evaluation-compact-best-move { -fx-font-weight: 800; -fx-text-fill: #262626; }
+.engine-evaluation-compact-label { -fx-font-size: 11px; -fx-text-fill: #65717e; }
+.engine-evaluation-minimize { -fx-min-width: 28px; -fx-min-height: 26px; -fx-padding: 0 7; -fx-background-color: transparent; -fx-border-color: #dce5ef; -fx-border-radius: 4; -fx-font-size: 15px; -fx-font-weight: 700; }
+.engine-evaluation-minimize:hover { -fx-background-color: #e8f1fb; -fx-border-color: #1c69d4; }
 .engine-selector-modal-card { -fx-min-width: 360px; -fx-max-width: 420px; }
 .engine-selector-tile { -fx-min-width: 92px; -fx-min-height: 78px; -fx-background-color: #ffffff; -fx-border-color: #dce5ef; -fx-border-width: 1; -fx-alignment: center; }
 .engine-selector-tile:hover, .engine-selector-tile.selected { -fx-border-color: #1c69d4; -fx-background-color: #edf5ff; }
@@ -1040,9 +1047,9 @@
 }
 
 .session-title {
-    -fx-font-size: 15px;
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
     -fx-text-fill: #262626;
-    -fx-text-overrun: ellipsis;
 }
 
 /* Dedicated session-management screen. */
@@ -1683,6 +1690,13 @@
 .night-mode .engine-evaluation-name, .night-mode .engine-evaluation-metric-value, .night-mode .engine-selector-name { -fx-text-fill: #f1f3f5; }
 .night-mode .engine-evaluation-version, .night-mode .engine-evaluation-metric-label, .night-mode .engine-evaluation-searching, .night-mode .engine-selector-version { -fx-text-fill: #b8c5d3; }
 .night-mode .engine-evaluation-activity.engine-evaluation-activity-idle { -fx-background-color: #465465; }
+.night-mode .engine-evaluation-compact-content { -fx-background-color: #262e38; -fx-border-color: #3b4654; }
+.night-mode .engine-evaluation-compact-name, .night-mode .engine-evaluation-compact-best-move { -fx-text-fill: #f1f3f5; }
+.night-mode .engine-evaluation-compact-label { -fx-text-fill: #b8c5d3; }
+.night-mode .engine-evaluation-minimize { -fx-border-color: #3b4654; -fx-text-fill: #f1f3f5; }
+.night-mode .tactic-result-card { -fx-background-color: #262e38; -fx-border-color: #3b4654; }
+.night-mode .tactic-result-card .eyebrow-label, .night-mode .tactic-result-card .card-copy { -fx-text-fill: #b8c5d3; }
+.night-mode .primary-button:disabled { -fx-background-color: #303b47; -fx-border-color: #465465; -fx-text-fill: #8291a0; }
 .night-mode .engine-selector-tile:hover, .night-mode .engine-selector-tile.selected { -fx-background-color: #2b3b4d; -fx-border-color: #6ba5f0; }
 .night-mode .statistics-workspace { -fx-background-color: #121820; }
 .night-mode .statistics-filter-card, .night-mode .statistics-chart-card, .night-mode .statistics-result-card { -fx-background-color: #262e38; -fx-border-color: #3b4654; }
@@ -2138,6 +2152,55 @@
 .night-mode .speaker-notes-heading { -fx-text-fill: #d6bd7f; }
 .night-mode .speaker-notes-empty { -fx-text-fill: #aeb8c3; }
 .night-mode .speaker-notes-section, .night-mode .speaker-notes-move, .night-mode .speaker-notes-story-line { -fx-border-color: transparent transparent #3b4654 transparent; }
+
+/* Interactive move-tree explorer. */
+.move-tree-overlay { -fx-background-color: rgba(8, 15, 24, 0.42); -fx-padding: 26; }
+.move-tree-card { -fx-background-color: #ffffff; -fx-background-radius: 18; -fx-border-color: #d8dde3; -fx-border-radius: 18; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.28), 28, 0.14, 0, 8); }
+.move-tree-header { -fx-padding: 18 22 14 22; -fx-border-color: transparent transparent #e6eaf0 transparent; -fx-cursor: move; }
+.move-tree-title { -fx-font-size: 21px; -fx-font-weight: bold; -fx-text-fill: #16233b; }
+.move-tree-support { -fx-font-size: 13px; -fx-text-fill: #6b7889; }
+.move-tree-close, .move-tree-comment-close { -fx-background-color: transparent; -fx-font-size: 22px; -fx-font-weight: bold; -fx-cursor: hand; }
+.move-tree-scroll, .move-tree-scroll > .viewport { -fx-background-color: transparent; -fx-background: transparent; }
+.move-tree-canvas { -fx-background-color: linear-gradient(to bottom, #fbfdff, #f4f8fc); }
+.move-tree-explorer { -fx-background-color: #f7f9fc; }
+.move-tree-inspector { -fx-background-color: #ffffff; -fx-border-color: transparent transparent transparent #dfe5ed; -fx-padding: 18; }
+.move-tree-connector-main { -fx-stroke: #1c69d4; -fx-stroke-width: 2.1; }
+.move-tree-connector-variation { -fx-stroke: #9d7ee6; -fx-stroke-width: 1.5; -fx-opacity: 0.82; }
+.move-tree-node { -fx-background-color: transparent; -fx-padding: 3 0; }
+.move-tree-marker { -fx-background-color: transparent; }
+.move-tree-marker-outer { -fx-fill: #ffffff; -fx-stroke-width: 2; }
+.move-tree-marker-inner { -fx-stroke: transparent; }
+.move-tree-marker-main .move-tree-marker-outer { -fx-stroke: #2878f0; }
+.move-tree-marker-main .move-tree-marker-inner { -fx-fill: #2878f0; }
+.move-tree-marker-variation .move-tree-marker-outer { -fx-stroke: #9d65df; }
+.move-tree-marker-variation .move-tree-marker-inner { -fx-fill: #9d65df; }
+.move-tree-marker-current .move-tree-marker-outer { -fx-stroke-width: 3; -fx-effect: dropshadow(gaussian, rgba(28,105,212,0.42), 10, 0.25, 0, 0); }
+.move-tree-marker-current .move-tree-marker-inner { -fx-fill: #075fbd; }
+.move-tree-san { -fx-background-color: transparent; -fx-text-fill: #16233b; -fx-font-weight: bold; -fx-padding: 4 1; -fx-cursor: hand; }
+.move-tree-san:hover { -fx-underline: true; }
+.move-tree-comment-button { -fx-background-color: rgba(28,105,212,0.10); -fx-border-color: rgba(28,105,212,0.28); -fx-background-radius: 9; -fx-border-radius: 9; -fx-padding: 6; }
+.move-tree-comment-viewer { -fx-background-color: #fffdf7; -fx-border-color: #d8cda9; -fx-background-radius: 12; -fx-border-radius: 12; -fx-padding: 14; }
+.move-tree-comment-title { -fx-font-weight: bold; -fx-text-fill: #6b5a2d; }
+.move-tree-comment-body { -fx-text-fill: #3c4650; }
+.move-tree-comment-scroll, .move-tree-comment-scroll > .viewport { -fx-background-color: transparent; -fx-background: transparent; }
+.move-tree-preview-heading { -fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #657386; }
+.move-tree-resize-handle { -fx-text-fill: #6b7889; -fx-cursor: se-resize; -fx-font-size: 17px; -fx-padding: 1 8 5 8; }
+.move-tree-empty { -fx-font-style: italic; -fx-text-fill: #6b7889; }
+.night-mode .move-tree-card { -fx-background-color: #1c2430; -fx-border-color: #465465; }
+.night-mode .move-tree-header { -fx-border-color: transparent transparent #465465 transparent; }
+.night-mode .move-tree-title { -fx-text-fill: #f1f3f5; }
+.night-mode .move-tree-support, .night-mode .move-tree-empty { -fx-text-fill: #aeb8c3; }
+.night-mode .move-tree-close, .night-mode .move-tree-comment-close { -fx-text-fill: #f1f3f5; }
+.night-mode .move-tree-canvas { -fx-background-color: linear-gradient(to bottom, #18212d, #202b38); }
+.night-mode .move-tree-explorer, .night-mode .move-tree-inspector { -fx-background-color: #1c2430; }
+.night-mode .move-tree-inspector { -fx-border-color: transparent transparent transparent #465465; }
+.night-mode .move-tree-marker-outer { -fx-fill: #202c3a; }
+.night-mode .move-tree-san { -fx-text-fill: #74b4ff; }
+.night-mode .move-tree-comment-button { -fx-background-color: rgba(116,180,255,0.12); -fx-border-color: rgba(116,180,255,0.3); }
+.night-mode .move-tree-comment-viewer { -fx-background-color: #202c3a; -fx-border-color: #5b6780; }
+.night-mode .move-tree-comment-title { -fx-text-fill: #d6bd7f; }
+.night-mode .move-tree-comment-body { -fx-text-fill: #f1f3f5; }
+.night-mode .move-tree-preview-heading, .night-mode .move-tree-resize-handle { -fx-text-fill: #aeb8c3; }
 
 /* Persistent game notifications use the same contained-overlay language as speaker notes. */
 .notifications-overlay { -fx-background-color: rgba(24, 31, 40, 0.34); }

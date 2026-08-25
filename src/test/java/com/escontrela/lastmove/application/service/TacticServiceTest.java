@@ -98,6 +98,34 @@ class TacticServiceTest {
   }
 
   @Test
+  void runsAnAnalysisTreeAsAnUnpersistedTemporaryTactic() {
+    var game =
+        gameFactory.createAnalysisGame(
+            Fen.of("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"));
+    var document = documentFactory.fromPosition(game.currentPosition(), Optional.empty());
+    document.apply(game.move(move("e2", "e4")));
+    document.apply(game.move(move("e7", "e5")));
+    assertTrue(document.previous());
+    var alternative = gameFactory.createAnalysisGame(document.currentPosition());
+    document.apply(alternative.move(move("c7", "c5")));
+
+    var temporary = service.startTemporaryExercise("Study chapter", document);
+    assertEquals("Study chapter", temporary.workspace().exerciseTitle());
+    assertTrue(temporary.workspace().readyToSolve());
+    assertTrue(service.listSuites(owner).isEmpty());
+
+    var outcome = service.attemptTemporaryMove(temporary.sessionId(), move("e2", "e4"));
+    assertTrue(outcome.accepted());
+    assertTrue(outcome.workspace().solved());
+    assertEquals("c5", outcome.workspace().position().lastMove().orElseThrow().san().getValue());
+
+    service.closeTemporaryExercise(temporary.sessionId());
+    assertThrows(
+        NoSuchElementException.class,
+        () -> service.restartTemporaryExercise(temporary.sessionId()));
+  }
+
+  @Test
   void exposesBlackAsTheSolverWhenTheFenIsBlackToMove() {
     TacticSuiteSummary suite =
         service.createSuite(new CreateTacticSuiteCommand(owner, "Endgames", Optional.empty()));

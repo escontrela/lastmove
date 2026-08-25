@@ -67,6 +67,8 @@ public final class SessionSelectorSkin extends SkinBase<SessionSelectorControl> 
       getStyleClass().add("study-library-cell");
       marker.getStyleClass().add("session-active-marker");
       title.getStyleClass().add("session-title");
+      title.setWrapText(true);
+      title.setMinWidth(0);
       title.setMaxWidth(Double.MAX_VALUE);
       HBox.setHgrow(title, Priority.ALWAYS);
       content.setAlignment(Pos.CENTER_LEFT);

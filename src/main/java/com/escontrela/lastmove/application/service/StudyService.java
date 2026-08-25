@@ -18,6 +18,7 @@ import com.escontrela.lastmove.application.study.RenameChapterCommand;
 import com.escontrela.lastmove.application.study.RenameStudyCommand;
 import com.escontrela.lastmove.application.study.StudyChapterSummary;
 import com.escontrela.lastmove.application.study.StudyChapterPositionEditContext;
+import com.escontrela.lastmove.application.study.StudyChapterTacticSource;
 import com.escontrela.lastmove.application.study.StudyChapterWorkspace;
 import com.escontrela.lastmove.application.study.StudyDetails;
 import com.escontrela.lastmove.application.study.StudySummary;
@@ -276,6 +277,14 @@ public final class StudyService {
         chapter.document().currentPosition(),
         chapter.document().sourceResult(),
         notationTree(chapter.document()));
+  }
+
+  /** Returns a chapter as source data for a temporary tactic attempt. */
+  public StudyChapterTacticSource chapterTacticSource(
+      PlayerId ownerId, StudyId studyId, StudyChapterId chapterId) {
+    assertAvailable();
+    StudyChapter chapter = ownedChapter(ownedStudy(ownerId, studyId), chapterId);
+    return new StudyChapterTacticSource(chapter.title(), chapter.document());
   }
 
   /** Loads the immutable context required to edit a chapter's initial position. */

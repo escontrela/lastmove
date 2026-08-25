@@ -18,6 +18,8 @@ import com.escontrela.lastmove.application.tactics.TacticMoveOutcome;
 import com.escontrela.lastmove.application.tactics.TacticSuiteDetails;
 import com.escontrela.lastmove.application.tactics.TacticSuiteSummary;
 import com.escontrela.lastmove.application.tactics.TacticWorkspace;
+import com.escontrela.lastmove.application.tactics.TemporaryTacticSession;
+import com.escontrela.lastmove.domain.analysis.AnalysisDocument;
 import com.escontrela.lastmove.domain.analysis.AnalysisNode;
 import com.escontrela.lastmove.domain.common.PieceColor;
 import com.escontrela.lastmove.domain.common.Square;
@@ -55,6 +57,7 @@ public final class TacticService {
   private final ChessGameFactory gameFactory;
   private final PersistenceAvailability availability;
   private final Map<AttemptKey, Attempt> attempts = new HashMap<>();
+  private final Map<UUID, Attempt> temporaryAttempts = new HashMap<>();
 
   public TacticService(
       TacticRepository tacticRepository,
@@ -218,6 +221,59 @@ public final class TacticService {
     return attempt.workspace();
   }
 
+  /** Starts an independent, in-memory attempt from an existing analysis tree. */
+  public TemporaryTacticSession startTemporaryExercise(String title, AnalysisDocument source) {
+    TacticExercise exercise =
+        exerciseFactory.fromSelectedLine(
+            Objects.requireNonNull(title, "title must not be null"),
+            Objects.requireNonNull(source, "source must not be null"));
+    Attempt attempt = Attempt.start(TacticSuiteId.random(), "Study chapter", exercise);
+    UUID sessionId = UUID.randomUUID();
+    temporaryAttempts.put(sessionId, attempt);
+    return new TemporaryTacticSession(sessionId, attempt.workspace());
+  }
+
+  /** Restarts a temporary attempt without creating a database record. */
+  public TacticWorkspace restartTemporaryExercise(UUID sessionId) {
+    Attempt attempt = temporaryAttempt(sessionId);
+    Attempt restarted = Attempt.start(attempt.suiteId, attempt.suiteTitle, attempt.exercise);
+    temporaryAttempts.put(sessionId, restarted);
+    return restarted.workspace();
+  }
+
+  /** Checks a move in a temporary attempt. */
+  public TacticMoveOutcome attemptTemporaryMove(UUID sessionId, MoveCommand command) {
+    Attempt attempt = temporaryAttempt(sessionId);
+    ChessGame game = gameFactory.createAnalysisGame(attempt.position);
+    MoveExecutionResult result = game.move(Objects.requireNonNull(command, "command must not be null"));
+    if (!result.accepted()) {
+      return new TacticMoveOutcome(attempt.workspace("That move is not legal."), false);
+    }
+    attempt.recordAttempt();
+    if (!attempt.accept(result)) {
+      return new TacticMoveOutcome(
+          attempt.workspace("That move does not solve the tactic. Try again."), false);
+    }
+    return new TacticMoveOutcome(attempt.workspace(), true);
+  }
+
+  /** Reveals a hint for a temporary attempt. */
+  public TacticHint requestTemporaryHint(UUID sessionId) {
+    Attempt attempt = temporaryAttempt(sessionId);
+    Optional<Square> sourceSquare = attempt.requestHint();
+    return new TacticHint(
+        attempt.workspace(
+            sourceSquare.isPresent()
+                ? "Hint used: move the highlighted piece. Each hint costs 30 percentage points."
+                : "No hint is available for this tactic."),
+        sourceSquare);
+  }
+
+  /** Releases the process-local state associated with a temporary attempt. */
+  public void closeTemporaryExercise(UUID sessionId) {
+    temporaryAttempts.remove(Objects.requireNonNull(sessionId, "sessionId must not be null"));
+  }
+
   /** Checks a legal move against the current expected solution continuations. */
   public TacticMoveOutcome attemptMove(
       PlayerId ownerId, TacticSuiteId suiteId, TacticExerciseId exerciseId, MoveCommand command) {
@@ -319,6 +375,11 @@ public final class TacticService {
         .orElseThrow(() -> new NoSuchElementException("Unknown tactic suite " + suiteId.value()));
   }
 
+  private Attempt temporaryAttempt(UUID sessionId) {
+    return Optional.ofNullable(temporaryAttempts.get(Objects.requireNonNull(sessionId, "sessionId must not be null")))
+        .orElseThrow(() -> new NoSuchElementException("Temporary tactic session is no longer available"));
+  }
+
   private NoSuchElementException unknownSuite(TacticSuiteId suiteId) {
     return new NoSuchElementException("Unknown tactic suite " + suiteId.value());
   }
@@ -405,6 +466,18 @@ public final class TacticService {
 
     static Attempt start(TacticSuite suite, TacticExercise exercise) {
       return new Attempt(suite, exercise);
+    }
+
+    static Attempt start(TacticSuiteId suiteId, String suiteTitle, TacticExercise exercise) {
+      return new Attempt(suiteId, suiteTitle, exercise);
+    }
+
+    private Attempt(TacticSuiteId suiteId, String suiteTitle, TacticExercise exercise) {
+      this.suiteId = Objects.requireNonNull(suiteId, "suiteId must not be null");
+      this.suiteTitle = Objects.requireNonNull(suiteTitle, "suiteTitle must not be null");
+      this.exercise = Objects.requireNonNull(exercise, "exercise must not be null");
+      this.expected = exercise.solution().tree().roots();
+      this.position = exercise.solution().initialPosition();
     }
 
     boolean accept(MoveExecutionResult result) {
