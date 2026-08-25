@@ -16,7 +16,7 @@
 <VBox fx:id="root" styleClass="app-shell" stylesheets="@../css/lastmove.css" xmlns="http://javafx.com/javafx/22.0.2" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.escontrela.lastmove.ui.controller.StudyDestinationScreenController">
     <BorderPane VBox.vgrow="ALWAYS">
         <top>
-            <VBox><ApplicationHeader />
+            <VBox><ApplicationHeader fx:id="applicationHeader" />
             <HBox managed="false" visible="false" alignment="CENTER_LEFT" spacing="16.0" styleClass="workspace-header">
                 <VBox spacing="6.0">
                     <Label styleClass="eyebrow-label" text="Analysis session" />

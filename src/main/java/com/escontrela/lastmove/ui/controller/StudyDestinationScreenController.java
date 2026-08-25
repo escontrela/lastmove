@@ -11,6 +11,8 @@ import com.escontrela.lastmove.application.study.StudySummary;
 import com.escontrela.lastmove.domain.analysis.AnalysisSessionId;
 import com.escontrela.lastmove.domain.player.PlayerId;
 import com.escontrela.lastmove.ui.component.message.TextInputModal;
+import com.escontrela.lastmove.ui.component.header.ApplicationHeader;
+import com.escontrela.lastmove.ui.component.header.HeaderAction;
 import com.escontrela.lastmove.ui.event.OpenAnalysisSessionEvent;
 import com.escontrela.lastmove.ui.event.OpenStudyWorkspaceEvent;
 import com.escontrela.lastmove.ui.event.SelectStudyDestinationEvent;
@@ -44,6 +46,7 @@ public final class StudyDestinationScreenController implements UiScreenControlle
   @FXML private ListView<StudySummary> studyList;
   @FXML private Button createStudyButton;
   @FXML private TextInputModal textInputModal;
+  @FXML private ApplicationHeader applicationHeader;
 
   private final StudyService studyService;
   private final AnalysisSessionService analysisSessionService;
@@ -82,7 +85,18 @@ public final class StudyDestinationScreenController implements UiScreenControlle
 
   @Override
   public void onShow() {
-    if (pendingSessionId == null || currentUserService.activePlayerState().playerId().isEmpty()) {
+    boolean canCreateStudy =
+        pendingSessionId != null && currentUserService.activePlayerState().playerId().isPresent();
+    applicationHeader.setContextActions(
+        List.of(
+            new HeaderAction(
+                "Create a new study",
+                "New study",
+                "/images/add_35dp_000000.png",
+                "/images/add_35dp_FFFFFF.png",
+                event -> onCreateStudy(),
+                !canCreateStudy)));
+    if (!canCreateStudy) {
       returnToAnalysis("Study destination selection cancelled");
       return;
     }
