@@ -27,6 +27,11 @@ public final class TacticExerciseFactory {
     return exercise(title, documentFactory.copyOf(source).content());
   }
 
+  /** Copies the active study variation as a standalone tactic solution. */
+  public TacticExercise fromSelectedLine(String title, AnalysisDocument source) {
+    return exercise(title, documentFactory.copySelectedLine(source).content());
+  }
+
   private TacticExercise exercise(String title, AnalysisContent content) {
     Instant now = Instant.now();
     return new TacticExercise(TacticExerciseId.random(), title, content, now, now);

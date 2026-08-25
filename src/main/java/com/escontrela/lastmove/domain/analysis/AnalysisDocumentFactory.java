@@ -88,6 +88,22 @@ public final class AnalysisDocumentFactory {
         navigation);
   }
 
+  /**
+   * Copies only the currently selected variation, including its selected continuation.
+   *
+   * <p>This is useful when a consumer should train or present the line the reader is currently
+   * following, without silently falling back to an unrelated preferred variation.
+   */
+  public AnalysisDocument copySelectedLine(AnalysisDocument source) {
+    AnalysisDocument required = Objects.requireNonNull(source, "source must not be null");
+    AnalysisDocument copy = fromPosition(required.initialPosition(), required.sourceResult());
+    for (AnalysisNode node : required.notationNodes()) {
+      copy.apply(MoveExecutionResult.accepted(node.ply().resultingPosition(), node.ply().move()));
+    }
+    copy.first();
+    return copy;
+  }
+
   private AnalysisNodeId copySubtree(
       AnalysisDocument source,
       AnalysisNode node,

@@ -899,6 +899,13 @@
 .engine-evaluation-change { -fx-background-color: transparent; -fx-text-fill: #1c69d4; -fx-font-weight: 700; }
 .engine-evaluation-activity { -fx-background-color: #1c69d4; }
 .engine-evaluation-activity.engine-evaluation-activity-idle { -fx-background-color: #cbd5df; }
+.engine-evaluation-host-minimized { -fx-padding: 0; }
+.engine-evaluation-control:empty { -fx-padding: 0; }
+.engine-evaluation-compact-content { -fx-padding: 9 12; -fx-background-color: #f5f8fb; -fx-border-color: #dce5ef; -fx-border-width: 1; }
+.engine-evaluation-compact-name, .engine-evaluation-compact-best-move { -fx-font-weight: 800; -fx-text-fill: #262626; }
+.engine-evaluation-compact-label { -fx-font-size: 11px; -fx-text-fill: #65717e; }
+.engine-evaluation-minimize { -fx-min-width: 28px; -fx-min-height: 26px; -fx-padding: 0 7; -fx-background-color: transparent; -fx-border-color: #dce5ef; -fx-border-radius: 4; -fx-font-size: 15px; -fx-font-weight: 700; }
+.engine-evaluation-minimize:hover { -fx-background-color: #e8f1fb; -fx-border-color: #1c69d4; }
 .engine-selector-modal-card { -fx-min-width: 360px; -fx-max-width: 420px; }
 .engine-selector-tile { -fx-min-width: 92px; -fx-min-height: 78px; -fx-background-color: #ffffff; -fx-border-color: #dce5ef; -fx-border-width: 1; -fx-alignment: center; }
 .engine-selector-tile:hover, .engine-selector-tile.selected { -fx-border-color: #1c69d4; -fx-background-color: #edf5ff; }
@@ -1040,9 +1047,9 @@
 }
 
 .session-title {
-    -fx-font-size: 15px;
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
     -fx-text-fill: #262626;
-    -fx-text-overrun: ellipsis;
 }
 
 /* Dedicated session-management screen. */
@@ -1683,6 +1690,13 @@
 .night-mode .engine-evaluation-name, .night-mode .engine-evaluation-metric-value, .night-mode .engine-selector-name { -fx-text-fill: #f1f3f5; }
 .night-mode .engine-evaluation-version, .night-mode .engine-evaluation-metric-label, .night-mode .engine-evaluation-searching, .night-mode .engine-selector-version { -fx-text-fill: #b8c5d3; }
 .night-mode .engine-evaluation-activity.engine-evaluation-activity-idle { -fx-background-color: #465465; }
+.night-mode .engine-evaluation-compact-content { -fx-background-color: #262e38; -fx-border-color: #3b4654; }
+.night-mode .engine-evaluation-compact-name, .night-mode .engine-evaluation-compact-best-move { -fx-text-fill: #f1f3f5; }
+.night-mode .engine-evaluation-compact-label { -fx-text-fill: #b8c5d3; }
+.night-mode .engine-evaluation-minimize { -fx-border-color: #3b4654; -fx-text-fill: #f1f3f5; }
+.night-mode .tactic-result-card { -fx-background-color: #262e38; -fx-border-color: #3b4654; }
+.night-mode .tactic-result-card .eyebrow-label, .night-mode .tactic-result-card .card-copy { -fx-text-fill: #b8c5d3; }
+.night-mode .primary-button:disabled { -fx-background-color: #303b47; -fx-border-color: #465465; -fx-text-fill: #8291a0; }
 .night-mode .engine-selector-tile:hover, .night-mode .engine-selector-tile.selected { -fx-background-color: #2b3b4d; -fx-border-color: #6ba5f0; }
 .night-mode .statistics-workspace { -fx-background-color: #121820; }
 .night-mode .statistics-filter-card, .night-mode .statistics-chart-card, .night-mode .statistics-result-card { -fx-background-color: #262e38; -fx-border-color: #3b4654; }

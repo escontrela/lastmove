@@ -41,6 +41,7 @@ import com.escontrela.lastmove.ui.component.notation.MoveNotationEntry;
 import com.escontrela.lastmove.ui.component.notation.MoveNotationNode;
 import com.escontrela.lastmove.ui.component.promotion.PromotionPickerControl;
 import com.escontrela.lastmove.ui.event.OpenStudyWorkspaceEvent;
+import com.escontrela.lastmove.ui.event.OpenStudyChapterTacticEvent;
 import com.escontrela.lastmove.ui.event.OpenChapterPositionEditorEvent;
 import com.escontrela.lastmove.ui.event.UiEventBus;
 import com.escontrela.lastmove.ui.model.BoardMoveInput;
@@ -886,6 +887,8 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
         "Edit chapter position…", "", event -> editChapterPosition(chapter));
     contextualMenuPanel.addItem("Rename chapter…", "", event -> renameChapter(chapter));
     contextualMenuPanel.addItem("Comments / Edit comment…", "", event -> showChapterComment(chapter));
+    contextualMenuPanel.addItem("Visualize tree", "", event -> showChapterTree(chapter));
+    contextualMenuPanel.addItem("Run chapter as tactic", "", event -> runChapterAsTactic(chapter));
     contextualMenuPanel.addSeparator();
     contextualMenuPanel.addItem("Move chapter up", "↑", event -> moveChapter(chapter, -1));
     contextualMenuPanel.addItem("Move chapter down", "↓", event -> moveChapter(chapter, 1));
@@ -903,6 +906,20 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
                       owner, activeStudyId, chapter.chapterId())));
           uiFlowManager.show(UiScreenId.POSITION_EDITOR);
         });
+  }
+
+  private void runChapterAsTactic(StudyChapterSummary chapter) {
+    if (activeStudyId == null) return;
+    uiEventBus.publish(new OpenStudyChapterTacticEvent(activeStudyId, chapter.chapterId()));
+    uiFlowManager.show(UiScreenId.TACTICS_WORKSPACE);
+  }
+
+  private void showChapterTree(StudyChapterSummary chapter) {
+    if (!chapter.chapterId().equals(activeChapterId)) {
+      activeChapterId = chapter.chapterId();
+      refreshWorkspace();
+    }
+    showMoveTree();
   }
 
   private final class ChapterCell extends ListCell<StudyChapterSummary> {

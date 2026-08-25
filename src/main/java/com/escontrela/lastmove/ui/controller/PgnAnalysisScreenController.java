@@ -30,6 +30,7 @@ import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton;
 import com.escontrela.lastmove.ui.component.tree.MoveTreeOverlay;
 import com.escontrela.lastmove.ui.event.OpenSessionManagementEvent;
 import com.escontrela.lastmove.ui.event.OpenAnalysisSessionEvent;
+import com.escontrela.lastmove.ui.event.OpenAnalysisSessionTacticEvent;
 import com.escontrela.lastmove.ui.event.ReturnToAnalysisSessionEvent;
 import com.escontrela.lastmove.ui.event.SelectStudyDestinationEvent;
 import com.escontrela.lastmove.ui.event.SelectTacticDestinationEvent;
@@ -549,6 +550,13 @@ public class PgnAnalysisScreenController implements UiScreenController {
     int selectedIndex = visibleSessions.indexOf(selected);
     contextualMenuPanel.clearItems();
     contextualMenuPanel.addItem("Visualize tree", "", ignored -> showMoveTree());
+    contextualMenuPanel.addItem(
+        "Run session as tactic",
+        "",
+        ignored -> {
+          uiEventBus.publish(new OpenAnalysisSessionTacticEvent(selected.sessionId()));
+          uiFlowManager.show(UiScreenId.TACTICS_WORKSPACE);
+        });
     contextualMenuPanel.addSeparator();
     contextualMenuPanel.addItem(
         "Open session", "", event -> activateSession(selectedIndex));

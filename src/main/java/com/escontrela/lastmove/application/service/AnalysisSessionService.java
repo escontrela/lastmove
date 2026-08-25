@@ -1,6 +1,7 @@
 package com.escontrela.lastmove.application.service;
 
 import com.escontrela.lastmove.application.dto.AnalysisNodeSummary;
+import com.escontrela.lastmove.application.analysis.AnalysisSessionTacticSource;
 import com.escontrela.lastmove.application.dto.AnalysisNotationNode;
 import com.escontrela.lastmove.application.dto.AnalysisNotationTree;
 import com.escontrela.lastmove.application.dto.AnalysisSessionSummary;
@@ -142,6 +143,12 @@ public final class AnalysisSessionService {
   /** Returns one retained session as a UI-safe summary. */
   public AnalysisSessionSummary sessionSummary(AnalysisSessionId sessionId) {
     return summary(session(sessionId));
+  }
+
+  /** Returns the currently selected variation of one session for a temporary tactic attempt. */
+  public AnalysisSessionTacticSource sessionTacticSource(AnalysisSessionId sessionId) {
+    AnalysisSession source = session(sessionId);
+    return new AnalysisSessionTacticSource(source.title(), source.document());
   }
 
   /** Renames one retained study without changing its identity or active cursor. */

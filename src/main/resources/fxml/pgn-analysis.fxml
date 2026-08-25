@@ -63,8 +63,7 @@
             </VBox>
             <VBox spacing="12.0" styleClass="rail-card" VBox.vgrow="ALWAYS">
                 <padding><Insets bottom="20.0" left="20.0" right="20.0" top="20.0" /></padding>
-                <Label styleClass="eyebrow-label" text="Open sessions" />
-                <Label styleClass="card-title" text="Sessions" />
+                <Label styleClass="eyebrow-label" text="Open session" />
                 <SessionSelectorControl fx:id="sessionSelector" VBox.vgrow="ALWAYS" />
             </VBox>
         </VBox>
