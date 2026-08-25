@@ -13,6 +13,7 @@
 <?import com.escontrela.lastmove.ui.component.promotion.PromotionPickerControl?>
 <?import com.escontrela.lastmove.ui.component.session.SessionSelectorControl?>
 <?import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton?>
+<?import com.escontrela.lastmove.ui.component.tree.MoveTreeOverlay?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.image.Image?>
@@ -120,4 +121,5 @@
     <CommentPanel fx:id="commentPanel" />
     <MultilineTextInputModal fx:id="commentEditor" />
     <MessageBox fx:id="moveDeleteConfirmation" />
+    <MoveTreeOverlay fx:id="moveTreeOverlay" />
 </StackPane>
