@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.escontrela.lastmove.application.dto.AnalysisSessionSummary;
+import com.escontrela.lastmove.application.analysis.AnalysisInitialPositionUpdate;
 import com.escontrela.lastmove.domain.analysis.AnalysisOrigin;
 import com.escontrela.lastmove.domain.analysis.AnalysisSessionId;
 import com.escontrela.lastmove.domain.analysis.AnalysisSessionFactory;
@@ -16,6 +17,7 @@ import com.escontrela.lastmove.domain.game.ChessGame;
 import com.escontrela.lastmove.domain.game.GameResult;
 import com.escontrela.lastmove.domain.game.MoveCommand;
 import com.escontrela.lastmove.domain.game.GamePlayer;
+import com.escontrela.lastmove.domain.game.PositionSnapshot;
 import com.escontrela.lastmove.domain.game.TimeControl;
 import com.escontrela.lastmove.domain.notation.Fen;
 import com.escontrela.lastmove.domain.notation.PgnGame;
@@ -266,6 +268,56 @@ class AnalysisSessionServiceTest {
             .toList());
     assertEquals(4, sourceGame.moveHistory().size());
     assertEquals("Qh4#", record.moves().getLast().ply().move().san().getValue());
+  }
+
+  @Test
+  void exposesTheSessionInitialPositionToTheEditor() {
+    AnalysisSessionSummary session = service.createInitialSession();
+    var context = service.positionEditContext(session.sessionId());
+
+    assertEquals(session.sessionId(), context.sessionId());
+    assertEquals(service.currentPosition(session.sessionId()), context.position());
+    assertEquals(PieceColor.WHITE, context.position().activeColor());
+  }
+
+  @Test
+  void replacingTheSameInitialPositionIsANoOp() {
+    AnalysisSessionSummary session = service.createInitialSession();
+
+    var result =
+        service.replaceInitialPosition(
+            session.sessionId(), service.currentPosition(session.sessionId()), false);
+
+    assertEquals(new AnalysisInitialPositionUpdate(false, false, 0), result);
+  }
+
+  @Test
+  void replacingTheInitialPositionOfAMoveSessionRequiresConfirmation() {
+    AnalysisSessionSummary session = service.createInitialSession();
+    service.attemptMove(session.sessionId(), move("e2", "e4"));
+    PositionSnapshot replacement =
+        service
+            .createFenSession(Fen.of("8/8/8/8/8/8/8/K6k b - - 7 42"))
+            .currentPosition();
+
+    var unconfirmed =
+        service.replaceInitialPosition(session.sessionId(), replacement, false);
+    assertFalse(unconfirmed.updated());
+    assertTrue(unconfirmed.requiresMoveReset());
+    assertEquals(1, unconfirmed.discardedMoveCount());
+    assertEquals(
+        List.of("e4"),
+        service.notationLine(session.sessionId()).stream()
+            .map(ply -> ply.move().san().getValue())
+            .toList());
+
+    var confirmed =
+        service.replaceInitialPosition(session.sessionId(), replacement, true);
+    assertTrue(confirmed.updated());
+    assertFalse(confirmed.requiresMoveReset());
+    assertEquals(1, confirmed.discardedMoveCount());
+    assertEquals(PieceColor.BLACK, service.currentPosition(session.sessionId()).activeColor());
+    assertTrue(service.notationTree(session.sessionId()).roots().isEmpty());
   }
 
   private MoveCommand move(String from, String to) {

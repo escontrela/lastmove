@@ -130,7 +130,7 @@ public final class ChesspressoRulesEngine implements ChessRulesEngine {
   }
 
   private String normalizeSan(String san) {
-    return san.trim().replace('0', 'O');
+    return san.trim().replace('0', 'O').replaceFirst("[!?]+$", "");
   }
 
   private Optional<PositionPiece> capturedPiece(Position position, short move) {

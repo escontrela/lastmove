@@ -30,6 +30,7 @@ import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton;
 import com.escontrela.lastmove.ui.component.tree.MoveTreeOverlay;
 import com.escontrela.lastmove.ui.event.OpenSessionManagementEvent;
 import com.escontrela.lastmove.ui.event.OpenAnalysisSessionEvent;
+import com.escontrela.lastmove.ui.event.OpenAnalysisPositionEditorEvent;
 import com.escontrela.lastmove.ui.event.OpenAnalysisSessionTacticEvent;
 import com.escontrela.lastmove.ui.event.ReturnToAnalysisSessionEvent;
 import com.escontrela.lastmove.ui.event.SelectStudyDestinationEvent;
@@ -349,6 +350,20 @@ public class PgnAnalysisScreenController implements UiScreenController {
     uiFlowManager.show(UiScreenId.TACTICS);
   }
 
+  /** Opens the position editor for the active session's starting position. */
+  @FXML
+  public void onEditPosition() {
+    editSessionPosition(activeAnalysisSessionId);
+  }
+
+  /** Opens the position editor for one session's starting position. */
+  private void editSessionPosition(AnalysisSessionId sessionId) {
+    uiEventBus.publish(
+        new OpenAnalysisPositionEditorEvent(
+            analysisSessionService.positionEditContext(sessionId)));
+    uiFlowManager.show(UiScreenId.POSITION_EDITOR);
+  }
+
   /** Receives the selection made by the dedicated session-management screen. */
   @EventListener
   public void onReturnToAnalysisSession(ReturnToAnalysisSessionEvent event) {
@@ -510,6 +525,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
     contextualMenuPanel.addItem("Export PGN…", "", event -> onExportSession());
     contextualMenuPanel.addItem("Copy position as FEN", "", event -> onCopyFen());
     contextualMenuPanel.addSeparator();
+    contextualMenuPanel.addItem("Edit starting position…", "", event -> onEditPosition());
     contextualMenuPanel.addItem("First move", "↑", event -> onFirstMove());
     contextualMenuPanel.addItem("Previous move", "←", event -> onPreviousMove());
     contextualMenuPanel.addItem("Next move", "→", event -> onNextMove());
@@ -564,6 +580,10 @@ public class PgnAnalysisScreenController implements UiScreenController {
         "Rename session…",
         "",
         event -> showRenameSessionModal(selected.sessionId(), selected.title()));
+    contextualMenuPanel.addItem(
+        "Edit starting position…",
+        "",
+        event -> editSessionPosition(selected.sessionId()));
     contextualMenuPanel.addItem(
         "Delete session", "", event -> deleteSession(selected.sessionId()));
     contextualMenuPanel.addSeparator();

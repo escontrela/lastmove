@@ -37,9 +37,10 @@
                     <padding><Insets bottom="20.0" left="20.0" right="20.0" top="20.0" /></padding>
                     <Label styleClass="eyebrow-label" text="Create tactic" />
                     <Label styleClass="card-title" text="Position and solution" />
-                    <Label styleClass="card-copy" text="Start with a FEN position, then author its accepted line directly on the board." wrapText="true" />
+                    <Label styleClass="card-copy" text="Start from a FEN position or compose one in the editor, then author its accepted line directly on the board." wrapText="true" />
                     <HBox alignment="CENTER_LEFT" spacing="8.0">
                         <ToolbarIconButton accessibleText="New tactic from FEN" darkIconResource="/images/upload_35dp_FFFFFF.png" lightIconResource="/images/upload_35dp_000000.png" onAction="#onAddFromFen" tooltipText="New tactic from FEN" />
+                        <ToolbarIconButton accessibleText="New tactic from editor" darkIconResource="/images/add_35dp_FFFFFF.png" lightIconResource="/images/add_35dp_000000.png" onAction="#onAddFromEditor" tooltipText="New tactic from editor" />
                         <ToolbarIconButton accessibleText="Author solution" darkIconResource="/images/edit_35dp_FFFFFF.png" lightIconResource="/images/edit_35dp_000000.png" onAction="#onToggleAuthoring" tooltipText="edit/ solution" />
                     </HBox>
                 </VBox>

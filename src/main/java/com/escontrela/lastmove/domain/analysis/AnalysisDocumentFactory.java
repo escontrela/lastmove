@@ -131,6 +131,9 @@ public final class AnalysisDocumentFactory {
   private void importVariations(AnalysisDocument document, List<ImportedPly> variations) {
     for (ImportedPly variation : variations) {
       document.apply(variation.execution());
+      if (!variation.comment().isBlank()) {
+        document.currentNode().orElseThrow().setComment(variation.comment());
+      }
       importVariations(document, variation.variations());
       document.previous();
     }

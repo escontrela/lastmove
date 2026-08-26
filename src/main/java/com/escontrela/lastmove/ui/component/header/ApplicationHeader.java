@@ -73,6 +73,11 @@ public final class ApplicationHeader extends HBox {
         rebuildContextActions(Objects.requireNonNull(actions, "actions must not be null"));
     }
 
+    /** Replaces only the back-button action, keeping its current visibility state. */
+    public void setOnBack(javafx.event.EventHandler<javafx.event.ActionEvent> handler) {
+        backButton.setOnAction(handler);
+    }
+
     private ImageView logo() {
         ImageView logo = new ImageView(loadLogo(false));
         logo.setFitWidth(48.0);

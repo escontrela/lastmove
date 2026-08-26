@@ -5,8 +5,10 @@ import com.escontrela.lastmove.application.service.AnalysisSessionService;
 import com.escontrela.lastmove.domain.analysis.AnalysisOrigin;
 import com.escontrela.lastmove.domain.analysis.AnalysisSessionId;
 import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
+import com.escontrela.lastmove.ui.component.header.ApplicationHeader;
 import com.escontrela.lastmove.ui.component.list.ManagedListCell;
 import com.escontrela.lastmove.ui.component.message.TextInputModal;
+import com.escontrela.lastmove.ui.event.OpenAnalysisPositionEditorEvent;
 import com.escontrela.lastmove.ui.event.OpenSessionManagementEvent;
 import com.escontrela.lastmove.ui.event.ReturnToAnalysisSessionEvent;
 import com.escontrela.lastmove.ui.event.UiEventBus;
@@ -85,6 +87,10 @@ public final class AnalysisSessionsScreenController implements UiScreenControlle
 
   @Override
   public void onShow() {
+    ApplicationHeader header = (ApplicationHeader) root.lookup(".application-header");
+    if (header != null) {
+      header.setOnBack(event -> backToAnalysis());
+    }
     refreshSessions();
   }
 
@@ -105,6 +111,13 @@ public final class AnalysisSessionsScreenController implements UiScreenControlle
     activeSessionId = session.sessionId();
     returnToAnalysis(
         Optional.of(activeSessionId), "Switched to " + session.title());
+  }
+
+  private void editSessionPosition(AnalysisSessionSummary session) {
+    uiEventBus.publish(
+        new OpenAnalysisPositionEditorEvent(
+            analysisSessionService.positionEditContext(session.sessionId())));
+    uiFlowManager.show(UiScreenId.POSITION_EDITOR);
   }
 
   private void renameSession(AnalysisSessionSummary session) {
@@ -165,6 +178,8 @@ public final class AnalysisSessionsScreenController implements UiScreenControlle
     contextualMenuPanel.clearItems();
     contextualMenuPanel.addItem("Open session", "", event -> openSession(session));
     contextualMenuPanel.addItem("Rename session…", "", event -> renameSession(session));
+    contextualMenuPanel.addItem(
+        "Edit starting position…", "", event -> editSessionPosition(session));
     contextualMenuPanel.addSeparator();
     contextualMenuPanel.addItem(
         "Move session up", "↑", selectedIndex <= 0, event -> moveSession(session, true));
