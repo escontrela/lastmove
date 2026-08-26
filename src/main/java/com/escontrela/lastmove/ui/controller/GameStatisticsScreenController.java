@@ -38,12 +38,12 @@ public final class GameStatisticsScreenController implements UiScreenController 
   @FXML private Button chartModeButton;
   @FXML private GameStatisticsChartControl chart; @FXML private EngineSelectorModal engineSelector;
   private Optional<String> selectedEngine = Optional.empty();
-  private GameStatisticsChartControl.DisplayMode chartMode = GameStatisticsChartControl.DisplayMode.GAME_TREND;
+  private GameStatisticsChartControl.DisplayMode chartMode = GameStatisticsChartControl.DisplayMode.OUTCOME_BARS;
   public GameStatisticsScreenController(GameStatisticsService statistics, CurrentUserService currentUser, ComputerGameService games) { this.statistics = statistics; this.currentUser = currentUser; this.games = games; }
   @FXML public void initialize() {
     root.getProperties().put("controller", this); granularity.setItems(FXCollections.observableArrayList(StatisticsGranularity.values()));
     granularity.setConverter(new javafx.util.StringConverter<>() { public String toString(StatisticsGranularity value) { return value == null ? "" : value.name().substring(0, 1) + value.name().substring(1).toLowerCase(); } public StatisticsGranularity fromString(String value) { return StatisticsGranularity.valueOf(value.toUpperCase()); } });
-    fromDate.setValue(LocalDate.now().minusMonths(1)); toDate.setValue(LocalDate.now()); granularity.setValue(StatisticsGranularity.MONTH);
+    fromDate.setValue(LocalDate.now().minusDays(6)); toDate.setValue(LocalDate.now()); granularity.setValue(StatisticsGranularity.DAY); chart.setDisplayMode(chartMode);
     engineSelector.setOnEngineSelected(event -> { selectedEngine = ALL_ENGINES.equals(event.engineId()) ? Optional.empty() : Optional.of(event.engineId()); engineLabel.setText(engineName()); refresh(); });
     engineSelector.setOnCancel(event -> statusLabel.setText("Statistics unchanged"));
   }

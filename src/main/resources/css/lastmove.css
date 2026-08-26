@@ -396,6 +396,226 @@
     -fx-padding: 8 0 0 0;
 }
 
+/* Home dashboard: the TilePanes wrap their cards as the window narrows. */
+.home-scroll-pane {
+    -fx-background-color: #f7f8fb;
+    -fx-border-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.home-scroll-pane > .viewport,
+.home-scroll-pane > .corner { -fx-background-color: #f7f8fb; }
+
+.home-scroll-pane .scroll-bar:vertical {
+    -fx-background-color: transparent;
+    -fx-padding: 4px;
+}
+
+.home-scroll-pane .scroll-bar:vertical .track {
+    -fx-background-color: #e7ebf1;
+    -fx-background-radius: 6px;
+}
+
+.home-scroll-pane .scroll-bar:vertical .thumb {
+    -fx-background-color: #b6c0cb;
+    -fx-background-radius: 6px;
+}
+
+.tool-catalog-shell {
+    -fx-background-color: #f7f8fb;
+    -fx-max-width: Infinity;
+}
+
+.home-action-grid, .home-secondary-grid {
+    -fx-pref-tile-width: 270px;
+    -fx-tile-alignment: top-left;
+}
+
+.home-secondary-grid { -fx-pref-tile-width: 360px; }
+
+.home-action-card, .home-secondary-card {
+    -fx-alignment: bottom-left;
+    -fx-background-color: #ffffff;
+    -fx-background-insets: 0, 0;
+    /* One radius for the colour layer and one for each card illustration. */
+    -fx-background-radius: 0, 0;
+    -fx-border-color: #e5eaf0;
+    -fx-border-radius: 0;
+    -fx-border-width: 1px;
+    -fx-cursor: hand;
+    -fx-padding: 24px;
+    -fx-text-fill: #14213d;
+    -fx-effect: dropshadow(gaussian, rgba(29, 47, 70, 0.07), 18, 0.08, 0, 5);
+}
+
+.home-action-card {
+    -fx-min-height: 252px;
+    -fx-pref-height: 252px;
+    -fx-max-height: 252px;
+}
+
+.home-secondary-card {
+    -fx-min-height: 220px;
+    -fx-pref-height: 220px;
+    -fx-max-height: 220px;
+    -fx-padding: 20px;
+}
+
+.home-action-card:hover, .home-secondary-card:hover {
+    -fx-border-color: #75a9ed;
+    -fx-effect: dropshadow(gaussian, rgba(25, 99, 211, 0.16), 22, 0.13, 0, 6);
+}
+
+.home-action-card:pressed, .home-secondary-card:pressed { -fx-opacity: 0.92; }
+
+.home-card-content, .home-secondary-content {
+    -fx-fill-width: true;
+    -fx-pref-width: 1000000px;
+    -fx-max-width: 1000000px;
+}
+
+.home-card-icon {
+    -fx-alignment: center;
+    -fx-min-height: 58px;
+    -fx-min-width: 58px;
+    -fx-pref-height: 58px;
+    -fx-pref-width: 58px;
+    -fx-background-radius: 16px;
+}
+
+.home-analysis-icon { -fx-background-color: #eaf3ff; }
+.home-studies-icon { -fx-background-color: #eaf9ef; }
+.home-tactics-icon { -fx-background-color: #f6eaff; }
+.home-computer-icon { -fx-background-color: #fff1df; }
+.home-games-icon { -fx-background-color: #eef3fa; }
+.home-position-icon { -fx-background-color: #e9f4ff; }
+
+.home-card-title {
+    -fx-font-size: 22px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #14213d;
+}
+
+.home-card-description, .home-secondary-description {
+    -fx-font-size: 14px;
+    -fx-line-spacing: 2px;
+    -fx-text-fill: #5d6b7e;
+}
+
+.home-card-link {
+    -fx-font-size: 14px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #1769d8;
+    -fx-padding: 12px 0 0 0;
+}
+
+.home-secondary-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #14213d;
+}
+
+.home-analysis-card {
+    -fx-background-image: url("/images/card-background-light.png");
+    -fx-background-position: right center;
+    -fx-background-repeat: no-repeat;
+    -fx-background-size: cover;
+}
+
+.home-studies-card {
+    -fx-background-image: url("/images/studies-card-background-light.png");
+    -fx-background-position: right center;
+    -fx-background-repeat: no-repeat;
+    -fx-background-size: cover;
+}
+
+.home-tactics-card {
+    -fx-background-image: url("/images/tactics-card-background-light.png");
+    -fx-background-position: right center;
+    -fx-background-repeat: no-repeat;
+    -fx-background-size: cover;
+}
+
+.home-computer-card {
+    -fx-background-image: url("/images/computer-challenge-card-background-light.png");
+    -fx-background-position: right center;
+    -fx-background-repeat: no-repeat;
+    -fx-background-size: cover;
+}
+
+.home-position-card {
+    -fx-background-image: url("/images/position-analysis-card-background-light.png");
+    -fx-background-position: right center;
+    -fx-background-repeat: no-repeat;
+    -fx-background-size: cover;
+}
+
+.home-knightshade-banner {
+    /* Keep the square artwork from influencing the TilePane's card measurements. */
+    -fx-min-width: 360px;
+    -fx-pref-width: 360px;
+    -fx-max-width: 360px;
+    -fx-min-height: 220px;
+    -fx-pref-height: 220px;
+    -fx-max-height: 220px;
+    -fx-background-color: #0d1c32;
+    -fx-background-image: url("/images/knight-shade-engine-banner.png");
+    -fx-background-position: center;
+    -fx-background-repeat: no-repeat;
+    -fx-background-size: cover;
+    -fx-border-color: #152b48;
+}
+
+.home-games-card {
+    -fx-background-image: url("/images/computer-challenge-card-background-light.png");
+    -fx-background-position: right center;
+    -fx-background-repeat: no-repeat;
+    -fx-background-size: cover;
+}
+
+.knightshade-kicker {
+    -fx-font-size: 12px;
+    -fx-font-weight: 800;
+    -fx-letter-spacing: 1.4px;
+    -fx-text-fill: #75aaff;
+}
+
+.knightshade-title {
+    -fx-font-size: 19px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #ffffff;
+}
+
+.knightshade-description {
+    -fx-font-size: 14px;
+    -fx-line-spacing: 2px;
+    -fx-text-fill: #d1deef;
+}
+
+.knightshade-link { -fx-text-fill: #bfa4ff; }
+
+.knightshade-copy {
+    -fx-max-width: 160px;
+    -fx-pref-width: 160px;
+}
+
+.knightshade-copy .knightshade-description,
+.knightshade-copy .knightshade-link { -fx-max-width: 160px; }
+
+.home-recent-games { -fx-padding: 2px 0 0 0; }
+
+.home-recent-game-title {
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #253954;
+}
+
+.home-recent-game-summary {
+    -fx-font-size: 12px;
+    -fx-text-fill: #718096;
+}
+
 .message-box-overlay {
     -fx-background-color: rgba(20, 27, 36, 0.18);
     -fx-padding: 32;
@@ -1607,6 +1827,38 @@
 .night-mode .tool-card-title { -fx-text-fill: #f1f3f5; }
 .night-mode .tool-card-description, .night-mode .tool-card-state { -fx-text-fill: #b8c5d3; }
 .night-mode .tool-card-state-ready { -fx-text-fill: #79aeef; }
+.night-mode .home-scroll-pane,
+.night-mode .home-scroll-pane > .viewport,
+.night-mode .home-scroll-pane > .corner,
+.night-mode .tool-catalog-shell { -fx-background-color: #111923; }
+.night-mode .home-scroll-pane .scroll-bar:vertical .track { -fx-background-color: #202d3d; }
+.night-mode .home-scroll-pane .scroll-bar:vertical .thumb { -fx-background-color: #536477; }
+.night-mode .home-action-card, .night-mode .home-secondary-card {
+    -fx-background-color: #1a2533;
+    -fx-border-color: #34465a;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.28), 18, 0.1, 0, 5);
+}
+.night-mode .home-action-card:hover, .night-mode .home-secondary-card:hover {
+    -fx-border-color: #6aa8f5;
+    -fx-effect: dropshadow(gaussian, rgba(70, 138, 230, 0.19), 22, 0.14, 0, 6);
+}
+.night-mode .home-analysis-card { -fx-background-image: url("/images/card-background-dark.png"); }
+.night-mode .home-studies-card { -fx-background-image: url("/images/studies-card-background-dark.png"); }
+.night-mode .home-tactics-card { -fx-background-image: url("/images/tactics-card-background-dark.png"); }
+.night-mode .home-computer-card { -fx-background-image: url("/images/computer-challenge-card-background-dark.png"); }
+.night-mode .home-position-card { -fx-background-image: url("/images/position-analysis-card-background-dark.png"); }
+.night-mode .home-games-card { -fx-background-image: url("/images/computer-challenge-card-background-dark.png"); }
+.night-mode .home-analysis-icon { -fx-background-color: #173353; }
+.night-mode .home-studies-icon { -fx-background-color: #193d31; }
+.night-mode .home-tactics-icon { -fx-background-color: #432553; }
+.night-mode .home-computer-icon { -fx-background-color: #50371d; }
+.night-mode .home-games-icon, .night-mode .home-position-icon { -fx-background-color: #21364d; }
+.night-mode .home-card-title, .night-mode .home-secondary-title { -fx-text-fill: #f4f7fb; }
+.night-mode .home-card-description, .night-mode .home-secondary-description { -fx-text-fill: #b5c2d2; }
+.night-mode .home-recent-game-title { -fx-text-fill: #e5edf7; }
+.night-mode .home-recent-game-summary { -fx-text-fill: #a9b9ca; }
+.night-mode .home-card-link { -fx-text-fill: #7cb4ff; }
+.night-mode .home-knightshade-banner { -fx-background-color: #081426; -fx-border-color: #294768; }
 .night-mode .message-box-overlay { -fx-background-color: rgba(0, 0, 0, 0.38); }
 .night-mode .promotion-picker-card {
     -fx-background-color: #1c2430;

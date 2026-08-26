@@ -23,6 +23,7 @@ import com.escontrela.lastmove.ui.screen.UiScreenId;
 import com.escontrela.lastmove.ui.service.ChessSound;
 import com.escontrela.lastmove.ui.service.ChessSoundService;
 import java.util.Map;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import javafx.collections.ListChangeListener;
@@ -35,6 +36,7 @@ import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.VBox;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
@@ -58,25 +60,15 @@ public class MainWindowController implements UiScreenController {
     @FXML
     private AnchorPane root;
     @FXML
-    private Label featureStatusLabel;
+    private Label welcomeLabel;
     @FXML
     private ImageView statusBrandLogo;
-    @FXML
-    private ImageView pgnToolIcon;
-    @FXML
-    private ImageView fenToolIcon;
     @FXML
     private Button studiesToolButton;
     @FXML
     private Button tacticsToolButton;
     @FXML
-    private ImageView localGameToolIcon;
-    @FXML
-    private ImageView openingToolIcon;
-    @FXML
-    private ImageView trainingToolIcon;
-    @FXML
-    private ImageView engineToolIcon;
+    private VBox recentGamesBox;
     @FXML
     private MessageBox startupMessageBox;
     @FXML
@@ -115,14 +107,15 @@ public class MainWindowController implements UiScreenController {
         notificationsPanel.setOnClear(() -> { currentUserService.selectedPlayerId().ifPresent(notifications::deleteAll); refreshNotifications(); });
         startupMessageBox.setOnAccept(event -> openPgnAnalysis());
         startupMessageBox.setOnCancel(event ->
-                featureStatusLabel.setText("Welcome to LastMove Chess."));
+                setFeatureStatus("Welcome to LastMove Chess."));
         startupMessageBox.setOnClose(event ->
-                featureStatusLabel.setText("Welcome to LastMove Chess."));
+                setFeatureStatus("Welcome to LastMove Chess."));
     }
 
     @Override
     public void onShow() {
         updateCurrentUserAvatar();
+        updateWelcomeAndRecentGames();
         updateStudiesAvailability();
         refreshNotifications();
         if (!startupMessageShown) {
@@ -147,7 +140,7 @@ public class MainWindowController implements UiScreenController {
     @FXML
     public void openStudies() {
         if (currentUserService.activePlayerState().status() != ActivePlayerStatus.ACTIVE) {
-            featureStatusLabel.setText("Select an active player profile before opening studies.");
+            setFeatureStatus("Select an active player profile before opening studies.");
             return;
         }
         uiFlowManager.show(UiScreenId.STUDIES);
@@ -157,7 +150,7 @@ public class MainWindowController implements UiScreenController {
     @FXML
     public void openTactics() {
         if (currentUserService.activePlayerState().status() != ActivePlayerStatus.ACTIVE) {
-            featureStatusLabel.setText("Select an active player profile before opening tactics.");
+            setFeatureStatus("Select an active player profile before opening tactics.");
             return;
         }
         uiFlowManager.show(UiScreenId.TACTICS);
@@ -172,7 +165,7 @@ public class MainWindowController implements UiScreenController {
     @FXML
     public void openMyGames() {
         if (currentUserService.activePlayerState().status() != ActivePlayerStatus.ACTIVE) {
-            featureStatusLabel.setText("Select an active player profile before opening your games.");
+            setFeatureStatus("Select an active player profile before opening your games.");
             return;
         }
         uiFlowManager.show(UiScreenId.MY_GAMES);
@@ -238,7 +231,7 @@ public class MainWindowController implements UiScreenController {
     @FXML
     public void showComingSoon(ActionEvent event) {
         String featureName = ((Button) event.getSource()).getAccessibleText();
-        featureStatusLabel.setText(featureName + " is coming soon.");
+        setFeatureStatus(featureName + " is coming soon.");
     }
 
     @FXML
@@ -262,11 +255,11 @@ public class MainWindowController implements UiScreenController {
         contextualMenuPanel.addItem("Open setup", "", event -> openSetup());
         contextualMenuPanel.addItem("Dismiss welcome message", "Esc", event -> {
             startupMessageBox.hide();
-            featureStatusLabel.setText("Welcome message dismissed.");
+            setFeatureStatus("Welcome message dismissed.");
         });
         contextualMenuPanel.addSeparator();
         contextualMenuPanel.addItem("About LastMove Chess", "", event ->
-                featureStatusLabel.setText("LastMove Chess — your chess study workspace."));
+                setFeatureStatus("LastMove Chess — your chess study workspace."));
     }
 
     private void updateStatusBrandLogo() {
@@ -278,17 +271,48 @@ public class MainWindowController implements UiScreenController {
 
     private void updateThemeAssets() {
         updateStatusBrandLogo();
-        String iconColor = isNightMode() ? "FFFFFF" : "000000";
-        updateToolIcon(pgnToolIcon, "history", iconColor);
-        updateToolIcon(fenToolIcon, "structure", iconColor);
-        updateToolIcon(localGameToolIcon, "swords", iconColor);
-        updateToolIcon(openingToolIcon, "search", iconColor);
-        updateToolIcon(trainingToolIcon, "filter", iconColor);
-        updateToolIcon(engineToolIcon, "zoom", iconColor);
     }
 
     private void updateCurrentUserAvatar() {
         currentUserAvatar.setDisplayName(currentUserService.currentUser().name());
+    }
+
+    /** The home dashboard has no inline status label; user feedback is presented by its overlays. */
+    private void setFeatureStatus(String message) {
+        // Intentionally empty until the dashboard gains a dedicated non-intrusive feedback surface.
+    }
+
+    private void updateWelcomeAndRecentGames() {
+        String name = currentUserService.currentUser().name();
+        welcomeLabel.setText("unknown".equalsIgnoreCase(name) ? "Welcome back" : "Welcome back, " + name);
+
+        List<SavedGameSummary> recentGames = currentUserService.selectedPlayerId()
+                .map(savedGames::listSummaries)
+                .orElseGet(List::of)
+                .stream()
+                .limit(2)
+                .toList();
+        if (recentGames.isEmpty()) {
+            recentGamesBox.getChildren().setAll(recentGameRow("No games yet", "Start a game and it will appear here."));
+            return;
+        }
+        recentGamesBox.getChildren().setAll(recentGames.stream()
+                .map(game -> recentGameRow(
+                        game.whiteName() + " vs " + game.blackName(),
+                        gameOutcome(game) + " · " + game.movesCount() + " moves"))
+                .toList());
+    }
+
+    private VBox recentGameRow(String title, String summary) {
+        Label titleLabel = new Label(title);
+        titleLabel.getStyleClass().add("home-recent-game-title");
+        Label summaryLabel = new Label(summary);
+        summaryLabel.getStyleClass().add("home-recent-game-summary");
+        return new VBox(2, titleLabel, summaryLabel);
+    }
+
+    private String gameOutcome(SavedGameSummary game) {
+        return game.finished() ? game.result().map(this::resultLabel).orElse("Finished") : "In progress";
     }
 
     private void updateStudiesAvailability() {
@@ -304,10 +328,6 @@ public class MainWindowController implements UiScreenController {
 
     private boolean isNightMode() {
         return root.getStyleClass().contains(NIGHT_MODE_STYLE_CLASS);
-    }
-
-    private void updateToolIcon(ImageView imageView, String iconName, String iconColor) {
-        imageView.setImage(loadImage("/images/" + iconName + "_35dp_" + iconColor + ".png"));
     }
 
     private Image loadImage(String resource) {

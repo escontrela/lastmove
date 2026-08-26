@@ -73,7 +73,9 @@ public final class GameStatisticsChartControl extends Region {
     for (int i = 0; i < buckets.size(); i++) { double x = LEFT + step * i; double y = TOP + plotHeight - (buckets.get(i).games() / (double) max) * plotHeight; g.fillOval(x - 3, y - 3, 6, 6); if (i == 0 || i == buckets.size() - 1 || buckets.size() <= 5) g.fillText(labels.format(buckets.get(i).start()), Math.max(LEFT, x - 18), height - 10); }
   }
   private void drawOutcomeBars(GraphicsContext g, double width, double height, double plotWidth, double plotHeight, long max, boolean night) {
-    double group = plotWidth / buckets.size(), bar = Math.max(3, Math.min(24, group * .28));
+    double group = plotWidth / buckets.size();
+    // Give short selected periods visual weight while retaining a readable chart for long ranges.
+    double bar = Math.max(3, Math.min(72, group * .34));
     Color won = Color.web(night ? "#4bd38a" : "#1b8f5a"), lost = Color.web(night ? "#ff8794" : "#cc4a55");
     for (int i = 0; i < buckets.size(); i++) {
       var bucket = buckets.get(i); double center = LEFT + group * i + group / 2;
