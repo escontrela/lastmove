@@ -1,24 +1,32 @@
 package com.escontrela.lastmove.ui.controller;
 
+import com.escontrela.lastmove.application.analysis.AnalysisPositionEditContext;
 import com.escontrela.lastmove.application.service.AnalysisSessionService;
 import com.escontrela.lastmove.application.service.CurrentUserService;
 import com.escontrela.lastmove.application.service.PositionEditorService;
 import com.escontrela.lastmove.application.service.PositionEditorService.PositionEditorState;
 import com.escontrela.lastmove.application.service.StudyService;
+import com.escontrela.lastmove.application.service.TacticService;
 import com.escontrela.lastmove.application.study.EditChapterInitialPositionCommand;
 import com.escontrela.lastmove.application.study.StudyChapterPositionEditContext;
+import com.escontrela.lastmove.application.tactics.CreateTacticExerciseFromFenCommand;
+import com.escontrela.lastmove.application.tactics.TacticPositionEditContext;
 import com.escontrela.lastmove.domain.common.PieceColor;
 import com.escontrela.lastmove.domain.common.PieceType;
 import com.escontrela.lastmove.domain.common.Square;
 import com.escontrela.lastmove.domain.game.CastlingRights;
 import com.escontrela.lastmove.domain.notation.Fen;
+import com.escontrela.lastmove.domain.tactics.TacticExerciseId;
 import com.escontrela.lastmove.ui.component.board.ChessBoardControl;
 import com.escontrela.lastmove.ui.component.board.BoardPieceDragPayload;
 import com.escontrela.lastmove.ui.component.message.MessageBox;
 import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton;
+import com.escontrela.lastmove.ui.event.OpenAnalysisPositionEditorEvent;
 import com.escontrela.lastmove.ui.event.OpenAnalysisSessionEvent;
 import com.escontrela.lastmove.ui.event.OpenChapterPositionEditorEvent;
 import com.escontrela.lastmove.ui.event.OpenStudyWorkspaceEvent;
+import com.escontrela.lastmove.ui.event.OpenTacticPositionEditorEvent;
+import com.escontrela.lastmove.ui.event.OpenTacticsWorkspaceEvent;
 import com.escontrela.lastmove.ui.event.SelectStudyDestinationEvent;
 import com.escontrela.lastmove.ui.event.UiEventBus;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
@@ -60,11 +68,13 @@ public final class PositionEditorScreenController implements UiScreenController 
   @FXML private Spinner<Integer> halfmoveSpinner, fullmoveSpinner;
   @FXML private Node openAnalysisButton;
   @FXML private Node addStudyButton;
-  @FXML private ToolbarIconButton saveChapterPositionButton;
+  @FXML private ToolbarIconButton cancelPositionButton;
+  @FXML private ToolbarIconButton savePositionButton;
   @FXML private MessageBox discardMovesConfirmation;
   private final PositionEditorService editor;
   private final StudyService studyService;
   private final AnalysisSessionService analysisSessions;
+  private final TacticService tacticService;
   private final CurrentUserService currentUserService;
   private final ClipboardService clipboard;
   private final UiEventBus events;
@@ -72,10 +82,12 @@ public final class PositionEditorScreenController implements UiScreenController 
   private PieceType selectedType;
   private PieceColor selectedColor;
   private StudyChapterPositionEditContext chapterEditContext;
+  private AnalysisPositionEditContext analysisEditContext;
+  private TacticPositionEditContext tacticEditContext;
 
   public PositionEditorScreenController(PositionEditorService editor, StudyService studyService, AnalysisSessionService analysisSessions,
-      CurrentUserService currentUserService, ClipboardService clipboard, UiEventBus events, @Lazy UiFlowManager flow) {
-    this.editor = editor; this.studyService = studyService; this.analysisSessions = analysisSessions; this.currentUserService = currentUserService;
+      TacticService tacticService, CurrentUserService currentUserService, ClipboardService clipboard, UiEventBus events, @Lazy UiFlowManager flow) {
+    this.editor = editor; this.studyService = studyService; this.analysisSessions = analysisSessions; this.tacticService = tacticService; this.currentUserService = currentUserService;
     this.clipboard = clipboard; this.events = events; this.flow = flow;
   }
   @FXML public void initialize() {
@@ -96,16 +108,61 @@ public final class PositionEditorScreenController implements UiScreenController 
     chapterEditContext = event.context();
   }
 
+  @EventListener
+  public void onOpenAnalysisPositionEditor(OpenAnalysisPositionEditorEvent event) {
+    analysisEditContext = event.context();
+  }
+
+  @EventListener
+  public void onOpenTacticPositionEditor(OpenTacticPositionEditorEvent event) {
+    tacticEditContext = event.context();
+  }
+
   @Override public void onShow() {
     boolean editingChapter = chapterEditContext != null;
+    boolean editingAnalysis = analysisEditContext != null;
+    boolean editingTactic = tacticEditContext != null;
+    boolean editing = editingChapter || editingAnalysis || editingTactic;
     if (editingChapter) {
       editor.load(chapterEditContext.initialPosition());
       statusLabel.setText("Editing the initial position of this study chapter");
+    } else if (editingAnalysis) {
+      editor.load(analysisEditContext.position());
+      statusLabel.setText("Editing the initial position of this analysis session");
+    } else if (editingTactic) {
+      editor.clear();
+      statusLabel.setText("Compose the starting position of a new tactic");
     }
-    openAnalysisButton.setDisable(editingChapter);
-    addStudyButton.setDisable(editingChapter);
-    saveChapterPositionButton.setManaged(editingChapter);
-    saveChapterPositionButton.setVisible(editingChapter);
+    openAnalysisButton.setDisable(editing);
+    addStudyButton.setDisable(editing);
+    cancelPositionButton.setManaged(editing);
+    cancelPositionButton.setVisible(editing);
+    cancelPositionButton.setTooltipText(
+        editingChapter
+            ? "Cancel position edit and return to study"
+            : editingAnalysis
+                ? "Cancel position edit and return to analysis"
+                : "Cancel position edit and return to tactic workspace");
+    cancelPositionButton.setAccessibleText(
+        editingChapter
+            ? "Cancel position edit and return to study"
+            : editingAnalysis
+                ? "Cancel position edit and return to analysis"
+                : "Cancel position edit and return to tactic workspace");
+    savePositionButton.setManaged(editing);
+    savePositionButton.setVisible(editing);
+    savePositionButton.setTooltipText(
+        editingChapter
+            ? "Save chapter position and return"
+            : editingAnalysis
+                ? "Save analysis position and return"
+                : "Create tactic from position and return");
+    savePositionButton.setAccessibleText(
+        editingChapter
+            ? "Save chapter position and return"
+            : editingAnalysis
+                ? "Save analysis position and return"
+                : "Create tactic from position and return");
     refresh();
   }
   @FXML public void selectWhitePawn() { select(PieceType.PAWN, PieceColor.WHITE); }
@@ -142,12 +199,17 @@ public final class PositionEditorScreenController implements UiScreenController 
   @FXML public void onImportFen() { try { editor.importFen(fenText.getText()); statusLabel.setText("FEN imported"); refresh(); } catch (IllegalArgumentException exception) { statusLabel.setText(message(exception, "The FEN is invalid.")); } }
   @FXML public void onOpenAnalysis() { Fen fen = validFen(); if (fen == null) return; var session = analysisSessions.createFenSession(fen); events.publish(new OpenAnalysisSessionEvent(session.sessionId(), "Position opened from editor")); flow.show(UiScreenId.PGN_ANALYSIS); }
   @FXML public void onAddStudy() { Fen fen = validFen(); if (fen == null) return; if (currentUserService.activePlayerState().playerId().isEmpty()) { statusLabel.setText("Select an active player profile before adding a study chapter."); return; } var session = analysisSessions.createFenSession(fen); events.publish(new SelectStudyDestinationEvent(session.sessionId(), SelectStudyDestinationEvent.PostCopyDestination.OPEN_STUDY_WORKSPACE)); flow.show(UiScreenId.STUDY_DESTINATION); }
-  @FXML public void onSaveChapterPosition() {
-    if (chapterEditContext == null || validFen() == null) return;
-    saveChapterPosition(false);
+  @FXML public void onSavePosition() {
+    if (validFen() == null) return;
+    if (chapterEditContext != null) saveChapterPosition(false);
+    else if (analysisEditContext != null) saveAnalysisPosition(false);
+    else if (tacticEditContext != null) saveTacticPosition();
   }
+  @FXML public void onCancelPosition() { onBack(); }
   @FXML public void onBack() {
     if (chapterEditContext != null) returnToEditedChapter();
+    else if (analysisEditContext != null) returnToAnalysis("Position edit cancelled");
+    else if (tacticEditContext != null) returnToTactics(Optional.empty());
     else flow.show(UiScreenId.MAIN);
   }
   private void saveChapterPosition(boolean discardExistingMoves) {
@@ -161,6 +223,29 @@ public final class PositionEditorScreenController implements UiScreenController 
     }
     returnToEditedChapter();
   }
+  private void saveAnalysisPosition(boolean discardExistingMoves) {
+    var result = analysisSessions.replaceInitialPosition(
+        analysisEditContext.sessionId(), editor.state().position(), discardExistingMoves);
+    if (result.requiresMoveReset()) {
+      confirmAnalysisMoveReset(result.discardedMoveCount());
+      return;
+    }
+    returnToAnalysis("Position saved in analysis session");
+  }
+  private void saveTacticPosition() {
+    Fen fen = validFen();
+    if (fen == null) return;
+    var exercise =
+        tacticService.createExerciseFromFen(
+            new CreateTacticExerciseFromFenCommand(
+                tacticEditContext.ownerId(), tacticEditContext.suiteId(), "New tactic", fen));
+    TacticPositionEditContext context = tacticEditContext;
+    tacticEditContext = null;
+    events.publish(
+        new OpenTacticsWorkspaceEvent(
+            context.suiteId(), Optional.of(exercise.exerciseId()), true));
+    flow.show(UiScreenId.TACTICS_WORKSPACE);
+  }
   private void confirmMoveReset(int moveCount) {
     discardMovesConfirmation.setTitle("Replace chapter position?");
     discardMovesConfirmation.setMessage(
@@ -171,11 +256,33 @@ public final class PositionEditorScreenController implements UiScreenController 
     discardMovesConfirmation.setOnCancel(event -> statusLabel.setText("Position not changed"));
     discardMovesConfirmation.show();
   }
+  private void confirmAnalysisMoveReset(int moveCount) {
+    discardMovesConfirmation.setTitle("Replace session position?");
+    discardMovesConfirmation.setMessage(
+        "This session has " + moveCount + " moves. Saving will remove every move, variation and move comment.");
+    discardMovesConfirmation.setAcceptText("Replace and clear moves");
+    discardMovesConfirmation.setCancelText("Keep editing");
+    discardMovesConfirmation.setOnAccept(event -> saveAnalysisPosition(true));
+    discardMovesConfirmation.setOnCancel(event -> statusLabel.setText("Position not changed"));
+    discardMovesConfirmation.show();
+  }
   private void returnToEditedChapter() {
     StudyChapterPositionEditContext context = chapterEditContext;
     chapterEditContext = null;
     events.publish(new OpenStudyWorkspaceEvent(context.studyId(), context.chapterId()));
     flow.show(UiScreenId.STUDY_WORKSPACE);
+  }
+  private void returnToAnalysis(String statusMessage) {
+    AnalysisPositionEditContext context = analysisEditContext;
+    analysisEditContext = null;
+    events.publish(new OpenAnalysisSessionEvent(context.sessionId(), statusMessage));
+    flow.show(UiScreenId.PGN_ANALYSIS);
+  }
+  private void returnToTactics(Optional<TacticExerciseId> exerciseId) {
+    TacticPositionEditContext context = tacticEditContext;
+    tacticEditContext = null;
+    events.publish(new OpenTacticsWorkspaceEvent(context.suiteId(), exerciseId, false));
+    flow.show(UiScreenId.TACTICS_WORKSPACE);
   }
   private void select(PieceType type, PieceColor color) { selectedType = type; selectedColor = color; selectedPieceLabel.setText("Selected: " + color.name().toLowerCase() + " " + type.name().toLowerCase() + ". Click a square to place it; drag board pieces to move."); }
   private void refresh() { PositionEditorState state = state(); chessBoard.renderPosition(state.position()); whiteToMove.setSelected(state.position().activeColor() == PieceColor.WHITE); blackToMove.setSelected(state.position().activeColor() == PieceColor.BLACK); CastlingRights r = state.position().castlingRights(); whiteKingSide.setSelected(r.whiteKingSide()); whiteQueenSide.setSelected(r.whiteQueenSide()); blackKingSide.setSelected(r.blackKingSide()); blackQueenSide.setSelected(r.blackQueenSide()); refreshEnPassantChoices(); String currentTarget = state.position().enPassantTarget().map(Square::toAlgebraic).orElse("-"); enPassantCombo.setValue(enPassantCombo.getItems().contains(currentTarget) ? currentTarget : "-"); halfmoveSpinner.getValueFactory().setValue(state.position().halfmoveClock()); fullmoveSpinner.getValueFactory().setValue(state.position().fullmoveNumber()); if (!state.valid()) statusLabel.setText(state.validationMessage().orElseThrow()); }

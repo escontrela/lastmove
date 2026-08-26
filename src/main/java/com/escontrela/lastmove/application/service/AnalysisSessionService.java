@@ -1,6 +1,8 @@
 package com.escontrela.lastmove.application.service;
 
 import com.escontrela.lastmove.application.dto.AnalysisNodeSummary;
+import com.escontrela.lastmove.application.analysis.AnalysisInitialPositionUpdate;
+import com.escontrela.lastmove.application.analysis.AnalysisPositionEditContext;
 import com.escontrela.lastmove.application.analysis.AnalysisSessionTacticSource;
 import com.escontrela.lastmove.application.dto.AnalysisNotationNode;
 import com.escontrela.lastmove.application.dto.AnalysisNotationTree;
@@ -143,6 +145,12 @@ public final class AnalysisSessionService {
   /** Returns one retained session as a UI-safe summary. */
   public AnalysisSessionSummary sessionSummary(AnalysisSessionId sessionId) {
     return summary(session(sessionId));
+  }
+
+  /** Returns the session identity and starting position for the position-authoring editor. */
+  public AnalysisPositionEditContext positionEditContext(AnalysisSessionId sessionId) {
+    AnalysisSession session = session(sessionId);
+    return new AnalysisPositionEditContext(session.id(), session.initialPosition());
   }
 
   /** Returns the currently selected variation of one session for a temporary tactic attempt. */
@@ -301,6 +309,29 @@ public final class AnalysisSessionService {
     return deletion;
   }
 
+  /**
+   * Replaces a session's starting position after explicit confirmation when its move tree exists.
+   *
+   * <p>The confirmed update clears the complete tree so annotations that no longer have a node
+   * cannot be retained.
+   */
+  public AnalysisInitialPositionUpdate replaceInitialPosition(
+      AnalysisSessionId sessionId, PositionSnapshot position, boolean discardExistingMoves) {
+    AnalysisSession session = session(sessionId);
+    PositionSnapshot required =
+        Objects.requireNonNull(position, "position must not be null");
+    if (session.initialPosition().equals(required)) {
+      return new AnalysisInitialPositionUpdate(false, false, 0);
+    }
+    int retainedMoveCount = session.moveCount();
+    if (retainedMoveCount > 0 && !discardExistingMoves) {
+      return new AnalysisInitialPositionUpdate(false, true, retainedMoveCount);
+    }
+    int discardedMoveCount = session.replaceInitialPosition(required);
+    sessionRepository.save(session);
+    return new AnalysisInitialPositionUpdate(true, false, discardedMoveCount);
+  }
+
   private AnalysisSessionSummary register(
       String title, AnalysisOrigin origin, PositionSnapshot initialPosition) {
     AnalysisSession session =
@@ -327,6 +358,9 @@ public final class AnalysisSessionService {
   private void importVariations(AnalysisSession session, List<ImportedPly> variations) {
     for (ImportedPly variation : variations) {
       session.apply(variation.execution());
+      if (!variation.comment().isBlank()) {
+        session.currentNode().orElseThrow().setComment(variation.comment());
+      }
       importVariations(session, variation.variations());
       session.previous();
     }

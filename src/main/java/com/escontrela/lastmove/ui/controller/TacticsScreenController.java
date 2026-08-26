@@ -255,7 +255,7 @@ public final class TacticsScreenController implements UiScreenController {
       exerciseId = Optional.of(exercise.exerciseId());
       pendingAnalysisSessionId = null;
     }
-    uiEventBus.publish(new OpenTacticsWorkspaceEvent(suite.suiteId(), exerciseId));
+    uiEventBus.publish(new OpenTacticsWorkspaceEvent(suite.suiteId(), exerciseId, false));
     uiFlowManager.show(UiScreenId.TACTICS_WORKSPACE);
   }
 

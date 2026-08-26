@@ -49,7 +49,8 @@
                <children>
                   <ToolbarIconButton fx:id="openAnalysisButton" accessibleText="Save session as chapter" darkIconResource="/images/graph_2_35dp_FFFFFF.png" lightIconResource="/images/graph_2_35dp_000000.png" onAction="#onOpenAnalysis" tooltipText="Open in analysis" />
                   <ToolbarIconButton fx:id="addStudyButton" accessibleText="Save current position as tactic" darkIconResource="/images/menu_book_35dp_FFFFFF.png" lightIconResource="/images/menu_book_35dp_000000.png" onAction="#onAddStudy" tooltipText="Add to study" />
-                  <ToolbarIconButton fx:id="saveChapterPositionButton" accessibleText="Save chapter position and return" darkIconResource="/images/save_35dp_FFFFFF.png" lightIconResource="/images/save_35dp_FFFFFF.png" managed="false" onAction="#onSaveChapterPosition" styleClass="prominent-toolbar-icon-button" tooltipText="Save chapter position and return" visible="false" />
+                  <ToolbarIconButton fx:id="cancelPositionButton" accessibleText="Cancel position edit and return" darkIconResource="/images/cancel_35dp_FFFFFF.png" lightIconResource="/images/cancel_35dp_000000.png" managed="false" onAction="#onCancelPosition" tooltipText="Cancel position edit and return" visible="false" />
+                  <ToolbarIconButton fx:id="savePositionButton" accessibleText="Save position and return" darkIconResource="/images/save_35dp_FFFFFF.png" lightIconResource="/images/save_35dp_FFFFFF.png" managed="false" onAction="#onSavePosition" styleClass="prominent-toolbar-icon-button" tooltipText="Save position and return" visible="false" />
                </children>
             </HBox>
         <Separator styleClass="editor-separator" />

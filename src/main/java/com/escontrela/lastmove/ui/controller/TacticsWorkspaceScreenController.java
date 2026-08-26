@@ -13,6 +13,7 @@ import com.escontrela.lastmove.application.tactics.TacticAuthoringMoveOutcome;
 import com.escontrela.lastmove.application.tactics.TacticExerciseSummary;
 import com.escontrela.lastmove.application.tactics.TacticHint;
 import com.escontrela.lastmove.application.tactics.TacticMoveOutcome;
+import com.escontrela.lastmove.application.tactics.TacticPositionEditContext;
 import com.escontrela.lastmove.application.tactics.TacticSuiteDetails;
 import com.escontrela.lastmove.application.tactics.TacticWorkspace;
 import com.escontrela.lastmove.application.tactics.TemporaryTacticSession;
@@ -31,6 +32,7 @@ import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
 import com.escontrela.lastmove.ui.component.message.TextInputModal;
 import com.escontrela.lastmove.ui.component.promotion.PromotionPickerControl;
 import com.escontrela.lastmove.ui.event.OpenTacticsWorkspaceEvent;
+import com.escontrela.lastmove.ui.event.OpenTacticPositionEditorEvent;
 import com.escontrela.lastmove.ui.event.OpenStudyChapterTacticEvent;
 import com.escontrela.lastmove.ui.event.OpenAnalysisSessionTacticEvent;
 import com.escontrela.lastmove.ui.event.OpenAnalysisSessionEvent;
@@ -154,7 +156,7 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
     clearTemporaryState();
     activeSuiteId = event.suiteId();
     activeExerciseId = event.exerciseId().orElse(null);
-    authoring = false;
+    authoring = event.authoring();
     authorParentNodeId = Optional.empty();
   }
 
@@ -232,6 +234,17 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
     textInputModal.setCancelText("Cancel");
     textInputModal.setOnAccept(event -> createFromFen(textInputModal.getText()));
     textInputModal.show();
+  }
+
+  /** Opens the position editor to compose the starting position of a new tactic exercise. */
+  @FXML
+  public void onAddFromEditor() {
+    Optional<PlayerId> owner = activeOwner();
+    if (owner.isEmpty()) return;
+    uiEventBus.publish(
+        new OpenTacticPositionEditorEvent(
+            new TacticPositionEditContext(owner.orElseThrow(), activeSuiteId)));
+    uiFlowManager.show(UiScreenId.POSITION_EDITOR);
   }
 
   @FXML

@@ -168,6 +168,16 @@ public final class AnalysisSession {
     return document.deleteBranch(nodeId);
   }
 
+  /** Returns the number of moves and variations currently retained by this session. */
+  public int moveCount() {
+    return document.content().tree().size();
+  }
+
+  /** Replaces the starting position and safely clears every move and variation. */
+  public int replaceInitialPosition(PositionSnapshot initialPosition) {
+    return document.replaceInitialPosition(initialPosition);
+  }
+
   /**
    * Restores the tree's first-child line as the active route without moving the current cursor.
    *
