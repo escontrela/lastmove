@@ -97,7 +97,9 @@ public final class ApplicationHeader extends HBox {
     }
 
     private Image loadLogo(boolean nightMode) {
-        String resource = nightMode ? "/images/last-move-logo-dark.png" : "/images/last-move-logo.png";
+        String resource = nightMode
+                ? "/images/lastmove-knight-mark-dark.png"
+                : "/images/lastmove-knight-mark.png";
         return new Image(Objects.requireNonNull(getClass().getResource(resource),
                 () -> "Missing header logo: " + resource).toExternalForm());
     }

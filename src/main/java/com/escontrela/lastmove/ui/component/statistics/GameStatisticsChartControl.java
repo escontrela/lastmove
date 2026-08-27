@@ -16,7 +16,15 @@ import javafx.util.Duration;
 /** Canvas-based line chart for the game's time-series aggregate. */
 public final class GameStatisticsChartControl extends Region {
   public enum DisplayMode { GAME_TREND, OUTCOME_BARS }
-  private static final double LEFT = 42, RIGHT = 18, TOP = 18, BOTTOM = 34;
+  private static final double LEFT = 42, RIGHT = 18, TOP = 18, BOTTOM = 34, OUTCOME_BOTTOM = 58;
+  // Semantic chart colours from DESIGN.md. They remain stable across themes so that
+  // a result never changes its meaning when the application theme is switched.
+  private static final Color PRIMARY = Color.web("#1c69d4");
+  private static final Color SUCCESS = Color.web("#22c55e");
+  private static final Color DAY_GRID = Color.web("#e6e6e6");
+  private static final Color DAY_TEXT = Color.web("#6b6b6b");
+  private static final Color NIGHT_GRID = Color.web("#3c3c3c");
+  private static final Color NIGHT_TEXT = Color.web("#bbbbbb");
   private final Canvas canvas = new Canvas();
   private final FadeTransition loadingPulse = new FadeTransition(Duration.millis(720), canvas);
   private List<GameStatisticsBucket> buckets = List.of();
@@ -55,9 +63,11 @@ public final class GameStatisticsChartControl extends Region {
   private void draw() {
     double width = canvas.getWidth(), height = canvas.getHeight(); if (width <= 0 || height <= 0) return;
     boolean night = observedRoot != null && observedRoot.getStyleClass().contains("night-mode");
-    Color grid = Color.web(night ? "#465465" : "#dfe5ec"), text = Color.web(night ? "#b8c5d3" : "#65717e"), line = Color.web(night ? "#68a9ff" : "#1c69d4");
+    Color grid = night ? NIGHT_GRID : DAY_GRID;
+    Color text = night ? NIGHT_TEXT : DAY_TEXT;
     GraphicsContext g = canvas.getGraphicsContext2D(); g.clearRect(0, 0, width, height);
-    double plotWidth = Math.max(1, width - LEFT - RIGHT), plotHeight = Math.max(1, height - TOP - BOTTOM);
+    double bottom = displayMode == DisplayMode.OUTCOME_BARS ? OUTCOME_BOTTOM : BOTTOM;
+    double plotWidth = Math.max(1, width - LEFT - RIGHT), plotHeight = Math.max(1, height - TOP - bottom);
     g.setStroke(grid); g.setLineWidth(1); g.setFill(text); g.setFont(javafx.scene.text.Font.font(11));
     long max = displayMode == DisplayMode.OUTCOME_BARS
         ? Math.max(1, buckets.stream().flatMapToLong(bucket -> java.util.stream.LongStream.of(bucket.results().won(), bucket.results().lost())).max().orElse(0))
@@ -67,24 +77,25 @@ public final class GameStatisticsChartControl extends Region {
     if (buckets.isEmpty()) { g.fillText("No finished games match these filters.", LEFT, TOP + plotHeight / 2); return; }
     if (displayMode == DisplayMode.OUTCOME_BARS) { drawOutcomeBars(g, width, height, plotWidth, plotHeight, max, night); return; }
     double step = buckets.size() == 1 ? 0 : plotWidth / (buckets.size() - 1);
-    g.setStroke(line); g.setLineWidth(2.5); g.beginPath();
+    g.setStroke(PRIMARY); g.setLineWidth(2.5); g.beginPath();
     for (int i = 0; i < buckets.size(); i++) { double x = LEFT + step * i; double y = TOP + plotHeight - (buckets.get(i).games() / (double) max) * plotHeight; if (i == 0) g.moveTo(x, y); else g.lineTo(x, y); }
-    g.stroke(); g.setFill(line);
+    g.stroke(); g.setFill(PRIMARY);
     for (int i = 0; i < buckets.size(); i++) { double x = LEFT + step * i; double y = TOP + plotHeight - (buckets.get(i).games() / (double) max) * plotHeight; g.fillOval(x - 3, y - 3, 6, 6); if (i == 0 || i == buckets.size() - 1 || buckets.size() <= 5) g.fillText(labels.format(buckets.get(i).start()), Math.max(LEFT, x - 18), height - 10); }
   }
   private void drawOutcomeBars(GraphicsContext g, double width, double height, double plotWidth, double plotHeight, long max, boolean night) {
     double group = plotWidth / buckets.size();
     // Give short selected periods visual weight while retaining a readable chart for long ranges.
     double bar = Math.max(3, Math.min(72, group * .34));
-    Color won = Color.web(night ? "#4bd38a" : "#1b8f5a"), lost = Color.web(night ? "#ff8794" : "#cc4a55");
+    Color won = SUCCESS, lost = PRIMARY;
     for (int i = 0; i < buckets.size(); i++) {
       var bucket = buckets.get(i); double center = LEFT + group * i + group / 2;
       double wonHeight = plotHeight * bucket.results().won() / max, lostHeight = plotHeight * bucket.results().lost() / max;
       g.setFill(won); g.fillRoundRect(center - bar - 2, TOP + plotHeight - wonHeight, bar, wonHeight, 3, 3);
       g.setFill(lost); g.fillRoundRect(center + 2, TOP + plotHeight - lostHeight, bar, lostHeight, 3, 3);
-      if (i == 0 || i == buckets.size() - 1 || buckets.size() <= 5) { g.setFill(Color.web(night ? "#b8c5d3" : "#65717e")); g.fillText(labels.format(bucket.start()), Math.max(LEFT, center - 20), height - 10); }
+      if (i == 0 || i == buckets.size() - 1 || buckets.size() <= 5) { g.setFill(night ? NIGHT_TEXT : DAY_TEXT); g.fillText(labels.format(bucket.start()), Math.max(LEFT, center - 20), height - 34); }
     }
-    g.setFill(won); g.fillRect(width - 145, 8, 9, 9); g.setFill(Color.web(night ? "#b8c5d3" : "#65717e")); g.fillText("Won", width - 132, 17);
-    g.setFill(lost); g.fillRect(width - 82, 8, 9, 9); g.setFill(Color.web(night ? "#b8c5d3" : "#65717e")); g.fillText("Lost", width - 69, 17);
+    double legendTop = height - 23, legendBaseline = height - 14;
+    g.setFill(won); g.fillRect(width - 145, legendTop, 9, 9); g.setFill(night ? NIGHT_TEXT : DAY_TEXT); g.fillText("Won", width - 132, legendBaseline);
+    g.setFill(lost); g.fillRect(width - 82, legendTop, 9, 9); g.setFill(night ? NIGHT_TEXT : DAY_TEXT); g.fillText("Lost", width - 69, legendBaseline);
   }
 }

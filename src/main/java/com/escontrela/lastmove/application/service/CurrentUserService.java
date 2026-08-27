@@ -3,6 +3,7 @@ package com.escontrela.lastmove.application.service;
 import com.escontrela.lastmove.domain.player.PlayerId;
 import com.escontrela.lastmove.domain.player.PlayerRepository;
 import com.escontrela.lastmove.domain.user.User;
+import java.util.Arrays;
 import com.escontrela.lastmove.infrastructure.persistence.PersistenceAvailability;
 import java.util.Objects;
 import java.util.Optional;
@@ -64,6 +65,14 @@ public class CurrentUserService {
         .flatMap(playerRepository::findById)
         .map(player -> User.named(player.fullName()))
         .orElse(User.UNKNOWN);
+  }
+
+  /** Returns a defensive copy of the active profile photo, when it is available. */
+  public Optional<byte[]> currentUserPhoto() {
+    return selectedPlayerId()
+        .flatMap(playerRepository::findById)
+        .flatMap(player -> player.photo())
+        .map(photo -> Arrays.copyOf(photo, photo.length));
   }
 
   /** Selects the given player profile as the current application user. */

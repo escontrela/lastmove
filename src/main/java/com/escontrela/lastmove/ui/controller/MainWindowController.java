@@ -14,7 +14,6 @@ import com.escontrela.lastmove.ui.event.OpenAnalysisSessionEvent;
 import com.escontrela.lastmove.ui.event.ResumeComputerGameEvent;
 import com.escontrela.lastmove.ui.event.UiEventBus;
 import com.escontrela.lastmove.application.service.CurrentUserService.ActivePlayerStatus;
-import com.escontrela.lastmove.ui.component.profile.CurrentUserAvatarControl;
 import com.escontrela.lastmove.ui.component.message.MessageBox;
 import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
@@ -22,10 +21,8 @@ import com.escontrela.lastmove.ui.screen.UiScreenController;
 import com.escontrela.lastmove.ui.screen.UiScreenId;
 import com.escontrela.lastmove.ui.service.ChessSound;
 import com.escontrela.lastmove.ui.service.ChessSoundService;
-import java.util.Map;
 import java.util.List;
-import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
 import javafx.collections.ListChangeListener;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
@@ -33,8 +30,6 @@ import javafx.event.ActionEvent;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.VBox;
 import org.springframework.context.annotation.Lazy;
@@ -45,10 +40,6 @@ import org.springframework.stereotype.Component;
 public class MainWindowController implements UiScreenController {
 
     private static final String NIGHT_MODE_STYLE_CLASS = "night-mode";
-    private static final String LIGHT_LOGO_RESOURCE = "/images/lastmove-chess-logo.png";
-    private static final String DARK_LOGO_RESOURCE = "/images/lastmove-chess-logo-dark.png";
-    private static final Map<String, Image> IMAGE_CACHE = new ConcurrentHashMap<>();
-
     private final UiFlowManager uiFlowManager;
     private final ChessSoundService chessSoundService;
     private final CurrentUserService currentUserService;
@@ -62,8 +53,6 @@ public class MainWindowController implements UiScreenController {
     @FXML
     private Label welcomeLabel;
     @FXML
-    private ImageView statusBrandLogo;
-    @FXML
     private Button studiesToolButton;
     @FXML
     private Button tacticsToolButton;
@@ -73,8 +62,6 @@ public class MainWindowController implements UiScreenController {
     private MessageBox startupMessageBox;
     @FXML
     private ContextualMenuPanel contextualMenuPanel;
-    @FXML
-    private CurrentUserAvatarControl currentUserAvatar;
     @FXML private NotificationsPanel notificationsPanel;
 
     private final ListChangeListener<String> themeStyleListener = change -> updateThemeAssets();
@@ -100,7 +87,6 @@ public class MainWindowController implements UiScreenController {
         chessSoundService.preload();
         root.getStyleClass().addListener(themeStyleListener);
         updateThemeAssets();
-        updateCurrentUserAvatar();
         configureContextMenu();
         notificationsPanel.setOnOpen(this::openNotificationGame);
         notificationsPanel.setOnDelete(notification -> { currentUserService.selectedPlayerId().ifPresent(owner -> notifications.deleteById(owner, notification.id())); refreshNotifications(); });
@@ -114,7 +100,6 @@ public class MainWindowController implements UiScreenController {
 
     @Override
     public void onShow() {
-        updateCurrentUserAvatar();
         updateWelcomeAndRecentGames();
         updateStudiesAvailability();
         refreshNotifications();
@@ -262,19 +247,7 @@ public class MainWindowController implements UiScreenController {
                 setFeatureStatus("LastMove Chess — your chess study workspace."));
     }
 
-    private void updateStatusBrandLogo() {
-        String resource = isNightMode()
-                ? DARK_LOGO_RESOURCE
-                : LIGHT_LOGO_RESOURCE;
-        statusBrandLogo.setImage(loadImage(resource));
-    }
-
     private void updateThemeAssets() {
-        updateStatusBrandLogo();
-    }
-
-    private void updateCurrentUserAvatar() {
-        currentUserAvatar.setDisplayName(currentUserService.currentUser().name());
     }
 
     /** The home dashboard has no inline status label; user feedback is presented by its overlays. */
@@ -330,9 +303,4 @@ public class MainWindowController implements UiScreenController {
         return root.getStyleClass().contains(NIGHT_MODE_STYLE_CLASS);
     }
 
-    private Image loadImage(String resource) {
-        return IMAGE_CACHE.computeIfAbsent(resource, path -> new Image(Objects.requireNonNull(
-                getClass().getResource(path),
-                () -> "Missing image resource: " + path).toExternalForm()));
-    }
 }

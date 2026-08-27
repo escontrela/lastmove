@@ -1,6 +1,7 @@
 package com.escontrela.lastmove.ui.controller;
 
 import com.escontrela.lastmove.application.computer.ComputerGameConfiguration;
+import com.escontrela.lastmove.application.computer.ComputerEngineIds;
 import com.escontrela.lastmove.application.computer.ComputerGamePhase;
 import com.escontrela.lastmove.application.computer.ComputerGameState;
 import com.escontrela.lastmove.application.service.ComputerGameService;
@@ -32,6 +33,7 @@ import com.escontrela.lastmove.ui.screen.UiScreenController;
 import com.escontrela.lastmove.ui.screen.UiScreenId;
 import com.escontrela.lastmove.ui.service.ChessSoundService;
 import com.escontrela.lastmove.ui.service.BoardAppearancePreferencesService;
+import java.io.ByteArrayInputStream;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
@@ -48,6 +50,7 @@ import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
+import javafx.scene.shape.Circle;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -62,6 +65,7 @@ import org.springframework.stereotype.Component;
 public final class HumanVsComputerScreenController implements UiScreenController {
 
   private static final double BOARD_MAX_SIZE = 720.0;
+  private static final double PLAYER_ICON_SIZE = 28.0;
   private static final String NIGHT_MODE_STYLE_CLASS = "night-mode";
 
   private final UiFlowManager uiFlowManager;
@@ -481,6 +485,9 @@ public final class HumanVsComputerScreenController implements UiScreenController
         humanIsWhite ? state.whitePlayer().getName() : state.blackPlayer().getName());
     opponentPlayerLabel.setText(
         humanIsWhite ? state.blackPlayer().getName() : state.whitePlayer().getName());
+    if (previousState == null || !previousState.engine().id().equals(state.engine().id())) {
+      updatePlayerIcons();
+    }
     humanClockLabel.setText(
         formatClock(
             humanIsWhite ? state.clock().whiteRemaining() : state.clock().blackRemaining()));
@@ -570,6 +577,7 @@ public final class HumanVsComputerScreenController implements UiScreenController
     restartButton.setDisable(true);
     resignButton.setDisable(true);
     opponentThinkingIndicator.setThinking(false);
+    updatePlayerIcons();
     followingLivePosition = true;
     reviewedPlyCount = 0;
     updateReviewControls();
@@ -577,8 +585,24 @@ public final class HumanVsComputerScreenController implements UiScreenController
 
   private void updatePlayerIcons() {
     String iconColor = root.getStyleClass().contains(NIGHT_MODE_STYLE_CLASS) ? "FFFFFF" : "000000";
-    humanPlayerIcon.setImage(loadImage("/images/face_35dp_" + iconColor + ".png"));
-    opponentPlayerIcon.setImage(loadImage("/images/robot_2_35dp_" + iconColor + ".png"));
+    currentUserService.currentUserPhoto().ifPresentOrElse(
+        photo -> {
+          humanPlayerIcon.setImage(new Image(new ByteArrayInputStream(photo)));
+          humanPlayerIcon.setClip(
+              new Circle(PLAYER_ICON_SIZE / 2, PLAYER_ICON_SIZE / 2, PLAYER_ICON_SIZE / 2));
+        },
+        () -> {
+          humanPlayerIcon.setImage(loadImage("/images/face_35dp_" + iconColor + ".png"));
+          humanPlayerIcon.setClip(null);
+        });
+    boolean knightshadeOpponent = renderedState != null
+        && ComputerEngineIds.KNIGHTSHADE.equals(renderedState.engine().id());
+    opponentPlayerIcon.setImage(knightshadeOpponent
+        ? loadImage(root.getStyleClass().contains(NIGHT_MODE_STYLE_CLASS)
+            ? "/images/knightshade-engine-mark-dark.png"
+            : "/images/knightshade-engine-mark.png")
+        : loadImage("/images/robot_2_35dp_" + iconColor + ".png"));
+    opponentPlayerIcon.setClip(null);
   }
 
   private Image loadImage(String resource) {
