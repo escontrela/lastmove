@@ -10,6 +10,7 @@ import com.escontrela.lastmove.ui.service.ChessSound;
 import com.escontrela.lastmove.ui.service.ChessSoundService;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -39,6 +40,7 @@ public class ChessBoardControl extends Control {
   private final BooleanProperty visualEffectsEnabled =
       new SimpleBooleanProperty(this, "visualEffectsEnabled", true);
   private final ObjectProperty<Square> hintSquare = new SimpleObjectProperty<>(this, "hintSquare");
+  private final ObservableList<Square> threatenedSquares = FXCollections.observableArrayList();
 
   // 1. PROPIEDAD DEL EVENTO: Permite suscribir controladores externos
   private final ObjectProperty<EventHandler<BoardMoveEvent>> onMoveRequested =
@@ -134,6 +136,9 @@ public class ChessBoardControl extends Control {
   public final ObjectProperty<Square> hintSquareProperty() {
     return hintSquare;
   }
+  public final void setThreatenedSquares(Set<Square> squares) { threatenedSquares.setAll(squares); }
+  public final void clearThreatenedSquares() { threatenedSquares.clear(); }
+  ObservableList<Square> observableThreatenedSquares() { return threatenedSquares; }
 
   public final Square getHintSquare() {
     return hintSquare.get();

@@ -1186,6 +1186,7 @@
     -fx-border-width: 4px;
     -fx-effect: dropshadow(gaussian, rgba(239, 183, 0, 0.85), 15, 0.32, 0, 0);
 }
+.chess-square.chess-square-threatened { -fx-effect: dropshadow(gaussian, rgba(210, 58, 69, 0.78), 10, 0.45, 0, 0); -fx-border-color: rgba(210, 58, 69, 0.82); -fx-border-width: 2; }
 
 .tactic-result-card {
     -fx-background-color: #f5f8fb;

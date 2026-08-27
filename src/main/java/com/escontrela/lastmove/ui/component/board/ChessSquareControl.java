@@ -94,6 +94,10 @@ public class ChessSquareControl extends StackPane {
       getStyleClass().remove(CssClassNames.SQUARE_HINT);
     }
   }
+  public void setThreatened(boolean threatened) {
+    if (threatened && !getStyleClass().contains("chess-square-threatened")) getStyleClass().add("chess-square-threatened");
+    if (!threatened) getStyleClass().remove("chess-square-threatened");
+  }
 
   /**
    * Aplica el tamaño exacto de la casilla (en píxeles), calculado por {@link ChessBoardSkin} a

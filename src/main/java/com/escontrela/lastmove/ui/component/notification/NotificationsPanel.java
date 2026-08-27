@@ -24,6 +24,8 @@ public final class NotificationsPanel extends StackPane {
   private Consumer<GameNotification> onOpen = ignored -> {};
   private Consumer<GameNotification> onDelete = ignored -> {};
   private Runnable onClear = () -> {};
+  private Runnable onOpenComputerMatch = () -> {};
+  private boolean computerMatchAvailable;
 
   public NotificationsPanel() {
     getStyleClass().add("notifications-overlay"); setAlignment(Pos.CENTER_RIGHT);
@@ -39,8 +41,24 @@ public final class NotificationsPanel extends StackPane {
   }
   public void setNotifications(List<NotificationEntry> notifications) {
     Objects.requireNonNull(notifications); content.getChildren().clear();
-    if (notifications.isEmpty()) { Label empty = new Label("You have no game notifications."); empty.getStyleClass().add("notifications-empty"); content.getChildren().add(empty); return; }
+    if (notifications.isEmpty() && !computerMatchAvailable) { Label empty = new Label("You have no game notifications."); empty.getStyleClass().add("notifications-empty"); content.getChildren().add(empty); return; }
     notifications.forEach(notification -> content.getChildren().add(row(notification)));
+    if (computerMatchAvailable) {
+      content.getChildren().add(0, computerMatchRow());
+    }
+  }
+
+  /** Adds an in-memory engine match to the event panel without creating a persisted notification. */
+  public void setComputerMatchAvailable(boolean available, Runnable onOpen) {
+    computerMatchAvailable = available;
+    onOpenComputerMatch = Objects.requireNonNull(onOpen);
+  }
+
+  private VBox computerMatchRow() {
+    Label heading = new Label("Computer vs computer"); heading.getStyleClass().add("notifications-heading");
+    Label detail = new Label("In progress · transient engine match"); detail.getStyleClass().add("notifications-detail");
+    Button open = new Button("Return to match"); open.getStyleClass().add("notifications-open"); open.setOnAction(e -> onOpenComputerMatch.run());
+    VBox row = new VBox(8, heading, detail, open); row.getStyleClass().add("notifications-row"); return row;
   }
   private VBox row(NotificationEntry entry) {
     GameNotification notification = entry.notification();

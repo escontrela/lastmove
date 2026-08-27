@@ -113,6 +113,7 @@ public class UiFlowManager {
     private String titleFor(UiScreenId screenId) {
         return switch (screenId) {
             case HUMAN_VS_COMPUTER -> "Human vs Computer";
+            case COMPUTER_VS_COMPUTER -> "Computer vs Computer";
             case PGN_ANALYSIS -> "PGN Analysis";
             case POSITION_EDITOR -> "Position Editor";
             case ANALYSIS_SESSIONS -> "Analysis Sessions";

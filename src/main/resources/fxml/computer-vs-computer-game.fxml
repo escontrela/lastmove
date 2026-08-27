@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import com.escontrela.lastmove.ui.component.board.ChessBoardControl?>
+<?import com.escontrela.lastmove.ui.component.header.ApplicationHeader?>
+<?import com.escontrela.lastmove.ui.component.game.ComputerVsComputerSetupOverlay?>
+<?import com.escontrela.lastmove.ui.component.game.CapturedPiecesControl?>
+<?import com.escontrela.lastmove.ui.component.game.ThinkingIndicatorControl?>
+<?import com.escontrela.lastmove.ui.component.game.TypewriterStatusLabel?>
+<?import com.escontrela.lastmove.ui.component.message.MessageBox?>
+<?import com.escontrela.lastmove.ui.component.notation.MoveNotationControl?>
+<?import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.Circle?>
+
+<StackPane fx:id="root" styleClass="app-shell" stylesheets="@../css/lastmove.css" xmlns="http://javafx.com/javafx/22.0.2" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.escontrela.lastmove.ui.controller.ComputerVsComputerScreenController">
+  <BorderPane styleClass="app-shell" StackPane.alignment="TOP_LEFT">
+    <top><ApplicationHeader /></top>
+    <center>
+      <HBox spacing="16.0" styleClass="analysis-workspace progressive-game-workspace"><padding><Insets bottom="16.0" left="20.0" right="20.0" top="8.0" /></padding>
+        <StackPane fx:id="boardHost" alignment="CENTER" HBox.hgrow="ALWAYS"><ChessBoardControl fx:id="chessBoard" /></StackPane>
+        <VBox prefWidth="340.0" spacing="8.0" styleClass="board-side-panel">
+          <VBox spacing="5.0" styleClass="rail-card progressive-player-card"><padding><Insets bottom="16.0" left="18.0" right="18.0" top="16.0" /></padding><HBox alignment="CENTER_LEFT" spacing="10.0"><ImageView fx:id="opponentPlayerIcon" fitHeight="28.0" fitWidth="28.0" preserveRatio="true" smooth="true" /><Label fx:id="opponentPlayerLabel" styleClass="progressive-player-name" text="Black engine" /><Circle fill="#1b1f26" radius="6.0" stroke="#69727d" strokeWidth="1.0" /><ThinkingIndicatorControl fx:id="opponentThinkingIndicator" /></HBox><Label fx:id="opponentClockLabel" styleClass="progressive-player-clock" text="--:--" /><CapturedPiecesControl fx:id="opponentCapturedPieces" /></VBox>
+          <HBox alignment="CENTER_LEFT" spacing="10.0" styleClass="progressive-navigation-row"><ToolbarIconButton fx:id="firstMoveButton" accessibleText="First move" darkIconResource="/images/first_page_35dp_FFFFFF.png" lightIconResource="/images/first_page_35dp_000000.png" onAction="#reviewFirstMove" tooltipText="First move" /><ToolbarIconButton fx:id="previousMoveButton" accessibleText="Previous move" darkIconResource="/images/arrow_left_alt_35dp_FFFFFF.png" lightIconResource="/images/arrow_left_alt_35dp_000000.png" onAction="#reviewPreviousMove" tooltipText="Previous move" /><ToolbarIconButton fx:id="nextMoveButton" accessibleText="Next move" darkIconResource="/images/arrow_right_alt_35dp_FFFFFF.png" lightIconResource="/images/arrow_right_alt_35dp_000000.png" onAction="#reviewNextMove" tooltipText="Next move" /><ToolbarIconButton fx:id="lastMoveButton" accessibleText="Last move" darkIconResource="/images/last_page_35dp_FFFFFF.png" lightIconResource="/images/last_page_35dp_000000.png" onAction="#reviewLastMove" tooltipText="Live position" /></HBox>
+          <VBox spacing="10.0" styleClass="rail-card progressive-moves-card" VBox.vgrow="ALWAYS"><padding><Insets bottom="14.0" left="14.0" right="14.0" top="14.0" /></padding><Label styleClass="card-title" text="Moves" /><MoveNotationControl fx:id="moveNotation" VBox.vgrow="ALWAYS" /></VBox>
+          <VBox spacing="5.0" styleClass="rail-card progressive-player-card"><padding><Insets bottom="16.0" left="18.0" right="18.0" top="16.0" /></padding><HBox alignment="CENTER_LEFT" spacing="10.0"><ImageView fx:id="humanPlayerIcon" fitHeight="28.0" fitWidth="28.0" preserveRatio="true" smooth="true" /><Label fx:id="humanPlayerLabel" styleClass="progressive-player-name" text="White engine" /><Circle fill="#ffffff" radius="6.0" stroke="#69727d" strokeWidth="1.0" /><ThinkingIndicatorControl fx:id="humanThinkingIndicator" /></HBox><Label fx:id="humanClockLabel" styleClass="progressive-player-clock" text="--:--" /><CapturedPiecesControl fx:id="humanCapturedPieces" /></VBox>
+          <HBox spacing="10.0"><Button fx:id="takeBackButton" disable="true" maxWidth="Infinity" mnemonicParsing="false" styleClass="progressive-action-button" text="Take back" HBox.hgrow="ALWAYS" /><Button fx:id="restartButton" maxWidth="Infinity" mnemonicParsing="false" onAction="#restart" styleClass="progressive-action-button" text="Restart" HBox.hgrow="ALWAYS" /><Button fx:id="resignButton" maxWidth="Infinity" mnemonicParsing="false" onAction="#resign" styleClass="progressive-action-button, progressive-danger-action-button" text="Stop" HBox.hgrow="ALWAYS" /></HBox>
+        </VBox>
+      </HBox>
+    </center>
+    <bottom><HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="status-rail"><Label styleClass="eyebrow-label" text="Status" /><TypewriterStatusLabel fx:id="statusLabel" styleClass="status-text, typewriter-status-label" text="Choose both engines and a time control" /></HBox></bottom>
+  </BorderPane>
+  <MessageBox fx:id="resultMessageBox" additionalButtonText="Change engines" additionalButtonVisible="true" autoHide="false" buttonMode="ACCEPT_CANCEL" closeButtonVisible="true" dragEnabled="true" onAdditionalAction="#resetModel" />
+  <ComputerVsComputerSetupOverlay fx:id="setupOverlay" />
+</StackPane>

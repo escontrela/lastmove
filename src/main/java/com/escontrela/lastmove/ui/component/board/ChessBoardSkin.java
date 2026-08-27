@@ -85,6 +85,7 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
       (observable, oldValue, enabled) -> updateSquareVisualEffects(enabled);
   private final ChangeListener<Square> hintSquareListener =
       (observable, oldSquare, newSquare) -> updateHintSquare(oldSquare, newSquare);
+  private final ListChangeListener<Square> threatenedSquaresListener = change -> updateThreatenedSquares();
 
   public ChessBoardSkin(ChessBoardControl control) {
 
@@ -96,12 +97,14 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     control.flippedProperty().addListener(orientationListener);
     control.visualEffectsEnabledProperty().addListener(visualEffectsListener);
     control.hintSquareProperty().addListener(hintSquareListener);
+    control.observableThreatenedSquares().addListener(threatenedSquaresListener);
     control.observableArrows().addListener(arrowsListener);
     control.addEventFilter(ContextMenuEvent.CONTEXT_MENU_REQUESTED, contextMenuFilter);
     if (control.getPosition() != null) {
       renderPosition(control.getPosition());
     }
     updateHintSquare(null, control.getHintSquare());
+    updateThreatenedSquares();
 
     // Configurar overlay para pieza flotante
     dragOverlay.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
@@ -266,6 +269,10 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
         squares[file][rank].setVisualEffectsEnabled(enabled);
       }
     }
+  }
+  private void updateThreatenedSquares() {
+    var threatened = new java.util.HashSet<>(getSkinnable().observableThreatenedSquares());
+    for (int file=0; file<ChessConstants.FILES; file++) for (int rank=0; rank<ChessConstants.RANKS; rank++) squares[file][rank].setThreatened(threatened.contains(Square.of(file, rank)));
   }
 
   private void updateHintSquare(Square oldSquare, Square newSquare) {

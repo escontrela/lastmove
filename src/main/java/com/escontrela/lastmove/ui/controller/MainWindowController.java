@@ -6,6 +6,7 @@ import com.escontrela.lastmove.application.notification.GameNotification;
 import com.escontrela.lastmove.application.repository.SavedGameRepository;
 import com.escontrela.lastmove.application.game.SavedGameSummary;
 import com.escontrela.lastmove.application.service.AnalysisSessionService;
+import com.escontrela.lastmove.application.service.ComputerVsComputerGameService;
 import com.escontrela.lastmove.ui.component.notification.NotificationsPanel;
 import com.escontrela.lastmove.ui.event.ToggleNotificationsPanelEvent;
 import com.escontrela.lastmove.application.event.ComputerGameFinishedEvent;
@@ -47,6 +48,7 @@ public class MainWindowController implements UiScreenController {
     private final SavedGameRepository savedGames;
     private final AnalysisSessionService analysisSessionService;
     private final UiEventBus uiEventBus;
+    private final ComputerVsComputerGameService computerVsComputerGames;
 
     @FXML
     private AnchorPane root;
@@ -71,7 +73,8 @@ public class MainWindowController implements UiScreenController {
             @Lazy UiFlowManager uiFlowManager,
             ChessSoundService chessSoundService,
             CurrentUserService currentUserService, GameNotificationRepository notifications, SavedGameRepository savedGames,
-            AnalysisSessionService analysisSessionService, UiEventBus uiEventBus) {
+            AnalysisSessionService analysisSessionService, UiEventBus uiEventBus,
+            ComputerVsComputerGameService computerVsComputerGames) {
         this.uiFlowManager = uiFlowManager;
         this.chessSoundService = chessSoundService;
         this.currentUserService = currentUserService;
@@ -79,6 +82,7 @@ public class MainWindowController implements UiScreenController {
         this.savedGames = savedGames;
         this.analysisSessionService = analysisSessionService;
         this.uiEventBus = uiEventBus;
+        this.computerVsComputerGames = computerVsComputerGames;
     }
 
     @FXML
@@ -91,6 +95,7 @@ public class MainWindowController implements UiScreenController {
         notificationsPanel.setOnOpen(this::openNotificationGame);
         notificationsPanel.setOnDelete(notification -> { currentUserService.selectedPlayerId().ifPresent(owner -> notifications.deleteById(owner, notification.id())); refreshNotifications(); });
         notificationsPanel.setOnClear(() -> { currentUserService.selectedPlayerId().ifPresent(notifications::deleteAll); refreshNotifications(); });
+        notificationsPanel.setComputerMatchAvailable(false, this::openComputerVsComputer);
         startupMessageBox.setOnAccept(event -> openPgnAnalysis());
         startupMessageBox.setOnCancel(event ->
                 setFeatureStatus("Welcome to LastMove Chess."));
@@ -147,6 +152,12 @@ public class MainWindowController implements UiScreenController {
         uiFlowManager.show(UiScreenId.HUMAN_VS_COMPUTER);
     }
 
+    /** Opens a transient match between two configured computer engines. */
+    @FXML
+    public void openComputerVsComputer() {
+        uiFlowManager.show(UiScreenId.COMPUTER_VS_COMPUTER);
+    }
+
     @FXML
     public void openMyGames() {
         if (currentUserService.activePlayerState().status() != ActivePlayerStatus.ACTIVE) {
@@ -171,6 +182,10 @@ public class MainWindowController implements UiScreenController {
         Platform.runLater(this::refreshNotifications);
     }
     private void refreshNotifications() {
+        notificationsPanel.setComputerMatchAvailable(
+                computerVsComputerGames.gamesInMemory().stream()
+                        .anyMatch(game -> game.result().isEmpty() && !game.stopped()),
+                this::openComputerVsComputer);
         currentUserService.selectedPlayerId().ifPresentOrElse(owner -> {
             Map<com.escontrela.lastmove.domain.game.GameId, SavedGameSummary> summaries = savedGames.listSummaries(owner).stream().collect(java.util.stream.Collectors.toMap(SavedGameSummary::gameId, summary -> summary));
             notificationsPanel.setNotifications(notifications.findByOwner(owner).stream().map(notification -> notificationEntry(notification, summaries.get(notification.gameId()))).toList());
@@ -235,6 +250,7 @@ public class MainWindowController implements UiScreenController {
             contextualMenuPanel.addItem("Tactic suites", "", event -> openTactics());
         }
         contextualMenuPanel.addItem("Human vs computer", "", event -> openHumanVsComputer());
+        contextualMenuPanel.addItem("Computer vs computer", "", event -> openComputerVsComputer());
         contextualMenuPanel.addSeparator();
         contextualMenuPanel.addItem("Players", "", event -> openPlayers());
         contextualMenuPanel.addItem("Open setup", "", event -> openSetup());
