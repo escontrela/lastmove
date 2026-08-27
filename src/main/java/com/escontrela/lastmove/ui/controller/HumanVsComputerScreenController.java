@@ -748,7 +748,7 @@ public final class HumanVsComputerScreenController implements UiScreenController
   private void refreshThreatHints() {
     boolean show = threatHintsEnabled && renderedState != null && followingLivePosition
         && renderedState.phase() == ComputerGamePhase.WAITING_FOR_HUMAN;
-    if (show) chessBoard.setThreatenedSquares(threatenedSquaresService.attackedBy(renderedState.position(), renderedState.humanColor().opposite()));
+    if (show) chessBoard.setThreatenedSquares(threatenedSquaresService.attackedPieces(renderedState.position(), renderedState.humanColor().opposite()));
     else chessBoard.clearThreatenedSquares();
     if (threatHintsIcon != null) threatHintsIcon.setVisible(threatHintsEnabled);
   }
