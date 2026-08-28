@@ -4,6 +4,7 @@ import com.escontrela.lastmove.domain.common.PieceColor;
 import com.escontrela.lastmove.domain.notation.SanMove;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -274,6 +275,14 @@ public final class ChessGame {
     return List.copyOf(moveHistory);
   }
 
+  /** Returns every official position from the initial setup through the current position. */
+  public List<PositionSnapshot> positionHistory() {
+    List<PositionSnapshot> positions = new ArrayList<>(moveHistory.size() + 1);
+    positions.add(initialPosition);
+    moveHistory.stream().map(Ply::resultingPosition).forEach(positions::add);
+    return List.copyOf(positions);
+  }
+
   public Optional<MoveDescriptor> lastMove() {
     return currentPosition.lastMove();
   }
@@ -416,6 +425,9 @@ public final class ChessGame {
     if (position.stalemate()) {
       return Optional.of(GameResult.DRAW);
     }
+    if (isThreefoldRepetition(position)) {
+      return Optional.of(GameResult.DRAW);
+    }
     return Optional.empty();
   }
 
@@ -426,7 +438,27 @@ public final class ChessGame {
     if (position.stalemate()) {
       return Optional.of(GameTerminationReason.STALEMATE);
     }
+    if (isThreefoldRepetition(position)) {
+      return Optional.of(GameTerminationReason.THREEFOLD_REPETITION);
+    }
     return Optional.empty();
+  }
+
+  private boolean isThreefoldRepetition(PositionSnapshot position) {
+    int occurrences = sameRepetitionPosition(initialPosition, position) ? 1 : 0;
+    for (Ply ply : moveHistory) {
+      if (sameRepetitionPosition(ply.resultingPosition(), position) && ++occurrences >= 3) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private boolean sameRepetitionPosition(PositionSnapshot left, PositionSnapshot right) {
+    return left.activeColor() == right.activeColor()
+        && left.castlingRights().equals(right.castlingRights())
+        && left.enPassantTarget().equals(right.enPassantTarget())
+        && new HashSet<>(left.pieces()).equals(new HashSet<>(right.pieces()));
   }
 
   private void requireGameInProgress() {

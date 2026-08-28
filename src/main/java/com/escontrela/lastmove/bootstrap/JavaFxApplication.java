@@ -2,6 +2,8 @@ package com.escontrela.lastmove.bootstrap;
 
 import javafx.application.Application;
 import javafx.stage.Stage;
+import javafx.scene.image.Image;
+import java.util.Objects;
 import org.springframework.context.ConfigurableApplicationContext;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
 import com.escontrela.lastmove.ui.screen.UiScreenId;
@@ -26,6 +28,10 @@ public class JavaFxApplication extends Application {
     public void start(Stage primaryStage) {
         springContext.getBeanFactory().registerSingleton("primaryStage", primaryStage);
         primaryStage.setTitle("LastMove");
+        primaryStage.getIcons().add(
+                new Image(Objects.requireNonNull(
+                        JavaFxApplication.class.getResource("/images/lastmove-knight-mark.png"))
+                        .toExternalForm()));
         UiFlowManager uiFlowManager = springContext.getBean(UiFlowManager.class);
         springContext.getBean(SplashScreenService.class)
                 .showIfEnabled(() -> uiFlowManager.show(UiScreenId.MAIN));
@@ -35,4 +41,5 @@ public class JavaFxApplication extends Application {
     public void stop() {
         springContext.close();
     }
+
 }

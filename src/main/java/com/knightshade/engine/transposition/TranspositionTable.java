@@ -48,6 +48,10 @@ public final class TranspositionTable {
 
   public void store(long key, Move move, int depth, int score, ScoreType type) {
     int index = (int) (key & mask);
+    Entry current = entries[index];
+    if (current != null && keys[index] == key && current.depth() > depth) {
+      return;
+    }
     keys[index] = key;
     entries[index] = new Entry(move, depth, score, type);
   }

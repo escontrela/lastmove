@@ -1541,6 +1541,13 @@
 
 /* Progressive-game screen and its Human vs Computer setup overlay. */
 .progressive-game-workspace { -fx-alignment: center; }
+.computer-vs-computer-shell {
+    -fx-background-color: #f8fbff;
+    -fx-background-image: url("../images/backgrounds/computer-match-light.png");
+    -fx-background-size: cover;
+    -fx-background-position: center;
+    -fx-background-repeat: no-repeat;
+}
 .progressive-player-card { -fx-background-color: #ffffff; }
 .progressive-player-name {
     -fx-font-size: 16px;
@@ -1677,6 +1684,10 @@
 
 /* Night mode is applied to each screen root by ApplicationThemeService. */
 .night-mode.app-shell, .night-mode .app-shell { -fx-background-color: #1a2129; }
+.night-mode.computer-vs-computer-shell, .night-mode .computer-vs-computer-shell {
+    -fx-background-color: #101923;
+    -fx-background-image: url("../images/backgrounds/computer-match-dark.png");
+}
 .night-mode .workspace-header, .night-mode.workspace-header {
     -fx-background-color: #1a2129;
     -fx-border-color: transparent transparent #3b4654 transparent;
@@ -2417,8 +2428,11 @@
 .move-tree-title { -fx-font-size: 21px; -fx-font-weight: bold; -fx-text-fill: #16233b; }
 .move-tree-support { -fx-font-size: 13px; -fx-text-fill: #6b7889; }
 .move-tree-close, .move-tree-comment-close { -fx-background-color: transparent; -fx-font-size: 22px; -fx-font-weight: bold; -fx-cursor: hand; }
+.move-tree-actions { -fx-padding: 0 4 0 0; }
+.move-tree-action-button { -fx-background-radius: 10; -fx-border-radius: 10; -fx-padding: 7; }
 .move-tree-scroll, .move-tree-scroll > .viewport { -fx-background-color: transparent; -fx-background: transparent; }
 .move-tree-canvas { -fx-background-color: linear-gradient(to bottom, #fbfdff, #f4f8fc); }
+.move-tree-zoom-canvas { -fx-background-color: transparent; }
 .move-tree-explorer { -fx-background-color: #f7f9fc; }
 .move-tree-inspector { -fx-background-color: #ffffff; -fx-border-color: transparent transparent transparent #dfe5ed; -fx-padding: 18; }
 .move-tree-connector-main { -fx-stroke: #1c69d4; -fx-stroke-width: 2.1; }

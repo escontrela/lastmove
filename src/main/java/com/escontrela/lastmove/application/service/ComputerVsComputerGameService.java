@@ -60,7 +60,7 @@ public final class ComputerVsComputerGameService {
   private void requestMove(Runtime runtime) {
     final PositionSnapshot position; final long version; final Duration limit; final ComputerMoveEngine engine;
     synchronized (runtime) { expire(runtime); if (runtime.game.result().isPresent() || runtime.stopped) return; position = runtime.game.currentPosition(); version = ++runtime.searchVersion; engine = runtime.game.currentTurn() == PieceColor.WHITE ? runtime.white : runtime.black; limit = permitted(runtime); }
-    engine.chooseMove(new ComputerMoveRequest(position, limit)).handle((move, failure) -> {
+    engine.chooseMove(new ComputerMoveRequest(position, limit, runtime.game.positionHistory())).handle((move, failure) -> {
       boolean continueMatch;
       synchronized (runtime) {
         if (version != runtime.searchVersion) return null;

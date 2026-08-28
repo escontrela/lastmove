@@ -44,7 +44,11 @@ public final class See {
     board[toIndex] =
         Piece.of(mover, move.isPromotion() ? move.promotion() : Piece.type(movingPiece));
 
-    return capturedValue - seeCapture(board, move.to(), mover.opposite());
+    int promotionGain =
+        move.isPromotion()
+            ? PieceValues.of(move.promotion()) - PieceValues.PAWN
+            : 0;
+    return capturedValue + promotionGain - seeCapture(board, move.to(), mover.opposite());
   }
 
   /** Returns whether the exchange started by {@code move} gains at least {@code threshold}. */

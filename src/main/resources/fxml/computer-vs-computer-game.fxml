@@ -15,8 +15,8 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.shape.Circle?>
 
-<StackPane fx:id="root" styleClass="app-shell" stylesheets="@../css/lastmove.css" xmlns="http://javafx.com/javafx/22.0.2" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.escontrela.lastmove.ui.controller.ComputerVsComputerScreenController">
-  <BorderPane styleClass="app-shell" StackPane.alignment="TOP_LEFT">
+<StackPane fx:id="root" styleClass="app-shell, computer-vs-computer-shell" stylesheets="@../css/lastmove.css" xmlns="http://javafx.com/javafx/22.0.2" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.escontrela.lastmove.ui.controller.ComputerVsComputerScreenController">
+  <BorderPane styleClass="app-shell, computer-vs-computer-shell" StackPane.alignment="TOP_LEFT">
     <top><ApplicationHeader /></top>
     <center>
       <HBox spacing="16.0" styleClass="analysis-workspace progressive-game-workspace"><padding><Insets bottom="16.0" left="20.0" right="20.0" top="8.0" /></padding>

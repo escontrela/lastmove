@@ -158,4 +158,23 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>macos-dock-icon</id>
+            <activation><os><family>mac</family></os></activation>
+            <build><plugins><plugin>
+                <groupId>org.openjfx</groupId>
+                <artifactId>javafx-maven-plugin</artifactId>
+                <configuration><options>
+                    <option>-Xdock:icon=${project.basedir}/src/main/resources/images/LastMove.icns</option>
+                </options></configuration>
+            </plugin></plugins></build>
+        </profile>
+        <profile>
+            <id>windows-app-icon</id>
+            <activation><os><family>Windows</family></os></activation>
+            <!-- Windows uses the Stage PNG while running; LastMove.ico is for jpackage. -->
+        </profile>
+    </profiles>
 </project>

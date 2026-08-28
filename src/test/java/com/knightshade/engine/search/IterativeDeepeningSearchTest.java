@@ -9,9 +9,13 @@ import com.knightshade.engine.api.SearchLimits;
 import com.knightshade.engine.api.SearchResult;
 import com.knightshade.engine.api.StopSignal;
 import com.knightshade.engine.board.FenParser;
+import com.knightshade.engine.board.Board;
+import com.knightshade.engine.board.Move;
+import com.escontrela.lastmove.domain.common.Square;
 import com.knightshade.engine.evaluation.PieceSquareEvaluator;
 import com.knightshade.engine.movegen.LegalMoveGenerator;
 import java.time.Duration;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class IterativeDeepeningSearchTest {
@@ -66,6 +70,56 @@ class IterativeDeepeningSearchTest {
   }
 
   @Test
+  void movesAnAttackedQueenInsteadOfLeavingItEnPriseAtShallowDepth() {
+    var search = new IterativeDeepeningSearch(new LegalMoveGenerator(), new PieceSquareEvaluator());
+
+    SearchResult result =
+        search.search(
+            FenParser.parse("7k/8/8/2n5/4Q3/8/8/7K w - - 0 1"),
+            SearchLimits.depth(1),
+            StopSignal.never());
+
+    assertNotNull(result.move());
+    assertEquals(Square.of("e4"), result.move().from());
+  }
+
+  @Test
+  void avoidsCompletingAThirdRepetitionWhenItsPositionIsNotWorse() {
+    Board board = FenParser.parse("7k/8/8/4r3/8/8/8/4Q2K w - - 0 1");
+    Move queenTakesRook = move(board, "e1e5");
+    long repeatedPosition = resultingKey(board, queenTakesRook);
+    var search = new IterativeDeepeningSearch(new LegalMoveGenerator(), new PieceSquareEvaluator());
+
+    SearchResult result =
+        search.search(
+            board,
+            SearchLimits.depth(1),
+            StopSignal.never(),
+            Map.of(board.zobristKey(), 1, repeatedPosition, 2));
+
+    assertNotNull(result.move());
+    assertTrue(!queenTakesRook.equals(result.move()));
+  }
+
+  @Test
+  void acceptsAThirdRepetitionAsADefensiveResourceWhenItsPositionIsWorse() {
+    Board board = FenParser.parse("7k/8/8/4q3/8/8/8/4R2K w - - 0 1");
+    Move rookTakesQueen = move(board, "e1e5");
+    long repeatedPosition = resultingKey(board, rookTakesQueen);
+    var search = new IterativeDeepeningSearch(new LegalMoveGenerator(), new PieceSquareEvaluator());
+
+    SearchResult result =
+        search.search(
+            board,
+            SearchLimits.depth(1),
+            StopSignal.never(),
+            Map.of(board.zobristKey(), 1, repeatedPosition, 2));
+
+    assertEquals(rookTakesQueen, result.move());
+    assertEquals(0, result.score());
+  }
+
+  @Test
   void findsALegalMoveInAQueenEndgameWithinTheTimeBudget() {
     String fen = "8/1K5k/5q2/2p5/8/8/8/8 b - - 7 69";
     var board = FenParser.parse(fen);
@@ -91,5 +145,19 @@ class IterativeDeepeningSearchTest {
 
     assertNotNull(result.move());
     assertTrue(legal.stream().anyMatch(move -> move.equals(result.move())));
+  }
+
+  private Move move(Board board, String uci) {
+    return new LegalMoveGenerator().generate(board).stream()
+        .filter(candidate -> candidate.toUci().equals(uci))
+        .findFirst()
+        .orElseThrow();
+  }
+
+  private long resultingKey(Board board, Move move) {
+    board.make(move);
+    long key = board.zobristKey();
+    board.unmake();
+    return key;
   }
 }
