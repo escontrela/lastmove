@@ -11,10 +11,13 @@ import java.util.Objects;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
 import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** Java HttpClient adapter for Lichess Bot API; each NDJSON stream is consumed on its own daemon task. */
 @Component
 public final class HttpLichessBotClient implements LichessBotClient {
+  private static final Logger log=LoggerFactory.getLogger(HttpLichessBotClient.class);
   private static final String API = "https://lichess.org"; private static final Duration TIMEOUT=Duration.ofSeconds(15);
   private final HttpClient client; private final ObjectMapper json; private final ExecutorService streams=Executors.newCachedThreadPool(r->{Thread t=new Thread(r,"lichess-stream");t.setDaemon(true);return t;});
   public HttpLichessBotClient(){this(HttpClient.newBuilder().connectTimeout(TIMEOUT).build(),new ObjectMapper());}
@@ -27,7 +30,7 @@ public final class HttpLichessBotClient implements LichessBotClient {
   public void resign(String token,String gameId){post(token,"/api/bot/game/"+gameId+"/resign","");}
   public void offerDraw(String token,String gameId){post(token,"/api/bot/game/"+gameId+"/draw/yes","");}
   private StreamHandle stream(String token,String path,Consumer<JsonNode> event,Consumer<Throwable> closed){
-    Future<?> task=streams.submit(()->{try{HttpResponse<InputStream> response=client.send(request(token,path).GET().build(),HttpResponse.BodyHandlers.ofInputStream());if(response.statusCode()!=200)throw new IOException("Lichess stream returned HTTP "+response.statusCode());try(BufferedReader reader=new BufferedReader(new InputStreamReader(response.body()))){String line;while(!Thread.currentThread().isInterrupted()&&(line=reader.readLine())!=null)if(!line.isBlank())event.accept(json.readTree(line));}}catch(Throwable failure){closed.accept(failure);} });
+    Future<?> task=streams.submit(()->{try{HttpResponse<InputStream> response=client.send(request(token,path).GET().build(),HttpResponse.BodyHandlers.ofInputStream());if(response.statusCode()!=200)throw new IOException("Lichess stream returned HTTP "+response.statusCode());log.info("Lichess NDJSON stream opened: path={}",path);try(BufferedReader reader=new BufferedReader(new InputStreamReader(response.body()))){String line;while(!Thread.currentThread().isInterrupted()&&(line=reader.readLine())!=null)if(!line.isBlank()){JsonNode node=json.readTree(line);log.info("Lichess NDJSON event received: path={} type={} moves={}",path,node.path("type").asText(),node.path("moves").asText(node.path("state").path("moves").asText()));event.accept(node);}}}catch(InterruptedException interrupted){Thread.currentThread().interrupt();}catch(Throwable failure){if(!Thread.currentThread().isInterrupted()){log.warn("Lichess NDJSON stream failed: path={}",path,failure);closed.accept(failure);}} });
     return ()->task.cancel(true);
   }
   private void post(String token,String path,String body){try{HttpResponse<String> response=client.send(request(token,path).header("Content-Type","application/x-www-form-urlencoded").POST(HttpRequest.BodyPublishers.ofString(body)).build(),HttpResponse.BodyHandlers.ofString());if(response.statusCode()<200||response.statusCode()>=300)throw new IllegalStateException("Lichess request failed (HTTP "+response.statusCode()+").");}catch(InterruptedException e){Thread.currentThread().interrupt();throw new IllegalStateException("Lichess request interrupted.",e);}catch(IOException e){throw new IllegalStateException("Could not reach Lichess.",e);}}

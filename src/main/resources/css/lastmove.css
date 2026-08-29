@@ -595,6 +595,13 @@
 
 .knightshade-link { -fx-text-fill: #bfa4ff; }
 
+.knightshade-arena-status { -fx-font-size: 13px; -fx-font-weight: 800; -fx-text-fill: #bfa4ff; }
+.knightshade-arena-status-connected { -fx-text-fill: #65d69a; }
+.knightshade-arena-status-error { -fx-text-fill: #ff9b9b; }
+.knightshade-arena-status-reconnecting, .knightshade-arena-status-connecting { -fx-text-fill: #f3c969; }
+.knightshade-arena-status-disconnected { -fx-text-fill: #b7c8dd; }
+.knightshade-arena-activity { -fx-font-size: 12px; -fx-text-fill: #b7c8dd; }
+
 .knightshade-copy {
     -fx-max-width: 160px;
     -fx-pref-width: 160px;
@@ -2001,6 +2008,26 @@
 .night-mode .secondary-button:hover, .night-mode .ghost-button:hover {
     -fx-background-color: #3b4654;
 }
+.arena-scroll-pane,
+.arena-scroll-pane > .viewport,
+.arena-scroll-pane > .corner { -fx-background-color: #f7f8fb; }
+.arena-state { -fx-font-weight: 800; -fx-text-fill: #34465b; }
+.arena-state-connected { -fx-text-fill: #16874d; }
+.arena-state-connecting { -fx-text-fill: #a96800; }
+.arena-state-error { -fx-text-fill: #b42318; }
+.arena-activity-entry { -fx-text-fill: #425466; -fx-padding: 3 0; }
+
+.night-mode .arena-scroll-pane,
+.night-mode .arena-scroll-pane > .viewport,
+.night-mode .arena-scroll-pane > .corner { -fx-background-color: #1a2129; }
+.night-mode .arena-state { -fx-text-fill: #dbe7f3; }
+.night-mode .arena-state-connected { -fx-text-fill: #7edca7; }
+.night-mode .arena-state-connecting { -fx-text-fill: #f3c969; }
+.night-mode .arena-state-error { -fx-text-fill: #ff9b9b; }
+.night-mode .arena-activity-entry { -fx-text-fill: #c6d3e0; }
+.night-mode .arena-scroll-pane .scroll-bar:vertical .track { -fx-background-color: #1c2430; }
+.night-mode .arena-scroll-pane .scroll-bar:vertical .thumb { -fx-background-color: #465465; }
+
 .night-mode .status-rail {
     -fx-background-color: #1a2129;
     -fx-border-color: #3b4654 transparent transparent transparent;
