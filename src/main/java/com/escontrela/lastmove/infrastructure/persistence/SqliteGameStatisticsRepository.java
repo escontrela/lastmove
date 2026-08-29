@@ -25,10 +25,12 @@ public class SqliteGameStatisticsRepository implements GameStatisticsRepository 
     long from = epochMillis(query.from()); long to = epochMillis(query.to().plusDays(1));
     String filter = query.engineId().isPresent() ? " AND c.engine_id=?" : "";
     Object[] parameters = query.engineId().isPresent()
-        ? new Object[] {query.playerId().value(), from, to, query.engineId().orElseThrow()}
-        : new Object[] {query.playerId().value(), from, to};
+        ? new Object[] {query.playerId().value(), query.playerId().value(), query.playerId().value(), from, to, query.engineId().orElseThrow()}
+        : new Object[] {query.playerId().value(), query.playerId().value(), query.playerId().value(), from, to};
     String common = " FROM games g JOIN computer_game_configuration c ON c.game_id=g.id"
-        + " WHERE g.owner_player_id=? AND g.status='FINISHED' AND g.result IN ('WHITE_WINS','BLACK_WINS','DRAW')"
+        + " WHERE (g.owner_player_id=? OR EXISTS (SELECT 1 FROM game_participants gp WHERE gp.game_id=g.id AND gp.player_id=?)"
+        + " OR (c.engine_id='knightshade' AND EXISTS (SELECT 1 FROM players p WHERE p.id=? AND p.player_type='SYSTEM' AND p.external_provider='LICHESS')))"
+        + " AND g.status='FINISHED' AND g.result IN ('WHITE_WINS','BLACK_WINS','DRAW')"
         + " AND g.updated_at>=? AND g.updated_at<?" + filter;
     String period = periodExpression(query.granularity());
     List<GameStatisticsBucket> buckets = jdbc.queryForList("SELECT " + period + " period_start, COUNT(*) games, "

@@ -83,7 +83,23 @@ public class SqliteGameRepository implements SavedGameRepository {
       context.ownerPlayerId().ifPresent(owner -> notifications.notify(owner, game.id(), "GAME_FINISHED"));
     }
     saveNewMoves(id, record.moves());
+    saveParticipants(id, context);
     context.computerConfiguration().ifPresent(configuration -> saveComputerConfiguration(id, configuration));
+  }
+
+  private void saveParticipants(String gameId, SavedGameContext context) {
+    List<PlayerId> participants = new ArrayList<>(context.participantPlayerIds());
+    // Local Knightshade games have a second persisted identity even though the
+    // legacy HVC context only carried the human owner.
+    if (context.computerConfiguration().map(c -> com.escontrela.lastmove.application.computer.ComputerEngineIds.KNIGHTSHADE.equals(c.engineId())).orElse(false)) {
+      jdbc.queryForList("SELECT id FROM players WHERE player_type='SYSTEM' AND external_provider='LICHESS'")
+          .forEach(row -> participants.add(PlayerId.of(((Number) row.get("id")).longValue())));
+    }
+    List<PlayerId> uniqueParticipants = participants.stream().distinct().toList();
+    for (PlayerId participant : uniqueParticipants) {
+      jdbc.update("INSERT OR IGNORE INTO game_participants(game_id, player_id, participant_role, joined_at) VALUES(?,?,?,?)",
+          gameId, participant.value(), "PLAYER", Instant.now().toEpochMilli());
+    }
   }
 
   private void saveNewMoves(String id, List<RecordedPly> moves) {
@@ -109,7 +125,10 @@ public class SqliteGameRepository implements SavedGameRepository {
     Optional<TimeControl> control=Optional.of(new TimeControl(optionalDuration(row.get("time_control_initial_ms")), Duration.ofMillis(((Number)row.get("time_control_increment_ms")).longValue())));
     ChessGame game=gameFactory.resume(new GameId(UUID.fromString(id)),rulesEngine.positionFrom(Fen.of((String)row.get("initial_fen"))),rulesEngine.positionFrom(Fen.of((String)row.get("current_fen"))),plies,before,clock(row.get("white_remaining_ms"),row.get("black_remaining_ms")),Optional.of(new GamePlayer((String)row.get("white_name"),PieceColor.WHITE,(Integer)row.get("white_elo"))),Optional.of(new GamePlayer((String)row.get("black_name"),PieceColor.BLACK,(Integer)row.get("black_elo"))),control,optionalEnum(GameResult.class,row.get("result")),optionalEnum(GameTerminationReason.class,row.get("termination_reason")));
     Optional<PlayerId> owner=Optional.ofNullable((Number)row.get("owner_player_id")).map(n->PlayerId.of(n.longValue())); GameType type=GameType.valueOf((String)row.get("game_type"));
-    return new SavedGame(game,new SavedGameContext(type,owner,type==GameType.HUMAN_VS_COMPUTER?Optional.of(computerConfiguration(id, game)):Optional.empty()));
+    List<PlayerId> participants = jdbc.queryForList("SELECT player_id FROM game_participants WHERE game_id=? ORDER BY joined_at, player_id", id)
+        .stream().map(r -> PlayerId.of(((Number) r.get("player_id")).longValue())).toList();
+    if (participants.isEmpty()) participants = owner.stream().toList();
+    return new SavedGame(game,new SavedGameContext(type,owner,type==GameType.HUMAN_VS_COMPUTER?Optional.of(computerConfiguration(id, game)):Optional.empty(), participants));
   }
   private ComputerGameConfiguration computerConfiguration(String id, ChessGame game) {
     var r=jdbc.queryForList("SELECT * FROM computer_game_configuration WHERE game_id=?",id).stream().findFirst().orElseThrow(()->new IllegalStateException("Missing computer configuration for "+id));
@@ -117,7 +136,7 @@ public class SqliteGameRepository implements SavedGameRepository {
   }
   @Override public List<SavedGameSummary> listSummaries(PlayerId ownerId) {
     if (!availability.isAvailable()) return fallback.listSummaries(ownerId);
-    return jdbc.queryForList("SELECT id,game_type,white_name,black_name,status,result,(SELECT COUNT(*) FROM game_moves m WHERE m.game_id=g.id) moves_count,updated_at FROM games g WHERE owner_player_id=? ORDER BY updated_at DESC",ownerId.value()).stream().map(r->new SavedGameSummary(new GameId(UUID.fromString((String)r.get("id"))),GameType.valueOf((String)r.get("game_type")),(String)r.get("white_name"),(String)r.get("black_name"),"FINISHED".equals(r.get("status")),optionalEnum(GameResult.class,r.get("result")),((Number)r.get("moves_count")).intValue(),Instant.ofEpochMilli(((Number)r.get("updated_at")).longValue()))).toList();
+    return jdbc.queryForList("SELECT g.id,g.game_type,g.white_name,g.black_name,g.status,g.result,(SELECT COUNT(*) FROM game_moves m WHERE m.game_id=g.id) moves_count,g.updated_at FROM games g LEFT JOIN game_participants gp ON gp.game_id=g.id WHERE gp.player_id=? OR g.owner_player_id=? OR (EXISTS (SELECT 1 FROM players p WHERE p.id=? AND p.player_type='SYSTEM' AND p.external_provider='LICHESS') AND EXISTS (SELECT 1 FROM computer_game_configuration c WHERE c.game_id=g.id AND c.engine_id='knightshade')) GROUP BY g.id ORDER BY g.updated_at DESC",ownerId.value(),ownerId.value(),ownerId.value()).stream().map(r->new SavedGameSummary(new GameId(UUID.fromString((String)r.get("id"))),GameType.valueOf((String)r.get("game_type")),(String)r.get("white_name"),(String)r.get("black_name"),"FINISHED".equals(r.get("status")),optionalEnum(GameResult.class,r.get("result")),((Number)r.get("moves_count")).intValue(),Instant.ofEpochMilli(((Number)r.get("updated_at")).longValue()))).toList();
   }
   @Override public boolean deleteById(GameId gameId) { if(!availability.isAvailable()) return fallback.deleteById(gameId); return jdbc.update("DELETE FROM games WHERE id=?",gameId.value().toString())>0; }
   private Ply toPly(java.util.Map<String,Object> r) { return new Ply(UUID.fromString((String)r.get("ply_id")),new MoveDescriptor(Square.of((String)r.get("move_from")),Square.of((String)r.get("move_to")),SanMove.of((String)r.get("san")),((Number)r.get("capture")).intValue()!=0,((Number)r.get("castle")).intValue()!=0,((Number)r.get("en_passant")).intValue()!=0,Optional.ofNullable((String)r.get("promotion")).map(PieceType::valueOf)),rulesEngine.positionFrom(Fen.of((String)r.get("resulting_fen"))),((Number)r.get("move_number")).intValue(),PieceColor.valueOf((String)r.get("moving_color"))); }
