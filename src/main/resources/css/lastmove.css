@@ -2008,6 +2008,13 @@
 .night-mode .secondary-button:hover, .night-mode .ghost-button:hover {
     -fx-background-color: #3b4654;
 }
+.game-session-selector-list { -fx-background-color: #ffffff; -fx-border-color: #d6dee8; -fx-border-radius: 10; -fx-background-radius: 10; }
+.game-session-selector-list .list-cell { -fx-background-color: transparent; -fx-text-fill: #25364a; -fx-padding: 12 14; -fx-border-color: transparent transparent #e6ebf1 transparent; }
+.game-session-selector-list .list-cell:selected { -fx-background-color: #e7f1ff; -fx-text-fill: #0b66c3; }
+.night-mode .game-session-selector-list { -fx-background-color: #1c2430; -fx-border-color: #465465; }
+.night-mode .game-session-selector-list .list-cell { -fx-text-fill: #dbe7f3; -fx-border-color: transparent transparent #344151 transparent; }
+.night-mode .game-session-selector-list .list-cell:selected { -fx-background-color: #29415e; -fx-text-fill: #9fc8f7; }
+
 .arena-scroll-pane,
 .arena-scroll-pane > .viewport,
 .arena-scroll-pane > .corner { -fx-background-color: #f7f8fb; }
