@@ -9,6 +9,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.escontrela.lastmove.application.player.CreatePlayerCommand;
 import com.escontrela.lastmove.application.player.PlayerSummary;
 import com.escontrela.lastmove.application.player.UpdatePlayerCommand;
+import com.escontrela.lastmove.application.arena.LichessBotAccount;
+import com.escontrela.lastmove.domain.player.PlayerType;
 import com.escontrela.lastmove.domain.analysis.ChapterNavigation;
 import com.escontrela.lastmove.domain.player.DuplicatePlayerEmailException;
 import com.escontrela.lastmove.domain.player.Player;
@@ -125,6 +127,16 @@ class PlayerServiceTest {
     }
 
     @Test
+    void synchronizesTheLichessBotAsOneSystemPlayer() {
+        Player first = service.synchronizeLichessBot(new LichessBotAccount("knightshade", "Knightshade Arena"));
+        Player refreshed = service.synchronizeLichessBot(new LichessBotAccount("knightshade", "Knightshade"));
+
+        assertEquals(first.id(), refreshed.id());
+        assertEquals(PlayerType.SYSTEM, refreshed.type());
+        assertEquals("Knightshade", refreshed.firstName());
+    }
+
+    @Test
     void throwsWhenPersistenceIsUnavailable() {
         PlayerService unavailableService =
                 new PlayerService(repository, studyRepository, PersistenceAvailability.unavailable("disk full"));
@@ -158,7 +170,7 @@ class PlayerServiceTest {
                             player.firstName(),
                             player.lastName(),
                             player.photo(),
-                            player.createdAt());
+                            player.createdAt(), player.type(), player.externalProvider(), player.externalAccountId());
             playersById.put(id, saved);
             return saved;
         }
@@ -191,6 +203,12 @@ class PlayerServiceTest {
             return playersById.values().stream()
                     .filter(player -> player.email().equals(email))
                     .findFirst();
+        }
+
+        @Override
+        public Optional<Player> findByExternalIdentity(String provider, String accountId) {
+            return playersById.values().stream().filter(player -> player.externalProvider().filter(provider::equals).isPresent()
+                    && player.externalAccountId().filter(accountId::equals).isPresent()).findFirst();
         }
 
         @Override

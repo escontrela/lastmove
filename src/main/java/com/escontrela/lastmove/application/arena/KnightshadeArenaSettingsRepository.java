@@ -13,4 +13,8 @@ public interface KnightshadeArenaSettingsRepository {
   void saveBotToken(String token);
 
   void deleteBotToken();
+
+  Optional<LichessBotAccount> findValidatedBotAccount();
+
+  void saveValidatedBotAccount(LichessBotAccount account);
 }

@@ -43,10 +43,17 @@ public final class KnightshadeArenaSettingsService {
     repository.deleteBotToken();
   }
 
+  /** Returns only the non-secret identity captured by the last successful validation. */
+  public java.util.Optional<LichessBotAccount> configuredBotAccount() {
+    return repository.findValidatedBotAccount();
+  }
+
   /** Validates the saved token and confirms that it belongs to a Lichess bot account. */
   public LichessBotAccount validateConfiguredBotAccount() {
     String token = repository.findBotToken().orElseThrow(
         () -> new LichessBotAccountValidationException("Save a Lichess bot token before validating it."));
-    return accountVerifier.verifyBotToken(token);
+    LichessBotAccount account = accountVerifier.verifyBotToken(token);
+    repository.saveValidatedBotAccount(account);
+    return account;
   }
 }

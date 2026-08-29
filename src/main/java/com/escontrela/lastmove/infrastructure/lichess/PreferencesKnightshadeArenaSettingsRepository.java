@@ -2,6 +2,7 @@ package com.escontrela.lastmove.infrastructure.lichess;
 
 import com.escontrela.lastmove.application.arena.KnightshadeArenaSettings;
 import com.escontrela.lastmove.application.arena.KnightshadeArenaSettingsRepository;
+import com.escontrela.lastmove.application.arena.LichessBotAccount;
 import java.util.Optional;
 import java.util.prefs.Preferences;
 import org.springframework.stereotype.Repository;
@@ -13,6 +14,8 @@ public class PreferencesKnightshadeArenaSettingsRepository
   private static final String TOKEN_KEY = "lichess.bot-token";
   private static final String MAXIMUM_GAMES_KEY = "arena.maximum-concurrent-games";
   private static final String AUTO_ACCEPT_KEY = "arena.automatic-challenge-acceptance";
+  private static final String VALIDATED_ACCOUNT_ID_KEY = "lichess.validated-account.id";
+  private static final String VALIDATED_ACCOUNT_USERNAME_KEY = "lichess.validated-account.username";
 
   private final Preferences preferences;
 
@@ -55,5 +58,23 @@ public class PreferencesKnightshadeArenaSettingsRepository
   @Override
   public void deleteBotToken() {
     preferences.remove(TOKEN_KEY);
+  }
+
+  @Override
+  public Optional<LichessBotAccount> findValidatedBotAccount() {
+    String id = preferences.get(VALIDATED_ACCOUNT_ID_KEY, "").trim();
+    String username = preferences.get(VALIDATED_ACCOUNT_USERNAME_KEY, "").trim();
+    if (id.isEmpty() || username.isEmpty()) return Optional.empty();
+    try {
+      return Optional.of(new LichessBotAccount(id, username));
+    } catch (IllegalArgumentException ignored) {
+      return Optional.empty();
+    }
+  }
+
+  @Override
+  public void saveValidatedBotAccount(LichessBotAccount account) {
+    preferences.put(VALIDATED_ACCOUNT_ID_KEY, account.id());
+    preferences.put(VALIDATED_ACCOUNT_USERNAME_KEY, account.username());
   }
 }

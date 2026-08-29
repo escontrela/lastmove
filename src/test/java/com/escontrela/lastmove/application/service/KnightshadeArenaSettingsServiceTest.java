@@ -41,6 +41,7 @@ class KnightshadeArenaSettingsServiceTest {
 
     assertEquals(new LichessBotAccount("bot-id", "Knightshade"), service.validateConfiguredBotAccount());
     assertEquals("token-value", verifiedToken[0]);
+    assertEquals(new LichessBotAccount("bot-id", "Knightshade"), service.configuredBotAccount().orElseThrow());
   }
 
   @Test
@@ -88,5 +89,8 @@ class KnightshadeArenaSettingsServiceTest {
     @Override public Optional<String> findBotToken() { return Optional.ofNullable(token); }
     @Override public void saveBotToken(String token) { this.token = token; }
     @Override public void deleteBotToken() { token = null; }
+    @Override public Optional<LichessBotAccount> findValidatedBotAccount() { return Optional.ofNullable(account); }
+    @Override public void saveValidatedBotAccount(LichessBotAccount account) { this.account = account; }
+    private LichessBotAccount account;
   }
 }

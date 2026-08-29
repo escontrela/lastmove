@@ -1538,6 +1538,12 @@
 }
 .settings-validation-message.settings-validation-error { -fx-text-fill: #a72e3e; }
 .settings-validation-message.settings-validation-success { -fx-text-fill: #167443; }
+.player-selector-modal-card { -fx-min-width: 420px; -fx-max-width: 720px; }
+.player-selector-tile { -fx-min-width: 144px; -fx-pref-width: 144px; -fx-min-height: 144px; -fx-background-color: #f8fbff; -fx-border-color: #d5dfeb; -fx-border-width: 1px; -fx-background-radius: 8px; -fx-border-radius: 8px; -fx-cursor: hand; }
+.player-selector-tile:hover, .player-selector-tile.selected { -fx-border-color: #1c69d4; -fx-background-color: #edf5ff; }
+.player-selector-avatar { -fx-background-color: #e6eef8; }
+.player-selector-name { -fx-font-size: 14px; -fx-font-weight: 700; -fx-text-fill: #263648; }
+.player-selector-detail { -fx-font-size: 12px; -fx-text-fill: #637386; }
 
 /* Progressive-game screen and its Human vs Computer setup overlay. */
 .progressive-game-workspace { -fx-alignment: center; }

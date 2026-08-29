@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.escontrela.lastmove.application.arena.KnightshadeArenaSettings;
+import com.escontrela.lastmove.application.arena.LichessBotAccount;
 import java.util.UUID;
 import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
@@ -20,9 +21,11 @@ class PreferencesKnightshadeArenaSettingsRepositoryTest {
 
       repository.saveSettings(new KnightshadeArenaSettings(4, true));
       repository.saveBotToken("bot-secret");
+      repository.saveValidatedBotAccount(new LichessBotAccount("knightshade", "Knightshade Arena"));
 
       assertEquals(new KnightshadeArenaSettings(4, true), repository.loadSettings());
       assertEquals("bot-secret", repository.findBotToken().orElseThrow());
+      assertEquals(new LichessBotAccount("knightshade", "Knightshade Arena"), repository.findValidatedBotAccount().orElseThrow());
 
       repository.deleteBotToken();
 

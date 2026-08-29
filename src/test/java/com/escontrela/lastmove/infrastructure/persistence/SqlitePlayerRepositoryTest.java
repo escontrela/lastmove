@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.escontrela.lastmove.domain.player.DuplicatePlayerEmailException;
 import com.escontrela.lastmove.domain.player.Player;
 import com.escontrela.lastmove.domain.player.PlayerId;
+import com.escontrela.lastmove.domain.player.PlayerType;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
@@ -62,6 +63,18 @@ class SqlitePlayerRepositoryTest {
 
         assertTrue(found.isPresent());
         assertEquals("Bob", found.orElseThrow().firstName());
+    }
+
+    @Test
+    void persistsSystemBotByItsExternalIdentityWithoutChangingHumanProfiles() {
+        Player human = repository.save(Player.create("human@example.com", "Human", "Player", Optional.empty()));
+        Player bot = repository.save(Player.lichessBot("knightshade", "Knightshade Arena"));
+
+        assertEquals(PlayerType.HUMAN, repository.findById(human.id()).orElseThrow().type());
+        Player foundBot = repository.findByExternalIdentity("LICHESS", "knightshade").orElseThrow();
+        assertEquals(bot.id(), foundBot.id());
+        assertEquals(PlayerType.SYSTEM, foundBot.type());
+        assertEquals("Knightshade Arena", foundBot.firstName());
     }
 
     @Test
