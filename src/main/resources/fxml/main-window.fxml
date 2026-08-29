@@ -4,83 +4,47 @@
 <?import com.escontrela.lastmove.ui.component.header.ApplicationHeader?>
 <?import com.escontrela.lastmove.ui.component.message.MessageBox?>
 <?import com.escontrela.lastmove.ui.component.notification.NotificationsPanel?>
-<?import com.escontrela.lastmove.ui.component.profile.CurrentUserAvatarControl?>
-<?import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
-<?import javafx.scene.control.TextField?>
-<?import javafx.scene.image.Image?>
-<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.TilePane?>
 <?import javafx.scene.layout.VBox?>
 
 <AnchorPane fx:id="root" onContextMenuRequested="#showContextMenu" styleClass="app-shell" stylesheets="@../css/lastmove.css" xmlns="http://javafx.com/javafx/22.0.2" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.escontrela.lastmove.ui.controller.MainWindowController">
 <BorderPane styleClass="app-shell" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
     <top>
-        <VBox><ApplicationHeader />
-        <HBox managed="false" visible="false" alignment="CENTER_LEFT" spacing="16.0" styleClass="workspace-header">
-            <ImageView fx:id="pgnToolIcon1" fitHeight="60.0" fitWidth="58.0" preserveRatio="true" smooth="true">
-               <image>
-                  <Image url="@../images/last-move-logo.png" />
-               </image>
-            </ImageView>
-            <VBox spacing="6.0">
-                <HBox alignment="CENTER_LEFT" spacing="8.0" styleClass="app-brand">
-                    <Label styleClass="app-brand-name" text="LastMove" />
-                    <Label styleClass="app-brand-edition" text="Chess" />
-                </HBox>
-            </VBox>
-            <Region HBox.hgrow="ALWAYS" />
-            <ToolbarIconButton accessibleText="Open setup" darkIconResource="/images/settings_35dp_FFFFFF.png" lightIconResource="/images/settings_35dp_000000.png" onAction="#openSetup" tooltipText="Setup" />
-            <ToolbarIconButton accessibleText="Open players" darkIconResource="/images/face_35dp_FFFFFF.png" lightIconResource="/images/face_35dp_000000.png" onAction="#openPlayers" tooltipText="Players" />
-              <CurrentUserAvatarControl fx:id="currentUserAvatar" accessibleText="Open player profiles" onAction="#openPlayers" />
-        </HBox></VBox>
+        <ApplicationHeader />
     </top>
     <center>
         <StackPane>
-            <VBox alignment="TOP_LEFT" spacing="24.0" styleClass="tool-catalog-shell">
-                <padding><Insets bottom="56.0" left="80.0" right="80.0" top="48.0" /></padding>
-                <Label styleClass="catalog-title" text="Chess tools" />
-                <Label styleClass="catalog-support" text="Choose a workspace for playing, studying, and analysing your games." wrapText="true" />
-                <TextField editable="false" focusTraversable="false" promptText="Search chess tools" styleClass="tool-search-field" />
-                <Label styleClass="catalog-section-title" text="Available now" />
-                <HBox spacing="16.0" styleClass="tool-card-row">
-                <Button accessibleText="Analyse a PGN" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" onAction="#openPgnAnalysis" styleClass="tool-card-button">
-                    <graphic><HBox alignment="CENTER_LEFT" spacing="16.0"><ImageView fx:id="pgnToolIcon" fitHeight="34.0" fitWidth="34.0" preserveRatio="true" smooth="true"><image><Image url="@../images/history_35dp_000000.png" /></image></ImageView><VBox spacing="5.0"><Label styleClass="tool-card-title" text="Analyse a PGN" /><Label styleClass="tool-card-description" text="Replay a recorded game move by move." /></VBox><Region HBox.hgrow="ALWAYS" /><Label styleClass="tool-card-state tool-card-state-ready" text="›" /></HBox></graphic>
-                </Button>
-                <Button fx:id="studiesToolButton" accessibleText="My studies" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" onAction="#openStudies" styleClass="tool-card-button">
-                    <graphic><HBox alignment="CENTER_LEFT" spacing="16.0"><ImageView fx:id="fenToolIcon" fitHeight="34.0" fitWidth="34.0" preserveRatio="true" smooth="true"><image><Image url="@../images/structure_35dp_000000.png" /></image></ImageView><VBox spacing="5.0"><Label styleClass="tool-card-title" text="My studies" /><Label styleClass="tool-card-description" text="Organise persistent chapters under your active profile." /></VBox><Region HBox.hgrow="ALWAYS" /><Label styleClass="tool-card-state tool-card-state-ready" text="›" /></HBox></graphic>
-                </Button>
-                <Button fx:id="tacticsToolButton" accessibleText="Tactic suites" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" onAction="#openTactics" styleClass="tool-card-button">
-                    <graphic><HBox alignment="CENTER_LEFT" spacing="16.0"><ImageView fx:id="trainingToolIcon" fitHeight="34.0" fitWidth="34.0" preserveRatio="true" smooth="true"><image><Image url="@../images/filter_35dp_000000.png" /></image></ImageView><VBox spacing="5.0"><Label styleClass="tool-card-title" text="Tactic suites" /><Label styleClass="tool-card-description" text="Create and solve your tactical exercises." /></VBox><Region HBox.hgrow="ALWAYS" /><Label styleClass="tool-card-state tool-card-state-ready" text="›" /></HBox></graphic>
-                </Button>
-                </HBox>
-                <HBox spacing="16.0" styleClass="tool-card-row">
-                <Button accessibleText="Human vs computer" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" onAction="#openHumanVsComputer" styleClass="tool-card-button">
-                    <graphic><HBox alignment="CENTER_LEFT" spacing="16.0"><ImageView fx:id="localGameToolIcon" fitHeight="34.0" fitWidth="34.0" preserveRatio="true" smooth="true"><image><Image url="@../images/swords_35dp_000000.png" /></image></ImageView><VBox spacing="5.0"><Label styleClass="tool-card-title" text="Human vs computer" /><Label styleClass="tool-card-description" text="Play a progressive game against Sunfish." /></VBox><Region HBox.hgrow="ALWAYS" /><Label styleClass="tool-card-state tool-card-state-ready" text="›" /></HBox></graphic>
-                </Button>
-                <Button accessibleText="My games" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" onAction="#openMyGames" styleClass="tool-card-button">
-                    <graphic><HBox alignment="CENTER_LEFT" spacing="16.0"><ImageView fitHeight="34.0" fitWidth="34.0" preserveRatio="true" smooth="true"><image><Image url="@../images/history_35dp_000000.png" /></image></ImageView><VBox spacing="5.0"><Label styleClass="tool-card-title" text="My games" /><Label styleClass="tool-card-description" text="Resume or review your saved games." /></VBox><Region HBox.hgrow="ALWAYS" /><Label styleClass="tool-card-state tool-card-state-ready" text="›" /></HBox></graphic>
-                </Button>
-                <Button accessibleText="Opening explorer" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" onAction="#showComingSoon" styleClass="tool-card-button">
-                    <graphic><HBox alignment="CENTER_LEFT" spacing="16.0"><ImageView fx:id="openingToolIcon" fitHeight="34.0" fitWidth="34.0" preserveRatio="true" smooth="true"><image><Image url="@../images/search_35dp_000000.png" /></image></ImageView><VBox spacing="5.0"><Label styleClass="tool-card-title" text="Opening explorer" /><Label styleClass="tool-card-description" text="Browse your repertoire and lines." /></VBox><Region HBox.hgrow="ALWAYS" /><Label styleClass="tool-card-state" text="Coming soon" /></HBox></graphic>
-                </Button>
-                </HBox>
-                <HBox spacing="16.0" styleClass="tool-card-row">
-                <Button accessibleText="Position editor" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" onAction="#openPositionEditor" styleClass="tool-card-button">
-                    <graphic><HBox alignment="CENTER_LEFT" spacing="16.0"><ImageView fitHeight="34.0" fitWidth="34.0" preserveRatio="true" smooth="true"><image><Image url="@../images/filter_35dp_000000.png" /></image></ImageView><VBox spacing="5.0"><Label styleClass="tool-card-title" text="Position editor" /><Label styleClass="tool-card-description" text="Compose a board and generate a valid FEN." /></VBox><Region HBox.hgrow="ALWAYS" /><Label styleClass="tool-card-state tool-card-state-ready" text="›" /></HBox></graphic>
-                </Button>
-                <Button accessibleText="Engine analysis" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" onAction="#showComingSoon" styleClass="tool-card-button">
-                    <graphic><HBox alignment="CENTER_LEFT" spacing="16.0"><ImageView fx:id="engineToolIcon" fitHeight="34.0" fitWidth="34.0" preserveRatio="true" smooth="true"><image><Image url="@../images/zoom_35dp_000000.png" /></image></ImageView><VBox spacing="5.0"><Label styleClass="tool-card-title" text="Engine analysis" /><Label styleClass="tool-card-description" text="Evaluate critical moments in a game." /></VBox><Region HBox.hgrow="ALWAYS" /><Label styleClass="tool-card-state" text="Coming soon" /></HBox></graphic>
-                </Button>
-                </HBox>
-                <Label fx:id="featureStatusLabel" styleClass="tool-catalog-status" text="Select Analyse a PGN to start." />
-            </VBox>
+            <ScrollPane fitToWidth="true" hbarPolicy="NEVER" styleClass="home-scroll-pane" vbarPolicy="AS_NEEDED">
+                <content>
+                    <VBox alignment="TOP_LEFT" spacing="24.0" styleClass="tool-catalog-shell">
+                        <padding><Insets bottom="40.0" left="48.0" right="48.0" top="38.0" /></padding>
+                        <VBox spacing="6.0">
+                            <Label fx:id="welcomeLabel" styleClass="catalog-title" text="Welcome back" />
+                            <Label styleClass="catalog-support" text="What would you like to work on today?" wrapText="true" />
+                        </VBox>
+                        <TilePane hgap="18.0" prefColumns="4" prefTileHeight="252.0" prefTileWidth="270.0" styleClass="home-action-grid" vgap="18.0">
+                            <Button accessibleText="Analyse a PGN" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" onAction="#openPgnAnalysis" styleClass="home-action-card, home-analysis-card"><graphic><VBox styleClass="home-card-content"><Region VBox.vgrow="ALWAYS" /><VBox spacing="7.0"><Label styleClass="home-card-title" text="Analyse a PGN" /><Label styleClass="home-card-description" text="Replay and analyse your games move by move." wrapText="true" /><Label styleClass="home-card-link" text="Start analysis  →" /></VBox></VBox></graphic></Button>
+                            <Button fx:id="studiesToolButton" accessibleText="My studies" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" onAction="#openStudies" styleClass="home-action-card, home-studies-card"><graphic><VBox styleClass="home-card-content"><Region VBox.vgrow="ALWAYS" /><VBox spacing="7.0"><Label styleClass="home-card-title" text="My studies" /><Label styleClass="home-card-description" text="Build and revisit your chess studies." wrapText="true" /><Label styleClass="home-card-link" text="Browse studies  →" /></VBox></VBox></graphic></Button>
+                            <Button fx:id="tacticsToolButton" accessibleText="Tactic suites" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" onAction="#openTactics" styleClass="home-action-card, home-tactics-card"><graphic><VBox styleClass="home-card-content"><Region VBox.vgrow="ALWAYS" /><VBox spacing="7.0"><Label styleClass="home-card-title" text="Tactic suites" /><Label styleClass="home-card-description" text="Create and solve tactical exercises." wrapText="true" /><Label styleClass="home-card-link" text="Start training  →" /></VBox></VBox></graphic></Button>
+                            <Button accessibleText="Play human vs computer" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" onAction="#openHumanVsComputer" styleClass="home-action-card, home-computer-card"><graphic><VBox styleClass="home-card-content"><Region VBox.vgrow="ALWAYS" /><VBox spacing="7.0"><Label styleClass="home-card-title" text="Play" /><Label styleClass="home-card-description" text="Challenge the computer at your own pace." wrapText="true" /><Label styleClass="home-card-link" text="Play now  →" /></VBox></VBox></graphic></Button>
+                        </TilePane>
+                        <TilePane hgap="18.0" prefColumns="3" prefTileHeight="220.0" prefTileWidth="360.0" styleClass="home-secondary-grid" vgap="18.0">
+                            <Button accessibleText="My games" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" onAction="#openMyGames" styleClass="home-secondary-card, home-games-card"><graphic><VBox styleClass="home-secondary-content"><VBox spacing="3.0"><Label styleClass="home-secondary-title" text="Last games" /><Label styleClass="home-secondary-description" text="Your most recently played games." /></VBox><VBox fx:id="recentGamesBox" spacing="8.0" styleClass="home-recent-games" /><Region VBox.vgrow="ALWAYS" /><Label styleClass="home-card-link" text="Open My games  →" /></VBox></graphic></Button>
+                            <Button accessibleText="Position editor" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" onAction="#openPositionEditor" styleClass="home-secondary-card, home-position-card"><graphic><VBox styleClass="home-secondary-content"><Region VBox.vgrow="ALWAYS" /><VBox spacing="5.0"><Label styleClass="home-secondary-title" text="Position editor" /><Label styleClass="home-secondary-description" text="Compose a position and generate a valid FEN." wrapText="true" /><Label styleClass="home-card-link" text="Open editor  →" /></VBox></VBox></graphic></Button>
+                            <Button accessibleText="Watch Knightshade play" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" onAction="#openComputerVsComputer" styleClass="home-secondary-card, home-knightshade-banner"><graphic><VBox styleClass="home-secondary-content"><Region VBox.vgrow="ALWAYS" /><VBox spacing="5.0" styleClass="knightshade-copy"><Label styleClass="knightshade-kicker" text="KNIGHTSHADE ENGINE" /><Label styleClass="knightshade-title" text="Knightshade v3" /><Label styleClass="knightshade-description" text="Embedded engine · ~1200 ELO&#10;Alpha-beta search · heuristic evaluation" wrapText="true" /><Label styleClass="home-card-link knightshade-link" text="Watch computer match  →" wrapText="true" /></VBox></VBox></graphic></Button>
+                        </TilePane>
+                    </VBox>
+                </content>
+            </ScrollPane>
             <NotificationsPanel fx:id="notificationsPanel" />
             <MessageBox fx:id="startupMessageBox" acceptText="Open PGN analysis" autoHide="true" buttonMode="ACCEPT_CANCEL" cancelText="Not now" cardWidth="460.0" contentPadding="20.0" contentSpacing="12.0" dragEnabled="true" message="Would you like to open the PGN analysis workspace and replay a recorded game?" title="Welcome to LastMove Chess" />
         </StackPane>
@@ -89,10 +53,6 @@
         <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="status-rail">
             <Label styleClass="eyebrow-label" text="Status" />
             <Label styleClass="status-text" text="Ready to choose a chess workspace" />
-            <Region HBox.hgrow="ALWAYS" />
-            <ImageView fx:id="statusBrandLogo" fitHeight="20.0" fitWidth="96.0" preserveRatio="true" smooth="true" styleClass="status-brand-logo">
-                <image><Image url="@../images/lastmove-chess-logo.png" /></image>
-            </ImageView>
         </HBox>
     </bottom>
 </BorderPane>

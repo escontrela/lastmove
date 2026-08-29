@@ -165,6 +165,26 @@ mvn clean package
 mvn javafx:run
 ```
 
+### Application icon on macOS and Windows
+
+The project includes the native icon assets derived from the LastMove horse mark:
+
+* macOS: `src/main/resources/images/LastMove.icns`
+* Windows: `src/main/resources/images/LastMove.ico`
+
+When you run the application on macOS with `mvn javafx:run`, Maven automatically activates the
+`macos-dock-icon` profile and passes the `.icns` file to the JVM. Quit the currently running
+Java process completely before starting it again; macOS keeps a Dock icon for the life of that
+process and will not update it in place.
+
+On Windows, no macOS JVM argument is applied. The JavaFX window uses the LastMove horse mark;
+the `.ico` file is reserved for a future native Windows installer or `jpackage` distribution.
+There is nothing to install manually for either development workflow.
+
+For a distributable application, use the platform-native asset during packaging: `LastMove.icns`
+for a macOS `.app` and `LastMove.ico` for a Windows `.exe`/MSI. Do not use the other platform's
+icon format.
+
 ## Analysis Workspace
 
 The PGN analysis screen contains three working areas:

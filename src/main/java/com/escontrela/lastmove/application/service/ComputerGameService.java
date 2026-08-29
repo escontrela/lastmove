@@ -33,6 +33,7 @@ import jakarta.annotation.PreDestroy;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -427,17 +428,23 @@ public final class ComputerGameService {
       RuntimeContext context, PositionSnapshot position, Duration thinkingTime) {
     OpeningPracticeConfiguration practice = context.configuration.openingPractice().orElse(null);
     if (practice == null || context.openingPracticeState != OpeningPracticeState.FOLLOWING) {
-      return context.engine.chooseMove(new ComputerMoveRequest(position, thinkingTime));
+      return context.engine.chooseMove(
+          new ComputerMoveRequest(position, thinkingTime, context.game.positionHistory()));
     }
     MoveCommand guided = practice.line().get(context.openingPlyIndex);
     ChessGame candidateGame = gameFactory.createAnalysisGame(position);
     var execution = candidateGame.move(guided);
     if (!execution.accepted()) {
       context.openingPracticeState = OpeningPracticeState.ABANDONED_BY_DEVIATION;
-      return context.engine.chooseMove(new ComputerMoveRequest(position, thinkingTime));
+      return context.engine.chooseMove(
+          new ComputerMoveRequest(position, thinkingTime, context.game.positionHistory()));
     }
-    ComputerMoveRequest bestRequest = new ComputerMoveRequest(position, thinkingTime);
-    ComputerMoveRequest guidedRequest = new ComputerMoveRequest(candidateGame.currentPosition(), thinkingTime);
+    ComputerMoveRequest bestRequest =
+        new ComputerMoveRequest(position, thinkingTime, context.game.positionHistory());
+    List<PositionSnapshot> guidedHistory = new ArrayList<>(context.game.positionHistory());
+    guidedHistory.add(candidateGame.currentPosition());
+    ComputerMoveRequest guidedRequest =
+        new ComputerMoveRequest(candidateGame.currentPosition(), thinkingTime, guidedHistory);
     return context.engine.analyze(bestRequest).thenCompose(best ->
         context.engine.analyze(guidedRequest).thenApply(afterGuided -> {
           if (withinThreshold(best, afterGuided, practice.safetyThresholdCentipawns())) {

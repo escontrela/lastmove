@@ -396,6 +396,226 @@
     -fx-padding: 8 0 0 0;
 }
 
+/* Home dashboard: the TilePanes wrap their cards as the window narrows. */
+.home-scroll-pane {
+    -fx-background-color: #f7f8fb;
+    -fx-border-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.home-scroll-pane > .viewport,
+.home-scroll-pane > .corner { -fx-background-color: #f7f8fb; }
+
+.home-scroll-pane .scroll-bar:vertical {
+    -fx-background-color: transparent;
+    -fx-padding: 4px;
+}
+
+.home-scroll-pane .scroll-bar:vertical .track {
+    -fx-background-color: #e7ebf1;
+    -fx-background-radius: 6px;
+}
+
+.home-scroll-pane .scroll-bar:vertical .thumb {
+    -fx-background-color: #b6c0cb;
+    -fx-background-radius: 6px;
+}
+
+.tool-catalog-shell {
+    -fx-background-color: radial-gradient(center 50% 38%, radius 92%, #ffffff 0%, #f8f9fd 52%, #edf2f8 100%);
+    -fx-max-width: Infinity;
+}
+
+.home-action-grid, .home-secondary-grid {
+    -fx-pref-tile-width: 270px;
+    -fx-tile-alignment: top-left;
+}
+
+.home-secondary-grid { -fx-pref-tile-width: 360px; }
+
+.home-action-card, .home-secondary-card {
+    -fx-alignment: bottom-left;
+    -fx-background-color: #ffffff;
+    -fx-background-insets: 0, 0;
+    /* One radius for the colour layer and one for each card illustration. */
+    -fx-background-radius: 0, 0;
+    -fx-border-color: #e5eaf0;
+    -fx-border-radius: 0;
+    -fx-border-width: 1px;
+    -fx-cursor: hand;
+    -fx-padding: 24px;
+    -fx-text-fill: #14213d;
+    -fx-effect: dropshadow(gaussian, rgba(29, 47, 70, 0.07), 18, 0.08, 0, 5);
+}
+
+.home-action-card {
+    -fx-min-height: 252px;
+    -fx-pref-height: 252px;
+    -fx-max-height: 252px;
+}
+
+.home-secondary-card {
+    -fx-min-height: 220px;
+    -fx-pref-height: 220px;
+    -fx-max-height: 220px;
+    -fx-padding: 20px;
+}
+
+.home-action-card:hover, .home-secondary-card:hover {
+    -fx-border-color: #75a9ed;
+    -fx-effect: dropshadow(gaussian, rgba(25, 99, 211, 0.16), 22, 0.13, 0, 6);
+}
+
+.home-action-card:pressed, .home-secondary-card:pressed { -fx-opacity: 0.92; }
+
+.home-card-content, .home-secondary-content {
+    -fx-fill-width: true;
+    -fx-pref-width: 1000000px;
+    -fx-max-width: 1000000px;
+}
+
+.home-card-icon {
+    -fx-alignment: center;
+    -fx-min-height: 58px;
+    -fx-min-width: 58px;
+    -fx-pref-height: 58px;
+    -fx-pref-width: 58px;
+    -fx-background-radius: 16px;
+}
+
+.home-analysis-icon { -fx-background-color: #eaf3ff; }
+.home-studies-icon { -fx-background-color: #eaf9ef; }
+.home-tactics-icon { -fx-background-color: #f6eaff; }
+.home-computer-icon { -fx-background-color: #fff1df; }
+.home-games-icon { -fx-background-color: #eef3fa; }
+.home-position-icon { -fx-background-color: #e9f4ff; }
+
+.home-card-title {
+    -fx-font-size: 22px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #14213d;
+}
+
+.home-card-description, .home-secondary-description {
+    -fx-font-size: 14px;
+    -fx-line-spacing: 2px;
+    -fx-text-fill: #5d6b7e;
+}
+
+.home-card-link {
+    -fx-font-size: 14px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #1769d8;
+    -fx-padding: 12px 0 0 0;
+}
+
+.home-secondary-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #14213d;
+}
+
+.home-analysis-card {
+    -fx-background-image: url("/images/card-background-light.png");
+    -fx-background-position: right center;
+    -fx-background-repeat: no-repeat;
+    -fx-background-size: cover;
+}
+
+.home-studies-card {
+    -fx-background-image: url("/images/studies-card-background-light.png");
+    -fx-background-position: right center;
+    -fx-background-repeat: no-repeat;
+    -fx-background-size: cover;
+}
+
+.home-tactics-card {
+    -fx-background-image: url("/images/tactics-card-background-light.png");
+    -fx-background-position: right center;
+    -fx-background-repeat: no-repeat;
+    -fx-background-size: cover;
+}
+
+.home-computer-card {
+    -fx-background-image: url("/images/computer-challenge-card-background-light.png");
+    -fx-background-position: right center;
+    -fx-background-repeat: no-repeat;
+    -fx-background-size: cover;
+}
+
+.home-position-card {
+    -fx-background-image: url("/images/position-analysis-card-background-light.png");
+    -fx-background-position: right center;
+    -fx-background-repeat: no-repeat;
+    -fx-background-size: cover;
+}
+
+.home-knightshade-banner {
+    /* Keep the square artwork from influencing the TilePane's card measurements. */
+    -fx-min-width: 360px;
+    -fx-pref-width: 360px;
+    -fx-max-width: 360px;
+    -fx-min-height: 220px;
+    -fx-pref-height: 220px;
+    -fx-max-height: 220px;
+    -fx-background-color: #0d1c32;
+    -fx-background-image: url("/images/knight-shade-engine-banner.png");
+    -fx-background-position: center;
+    -fx-background-repeat: no-repeat;
+    -fx-background-size: cover;
+    -fx-border-color: #152b48;
+}
+
+.home-games-card {
+    -fx-background-image: url("/images/computer-challenge-card-background-light.png");
+    -fx-background-position: right center;
+    -fx-background-repeat: no-repeat;
+    -fx-background-size: cover;
+}
+
+.knightshade-kicker {
+    -fx-font-size: 12px;
+    -fx-font-weight: 800;
+    -fx-letter-spacing: 1.4px;
+    -fx-text-fill: #75aaff;
+}
+
+.knightshade-title {
+    -fx-font-size: 19px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #ffffff;
+}
+
+.knightshade-description {
+    -fx-font-size: 14px;
+    -fx-line-spacing: 2px;
+    -fx-text-fill: #d1deef;
+}
+
+.knightshade-link { -fx-text-fill: #bfa4ff; }
+
+.knightshade-copy {
+    -fx-max-width: 160px;
+    -fx-pref-width: 160px;
+}
+
+.knightshade-copy .knightshade-description,
+.knightshade-copy .knightshade-link { -fx-max-width: 160px; }
+
+.home-recent-games { -fx-padding: 2px 0 0 0; }
+
+.home-recent-game-title {
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #253954;
+}
+
+.home-recent-game-summary {
+    -fx-font-size: 12px;
+    -fx-text-fill: #718096;
+}
+
 .message-box-overlay {
     -fx-background-color: rgba(20, 27, 36, 0.18);
     -fx-padding: 32;
@@ -908,6 +1128,7 @@
 .engine-evaluation-minimize:hover { -fx-background-color: #e8f1fb; -fx-border-color: #1c69d4; }
 .engine-selector-modal-card { -fx-min-width: 360px; -fx-max-width: 420px; }
 .engine-selector-tile { -fx-min-width: 92px; -fx-min-height: 78px; -fx-background-color: #ffffff; -fx-border-color: #dce5ef; -fx-border-width: 1; -fx-alignment: center; }
+.engine-selector-knightshade-mark { -fx-opacity: 0.2; }
 .engine-selector-tile:hover, .engine-selector-tile.selected { -fx-border-color: #1c69d4; -fx-background-color: #edf5ff; }
 .engine-selector-icon { -fx-font-size: 19px; -fx-text-fill: #1c69d4; }
 .engine-selector-name { -fx-font-size: 13px; }
@@ -917,21 +1138,21 @@
 
 .statistics-workspace { -fx-background-color: #f7f7f7; }
 .statistics-filter-card, .statistics-chart-card, .statistics-result-card {
-    -fx-background-color: #ffffff; -fx-border-color: #dfe5ec; -fx-border-width: 1; -fx-background-radius: 10; -fx-border-radius: 10;
+    -fx-background-color: #ffffff; -fx-border-color: #e6e6e6; -fx-border-width: 1; -fx-background-radius: 10; -fx-border-radius: 10;
 }
 .statistics-filter-card { -fx-padding: 16; }
 .statistics-chart-card { -fx-padding: 18; -fx-min-height: 300; }
-.statistics-filter-label, .statistics-card-copy, .statistics-result-label { -fx-font-size: 12px; -fx-text-fill: #65717e; }
-.statistics-card-title { -fx-font-size: 16px; -fx-font-weight: 800; -fx-text-fill: #1f242a; }
-.statistics-input, .statistics-engine-button { -fx-background-color: #ffffff; -fx-border-color: #c7d2df; -fx-border-width: 1; -fx-text-fill: #1f242a; -fx-background-radius: 6; -fx-border-radius: 6; }
+.statistics-filter-label, .statistics-card-copy, .statistics-result-label { -fx-font-size: 12px; -fx-text-fill: #6b6b6b; }
+.statistics-card-title { -fx-font-size: 16px; -fx-font-weight: 800; -fx-text-fill: #262626; }
+.statistics-input, .statistics-engine-button { -fx-background-color: #ffffff; -fx-border-color: #cccccc; -fx-border-width: 1; -fx-text-fill: #262626; -fx-background-radius: 6; -fx-border-radius: 6; }
 .statistics-engine-button { -fx-min-width: 190; -fx-alignment: center-left; -fx-padding: 8 12; -fx-cursor: hand; }
-.statistics-engine-button:hover { -fx-border-color: #1c69d4; -fx-background-color: #edf5ff; }
-.statistics-chart-toggle { -fx-background-color: transparent; -fx-border-color: #c7d2df; -fx-border-width: 1; -fx-text-fill: #1c69d4; -fx-font-weight: 700; -fx-background-radius: 6; -fx-border-radius: 6; -fx-cursor: hand; }
+.statistics-engine-button:hover { -fx-border-color: #1c69d4; -fx-background-color: #f7f7f7; }
+.statistics-chart-toggle { -fx-background-color: transparent; -fx-border-color: #cccccc; -fx-border-width: 1; -fx-text-fill: #1c69d4; -fx-font-weight: 700; -fx-background-radius: 6; -fx-border-radius: 6; -fx-cursor: hand; }
 .statistics-result-card { -fx-padding: 15 18; -fx-border-width: 1 1 1 4; }
-.statistics-result-won { -fx-border-color: #dfe5ec #dfe5ec #dfe5ec #1b8f5a; }
-.statistics-result-lost { -fx-border-color: #dfe5ec #dfe5ec #dfe5ec #cc4a55; }
-.statistics-result-drawn { -fx-border-color: #dfe5ec #dfe5ec #dfe5ec #718096; }
-.statistics-result-value { -fx-font-size: 24px; -fx-font-weight: 800; -fx-text-fill: #1f242a; }
+.statistics-result-won { -fx-border-color: #e6e6e6 #e6e6e6 #e6e6e6 #22c55e; }
+.statistics-result-lost { -fx-border-color: #e6e6e6 #e6e6e6 #e6e6e6 #1c69d4; }
+.statistics-result-drawn { -fx-border-color: #e6e6e6 #e6e6e6 #e6e6e6 #6b6b6b; }
+.statistics-result-value { -fx-font-size: 24px; -fx-font-weight: 800; -fx-text-fill: #262626; }
 
 .chess-board {
     -fx-border-color: transparent;
@@ -964,6 +1185,10 @@
     -fx-border-color: #efb700;
     -fx-border-width: 4px;
     -fx-effect: dropshadow(gaussian, rgba(239, 183, 0, 0.85), 15, 0.32, 0, 0);
+}
+.chess-square-threatened-glow {
+    -fx-background-color: radial-gradient(center 50% 50%, radius 65%, rgba(210, 58, 69, 0.0) 42%, rgba(210, 58, 69, 0.28) 72%, rgba(210, 58, 69, 0.62) 100%);
+    -fx-effect: dropshadow(gaussian, rgba(210, 58, 69, 0.35), 8, 0.35, 0, 0);
 }
 
 .tactic-result-card {
@@ -1316,6 +1541,13 @@
 
 /* Progressive-game screen and its Human vs Computer setup overlay. */
 .progressive-game-workspace { -fx-alignment: center; }
+.computer-vs-computer-shell {
+    -fx-background-color: #f8fbff;
+    -fx-background-image: url("../images/backgrounds/computer-match-light.png");
+    -fx-background-size: cover;
+    -fx-background-position: center;
+    -fx-background-repeat: no-repeat;
+}
 .progressive-player-card { -fx-background-color: #ffffff; }
 .progressive-player-name {
     -fx-font-size: 16px;
@@ -1452,6 +1684,10 @@
 
 /* Night mode is applied to each screen root by ApplicationThemeService. */
 .night-mode.app-shell, .night-mode .app-shell { -fx-background-color: #1a2129; }
+.night-mode.computer-vs-computer-shell, .night-mode .computer-vs-computer-shell {
+    -fx-background-color: #101923;
+    -fx-background-image: url("../images/backgrounds/computer-match-dark.png");
+}
 .night-mode .workspace-header, .night-mode.workspace-header {
     -fx-background-color: #1a2129;
     -fx-border-color: transparent transparent #3b4654 transparent;
@@ -1607,6 +1843,38 @@
 .night-mode .tool-card-title { -fx-text-fill: #f1f3f5; }
 .night-mode .tool-card-description, .night-mode .tool-card-state { -fx-text-fill: #b8c5d3; }
 .night-mode .tool-card-state-ready { -fx-text-fill: #79aeef; }
+.night-mode .home-scroll-pane,
+.night-mode .home-scroll-pane > .viewport,
+.night-mode .home-scroll-pane > .corner,
+.night-mode .tool-catalog-shell { -fx-background-color: radial-gradient(center 50% 38%, radius 92%, #253449 0%, #141e2a 58%, #0d141c 100%); }
+.night-mode .home-scroll-pane .scroll-bar:vertical .track { -fx-background-color: #202d3d; }
+.night-mode .home-scroll-pane .scroll-bar:vertical .thumb { -fx-background-color: #536477; }
+.night-mode .home-action-card, .night-mode .home-secondary-card {
+    -fx-background-color: #1a2533;
+    -fx-border-color: #34465a;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.28), 18, 0.1, 0, 5);
+}
+.night-mode .home-action-card:hover, .night-mode .home-secondary-card:hover {
+    -fx-border-color: #6aa8f5;
+    -fx-effect: dropshadow(gaussian, rgba(70, 138, 230, 0.19), 22, 0.14, 0, 6);
+}
+.night-mode .home-analysis-card { -fx-background-image: url("/images/card-background-dark.png"); }
+.night-mode .home-studies-card { -fx-background-image: url("/images/studies-card-background-dark.png"); }
+.night-mode .home-tactics-card { -fx-background-image: url("/images/tactics-card-background-dark.png"); }
+.night-mode .home-computer-card { -fx-background-image: url("/images/computer-challenge-card-background-dark.png"); }
+.night-mode .home-position-card { -fx-background-image: url("/images/position-analysis-card-background-dark.png"); }
+.night-mode .home-games-card { -fx-background-image: url("/images/computer-challenge-card-background-dark.png"); }
+.night-mode .home-analysis-icon { -fx-background-color: #173353; }
+.night-mode .home-studies-icon { -fx-background-color: #193d31; }
+.night-mode .home-tactics-icon { -fx-background-color: #432553; }
+.night-mode .home-computer-icon { -fx-background-color: #50371d; }
+.night-mode .home-games-icon, .night-mode .home-position-icon { -fx-background-color: #21364d; }
+.night-mode .home-card-title, .night-mode .home-secondary-title { -fx-text-fill: #f4f7fb; }
+.night-mode .home-card-description, .night-mode .home-secondary-description { -fx-text-fill: #b5c2d2; }
+.night-mode .home-recent-game-title { -fx-text-fill: #e5edf7; }
+.night-mode .home-recent-game-summary { -fx-text-fill: #a9b9ca; }
+.night-mode .home-card-link { -fx-text-fill: #7cb4ff; }
+.night-mode .home-knightshade-banner { -fx-background-color: #081426; -fx-border-color: #294768; }
 .night-mode .message-box-overlay { -fx-background-color: rgba(0, 0, 0, 0.38); }
 .night-mode .promotion-picker-card {
     -fx-background-color: #1c2430;
@@ -1698,26 +1966,26 @@
 .night-mode .tactic-result-card .eyebrow-label, .night-mode .tactic-result-card .card-copy { -fx-text-fill: #b8c5d3; }
 .night-mode .primary-button:disabled { -fx-background-color: #303b47; -fx-border-color: #465465; -fx-text-fill: #8291a0; }
 .night-mode .engine-selector-tile:hover, .night-mode .engine-selector-tile.selected { -fx-background-color: #2b3b4d; -fx-border-color: #6ba5f0; }
-.night-mode .statistics-workspace { -fx-background-color: #121820; }
-.night-mode .statistics-filter-card, .night-mode .statistics-chart-card, .night-mode .statistics-result-card { -fx-background-color: #262e38; -fx-border-color: #3b4654; }
-.night-mode .statistics-card-title, .night-mode .statistics-result-value { -fx-text-fill: #f1f3f5; }
-.night-mode .statistics-filter-label, .night-mode .statistics-card-copy, .night-mode .statistics-result-label { -fx-text-fill: #b8c5d3; }
-.night-mode .statistics-input, .night-mode .statistics-engine-button { -fx-background-color: #1c2430; -fx-border-color: #5c6a79; -fx-text-fill: #f1f3f5; }
-.night-mode .statistics-input .text-field, .night-mode .statistics-input .arrow-button { -fx-background-color: #1c2430; -fx-text-fill: #f1f3f5; }
-.night-mode .statistics-input .text-field { -fx-prompt-text-fill: #8e9ba8; }
-.night-mode .statistics-input .arrow { -fx-background-color: #b8c5d3; }
-.night-mode .statistics-input .list-cell { -fx-background-color: #1c2430; -fx-text-fill: #f1f3f5; }
-.night-mode .combo-box-popup .list-view, .night-mode .date-picker-popup { -fx-background-color: #1c2430; -fx-border-color: #5c6a79; }
-.night-mode .combo-box-popup .list-cell, .night-mode .date-picker-popup .day-cell { -fx-background-color: #1c2430; -fx-text-fill: #f1f3f5; }
-.night-mode .combo-box-popup .list-cell:hover, .night-mode .date-picker-popup .day-cell:hover { -fx-background-color: #2b3b4d; }
+.night-mode .statistics-workspace { -fx-background-color: #1a2129; }
+.night-mode .statistics-filter-card, .night-mode .statistics-chart-card, .night-mode .statistics-result-card { -fx-background-color: #262e38; -fx-border-color: #3c3c3c; }
+.night-mode .statistics-card-title, .night-mode .statistics-result-value { -fx-text-fill: #ffffff; }
+.night-mode .statistics-filter-label, .night-mode .statistics-card-copy, .night-mode .statistics-result-label { -fx-text-fill: #bbbbbb; }
+.night-mode .statistics-input, .night-mode .statistics-engine-button { -fx-background-color: #1a2129; -fx-border-color: #6b6b6b; -fx-text-fill: #ffffff; }
+.night-mode .statistics-input .text-field, .night-mode .statistics-input .arrow-button { -fx-background-color: #1a2129; -fx-text-fill: #ffffff; }
+.night-mode .statistics-input .text-field { -fx-prompt-text-fill: #bbbbbb; }
+.night-mode .statistics-input .arrow { -fx-background-color: #bbbbbb; }
+.night-mode .statistics-input .list-cell { -fx-background-color: #1a2129; -fx-text-fill: #ffffff; }
+.night-mode .combo-box-popup .list-view, .night-mode .date-picker-popup { -fx-background-color: #1a2129; -fx-border-color: #6b6b6b; }
+.night-mode .combo-box-popup .list-cell, .night-mode .date-picker-popup .day-cell { -fx-background-color: #1a2129; -fx-text-fill: #ffffff; }
+.night-mode .combo-box-popup .list-cell:hover, .night-mode .date-picker-popup .day-cell:hover { -fx-background-color: #262e38; }
 .night-mode .date-picker-popup .month-year-pane, .night-mode .date-picker-popup .spinner .button { -fx-background-color: #262e38; }
-.night-mode .date-picker-popup .month-year-pane .label, .night-mode .date-picker-popup .weekday { -fx-text-fill: #b8c5d3; }
-.night-mode .statistics-chart-toggle { -fx-border-color: #5c6a79; -fx-text-fill: #68a9ff; }
-.night-mode .statistics-chart-toggle:hover { -fx-background-color: #2b3b4d; -fx-border-color: #6ba5f0; }
-.night-mode .statistics-result-won { -fx-border-color: #3b4654 #3b4654 #3b4654 #4bd38a; }
-.night-mode .statistics-result-lost { -fx-border-color: #3b4654 #3b4654 #3b4654 #ff8794; }
-.night-mode .statistics-result-drawn { -fx-border-color: #3b4654 #3b4654 #3b4654 #9fb2c6; }
-.night-mode .statistics-engine-button:hover { -fx-background-color: #2b3b4d; -fx-border-color: #6ba5f0; }
+.night-mode .date-picker-popup .month-year-pane .label, .night-mode .date-picker-popup .weekday { -fx-text-fill: #bbbbbb; }
+.night-mode .statistics-chart-toggle { -fx-border-color: #6b6b6b; -fx-text-fill: #1c69d4; }
+.night-mode .statistics-chart-toggle:hover { -fx-background-color: #262e38; -fx-border-color: #1c69d4; }
+.night-mode .statistics-result-won { -fx-border-color: #3c3c3c #3c3c3c #3c3c3c #22c55e; }
+.night-mode .statistics-result-lost { -fx-border-color: #3c3c3c #3c3c3c #3c3c3c #1c69d4; }
+.night-mode .statistics-result-drawn { -fx-border-color: #3c3c3c #3c3c3c #3c3c3c #bbbbbb; }
+.night-mode .statistics-engine-button:hover { -fx-background-color: #262e38; -fx-border-color: #1c69d4; }
 .night-mode .secondary-button {
     -fx-background-color: #262e38;
     -fx-border-color: #6d7783;
@@ -2155,13 +2423,17 @@
 
 /* Interactive move-tree explorer. */
 .move-tree-overlay { -fx-background-color: rgba(8, 15, 24, 0.42); -fx-padding: 26; }
+.move-tree-overlay-maximized { -fx-padding: 0; }
 .move-tree-card { -fx-background-color: #ffffff; -fx-background-radius: 18; -fx-border-color: #d8dde3; -fx-border-radius: 18; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.28), 28, 0.14, 0, 8); }
 .move-tree-header { -fx-padding: 18 22 14 22; -fx-border-color: transparent transparent #e6eaf0 transparent; -fx-cursor: move; }
 .move-tree-title { -fx-font-size: 21px; -fx-font-weight: bold; -fx-text-fill: #16233b; }
 .move-tree-support { -fx-font-size: 13px; -fx-text-fill: #6b7889; }
 .move-tree-close, .move-tree-comment-close { -fx-background-color: transparent; -fx-font-size: 22px; -fx-font-weight: bold; -fx-cursor: hand; }
+.move-tree-actions { -fx-padding: 0 4 0 0; }
+.move-tree-action-button { -fx-background-radius: 10; -fx-border-radius: 10; -fx-padding: 7; }
 .move-tree-scroll, .move-tree-scroll > .viewport { -fx-background-color: transparent; -fx-background: transparent; }
 .move-tree-canvas { -fx-background-color: linear-gradient(to bottom, #fbfdff, #f4f8fc); }
+.move-tree-zoom-canvas { -fx-background-color: transparent; }
 .move-tree-explorer { -fx-background-color: #f7f9fc; }
 .move-tree-inspector { -fx-background-color: #ffffff; -fx-border-color: transparent transparent transparent #dfe5ed; -fx-padding: 18; }
 .move-tree-connector-main { -fx-stroke: #1c69d4; -fx-stroke-width: 2.1; }

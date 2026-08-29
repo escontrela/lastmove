@@ -115,6 +115,10 @@
                             <Label styleClass="shortcut-reference-key" text="→" />
                             <Label styleClass="shortcut-reference-action" text="Next move" />
                         </HBox>
+                        <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="shortcut-reference-row">
+                            <Label styleClass="shortcut-reference-key" text="⌘⇧H / Ctrl+Shift+H" />
+                            <Label styleClass="shortcut-reference-action" text="Toggle threatened-square hints in Human vs Computer" />
+                        </HBox>
                     </VBox>
                 </VBox>
             </content>

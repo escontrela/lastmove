@@ -11,6 +11,7 @@ import com.escontrela.lastmove.domain.service.FenService;
 import com.knightshade.engine.KnightshadeEngine;
 import com.knightshade.engine.api.SearchLimits;
 import com.knightshade.engine.api.SearchResult;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -131,11 +132,16 @@ public final class KnightshadeMoveEngine implements ComputerMoveEngine {
     long startedAt = System.nanoTime();
     try {
       String fen = fenService.fromSnapshot(request.position()).getValue();
+      List<String> positionHistory =
+          request.positionHistory().stream()
+              .map(position -> fenService.fromSnapshot(position).getValue())
+              .toList();
       long maxTimeMillis = request.maximumThinkingTime().toMillis();
       log.info("Knightshade search started: fen='{}' maxTimeMs={}", fen, maxTimeMillis);
       SearchResult result =
           engine.search(
               fen,
+              positionHistory,
               SearchLimits.timeOnly(request.maximumThinkingTime()),
               cancellationRequested::get);
       EngineScore score =

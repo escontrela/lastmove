@@ -183,6 +183,22 @@ class ChessGameTest {
     assertEquals(Duration.ZERO, expired.currentClock().whiteRemaining().orElseThrow());
   }
 
+  @Test
+  void thirdRepetitionFinishesTheGameAsADraw() {
+    ChessGame game = newGame();
+
+    for (String move : List.of("Nf3", "Nf6", "Ng1", "Ng8", "Nf3", "Nf6", "Ng1", "Ng8")) {
+      assertTrue(game.move(move).accepted());
+    }
+
+    assertEquals(GameResult.DRAW, game.result().orElseThrow());
+    assertEquals(
+        GameTerminationReason.THREEFOLD_REPETITION,
+        game.terminationReason().orElseThrow());
+    assertEquals(9, game.positionHistory().size());
+    assertFalse(game.move("Nf3").accepted());
+  }
+
   private ChessGame newGame() {
     return gameFactory.createInitial(
         new GamePlayer("Alice", PieceColor.WHITE),

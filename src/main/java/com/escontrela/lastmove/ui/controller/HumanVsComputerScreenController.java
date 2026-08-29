@@ -1,6 +1,7 @@
 package com.escontrela.lastmove.ui.controller;
 
 import com.escontrela.lastmove.application.computer.ComputerGameConfiguration;
+import com.escontrela.lastmove.application.computer.ComputerEngineIds;
 import com.escontrela.lastmove.application.computer.ComputerGamePhase;
 import com.escontrela.lastmove.application.computer.ComputerGameState;
 import com.escontrela.lastmove.application.service.ComputerGameService;
@@ -32,6 +33,8 @@ import com.escontrela.lastmove.ui.screen.UiScreenController;
 import com.escontrela.lastmove.ui.screen.UiScreenId;
 import com.escontrela.lastmove.ui.service.ChessSoundService;
 import com.escontrela.lastmove.ui.service.BoardAppearancePreferencesService;
+import com.escontrela.lastmove.domain.service.ThreatenedSquaresService;
+import java.io.ByteArrayInputStream;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
@@ -48,6 +51,7 @@ import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
+import javafx.scene.shape.Circle;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -62,6 +66,7 @@ import org.springframework.stereotype.Component;
 public final class HumanVsComputerScreenController implements UiScreenController {
 
   private static final double BOARD_MAX_SIZE = 720.0;
+  private static final double PLAYER_ICON_SIZE = 28.0;
   private static final String NIGHT_MODE_STYLE_CLASS = "night-mode";
 
   private final UiFlowManager uiFlowManager;
@@ -73,6 +78,7 @@ public final class HumanVsComputerScreenController implements UiScreenController
   private final BoardAppearancePreferencesService boardAppearancePreferencesService;
   private final ComputerEngineSettingsService computerEngineSettingsService;
   private final OpeningPracticeService openingPracticeService;
+  private final ThreatenedSquaresService threatenedSquaresService;
   private Timeline clockRefresh;
   private final ListChangeListener<String> themeStyleListener = change -> updatePlayerIcons();
 
@@ -87,6 +93,7 @@ public final class HumanVsComputerScreenController implements UiScreenController
   @FXML private Label humanPlayerLabel;
   @FXML private ImageView opponentPlayerIcon;
   @FXML private ImageView humanPlayerIcon;
+  @FXML private ImageView threatHintsIcon;
   @FXML private CapturedPiecesControl opponentCapturedPieces;
   @FXML private CapturedPiecesControl humanCapturedPieces;
   @FXML private Label opponentClockLabel;
@@ -108,6 +115,7 @@ public final class HumanVsComputerScreenController implements UiScreenController
   private boolean resultShown;
   private boolean followingLivePosition = true;
   private int reviewedPlyCount;
+  private boolean threatHintsEnabled;
 
   public HumanVsComputerScreenController(
       @Lazy UiFlowManager uiFlowManager,
@@ -118,7 +126,8 @@ public final class HumanVsComputerScreenController implements UiScreenController
       CurrentUserService currentUserService,
       BoardAppearancePreferencesService boardAppearancePreferencesService,
       ComputerEngineSettingsService computerEngineSettingsService,
-      OpeningPracticeService openingPracticeService) {
+      OpeningPracticeService openingPracticeService,
+      ThreatenedSquaresService threatenedSquaresService) {
     this.uiFlowManager = uiFlowManager;
     this.computerGameService = computerGameService;
     this.analysisSessionService = analysisSessionService;
@@ -128,6 +137,7 @@ public final class HumanVsComputerScreenController implements UiScreenController
     this.boardAppearancePreferencesService = boardAppearancePreferencesService;
     this.computerEngineSettingsService = computerEngineSettingsService;
     this.openingPracticeService = openingPracticeService;
+    this.threatenedSquaresService = threatenedSquaresService;
   }
 
   @FXML
@@ -147,6 +157,13 @@ public final class HumanVsComputerScreenController implements UiScreenController
     configurePromotionPicker();
     configureSetupOverlay();
     configureResultMessage();
+    root.addEventFilter(javafx.scene.input.KeyEvent.KEY_PRESSED, event -> {
+      if (event.getCode() == javafx.scene.input.KeyCode.H && event.isShortcutDown() && event.isShiftDown()) {
+        threatHintsEnabled = !threatHintsEnabled;
+        refreshThreatHints();
+        event.consume();
+      }
+    });
     bindResponsiveBoardSize();
     showEmptyWorkspace();
   }
@@ -475,12 +492,16 @@ public final class HumanVsComputerScreenController implements UiScreenController
       reviewedPlyCount = Math.min(reviewedPlyCount, state.moves().size());
     }
     chessBoard.renderPosition(reviewedPosition());
+    refreshThreatHints();
     refreshCapturedPieces();
     boolean humanIsWhite = state.humanColor() == PieceColor.WHITE;
     humanPlayerLabel.setText(
         humanIsWhite ? state.whitePlayer().getName() : state.blackPlayer().getName());
     opponentPlayerLabel.setText(
         humanIsWhite ? state.blackPlayer().getName() : state.whitePlayer().getName());
+    if (previousState == null || !previousState.engine().id().equals(state.engine().id())) {
+      updatePlayerIcons();
+    }
     humanClockLabel.setText(
         formatClock(
             humanIsWhite ? state.clock().whiteRemaining() : state.clock().blackRemaining()));
@@ -544,6 +565,7 @@ public final class HumanVsComputerScreenController implements UiScreenController
       return;
     }
     resultShown = true;
+    chessSoundService.play(com.escontrela.lastmove.ui.service.ChessSound.NOTIFY);
     String winner =
         state.result().orElseThrow() == GameResult.DRAW
             ? "Draw"
@@ -570,6 +592,9 @@ public final class HumanVsComputerScreenController implements UiScreenController
     restartButton.setDisable(true);
     resignButton.setDisable(true);
     opponentThinkingIndicator.setThinking(false);
+    updatePlayerIcons();
+    threatHintsIcon.setImage(loadImage(root.getStyleClass().contains(NIGHT_MODE_STYLE_CLASS) ? "/images/gpp_maybe_35dp_FFFFFF.png" : "/images/gpp_maybe_35dp_000000.png"));
+    threatHintsIcon.setVisible(threatHintsEnabled);
     followingLivePosition = true;
     reviewedPlyCount = 0;
     updateReviewControls();
@@ -577,8 +602,24 @@ public final class HumanVsComputerScreenController implements UiScreenController
 
   private void updatePlayerIcons() {
     String iconColor = root.getStyleClass().contains(NIGHT_MODE_STYLE_CLASS) ? "FFFFFF" : "000000";
-    humanPlayerIcon.setImage(loadImage("/images/face_35dp_" + iconColor + ".png"));
-    opponentPlayerIcon.setImage(loadImage("/images/robot_2_35dp_" + iconColor + ".png"));
+    currentUserService.currentUserPhoto().ifPresentOrElse(
+        photo -> {
+          humanPlayerIcon.setImage(new Image(new ByteArrayInputStream(photo)));
+          humanPlayerIcon.setClip(
+              new Circle(PLAYER_ICON_SIZE / 2, PLAYER_ICON_SIZE / 2, PLAYER_ICON_SIZE / 2));
+        },
+        () -> {
+          humanPlayerIcon.setImage(loadImage("/images/face_35dp_" + iconColor + ".png"));
+          humanPlayerIcon.setClip(null);
+        });
+    boolean knightshadeOpponent = renderedState != null
+        && ComputerEngineIds.KNIGHTSHADE.equals(renderedState.engine().id());
+    opponentPlayerIcon.setImage(knightshadeOpponent
+        ? loadImage(root.getStyleClass().contains(NIGHT_MODE_STYLE_CLASS)
+            ? "/images/knightshade-engine-mark-dark.png"
+            : "/images/knightshade-engine-mark.png")
+        : loadImage("/images/robot_2_35dp_" + iconColor + ".png"));
+    opponentPlayerIcon.setClip(null);
   }
 
   private Image loadImage(String resource) {
@@ -691,6 +732,7 @@ public final class HumanVsComputerScreenController implements UiScreenController
 
   private void renderReviewedPosition() {
     chessBoard.renderPosition(reviewedPosition());
+    refreshThreatHints();
     refreshCapturedPieces();
     refreshNotation(renderedState.moves());
     updateReviewControls();
@@ -701,6 +743,14 @@ public final class HumanVsComputerScreenController implements UiScreenController
           "Reviewing position %d of %d · clocks continue"
               .formatted(reviewedPlyCount, renderedState.moves().size()));
     }
+  }
+
+  private void refreshThreatHints() {
+    boolean show = threatHintsEnabled && renderedState != null && followingLivePosition
+        && renderedState.phase() == ComputerGamePhase.WAITING_FOR_HUMAN;
+    if (show) chessBoard.setThreatenedSquares(threatenedSquaresService.attackedPieces(renderedState.position(), renderedState.humanColor().opposite()));
+    else chessBoard.clearThreatenedSquares();
+    if (threatHintsIcon != null) threatHintsIcon.setVisible(threatHintsEnabled);
   }
 
   private void refreshCapturedPieces() {

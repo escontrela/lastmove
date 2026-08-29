@@ -38,4 +38,14 @@ class SeeTest {
 
     assertEquals(0, See.evaluate(board, move));
   }
+
+  @Test
+  void includesTheMaterialCreatedByPromotion() {
+    var board = FenParser.parse("7k/P7/8/8/8/8/8/7K w - - 0 1");
+    Move move =
+        new Move(Square.of("a7"), Square.of("a8"), PieceType.QUEEN, MoveFlag.NORMAL, null);
+
+    assertEquals(800, See.evaluate(board, move));
+    assertTrue(See.ge(board, move, 0));
+  }
 }

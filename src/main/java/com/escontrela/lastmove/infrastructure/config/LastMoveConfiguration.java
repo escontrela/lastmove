@@ -5,6 +5,7 @@ import com.escontrela.lastmove.domain.analysis.AnalysisSessionFactory;
 import com.escontrela.lastmove.domain.game.ChessGameFactory;
 import com.escontrela.lastmove.domain.game.ChessRulesEngine;
 import com.escontrela.lastmove.domain.service.FenService;
+import com.escontrela.lastmove.domain.service.ThreatenedSquaresService;
 import com.escontrela.lastmove.domain.study.StudyChapterFactory;
 import com.escontrela.lastmove.domain.tactics.TacticExerciseFactory;
 import java.time.Clock;
@@ -54,6 +55,7 @@ public class LastMoveConfiguration {
     public FenService fenService() {
         return new FenService();
     }
+    @Bean public ThreatenedSquaresService threatenedSquaresService() { return new ThreatenedSquaresService(); }
 
     /** Supplies wall-clock time to progressive-game application services. */
     @Bean

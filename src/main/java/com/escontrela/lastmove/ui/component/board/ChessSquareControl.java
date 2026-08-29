@@ -8,6 +8,7 @@ import javafx.scene.layout.BorderStroke;
 import javafx.scene.layout.BorderStrokeStyle;
 import javafx.scene.layout.BorderWidths;
 import javafx.scene.layout.CornerRadii;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import com.escontrela.lastmove.ui.support.CssClassNames;
@@ -38,6 +39,7 @@ public class ChessSquareControl extends StackPane {
   private boolean visualEffectsEnabled = true;
   private final ImageView pieceImageView =
       new ImageView(); // Cambiado el nombre de la variable para evitar colisión con el tipo Image
+  private final Region threatenedOverlay = new Region();
 
   public ChessSquareControl(int file, int rank, boolean isLight, BoardTheme theme) {
     this.file = file;
@@ -52,7 +54,12 @@ public class ChessSquareControl extends StackPane {
     pieceImageView.setPreserveRatio(true);
     pieceImageView.setPickOnBounds(false); // Clave: no interceptar eventos de mouse
 
+    threatenedOverlay.setMouseTransparent(true);
+    threatenedOverlay.getStyleClass().add("chess-square-threatened-glow");
+    threatenedOverlay.setVisible(false);
+
     getChildren().add(pieceImageView);
+    getChildren().add(threatenedOverlay);
   }
 
   private void applyTheme(BoardTheme theme) {
@@ -93,6 +100,9 @@ public class ChessSquareControl extends StackPane {
     } else {
       getStyleClass().remove(CssClassNames.SQUARE_HINT);
     }
+  }
+  public void setThreatened(boolean threatened) {
+    threatenedOverlay.setVisible(threatened);
   }
 
   /**

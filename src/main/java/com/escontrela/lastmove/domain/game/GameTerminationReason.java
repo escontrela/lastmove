@@ -4,6 +4,7 @@ package com.escontrela.lastmove.domain.game;
 public enum GameTerminationReason {
   CHECKMATE,
   STALEMATE,
+  THREEFOLD_REPETITION,
   RESIGNATION,
   TIMEOUT
 }

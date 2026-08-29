@@ -1,6 +1,7 @@
 package com.escontrela.lastmove.ui.component.evaluation;
 
 import com.escontrela.lastmove.application.computer.ComputerEngineDescriptor;
+import com.escontrela.lastmove.application.computer.ComputerEngineIds;
 import java.util.List;
 import java.util.Objects;
 import javafx.application.Platform;
@@ -10,6 +11,8 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.FlowPane;
@@ -87,12 +90,37 @@ public final class EngineSelectorModal extends StackPane {
     Button choice = new Button();
     choice.getStyleClass().add("engine-selector-tile");
     if (engine.id().equals(selectedId)) choice.getStyleClass().add("selected");
-    choice.setGraphic(new VBox(4, icon, name, version));
+    VBox details = new VBox(4, icon, name, version);
+    details.setAlignment(Pos.CENTER);
+    choice.setGraphic(ComputerEngineIds.KNIGHTSHADE.equals(engine.id())
+        ? knightshadeTileGraphic(details)
+        : details);
     choice.setOnAction(event -> {
       if (onEngineSelected != null) onEngineSelected.handle(new EngineSelectionEvent(engine.id()));
       hide();
     });
     return choice;
+  }
+
+  private StackPane knightshadeTileGraphic(VBox details) {
+    ImageView mark = new ImageView(loadKnightshadeMark());
+    mark.setFitWidth(74);
+    mark.setFitHeight(74);
+    mark.setPreserveRatio(true);
+    mark.setMouseTransparent(true);
+    mark.setOpacity(0.2);
+    mark.getStyleClass().add("engine-selector-knightshade-mark");
+    return new StackPane(mark, details);
+  }
+
+  private Image loadKnightshadeMark() {
+    boolean nightMode = getScene() != null
+        && getScene().getRoot().getStyleClass().contains("night-mode");
+    String resource = nightMode
+        ? "/images/knightshade-engine-mark-dark.png"
+        : "/images/knightshade-engine-mark.png";
+    return new Image(Objects.requireNonNull(getClass().getResource(resource),
+        () -> "Missing Knightshade engine mark: " + resource).toExternalForm());
   }
 
   private void handleEscape(KeyEvent event) {

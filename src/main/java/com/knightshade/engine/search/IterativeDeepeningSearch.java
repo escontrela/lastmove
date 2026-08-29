@@ -19,7 +19,9 @@ import com.knightshade.engine.transposition.TranspositionTable.Entry;
 import com.knightshade.engine.transposition.TranspositionTable.ScoreType;
 import com.escontrela.lastmove.domain.common.PieceColor;
 import com.escontrela.lastmove.domain.common.PieceType;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -31,6 +33,7 @@ public final class IterativeDeepeningSearch implements Search {
 
   private static final int DEFAULT_MAX_DEPTH = 64;
   private static final int ASPIRATION_DELTA = 25;
+  private static final int MAX_CHECK_EXTENSIONS = 2;
 
   private final MoveGenerator moveGenerator;
   private final Evaluator evaluator;
@@ -57,9 +60,23 @@ public final class IterativeDeepeningSearch implements Search {
 
   @Override
   public SearchResult search(Board board, SearchLimits limits, StopSignal stop) {
+    return search(board, limits, stop, Map.of());
+  }
+
+  @Override
+  public SearchResult search(
+      Board board,
+      SearchLimits limits,
+      StopSignal stop,
+      Map<Long, Integer> positionOccurrences) {
     Objects.requireNonNull(board, "board must not be null");
     Objects.requireNonNull(limits, "limits must not be null");
     Objects.requireNonNull(stop, "stop must not be null");
+    Map<Long, Integer> repetitions =
+        new HashMap<>(
+            Objects.requireNonNull(
+                positionOccurrences, "positionOccurrences must not be null"));
+    repetitions.putIfAbsent(board.zobristKey(), 1);
 
     nodes = 0;
     quiescence.resetNodes();
@@ -79,8 +96,18 @@ public final class IterativeDeepeningSearch implements Search {
     Move bestMove = rootMoves.getFirst();
     int bestScore = 0;
     int completedDepth = 0;
+    boolean avoidThirdRepetition = evaluateFromSideToMove(board) >= 0;
     for (int depth = 1; depth <= maxDepth; depth++) {
-      int score = searchDepth(board, depth, bestScore, killers, history, timeBoundStop);
+      int score =
+          searchDepth(
+              board,
+              depth,
+              bestScore,
+              killers,
+              history,
+              repetitions,
+              avoidThirdRepetition,
+              timeBoundStop);
       if (timeBoundStop.shouldStop()) {
         break;
       }
@@ -101,6 +128,8 @@ public final class IterativeDeepeningSearch implements Search {
       int previousScore,
       KillerMoves killers,
       HistoryTable history,
+      Map<Long, Integer> repetitions,
+      boolean avoidThirdRepetition,
       StopSignal stop) {
     int delta = ASPIRATION_DELTA;
     int alpha = depth <= 1 ? -Scores.INF : Math.max(-Scores.INF, previousScore - delta);
@@ -109,7 +138,17 @@ public final class IterativeDeepeningSearch implements Search {
       if (stop.shouldStop()) {
         return previousScore;
       }
-      int score = searchRoot(board, depth, alpha, beta, killers, history, stop);
+      int score =
+          searchRoot(
+              board,
+              depth,
+              alpha,
+              beta,
+              killers,
+              history,
+              repetitions,
+              avoidThirdRepetition,
+              stop);
       if (stop.shouldStop()) {
         return previousScore;
       }
@@ -131,6 +170,8 @@ public final class IterativeDeepeningSearch implements Search {
       int beta,
       KillerMoves killers,
       HistoryTable history,
+      Map<Long, Integer> repetitions,
+      boolean avoidThirdRepetition,
       StopSignal stop) {
     Move ttMove = transpositionMoveFor(board);
     List<Move> moves =
@@ -138,21 +179,83 @@ public final class IterativeDeepeningSearch implements Search {
             board,
             moveGenerator.generate(board),
             new OrderingContext(0, killers, history, ttMove));
+    boolean hasNonRepeatingMove =
+        !avoidThirdRepetition
+            || moves.stream()
+                .anyMatch(move -> !wouldRepeatThirdTime(board, move, repetitions));
 
     int best = -Scores.INF;
+    int moveCount = 0;
     for (Move move : moves) {
       if (stop.shouldStop()) {
         break;
       }
       board.make(move);
-      int score = -pvSearch(board, depth - 1, -beta, -alpha, 1, killers, history, stop);
+      long childKey = board.zobristKey();
+      if (avoidThirdRepetition
+          && hasNonRepeatingMove
+          && repetitions.getOrDefault(childKey, 0) >= 2) {
+        board.unmake();
+        continue;
+      }
+      moveCount++;
+      recordPosition(repetitions, childKey);
+      int score;
+      if (moveCount == 1) {
+        score =
+            -pvSearch(
+                board,
+                depth - 1,
+                -beta,
+                -alpha,
+                1,
+                0,
+                killers,
+                history,
+                repetitions,
+                stop);
+      } else {
+        score =
+            -pvSearch(
+                board,
+                depth - 1,
+                -alpha - 1,
+                -alpha,
+                1,
+                0,
+                killers,
+                history,
+                repetitions,
+                stop);
+        if (score > alpha && score < beta) {
+          score =
+              -pvSearch(
+                  board,
+                  depth - 1,
+                  -beta,
+                  -alpha,
+                  1,
+                  0,
+                  killers,
+                  history,
+                  repetitions,
+                  stop);
+        }
+      }
+      forgetPosition(repetitions, childKey);
       board.unmake();
+      if (stop.shouldStop()) {
+        break;
+      }
       if (score > best) {
         best = score;
         bestRootMove = move;
       }
       if (score > alpha) {
         alpha = score;
+      }
+      if (alpha >= beta) {
+        break;
       }
     }
     return best;
@@ -164,8 +267,10 @@ public final class IterativeDeepeningSearch implements Search {
       int alpha,
       int beta,
       int ply,
+      int checkExtensions,
       KillerMoves killers,
       HistoryTable history,
+      Map<Long, Integer> repetitions,
       StopSignal stop) {
     nodes++;
     if (stop.shouldStop()) {
@@ -173,6 +278,15 @@ public final class IterativeDeepeningSearch implements Search {
     }
     if (ply >= Scores.MAX_PLY) {
       return evaluateFromSideToMove(board);
+    }
+    if (repetitions.getOrDefault(board.zobristKey(), 0) >= 3) {
+      return 0;
+    }
+
+    boolean inCheck = board.inCheck(board.sideToMove());
+    if (inCheck && depth > 0 && checkExtensions < MAX_CHECK_EXTENSIONS) {
+      depth++;
+      checkExtensions++;
     }
 
     long key = board.zobristKey();
@@ -203,19 +317,43 @@ public final class IterativeDeepeningSearch implements Search {
       return score;
     }
     if (depth <= 0) {
-      int score = quiescence.search(board, alpha, beta, ply, stop);
-      transpositionTable.store(key, null, 0, Scores.toTable(score, ply), ScoreType.EXACT);
+      int alphaOriginal = alpha;
+      int score = quiescence.searchWithQuietChecks(board, alpha, beta, ply, stop);
+      if (!stop.shouldStop()) {
+        ScoreType type =
+            score <= alphaOriginal
+                ? ScoreType.UPPER_BOUND
+                : score >= beta ? ScoreType.LOWER_BOUND : ScoreType.EXACT;
+        transpositionTable.store(key, null, 0, Scores.toTable(score, ply), type);
+      }
       return score;
     }
 
-    boolean inCheck = board.inCheck(board.sideToMove());
-    if (!inCheck && depth >= 3 && hasNonPawnMaterial(board, board.sideToMove())) {
+    if (!inCheck
+        && beta - alpha == 1
+        && depth >= 3
+        && hasNonPawnMaterial(board, board.sideToMove())) {
       int reduction = 2 + depth / 4;
       board.makeNullMove();
-      int score = -pvSearch(board, depth - 1 - reduction, -beta, -beta + 1, ply + 1, killers,
-          history, stop);
+      int score =
+          -pvSearch(
+              board,
+              depth - 1 - reduction,
+              -beta,
+              -beta + 1,
+              ply + 1,
+              checkExtensions,
+              killers,
+              history,
+              repetitions,
+              stop);
       board.unmakeNullMove();
+      if (stop.shouldStop()) {
+        return alpha;
+      }
       if (score >= beta) {
+        transpositionTable.store(
+            key, null, depth, Scores.toTable(score, ply), ScoreType.LOWER_BOUND);
         return score;
       }
     }
@@ -236,28 +374,71 @@ public final class IterativeDeepeningSearch implements Search {
               && !move.equals(killers.secondary(ply));
 
       board.make(move);
+      long childKey = board.zobristKey();
+      recordPosition(repetitions, childKey);
+      boolean givesCheck = board.inCheck(board.sideToMove());
+      boolean reduced = reduce && !givesCheck;
       int score;
       if (moveCount == 1) {
-        score = -pvSearch(board, depth - 1, -beta, -alpha, ply + 1, killers, history, stop);
+        score =
+            -pvSearch(
+                board,
+                depth - 1,
+                -beta,
+                -alpha,
+                ply + 1,
+                checkExtensions,
+                killers,
+                history,
+                repetitions,
+                stop);
       } else {
         score =
             -pvSearch(
                 board,
-                reduce ? depth - 2 : depth - 1,
+                reduced ? depth - 2 : depth - 1,
                 -alpha - 1,
                 -alpha,
                 ply + 1,
+                checkExtensions,
                 killers,
                 history,
+                repetitions,
                 stop);
-        if (reduce && score > alpha) {
-          score = -pvSearch(board, depth - 1, -alpha - 1, -alpha, ply + 1, killers, history, stop);
+        if (reduced && score > alpha) {
+          score =
+              -pvSearch(
+                  board,
+                  depth - 1,
+                  -alpha - 1,
+                  -alpha,
+                  ply + 1,
+                  checkExtensions,
+                  killers,
+                  history,
+                  repetitions,
+                  stop);
         }
         if (score > alpha && score < beta) {
-          score = -pvSearch(board, depth - 1, -beta, -alpha, ply + 1, killers, history, stop);
+          score =
+              -pvSearch(
+                  board,
+                  depth - 1,
+                  -beta,
+                  -alpha,
+                  ply + 1,
+                  checkExtensions,
+                  killers,
+                  history,
+                  repetitions,
+                  stop);
         }
       }
+      forgetPosition(repetitions, childKey);
       board.unmake();
+      if (stop.shouldStop()) {
+        return alpha;
+      }
 
       if (score >= beta) {
         if (!move.isCapture() && !move.isPromotion()) {
@@ -280,6 +461,22 @@ public final class IterativeDeepeningSearch implements Search {
     ScoreType type = best <= alphaOriginal ? ScoreType.UPPER_BOUND : ScoreType.EXACT;
     transpositionTable.store(key, bestMove, depth, Scores.toTable(best, ply), type);
     return best;
+  }
+
+  private boolean wouldRepeatThirdTime(
+      Board board, Move move, Map<Long, Integer> repetitions) {
+    board.make(move);
+    boolean repeats = repetitions.getOrDefault(board.zobristKey(), 0) >= 2;
+    board.unmake();
+    return repeats;
+  }
+
+  private void recordPosition(Map<Long, Integer> repetitions, long key) {
+    repetitions.merge(key, 1, Integer::sum);
+  }
+
+  private void forgetPosition(Map<Long, Integer> repetitions, long key) {
+    repetitions.computeIfPresent(key, (ignored, count) -> count == 1 ? null : count - 1);
   }
 
   private boolean hasNonPawnMaterial(Board board, PieceColor color) {
