@@ -5,7 +5,9 @@ import com.escontrela.lastmove.application.computer.ComputerEngineHealth;
 import com.escontrela.lastmove.application.computer.ComputerEngineIds;
 import com.escontrela.lastmove.application.service.ComputerEngineHealthService;
 import com.escontrela.lastmove.application.service.ComputerEngineSettingsService;
+import com.escontrela.lastmove.application.service.KnightshadeArenaSettingsService;
 import com.escontrela.lastmove.application.service.PositionAnalysisService;
+import com.escontrela.lastmove.application.arena.KnightshadeArenaSettings;
 import com.escontrela.lastmove.ui.component.header.ApplicationHeader;
 import com.escontrela.lastmove.ui.component.header.HeaderAction;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
@@ -18,6 +20,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
@@ -25,6 +28,9 @@ import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.PasswordField;
+import javafx.scene.control.Spinner;
+import javafx.scene.control.SpinnerValueFactory;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
 import javafx.util.StringConverter;
@@ -42,6 +48,7 @@ public class SetupScreenController implements UiScreenController {
     private final ComputerEngineSettingsService computerEngineSettingsService;
     private final ComputerEngineHealthService computerEngineHealthService;
     private final PositionAnalysisService positionAnalysisService;
+    private final KnightshadeArenaSettingsService knightshadeArenaSettingsService;
 
     @FXML
     private BorderPane root;
@@ -73,6 +80,16 @@ public class SetupScreenController implements UiScreenController {
     private ComboBox<ComputerEngineDescriptor> analysisEngineCombo;
     @FXML
     private CheckBox analysisEngineDefaultCheckBox;
+    @FXML
+    private PasswordField lichessBotTokenField;
+    @FXML
+    private Spinner<Integer> arenaMaximumGamesSpinner;
+    @FXML
+    private CheckBox arenaAutomaticAcceptanceCheckBox;
+    @FXML
+    private Button validateLichessAccountButton;
+    @FXML
+    private Label lichessValidationLabel;
 
     private static final List<Duration> THINKING_TIME_PRESETS = List.of(
             Duration.ofMillis(500),
@@ -128,6 +145,9 @@ public class SetupScreenController implements UiScreenController {
     private String savedMaiaWeightsPath;
     private Duration savedKnightshadeThinkingTime;
     private String savedAnalysisEngineDefaultId;
+    private KnightshadeArenaSettings savedArenaSettings;
+    private boolean arenaTokenChanged;
+    private boolean loadingArenaToken;
 
     public SetupScreenController(
             @Lazy UiFlowManager uiFlowManager,
@@ -136,7 +156,8 @@ public class SetupScreenController implements UiScreenController {
             BoardAppearancePreferencesService boardAppearancePreferencesService,
             ComputerEngineSettingsService computerEngineSettingsService,
             ComputerEngineHealthService computerEngineHealthService,
-            PositionAnalysisService positionAnalysisService) {
+            PositionAnalysisService positionAnalysisService,
+            KnightshadeArenaSettingsService knightshadeArenaSettingsService) {
         this.uiFlowManager = uiFlowManager;
         this.themeService = themeService;
         this.startupPreferencesService = startupPreferencesService;
@@ -144,6 +165,7 @@ public class SetupScreenController implements UiScreenController {
         this.computerEngineSettingsService = computerEngineSettingsService;
         this.computerEngineHealthService = computerEngineHealthService;
         this.positionAnalysisService = positionAnalysisService;
+        this.knightshadeArenaSettingsService = knightshadeArenaSettingsService;
     }
 
     @FXML
@@ -176,6 +198,20 @@ public class SetupScreenController implements UiScreenController {
                 updateApplyButtonVisibility());
         analysisEngineDefaultCheckBox.selectedProperty().addListener((ignored, oldValue, newValue) ->
                 updateApplyButtonVisibility());
+        arenaMaximumGamesSpinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(
+                1, KnightshadeArenaSettings.MAXIMUM_CONCURRENT_GAMES_LIMIT,
+                KnightshadeArenaSettings.DEFAULT_MAXIMUM_CONCURRENT_GAMES));
+        arenaMaximumGamesSpinner.valueProperty().addListener((ignored, oldValue, newValue) ->
+                updateApplyButtonVisibility());
+        arenaAutomaticAcceptanceCheckBox.selectedProperty().addListener((ignored, oldValue, newValue) ->
+                updateApplyButtonVisibility());
+        lichessBotTokenField.textProperty().addListener((ignored, oldValue, newValue) -> {
+            if (!loadingArenaToken) {
+                arenaTokenChanged = true;
+                clearLichessValidation();
+                updateApplyButtonVisibility();
+            }
+        });
     }
 
     @Override
@@ -211,8 +247,14 @@ public class SetupScreenController implements UiScreenController {
                 computerEngineSettingsService.defaultAnalysisEngineId().orElse(null);
         analysisEngineDefaultCheckBox.setSelected(savedAnalysisEngineDefaultId != null);
         selectAnalysisEngine(positionAnalysisService.defaultEngineId());
+        savedArenaSettings = knightshadeArenaSettingsService.settings();
+        arenaMaximumGamesSpinner.getValueFactory().setValue(savedArenaSettings.maximumConcurrentGames());
+        arenaAutomaticAcceptanceCheckBox.setSelected(savedArenaSettings.automaticChallengeAcceptance());
+        clearTokenField();
+        arenaTokenChanged = false;
         clearSunfishValidation();
         clearMaiaValidation();
+        clearLichessValidation();
         updateApplyButtonVisibility();
     }
 
@@ -238,6 +280,7 @@ public class SetupScreenController implements UiScreenController {
         savedAnalysisEngineDefaultId = effectiveAnalysisEngineDefaultId();
         computerEngineSettingsService.updateDefaultAnalysisEngineId(
                 Optional.ofNullable(savedAnalysisEngineDefaultId));
+        applyArenaSettings();
         themeService.setNightMode(nightModeCheckBox.isSelected());
         startupPreferencesService.setSplashScreenEnabled(showSplashCheckBox.isSelected());
         boardAppearancePreferencesService.setBoardVisualEffectsEnabled(boardVisualEffectsCheckBox.isSelected());
@@ -262,6 +305,32 @@ public class SetupScreenController implements UiScreenController {
                 .updateMaiaWeightsLocation(maiaWeightsPathField.getText())
                 .executablePath()
                 .toString();
+    }
+
+    private void applyArenaSettings() {
+        if (arenaTokenChanged) {
+            String token = trimmed(lichessBotTokenField.getText());
+            if (token.isEmpty()) {
+                knightshadeArenaSettingsService.clearBotToken();
+            } else {
+                knightshadeArenaSettingsService.updateBotToken(token);
+            }
+            clearTokenField();
+            arenaTokenChanged = false;
+        }
+        savedArenaSettings = new KnightshadeArenaSettings(
+                arenaMaximumGamesSpinner.getValue(), arenaAutomaticAcceptanceCheckBox.isSelected());
+        knightshadeArenaSettingsService.updateSettings(savedArenaSettings);
+        clearLichessValidation();
+    }
+
+    /** Validates only a token already saved in user preferences, never a token in an unsaved field. */
+    @FXML
+    public void validateLichessAccount() {
+        validateLichessAccountButton.setDisable(true);
+        showLichessValidation("Validating the configured Lichess bot account…", null);
+        CompletableFuture.supplyAsync(knightshadeArenaSettingsService::validateConfiguredBotAccount)
+                .whenComplete((account, failure) -> Platform.runLater(() -> finishLichessValidation(account, failure)));
     }
 
     private static String trimmed(String value) {
@@ -320,6 +389,7 @@ public class SetupScreenController implements UiScreenController {
                 !hasUnsavedChanges)));
         testSunfishButton.setDisable(hasUnsavedChanges || savedSunfishExecutablePath == null);
         testMaiaButton.setDisable(hasUnsavedChanges);
+        validateLichessAccountButton.setDisable(hasUnsavedChanges || !knightshadeArenaSettingsService.hasBotToken());
         if (hasUnsavedChanges
                 && !sunfishExecutablePathField.getText().trim().equals(savedSunfishExecutablePath)) {
             showSunfishValidation("Apply the executable path before testing the connection.", null);
@@ -341,7 +411,11 @@ public class SetupScreenController implements UiScreenController {
                 || !Objects.equals(
                         knightshadeThinkingTimeCombo.getValue(), savedKnightshadeThinkingTime)
                 || !Objects.equals(
-                        effectiveAnalysisEngineDefaultId(), savedAnalysisEngineDefaultId);
+                        effectiveAnalysisEngineDefaultId(), savedAnalysisEngineDefaultId)
+                || arenaTokenChanged
+                || !Objects.equals(new KnightshadeArenaSettings(
+                        arenaMaximumGamesSpinner.getValue(), arenaAutomaticAcceptanceCheckBox.isSelected()),
+                        savedArenaSettings);
     }
 
     private void finishSunfishCheck(ComputerEngineHealth health, Throwable failure) {
@@ -392,6 +466,39 @@ public class SetupScreenController implements UiScreenController {
                 "settings-validation-success", "settings-validation-error");
         if (successful != null) {
             maiaValidationLabel.getStyleClass().add(
+                    successful ? "settings-validation-success" : "settings-validation-error");
+        }
+    }
+
+    private void finishLichessValidation(
+            com.escontrela.lastmove.application.arena.LichessBotAccount account, Throwable failure) {
+        if (failure != null) {
+            Throwable cause = failure.getCause() == null ? failure : failure.getCause();
+            showLichessValidation(cause.getMessage() == null ? "Could not validate the Lichess bot account." : cause.getMessage(), false);
+        } else {
+            showLichessValidation("Connected to Lichess bot account " + account.username() + ".", true);
+        }
+        updateApplyButtonVisibility();
+    }
+
+    private void clearTokenField() {
+        loadingArenaToken = true;
+        lichessBotTokenField.clear();
+        loadingArenaToken = false;
+    }
+
+    private void clearLichessValidation() {
+        lichessValidationLabel.setText("");
+        lichessValidationLabel.getStyleClass().removeAll(
+                "settings-validation-success", "settings-validation-error");
+    }
+
+    private void showLichessValidation(String message, Boolean successful) {
+        lichessValidationLabel.setText(message == null ? "" : message);
+        lichessValidationLabel.getStyleClass().removeAll(
+                "settings-validation-success", "settings-validation-error");
+        if (successful != null) {
+            lichessValidationLabel.getStyleClass().add(
                     successful ? "settings-validation-success" : "settings-validation-error");
         }
     }

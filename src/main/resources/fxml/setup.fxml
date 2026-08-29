@@ -7,6 +7,8 @@
 <?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.Spinner?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
@@ -80,6 +82,22 @@
                         <Label styleClass="card-copy" text="Knightshade is the engine built into LastMove. Give it more thinking time per move to make it play stronger." wrapText="true" />
                         <Label styleClass="settings-field-label" text="Thinking time per move" />
                         <ComboBox fx:id="knightshadeThinkingTimeCombo" maxWidth="Infinity" />
+                    </VBox>
+                    <VBox maxWidth="680.0" spacing="12.0" styleClass="setup-card">
+                        <padding><Insets bottom="32.0" left="32.0" right="32.0" top="32.0" /></padding>
+                        <Label styleClass="eyebrow-label" text="Knightshade Arena" />
+                        <Label styleClass="card-title" text="Lichess bot account" />
+                        <Label styleClass="card-copy" text="Save the personal token for the Lichess account already upgraded to Bot. The token is stored only in this device’s user preferences and is never shown again." wrapText="true" />
+                        <Label styleClass="settings-field-label" text="Lichess bot token" />
+                        <PasswordField fx:id="lichessBotTokenField" maxWidth="Infinity" promptText="Paste a token with bot:play scope" styleClass="settings-text-field" />
+                        <Label styleClass="settings-field-label" text="Maximum concurrent games" />
+                        <Spinner fx:id="arenaMaximumGamesSpinner" editable="false" maxWidth="Infinity" />
+                        <CheckBox fx:id="arenaAutomaticAcceptanceCheckBox" mnemonicParsing="false" styleClass="settings-check-box" text="Automatically accept eligible standard challenges" />
+                        <Label styleClass="card-copy" text="Arena currently accepts casual and rated standard chess at any clock, increment or rating. Variants and tournaments will be added in a later delivery." wrapText="true" />
+                        <HBox alignment="CENTER_LEFT" spacing="12.0">
+                            <Button fx:id="validateLichessAccountButton" mnemonicParsing="false" onAction="#validateLichessAccount" styleClass="secondary-button" text="Validate account" />
+                            <Label fx:id="lichessValidationLabel" maxWidth="Infinity" styleClass="settings-validation-message" wrapText="true" HBox.hgrow="ALWAYS" />
+                        </HBox>
                     </VBox>
                     <VBox maxWidth="680.0" spacing="12.0" styleClass="setup-card">
                         <padding><Insets bottom="32.0" left="32.0" right="32.0" top="32.0" /></padding>
