@@ -2423,6 +2423,7 @@
 
 /* Interactive move-tree explorer. */
 .move-tree-overlay { -fx-background-color: rgba(8, 15, 24, 0.42); -fx-padding: 26; }
+.move-tree-overlay-maximized { -fx-padding: 0; }
 .move-tree-card { -fx-background-color: #ffffff; -fx-background-radius: 18; -fx-border-color: #d8dde3; -fx-border-radius: 18; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.28), 28, 0.14, 0, 8); }
 .move-tree-header { -fx-padding: 18 22 14 22; -fx-border-color: transparent transparent #e6eaf0 transparent; -fx-cursor: move; }
 .move-tree-title { -fx-font-size: 21px; -fx-font-weight: bold; -fx-text-fill: #16233b; }

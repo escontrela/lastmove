@@ -16,9 +16,12 @@ import javafx.event.EventType;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.geometry.Point2D;
+import javafx.scene.Cursor;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.input.MouseButton;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
@@ -76,6 +79,14 @@ public final class MoveTreeOverlay extends StackPane {
   private double resizeStartSceneY;
   private double resizeStartWidth;
   private double resizeStartHeight;
+  private boolean panning;
+  private double panStartSceneX;
+  private double panStartSceneY;
+  private double panStartHValue;
+  private double panStartVValue;
+  private boolean maximized;
+  private double preMaximizeWidth;
+  private double preMaximizeHeight;
 
   public MoveTreeOverlay() {
     getStyleClass().add("move-tree-overlay");
@@ -117,12 +128,18 @@ public final class MoveTreeOverlay extends StackPane {
         "Zoom in move tree");
     zoomIn.setOnAction(event -> zoomIn());
     ToolbarIconButton centerInitialNode = treeActionButton(
-        "/images/zoom_out_map_35dp_000000.png",
-        "/images/zoom_out_map_35dp_FFFFFF.png",
+        "/images/center_focus_weak_35dp_000000.png",
+        "/images/center_focus_weak_35dp_FFFFFF.png",
         "Center initial position",
         "Center the initial move tree node");
     centerInitialNode.setOnAction(event -> centerInitialNode());
-    HBox treeActions = new HBox(6, zoomOut, zoomIn, centerInitialNode);
+    ToolbarIconButton maximize = treeActionButton(
+        "/images/zoom_out_map_35dp_000000.png",
+        "/images/zoom_out_map_35dp_FFFFFF.png",
+        "Maximize move tree",
+        "Maximize the move tree to the parent window");
+    maximize.setOnAction(event -> toggleMaximize());
+    HBox treeActions = new HBox(6, zoomOut, zoomIn, centerInitialNode, maximize);
     treeActions.setAlignment(Pos.CENTER_RIGHT);
     treeActions.getStyleClass().add("move-tree-actions");
     HBox header = new HBox(14, titleBox, spacer, treeActions, close);
@@ -182,6 +199,7 @@ public final class MoveTreeOverlay extends StackPane {
     getChildren().add(card);
     configureDrag(header);
     configureResize(resizeHandle);
+    configurePan();
     hide();
   }
 
@@ -225,6 +243,9 @@ public final class MoveTreeOverlay extends StackPane {
   }
 
   public void hide() {
+    panning = false;
+    zoomCanvas.setCursor(Cursor.DEFAULT);
+    if (maximized) restoreCardSize();
     setManaged(false);
     setVisible(false);
   }
@@ -413,6 +434,7 @@ public final class MoveTreeOverlay extends StackPane {
 
   private void centerInitialNode() {
     if (initialNodeCenter == null) return;
+    panning = false;
     javafx.application.Platform.runLater(
         () -> {
           double contentWidth = canvasWidth * zoom;
@@ -427,6 +449,28 @@ public final class MoveTreeOverlay extends StackPane {
   private static double scrollValue(double center, double viewport, double content) {
     if (content <= viewport) return 0.0;
     return Math.clamp((center - viewport / 2) / (content - viewport), 0.0, 1.0);
+  }
+
+  private void toggleMaximize() {
+    if (maximized) {
+      restoreCardSize();
+      return;
+    }
+    preMaximizeWidth = card.getPrefWidth();
+    preMaximizeHeight = card.getPrefHeight();
+    StackPane.setMargin(card, Insets.EMPTY);
+    getStyleClass().add("move-tree-overlay-maximized");
+    card.setPrefWidth(getWidth());
+    card.setPrefHeight(getHeight());
+    maximized = true;
+  }
+
+  private void restoreCardSize() {
+    StackPane.setMargin(card, new Insets(28));
+    getStyleClass().remove("move-tree-overlay-maximized");
+    card.setPrefWidth(preMaximizeWidth);
+    card.setPrefHeight(preMaximizeHeight);
+    maximized = false;
   }
 
   private void configureDrag(HBox header) {
@@ -457,6 +501,61 @@ public final class MoveTreeOverlay extends StackPane {
           card.setPrefWidth(Math.max(card.getMinWidth(), resizeStartWidth + event.getSceneX() - resizeStartSceneX));
           card.setPrefHeight(Math.max(card.getMinHeight(), resizeStartHeight + event.getSceneY() - resizeStartSceneY));
         });
+  }
+
+  private void configurePan() {
+    zoomCanvas.setOnMousePressed(
+        event -> {
+          if (event.getButton() != MouseButton.SECONDARY || hitsNode(event.getTarget())) return;
+          panStartSceneX = event.getSceneX();
+          panStartSceneY = event.getSceneY();
+          panStartHValue = treeScroll.getHvalue();
+          panStartVValue = treeScroll.getVvalue();
+          panning = true;
+          zoomCanvas.setCursor(Cursor.CLOSED_HAND);
+          event.consume();
+        });
+    zoomCanvas.setOnMouseDragged(
+        event -> {
+          if (!panning) return;
+          double contentWidth = canvasWidth * zoom;
+          double contentHeight = canvasHeight * zoom;
+          double viewportWidth = treeScroll.getViewportBounds().getWidth();
+          double viewportHeight = treeScroll.getViewportBounds().getHeight();
+          double dx = event.getSceneX() - panStartSceneX;
+          double dy = event.getSceneY() - panStartSceneY;
+          if (contentWidth > viewportWidth) {
+            treeScroll.setHvalue(
+                Math.clamp(panStartHValue - dx / (contentWidth - viewportWidth), 0.0, 1.0));
+          }
+          if (contentHeight > viewportHeight) {
+            treeScroll.setVvalue(
+                Math.clamp(panStartVValue - dy / (contentHeight - viewportHeight), 0.0, 1.0));
+          }
+          event.consume();
+        });
+    zoomCanvas.setOnMouseReleased(
+        event -> {
+          if (event.getButton() != MouseButton.SECONDARY || !panning) return;
+          panning = false;
+          zoomCanvas.setCursor(Cursor.DEFAULT);
+          event.consume();
+        });
+    zoomCanvas.setOnMouseMoved(
+        event -> {
+          if (panning) return;
+          zoomCanvas.setCursor(hitsNode(event.getTarget()) ? Cursor.DEFAULT : Cursor.MOVE);
+        });
+    zoomCanvas.setOnMouseExited(event -> zoomCanvas.setCursor(Cursor.DEFAULT));
+  }
+
+  private static boolean hitsNode(Object target) {
+    if (!(target instanceof Node node)) return false;
+    while (node != null) {
+      if (node.getStyleClass().contains("move-tree-node")) return true;
+      node = node.getParent();
+    }
+    return false;
   }
 
   private static java.util.Optional<TreeNode> findCurrentNode(List<TreeNode> nodes) {
