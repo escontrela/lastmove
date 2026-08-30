@@ -24,15 +24,57 @@ public final class LichessArenaService {
   private volatile LichessBotClient.StreamHandle accountStream; private final Map<String,LichessBotClient.StreamHandle> gameStreams=new ConcurrentHashMap<>();
   private final ScheduledExecutorService reconnects; private final Duration reconnectDelay;
   private final AtomicBoolean accountReconnectScheduled=new AtomicBoolean(); private final Set<String> gameReconnects=ConcurrentHashMap.newKeySet();
+  private volatile ArenaTournamentListState tournamentListState=ArenaTournamentListState.DISCONNECTED;
+  private volatile Optional<String> tournamentListError=Optional.empty();
   @org.springframework.beans.factory.annotation.Autowired
   public LichessArenaService(LichessArenaRepository arena,KnightshadeArenaSettingsRepository settings,LichessBotClient client,ApplicationEventPublisher events){this(arena,settings,client,events,STREAM_RECONNECT_DELAY,Executors.newSingleThreadScheduledExecutor(r->{Thread t=new Thread(r,"lichess-reconnect");t.setDaemon(true);return t;}));}
   LichessArenaService(LichessArenaRepository arena,KnightshadeArenaSettingsRepository settings,LichessBotClient client,ApplicationEventPublisher events,Duration reconnectDelay,ScheduledExecutorService reconnects){this.arena=Objects.requireNonNull(arena);this.settings=Objects.requireNonNull(settings);this.client=Objects.requireNonNull(client);this.events=Objects.requireNonNull(events);this.reconnectDelay=Objects.requireNonNull(reconnectDelay);this.reconnects=Objects.requireNonNull(reconnects);}
   public synchronized ArenaConnection connect(){String token=token(); Instant now=Instant.now(); arena.saveConnection(new ArenaConnection(ArenaConnectionStatus.CONNECTING,Optional.empty(),Optional.empty(),Optional.empty(),now)); publish(LichessArenaEvent.Type.CONNECTIVITY_CHANGED,"","Connecting"); close(accountStream); accountStream=client.streamEvents(token,this::onAccountEvent,this::onAccountStreamClosed); ArenaConnection value=new ArenaConnection(ArenaConnectionStatus.CONNECTED,Optional.empty(),Optional.of(now),Optional.empty(),now);arena.saveConnection(value);publish(LichessArenaEvent.Type.CONNECTIVITY_CHANGED,"","Connected"); return value;}
-  public synchronized ArenaConnection disconnect(){close(accountStream);accountStream=null;gameStreams.values().forEach(this::close);gameStreams.clear();Instant now=Instant.now();ArenaConnection value=new ArenaConnection(ArenaConnectionStatus.DISCONNECTED,Optional.empty(),arena.connection().connectedAt(),Optional.of(now),now);arena.saveConnection(value);publish(LichessArenaEvent.Type.CONNECTIVITY_CHANGED,"","Disconnected");return value;}
+  public synchronized ArenaConnection disconnect(){close(accountStream);accountStream=null;gameStreams.values().forEach(this::close);gameStreams.clear();tournamentListState=ArenaTournamentListState.DISCONNECTED;tournamentListError=Optional.empty();Instant now=Instant.now();ArenaConnection value=new ArenaConnection(ArenaConnectionStatus.DISCONNECTED,Optional.empty(),arena.connection().connectedAt(),Optional.of(now),now);arena.saveConnection(value);publish(LichessArenaEvent.Type.CONNECTIVITY_CHANGED,"","Disconnected");return value;}
   public ArenaConnection connection(){return arena.connection();} public List<ArenaChallenge> challenges(){return arena.listChallenges();} public List<ArenaGame> activeGames(){return arena.listActiveGames();}
+  public List<ArenaTournament> tournaments(){return arena.listTournaments();}
+  public ArenaTournamentListState tournamentListState(){return tournamentListState;}
+  public Optional<String> tournamentListError(){return tournamentListError;}
   public Optional<LichessBotAccount> account(){return settings.findValidatedBotAccount();}
   public int maximumConcurrentGames(){return settings.loadSettings().maximumConcurrentGames();}
   public boolean automaticChallengeAcceptance(){return settings.loadSettings().automaticChallengeAcceptance();}
+  /**
+   * Reconciles Lichess' public Arena schedule into durable bot-eligible tournament rows.
+   * A failed refresh deliberately keeps the last persisted schedule visible to the future UI.
+   */
+  public synchronized List<ArenaTournament> refreshTournaments(){
+    if(connection().status()!=ArenaConnectionStatus.CONNECTED){
+      tournamentListState=ArenaTournamentListState.DISCONNECTED;
+      tournamentListError=Optional.of("Connect Knightshade Arena before loading tournaments.");
+      return tournaments();
+    }
+    tournamentListState=ArenaTournamentListState.LOADING;
+    tournamentListError=Optional.empty();
+    try {
+      Instant now=Instant.now();
+      for(LichessTournamentSnapshot snapshot:client.currentTournaments(token())) {
+        Optional<ArenaTournament> existing=arena.findTournament(snapshot.id());
+        if(!snapshot.botsAllowed()&&existing.isEmpty()) continue;
+        ArenaTournament tournament=existing.map(current->current.reconcile(snapshot,now))
+            .orElseGet(()->ArenaTournament.discovered(snapshot,now));
+        arena.saveTournament(tournament);
+      }
+      List<ArenaTournament> result=tournaments();
+      tournamentListState=result.isEmpty()?ArenaTournamentListState.EMPTY:ArenaTournamentListState.READY;
+      publish(LichessArenaEvent.Type.TOURNAMENTS_UPDATED,"",Integer.toString(result.size()));
+      return result;
+    } catch(LichessTournamentRequestException failure) {
+      tournamentListState=ArenaTournamentListState.ERROR;
+      tournamentListError=Optional.of(failure.getMessage());
+      publish(LichessArenaEvent.Type.TOURNAMENTS_FAILED,"",failure.getMessage());
+      return tournaments();
+    } catch(RuntimeException failure) {
+      tournamentListState=ArenaTournamentListState.ERROR;
+      tournamentListError=Optional.of("Could not load Lichess tournaments.");
+      publish(LichessArenaEvent.Type.TOURNAMENTS_FAILED,"","Could not load Lichess tournaments.");
+      return tournaments();
+    }
+  }
   public synchronized void reconcileCurrentGames(){JsonNode response=client.currentGames(token());Set<String> current=new HashSet<>();response.path("nowPlaying").forEach(node->{String id=node.path("gameId").asText();if(id.isBlank())return;current.add(id);ArenaGame game=arena.findGame(id).orElseGet(()->{Instant now=Instant.now();return new ArenaGame(id,Optional.empty(),Optional.empty(),optionalText(node,"fullId").map(v->"https://lichess.org/"+v),Optional.empty(),Optional.empty(),Optional.empty(),ArenaGameStatus.STARTED,Optional.empty(),now,Optional.empty(),now);});arena.saveGame(game);if(!gameStreams.containsKey(id))openGameStream(id);});for(ArenaGame game:arena.listActiveGames())if((game.status()==ArenaGameStatus.STARTED||game.status()==ArenaGameStatus.ACTIVE||game.status()==ArenaGameStatus.STREAM_CLOSED)&&!current.contains(game.lichessGameId())){Instant now=Instant.now();arena.saveGame(new ArenaGame(game.lichessGameId(),game.localGameId(),game.challengeId(),game.gameUrl(),game.whiteLichessId(),game.blackLichessId(),game.botColor(),ArenaGameStatus.FINISHED,Optional.empty(),game.startedAt(),Optional.of(now),now));publish(LichessArenaEvent.Type.GAME_FINISHED,game.lichessGameId(),"Reconciled as finished");}}
   public void accept(String id){if(!arena.reserveChallenge(id,settings.loadSettings().maximumConcurrentGames())){decide(id,ArenaChallengeDecision.DECLINED,"Maximum concurrent games reached");client.declineChallenge(token(),id,"later");return;}try{client.acceptChallenge(token(),id);decide(id,ArenaChallengeDecision.ACCEPTED,null);}catch(RuntimeException failure){decide(id,ArenaChallengeDecision.FAILED,failure.getMessage());throw failure;}}
   public void decline(String id,String reason){client.declineChallenge(token(),id,reason);decide(id,ArenaChallengeDecision.DECLINED,reason);}

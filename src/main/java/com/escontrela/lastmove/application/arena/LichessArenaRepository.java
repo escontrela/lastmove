@@ -15,4 +15,7 @@ public interface LichessArenaRepository {
   void saveGame(ArenaGame game);
   Optional<ArenaGame> findGame(String lichessGameId);
   List<ArenaGame> listActiveGames();
+  void saveTournament(ArenaTournament tournament);
+  Optional<ArenaTournament> findTournament(String lichessTournamentId);
+  List<ArenaTournament> listTournaments();
 }
