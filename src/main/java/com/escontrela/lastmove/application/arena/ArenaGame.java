@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.util.Optional;
 
 public record ArenaGame(String lichessGameId, Optional<GameId> localGameId, Optional<String> challengeId,
+    Optional<String> tournamentId,
     Optional<String> gameUrl, Optional<String> whiteLichessId, Optional<String> blackLichessId,
     Optional<PieceColor> botColor, ArenaGameStatus status, Optional<String> lastError,
     Instant startedAt, Optional<Instant> finishedAt, Instant updatedAt) {}

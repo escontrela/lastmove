@@ -87,7 +87,7 @@ public class UiFlowManager {
                         "Open game notifications",
                         "Notifications",
                         currentUserService.selectedPlayerId().filter(notifications::hasUnread).isPresent() ? "/images/notification_sound_35dp_000000.png" : "/images/notifications_35dp_000000.png",
-                        currentUserService.selectedPlayerId().filter(notifications::hasUnread).isPresent() ? "/images/notification_sound_35dp_FFFFFF.png" : "/images/notifications_35dp_FFFFFF_.png",
+                        currentUserService.selectedPlayerId().filter(notifications::hasUnread).isPresent() ? "/images/notification_sound_35dp_FFFFFF.png" : "/images/notifications_35dp_FFFFFF.png",
                         event -> eventBus.publish(new ToggleNotificationsPanelEvent()),
                         false), new HeaderAction(
                         "Open settings",

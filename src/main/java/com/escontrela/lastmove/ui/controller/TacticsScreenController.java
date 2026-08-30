@@ -237,7 +237,7 @@ public final class TacticsScreenController implements UiScreenController {
                 "Create tactic suite",
                 "Create tactic suite",
                 "/images/add_35dp_000000.png",
-                "/images/add_35dp_FFFFFFpng.png",
+                "/images/add_35dp_FFFFFF.png",
                 event -> onCreateSuite(),
                 !available)));
   }

@@ -22,6 +22,15 @@ class PlayerTest {
     }
 
     @Test
+    void createsKnightshadeAsTheLocalApplicationBotIdentity() {
+        Player bot = Player.knightshadeBot("knight-shade-bot");
+
+        assertEquals("Knightshade Arena Bot", bot.fullName());
+        assertEquals("LICHESS", bot.externalProvider().orElseThrow());
+        assertEquals("knight-shade-bot", bot.externalAccountId().orElseThrow());
+    }
+
+    @Test
     void trimsWhitespace() {
         Player player = Player.create("  bob@example.com  ", "  Bob  ", "  Jones  ", Optional.empty());
 

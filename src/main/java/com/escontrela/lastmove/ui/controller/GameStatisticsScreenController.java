@@ -78,7 +78,7 @@ public final class GameStatisticsScreenController implements UiScreenController 
   private void showPlayerSelector() {
     List<PlayerSummary> options = players.listPlayers();
     if (options.isEmpty()) { statusLabel.setText("Create or validate a player profile before viewing statistics."); return; }
-    playerSelector.show(options, selectedPlayer.map(summary -> summary.id().value()).orElse(null), "Choose player", "View statistics for a local player or Knightshade without changing the active application user.");
+    playerSelector.show(options, selectedPlayer.map(summary -> summary.id().value()).orElse(null), "Choose player", "View statistics for an app player or Knightshade. Uncheck to include Lichess participants.", arenaSettings.configuredBotAccount().map(com.escontrela.lastmove.application.arena.LichessBotAccount::id));
   }
   private void refresh() {
     LocalDate from = fromDate.getValue(), to = toDate.getValue(); StatisticsGranularity grouping = granularity.getValue();

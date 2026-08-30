@@ -6,6 +6,7 @@ import com.escontrela.lastmove.application.arena.LichessBotAccount;
 import com.escontrela.lastmove.application.arena.LichessBotAccountValidationException;
 import com.escontrela.lastmove.application.arena.LichessBotAccountVerifier;
 import java.util.Objects;
+import java.util.Optional;
 import org.springframework.stereotype.Service;
 
 /** Coordinates user-local Arena preferences and safe validation of the configured bot account. */
@@ -52,7 +53,11 @@ public final class KnightshadeArenaSettingsService {
   public LichessBotAccount validateConfiguredBotAccount() {
     String token = repository.findBotToken().orElseThrow(
         () -> new LichessBotAccountValidationException("Save a Lichess bot token before validating it."));
-    LichessBotAccount account = accountVerifier.verifyBotToken(token);
+    LichessBotAccount verified = accountVerifier.verifyBotToken(token);
+    Optional<Integer> previous = repository.findValidatedBotAccount()
+        .filter(old -> old.id().equalsIgnoreCase(verified.id()))
+        .flatMap(LichessBotAccount::standardRating);
+    LichessBotAccount account = new LichessBotAccount(verified.id(), verified.username(), verified.standardRating(), previous);
     repository.saveValidatedBotAccount(account);
     return account;
   }

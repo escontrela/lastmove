@@ -134,6 +134,7 @@ class PlayerServiceTest {
         assertEquals(first.id(), refreshed.id());
         assertEquals(PlayerType.SYSTEM, refreshed.type());
         assertEquals("Knightshade", refreshed.firstName());
+        assertEquals("Arena Bot", refreshed.lastName());
     }
 
     @Test
