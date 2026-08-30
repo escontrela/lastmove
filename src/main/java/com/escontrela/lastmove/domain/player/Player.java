@@ -20,6 +20,9 @@ public final class Player {
     private final String lastName;
     private final Optional<byte[]> photo;
     private final Instant createdAt;
+    private final PlayerType type;
+    private final Optional<String> externalProvider;
+    private final Optional<String> externalAccountId;
 
     public Player(
             PlayerId id,
@@ -28,12 +31,34 @@ public final class Player {
             String lastName,
             Optional<byte[]> photo,
             Instant createdAt) {
+        this(id, email, firstName, lastName, photo, createdAt, PlayerType.HUMAN, Optional.empty(), Optional.empty());
+    }
+
+    public Player(
+            PlayerId id,
+            String email,
+            String firstName,
+            String lastName,
+            Optional<byte[]> photo,
+            Instant createdAt,
+            PlayerType type,
+            Optional<String> externalProvider,
+            Optional<String> externalAccountId) {
         this.id = id;
         this.email = validateEmail(email);
         this.firstName = validateName(firstName, "firstName");
         this.lastName = validateName(lastName, "lastName");
         this.photo = validatePhoto(photo);
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt must not be null");
+        this.type = Objects.requireNonNull(type, "type must not be null");
+        this.externalProvider = normalizeOptional(externalProvider, "externalProvider");
+        this.externalAccountId = normalizeOptional(externalAccountId, "externalAccountId");
+        if (this.externalProvider.isPresent() != this.externalAccountId.isPresent()) {
+            throw new IllegalArgumentException("external provider and account id must coexist");
+        }
+        if (type == PlayerType.SYSTEM && this.externalProvider.isEmpty()) {
+            throw new IllegalArgumentException("system players require an external identity");
+        }
     }
 
     /** Creates a new, not-yet-persisted player profile. */
@@ -42,12 +67,31 @@ public final class Player {
         return new Player(null, email, firstName, lastName, photo, Instant.now());
     }
 
+    /** Creates the non-editable local representation of a Lichess bot account. */
+    public static Player lichessBot(String accountId, String username) {
+        String id = normalizeRequired(accountId, "accountId");
+        String name = normalizeRequired(username, "username");
+        return new Player(null, id + "@lichess.local", name, "Lichess Bot", Optional.empty(), Instant.now(),
+                PlayerType.SYSTEM, Optional.of("LICHESS"), Optional.of(id));
+    }
+
     /** Returns this persisted profile with its editable details replaced. */
     public Player update(String email, String firstName, String lastName, Optional<byte[]> photo) {
         if (id == null) {
             throw new IllegalStateException("Cannot update a player that has not been persisted");
         }
-        return new Player(id, email, firstName, lastName, photo, createdAt);
+        if (type != PlayerType.HUMAN) {
+            throw new IllegalStateException("System players are managed by their external identity");
+        }
+        return new Player(id, email, firstName, lastName, photo, createdAt, type, externalProvider, externalAccountId);
+    }
+
+    /** Refreshes the display name of an externally managed system player without changing its identity. */
+    public Player refreshSystemDisplayName(String displayName) {
+        if (id == null || type != PlayerType.SYSTEM) {
+            throw new IllegalStateException("Only persisted system players can refresh their display name");
+        }
+        return new Player(id, email, displayName, lastName, photo, createdAt, type, externalProvider, externalAccountId);
     }
 
     public PlayerId id() {
@@ -77,6 +121,12 @@ public final class Player {
     public Instant createdAt() {
         return createdAt;
     }
+
+    public PlayerType type() { return type; }
+
+    public Optional<String> externalProvider() { return externalProvider; }
+
+    public Optional<String> externalAccountId() { return externalAccountId; }
 
     private static String validateEmail(String email) {
         Objects.requireNonNull(email, "email must not be null");
@@ -124,6 +174,17 @@ public final class Player {
             throw new IllegalArgumentException("photo must be a PNG or JPEG image");
         }
         return photo;
+    }
+
+    private static Optional<String> normalizeOptional(Optional<String> value, String field) {
+        Objects.requireNonNull(value, field + " must not be null");
+        return value.map(item -> normalizeRequired(item, field));
+    }
+
+    private static String normalizeRequired(String value, String field) {
+        String normalized = Objects.requireNonNull(value, field + " must not be null").trim();
+        if (normalized.isEmpty()) throw new IllegalArgumentException(field + " must not be blank");
+        return normalized;
     }
 
     private static boolean isPngOrJpeg(byte[] bytes) {

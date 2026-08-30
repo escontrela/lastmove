@@ -52,7 +52,8 @@ public class InMemoryProgressiveGameRepository implements ProgressiveGameReposit
   @Override
   public synchronized List<SavedGameSummary> listSummaries(com.escontrela.lastmove.domain.player.PlayerId ownerId) {
     return games.values().stream()
-        .filter(saved -> saved.context().ownerPlayerId().filter(ownerId::equals).isPresent())
+        .filter(saved -> saved.context().participantPlayerIds().contains(ownerId)
+            || saved.context().ownerPlayerId().filter(ownerId::equals).isPresent())
         .map(saved -> new SavedGameSummary(saved.game().id(), saved.context().gameType(),
             saved.game().whitePlayer().map(com.escontrela.lastmove.domain.game.GamePlayer::getName).orElse("White"),
             saved.game().blackPlayer().map(com.escontrela.lastmove.domain.game.GamePlayer::getName).orElse("Black"),

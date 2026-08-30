@@ -3,6 +3,7 @@ package com.escontrela.lastmove.infrastructure.persistence;
 import com.escontrela.lastmove.domain.player.Player;
 import com.escontrela.lastmove.domain.player.PlayerId;
 import com.escontrela.lastmove.domain.player.PlayerRepository;
+import com.escontrela.lastmove.domain.player.PlayerType;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.time.Instant;
@@ -23,10 +24,10 @@ import org.springframework.stereotype.Repository;
 public class SqlitePlayerRepository implements PlayerRepository {
 
     private static final String INSERT_SQL =
-            "INSERT INTO players (email, firstname, lastname, photo, created_at) "
-                    + "VALUES (?, ?, ?, ?, ?)";
+            "INSERT INTO players (email, firstname, lastname, photo, created_at, player_type, external_provider, external_account_id) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
     private static final String SELECT_SQL =
-            "SELECT id, email, firstname, lastname, photo, created_at FROM players";
+            "SELECT id, email, firstname, lastname, photo, created_at, player_type, external_provider, external_account_id FROM players";
     private static final String UPDATE_SQL =
             "UPDATE players SET email = ?, firstname = ?, lastname = ?, photo = ? WHERE id = ?";
 
@@ -56,6 +57,9 @@ public class SqlitePlayerRepository implements PlayerRepository {
                         statement.setString(3, player.lastName());
                         statement.setBytes(4, player.photo().orElse(null));
                         statement.setLong(5, player.createdAt().toEpochMilli());
+                        statement.setString(6, player.type().name());
+                        statement.setString(7, player.externalProvider().orElse(null));
+                        statement.setString(8, player.externalAccountId().orElse(null));
                         return statement;
                     },
                     keyHolder);
@@ -76,7 +80,8 @@ public class SqlitePlayerRepository implements PlayerRepository {
                 player.firstName(),
                 player.lastName(),
                 player.photo(),
-                player.createdAt());
+                player.createdAt(),
+                player.type(), player.externalProvider(), player.externalAccountId());
     }
 
     @Override
@@ -136,6 +141,13 @@ public class SqlitePlayerRepository implements PlayerRepository {
     }
 
     @Override
+    public Optional<Player> findByExternalIdentity(String provider, String accountId) {
+        assertAvailable();
+        return jdbcTemplate.query(SELECT_SQL + " WHERE external_provider = ? AND external_account_id = ?", mapper(),
+                requireIdentityPart(provider, "provider"), requireIdentityPart(accountId, "accountId")).stream().findFirst();
+    }
+
+    @Override
     public List<Player> findAll() {
         assertAvailable();
         return jdbcTemplate.query(
@@ -162,7 +174,16 @@ public class SqlitePlayerRepository implements PlayerRepository {
                         resultSet.getString("firstname"),
                         resultSet.getString("lastname"),
                         Optional.ofNullable(resultSet.getBytes("photo")),
-                        Instant.ofEpochMilli(resultSet.getLong("created_at")));
+                        Instant.ofEpochMilli(resultSet.getLong("created_at")),
+                        PlayerType.valueOf(resultSet.getString("player_type")),
+                        Optional.ofNullable(resultSet.getString("external_provider")),
+                        Optional.ofNullable(resultSet.getString("external_account_id")));
+    }
+
+    private static String requireIdentityPart(String value, String name) {
+        String required = Objects.requireNonNull(value, name + " must not be null").trim();
+        if (required.isEmpty()) throw new IllegalArgumentException(name + " must not be blank");
+        return required;
     }
 
     private static boolean isUniqueConstraintViolation(DataAccessException exception) {

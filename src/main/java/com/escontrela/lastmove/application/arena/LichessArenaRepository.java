@@ -1,0 +1,18 @@
+package com.escontrela.lastmove.application.arena;
+
+import java.util.List;
+import java.util.Optional;
+
+/** Persistence boundary for the observable Arena state. */
+public interface LichessArenaRepository {
+  ArenaConnection connection();
+  void saveConnection(ArenaConnection connection);
+  void saveChallenge(ArenaChallenge challenge);
+  Optional<ArenaChallenge> findChallenge(String id);
+  List<ArenaChallenge> listChallenges();
+  /** Atomically reserves one accepting slot when fewer than {@code maximum} games are reserved or active. */
+  boolean reserveChallenge(String id, int maximum);
+  void saveGame(ArenaGame game);
+  Optional<ArenaGame> findGame(String lichessGameId);
+  List<ArenaGame> listActiveGames();
+}

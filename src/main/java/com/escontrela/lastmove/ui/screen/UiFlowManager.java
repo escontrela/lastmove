@@ -126,6 +126,7 @@ public class UiFlowManager {
             case PLAYERS -> "Player Profiles";
             case MY_GAMES -> "My Games";
             case GAME_STATISTICS -> "Game Statistics";
+            case KNIGHTSHADE_ARENA -> "Knightshade Arena";
             case MAIN -> "Home";
         };
     }

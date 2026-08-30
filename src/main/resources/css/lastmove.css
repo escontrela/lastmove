@@ -595,6 +595,13 @@
 
 .knightshade-link { -fx-text-fill: #bfa4ff; }
 
+.knightshade-arena-status { -fx-font-size: 13px; -fx-font-weight: 800; -fx-text-fill: #bfa4ff; }
+.knightshade-arena-status-connected { -fx-text-fill: #65d69a; }
+.knightshade-arena-status-error { -fx-text-fill: #ff9b9b; }
+.knightshade-arena-status-reconnecting, .knightshade-arena-status-connecting { -fx-text-fill: #f3c969; }
+.knightshade-arena-status-disconnected { -fx-text-fill: #b7c8dd; }
+.knightshade-arena-activity { -fx-font-size: 12px; -fx-text-fill: #b7c8dd; }
+
 .knightshade-copy {
     -fx-max-width: 160px;
     -fx-pref-width: 160px;
@@ -1538,6 +1545,12 @@
 }
 .settings-validation-message.settings-validation-error { -fx-text-fill: #a72e3e; }
 .settings-validation-message.settings-validation-success { -fx-text-fill: #167443; }
+.player-selector-modal-card { -fx-min-width: 420px; -fx-max-width: 720px; }
+.player-selector-tile { -fx-min-width: 144px; -fx-pref-width: 144px; -fx-min-height: 144px; -fx-background-color: #f8fbff; -fx-border-color: #d5dfeb; -fx-border-width: 1px; -fx-background-radius: 8px; -fx-border-radius: 8px; -fx-cursor: hand; }
+.player-selector-tile:hover, .player-selector-tile.selected { -fx-border-color: #1c69d4; -fx-background-color: #edf5ff; }
+.player-selector-avatar { -fx-background-color: #e6eef8; }
+.player-selector-name { -fx-font-size: 14px; -fx-font-weight: 700; -fx-text-fill: #263648; }
+.player-selector-detail { -fx-font-size: 12px; -fx-text-fill: #637386; }
 
 /* Progressive-game screen and its Human vs Computer setup overlay. */
 .progressive-game-workspace { -fx-alignment: center; }
@@ -1995,6 +2008,33 @@
 .night-mode .secondary-button:hover, .night-mode .ghost-button:hover {
     -fx-background-color: #3b4654;
 }
+.game-session-selector-list { -fx-background-color: #ffffff; -fx-border-color: #d6dee8; -fx-border-radius: 10; -fx-background-radius: 10; }
+.game-session-selector-list .list-cell { -fx-background-color: transparent; -fx-text-fill: #25364a; -fx-padding: 12 14; -fx-border-color: transparent transparent #e6ebf1 transparent; }
+.game-session-selector-list .list-cell:selected { -fx-background-color: #e7f1ff; -fx-text-fill: #0b66c3; }
+.night-mode .game-session-selector-list { -fx-background-color: #1c2430; -fx-border-color: #465465; }
+.night-mode .game-session-selector-list .list-cell { -fx-text-fill: #dbe7f3; -fx-border-color: transparent transparent #344151 transparent; }
+.night-mode .game-session-selector-list .list-cell:selected { -fx-background-color: #29415e; -fx-text-fill: #9fc8f7; }
+
+.arena-scroll-pane,
+.arena-scroll-pane > .viewport,
+.arena-scroll-pane > .corner { -fx-background-color: #f7f8fb; }
+.arena-state { -fx-font-weight: 800; -fx-text-fill: #34465b; }
+.arena-state-connected { -fx-text-fill: #16874d; }
+.arena-state-connecting { -fx-text-fill: #a96800; }
+.arena-state-error { -fx-text-fill: #b42318; }
+.arena-activity-entry { -fx-text-fill: #425466; -fx-padding: 3 0; }
+
+.night-mode .arena-scroll-pane,
+.night-mode .arena-scroll-pane > .viewport,
+.night-mode .arena-scroll-pane > .corner { -fx-background-color: #1a2129; }
+.night-mode .arena-state { -fx-text-fill: #dbe7f3; }
+.night-mode .arena-state-connected { -fx-text-fill: #7edca7; }
+.night-mode .arena-state-connecting { -fx-text-fill: #f3c969; }
+.night-mode .arena-state-error { -fx-text-fill: #ff9b9b; }
+.night-mode .arena-activity-entry { -fx-text-fill: #c6d3e0; }
+.night-mode .arena-scroll-pane .scroll-bar:vertical .track { -fx-background-color: #1c2430; }
+.night-mode .arena-scroll-pane .scroll-bar:vertical .thumb { -fx-background-color: #465465; }
+
 .night-mode .status-rail {
     -fx-background-color: #1a2129;
     -fx-border-color: #3b4654 transparent transparent transparent;

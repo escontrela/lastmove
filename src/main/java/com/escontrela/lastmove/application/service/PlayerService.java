@@ -3,6 +3,7 @@ package com.escontrela.lastmove.application.service;
 import com.escontrela.lastmove.application.player.CreatePlayerCommand;
 import com.escontrela.lastmove.application.player.PlayerSummary;
 import com.escontrela.lastmove.application.player.UpdatePlayerCommand;
+import com.escontrela.lastmove.application.arena.LichessBotAccount;
 import com.escontrela.lastmove.domain.player.DuplicatePlayerEmailException;
 import com.escontrela.lastmove.domain.player.Player;
 import com.escontrela.lastmove.domain.player.PlayerId;
@@ -55,8 +56,25 @@ public class PlayerService {
                                         player.email(),
                                         player.firstName(),
                                         player.lastName(),
-                                        player.photo()))
+                                        player.photo(), player.type(), player.externalProvider(), player.externalAccountId()))
                 .toList();
+    }
+
+    /** Creates the local system-player identity for the validated Lichess bot exactly once. */
+    public Player synchronizeLichessBot(LichessBotAccount account) {
+        assertAvailable();
+        Objects.requireNonNull(account, "account must not be null");
+        return playerRepository.findByExternalIdentity("LICHESS", account.id())
+                .map(existing -> existing.firstName().equals(account.username())
+                        ? existing : playerRepository.update(existing.refreshSystemDisplayName(account.username())))
+                .orElseGet(() -> playerRepository.save(Player.lichessBot(account.id(), account.username())));
+    }
+
+    public java.util.Optional<PlayerSummary> playerSummary(PlayerId id) {
+        assertAvailable();
+        return playerRepository.findById(Objects.requireNonNull(id, "player id must not be null"))
+                .map(player -> new PlayerSummary(player.id(), player.email(), player.firstName(), player.lastName(),
+                        player.photo(), player.type(), player.externalProvider(), player.externalAccountId()));
     }
 
     /** Replaces the editable details of an existing player profile. */

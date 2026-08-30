@@ -16,6 +16,10 @@ public interface PlayerRepository {
 
     Optional<Player> findByEmail(String email);
 
+    default Optional<Player> findByExternalIdentity(String provider, String accountId) {
+        return Optional.empty();
+    }
+
     List<Player> findAll();
 
     boolean existsByEmail(String email);

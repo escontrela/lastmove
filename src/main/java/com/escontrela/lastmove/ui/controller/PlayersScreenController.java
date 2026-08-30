@@ -238,15 +238,14 @@ public class PlayersScreenController implements UiScreenController {
         VBox details = new VBox(4);
         Label name = new Label(player.fullName()); name.getStyleClass().add("player-card-name");
         Label email = new Label(player.email()); email.getStyleClass().add("player-card-email");
-        Label active = new Label(selected ? "ACTIVE" : "AVAILABLE"); active.getStyleClass().add("player-row-status");
-        active.setVisible(selected); active.setManaged(selected);
+        Label active = new Label(player.systemPlayer() ? "SYSTEM" : selected ? "ACTIVE" : "AVAILABLE"); active.getStyleClass().add("player-row-status");
+        active.setVisible(selected || player.systemPlayer()); active.setManaged(selected || player.systemPlayer());
         details.getChildren().addAll(name, email, active);
         Region spacer = new Region(); HBox.setHgrow(spacer, Priority.ALWAYS);
-        Label actionsHint = new Label("Right-click for actions");
+        Label actionsHint = new Label(player.systemPlayer() ? "Managed by Arena" : "Right-click for actions");
         actionsHint.getStyleClass().add("player-row-actions-hint");
         card.setOnContextMenuRequested(event -> {
-            selectContextRow(player);
-            showPlayerActions(player, selected, event.getSceneX(), event.getSceneY());
+            if (!player.systemPlayer()) { selectContextRow(player); showPlayerActions(player, selected, event.getSceneX(), event.getSceneY()); }
             event.consume();
         });
         card.getChildren().addAll(photoView, details, spacer, active, actionsHint);
