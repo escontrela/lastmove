@@ -1543,6 +1543,22 @@
     -fx-font-size: 13px;
     -fx-text-fill: #596675;
 }
+.arena-bot-settings {
+    -fx-padding: 12px 14px;
+    -fx-background-color: #f7f9fc;
+    -fx-border-color: #dce5ef;
+    -fx-border-width: 1px;
+    -fx-background-radius: 10px;
+    -fx-border-radius: 10px;
+}
+.arena-bot-setting-value { -fx-font-size: 14px; -fx-font-weight: 700; -fx-text-fill: #262626; }
+.button.arena-bot-settings-change { -fx-background-color: transparent; -fx-padding: 5px 8px; -fx-text-fill: #1c69d4; -fx-font-weight: 700; -fx-cursor: hand; }
+.button.arena-bot-settings-change:hover { -fx-underline: true; }
+.bot-challenge-settings-modal-card { -fx-min-width: 650px; -fx-max-width: 720px; -fx-cursor: default; }
+.bot-challenge-settings-modal .text-field { -fx-pref-width: 160px; }
+.button.arena-now-playing-button { -fx-background-color: transparent; -fx-padding: 0; -fx-cursor: hand; }
+.button.arena-now-playing-button:hover { -fx-underline: true; }
+.arena-now-playing-button .label { -fx-font-size: 14px; -fx-font-weight: 700; -fx-text-fill: #1c69d4; }
 .settings-validation-message.settings-validation-error { -fx-text-fill: #a72e3e; }
 .settings-validation-message.settings-validation-success { -fx-text-fill: #167443; }
 .player-selector-modal-card { -fx-min-width: 420px; -fx-max-width: 720px; }
@@ -2026,19 +2042,30 @@
 .arena-rating-value { -fx-font-size: 17px; -fx-font-weight: 800; -fx-text-fill: #0b63e8; }
 .arena-game-timeline { -fx-padding: 14; -fx-background-color: #ffffff; -fx-background-radius: 10px; -fx-border-color: #dce5ef; -fx-border-radius: 10px; }
 .arena-timeline-support { -fx-font-size: 12px; -fx-text-fill: #617084; }
-.arena-timeline-range { -fx-min-width: 145px; }
+.arena-timeline-range { -fx-min-width: 145px; -fx-background-color: #ffffff; -fx-border-color: #d5dde7; -fx-border-width: 1px; -fx-background-radius: 4px; -fx-border-radius: 4px; -fx-padding: 0; -fx-font-size: 13px; -fx-text-fill: #25364a; }
+.arena-timeline-range:hover, .arena-timeline-range:focused { -fx-border-color: #1c69d4; -fx-background-color: #f7fbff; }
+.arena-timeline-range .arrow-button { -fx-background-color: transparent; -fx-border-color: transparent; }
+.arena-timeline-range .arrow { -fx-background-color: #617084; }
 .arena-timeline-scroll, .arena-timeline-scroll > .viewport { -fx-background-color: transparent; }
 .arena-timeline-lane { -fx-background-color: #f8fafc; -fx-background-radius: 8px; }
 .arena-timeline-baseline { -fx-stroke: #7c8da1; -fx-stroke-width: 2px; }
-.arena-timeline-stem { -fx-stroke-width: 4px; -fx-stroke-line-cap: round; }
+.arena-timeline-stem { -fx-stroke-width: 3px; -fx-stroke-line-cap: round; }
 .arena-timeline-win { -fx-stroke: #16874d; }
 .arena-timeline-loss { -fx-stroke: #c43d36; }
 .arena-timeline-neutral { -fx-stroke: #718096; }
-.arena-timeline-detail { -fx-font-size: 11px; -fx-font-weight: 700; -fx-alignment: center; -fx-text-alignment: center; }
+.arena-timeline-detail { -fx-font-size: 13px; -fx-font-weight: 700; -fx-alignment: center; -fx-text-alignment: center; }
 .arena-timeline-detail-win { -fx-text-fill: #16874d; }
 .arena-timeline-detail-loss { -fx-text-fill: #c43d36; }
 .arena-timeline-detail-neutral { -fx-text-fill: #617084; }
-.arena-timeline-time { -fx-font-size: 10px; -fx-text-fill: #617084; }
+.arena-timeline-time { -fx-font-size: 12px; -fx-text-fill: #617084; }
+.arena-console { -fx-min-height: 160px; -fx-background-color: #111a24; -fx-background-radius: 8px; -fx-border-color: #2d4054; -fx-border-radius: 8px; }
+.arena-console-scroll, .arena-console-scroll > .viewport { -fx-background-color: transparent; }
+.arena-console-output { -fx-padding: 7 0; }
+.arena-console-line { -fx-font-family: "SFMono-Regular", Menlo, Consolas, monospace; -fx-font-size: 12px; -fx-text-fill: #b8d4c3; -fx-padding: 7 12; -fx-background-color: transparent; }
+.arena-console-action:hover { -fx-background-color: #1d2a38; -fx-text-fill: #7de0a7; }
+.arena-console-empty { -fx-font-family: "SFMono-Regular", Menlo, Consolas, monospace; -fx-font-size: 12px; -fx-text-fill: #7891a5; -fx-padding: 15 12; }
+.arena-console .scroll-bar:vertical .track { -fx-background-color: #111a24; }
+.arena-console .scroll-bar:vertical .thumb { -fx-background-color: #3a5065; }
 .arena-activity-entry { -fx-text-fill: #425466; -fx-padding: 3 0; }
 .arena-tournament-state { -fx-font-size: 12px; -fx-text-fill: #617084; }
 .arena-tournaments-list { -fx-min-height: 196px; }
@@ -2065,11 +2092,19 @@
 .night-mode .arena-game-timeline { -fx-background-color: #202a36; -fx-border-color: #394858; }
 .night-mode .arena-timeline-support, .night-mode .arena-timeline-time { -fx-text-fill: #b7c8dd; }
 .night-mode .arena-timeline-lane { -fx-background-color: #18212b; }
+.night-mode .arena-timeline-range { -fx-background-color: #1a2129; -fx-border-color: #52647a; -fx-text-fill: #f1f3f5; }
+.night-mode .arena-timeline-range:hover, .night-mode .arena-timeline-range:focused { -fx-background-color: #263750; -fx-border-color: #78b9ff; }
+.night-mode .arena-timeline-range .list-cell { -fx-background-color: #1a2129; -fx-text-fill: #f1f3f5; }
+.night-mode .arena-timeline-range .arrow { -fx-background-color: #b7c8dd; }
 .night-mode .arena-timeline-baseline { -fx-stroke: #718096; }
 .night-mode .arena-timeline-win { -fx-stroke: #7edca7; }
 .night-mode .arena-timeline-loss { -fx-stroke: #ff9b9b; }
 .night-mode .arena-timeline-detail-win { -fx-text-fill: #7edca7; }
 .night-mode .arena-timeline-detail-loss { -fx-text-fill: #ff9b9b; }
+.night-mode .arena-console { -fx-background-color: #101820; -fx-border-color: #3b5064; }
+.night-mode .arena-console-line { -fx-text-fill: #c6d9cc; }
+.night-mode .arena-console-action:hover { -fx-background-color: #223244; -fx-text-fill: #89e6ad; }
+.night-mode .arena-console-empty { -fx-text-fill: #8ea1b8; }
 .night-mode .arena-activity-entry { -fx-text-fill: #c6d3e0; }
 .night-mode .arena-tournament-state, .night-mode .arena-tournament-summary { -fx-text-fill: #b7c8dd; }
 .night-mode .arena-tournament-row { -fx-border-color: transparent transparent #394858 transparent; }

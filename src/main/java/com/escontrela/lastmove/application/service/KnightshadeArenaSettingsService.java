@@ -57,7 +57,8 @@ public final class KnightshadeArenaSettingsService {
     Optional<Integer> previous = repository.findValidatedBotAccount()
         .filter(old -> old.id().equalsIgnoreCase(verified.id()))
         .flatMap(LichessBotAccount::standardRating);
-    LichessBotAccount account = new LichessBotAccount(verified.id(), verified.username(), verified.standardRating(), previous);
+    LichessBotAccount account = new LichessBotAccount(verified.id(), verified.username(),
+        verified.blitzRating(), verified.rapidRating(), verified.standardRating(), previous);
     repository.saveValidatedBotAccount(account);
     return account;
   }

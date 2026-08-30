@@ -124,6 +124,25 @@ class LichessArenaServiceTest {
     assertEquals(BotChallengeCycleStatus.WAITING_FOR_GAME, repo.cycle.status());
     service.closeOnApplicationExit();
   }
+  @Test void resilienceDoesNotUseTheUnsupportedOutgoingChallengeListing() throws Exception {
+    FakeRepository repo = new FakeRepository(); FakeClient client = new FakeClient(); FakeSettings settings = new FakeSettings(false, 2);
+    Instant now = Instant.now();
+    repo.cycle = new BotChallengeCycle(BotChallengeCycleStatus.WAITING_FOR_GAME,
+        new BotChallengeConfiguration(300, 0, "standard", false, 2000, 2, true, false),
+        List.of("one"), Optional.of("one"), Optional.of("challenge-1"), Optional.empty(), 0,
+        Optional.empty(), Optional.empty(), now);
+    client.outgoingChallengeListingUnavailable = true;
+    BotChallengeCycleService cycle = new BotChallengeCycleService(repo, settings, client, event -> {});
+    LichessArenaService service = new LichessArenaService(repo, settings, client, event -> {});
+    var field = LichessArenaService.class.getDeclaredField("botCycle"); field.setAccessible(true); field.set(service, cycle);
+    service.connect();
+
+    service.superviseResilience();
+
+    assertEquals(ArenaConnectionStatus.CONNECTED, service.connection().status());
+    assertEquals(BotChallengeCycleStatus.WAITING_FOR_GAME, repo.cycle.status());
+    service.closeOnApplicationExit();
+  }
   @Test void keepsTournamentListDisconnectedUntilArenaIsConnected() {
     FakeRepository repo = new FakeRepository(); FakeClient client = new FakeClient();
     LichessArenaService service = new LichessArenaService(repo, new FakeSettings(false, 2), client, event -> {});
@@ -131,6 +150,19 @@ class LichessArenaServiceTest {
     assertTrue(service.refreshTournaments().isEmpty());
     assertEquals(ArenaTournamentListState.DISCONNECTED, service.tournamentListState());
     assertEquals(0, client.tournamentRequests);
+  }
+  @Test void manualBotChallengeStartsTrackingAnImmediatelyAcceptedGame() {
+    FakeRepository repo = new FakeRepository(); FakeClient client = new FakeClient(); client.immediateChallenge = true;
+    LichessArenaService service = new LichessArenaService(repo, new FakeSettings(false, 2), client, event -> {});
+    service.connect();
+
+    LichessChallengeSubmission submission = service.challengeBot(
+        new LichessBotCandidate("opponent", "Opponent", true, true, Optional.of(1700), Optional.empty(), Instant.now()),
+        BotChallengeConfiguration.defaults());
+
+    assertEquals(Optional.of("g1"), submission.gameId());
+    assertEquals(ArenaGameStatus.STARTED, repo.findGame("g1").orElseThrow().status());
+    assertEquals(1, client.gameSubscriptions.get("g1"));
   }
   @Test void associatesArenaPairingWithThePersistedTournamentAndDoesNotDuplicateItsLifecycle() throws Exception {
     FakeRepository repo = new FakeRepository(); FakeSettings settings = new FakeSettings(false, 2); FakeClient client = new FakeClient();
@@ -158,5 +190,5 @@ class LichessArenaServiceTest {
   private static void await(java.util.function.BooleanSupplier condition) throws InterruptedException { for (int i=0;i<200&&!condition.getAsBoolean();i++) Thread.sleep(10); assertTrue(condition.getAsBoolean(), "condition was not met"); }
   private static final class FakeSettings implements KnightshadeArenaSettingsRepository { final KnightshadeArenaSettings value; FakeSettings(boolean auto,int max){value=new KnightshadeArenaSettings(max,auto);} public KnightshadeArenaSettings loadSettings(){return value;} public void saveSettings(KnightshadeArenaSettings s){} public Optional<String> findBotToken(){return Optional.of("token");} public void saveBotToken(String t){} public void deleteBotToken(){} public Optional<LichessBotAccount> findValidatedBotAccount(){return Optional.of(new LichessBotAccount("bot","Knightshade"));} public void saveValidatedBotAccount(LichessBotAccount a){} }
   private static class FakeRepository implements LichessArenaRepository { final Map<String,ArenaChallenge> challenges=new LinkedHashMap<>(); final Map<String,ArenaGame> games=new LinkedHashMap<>(); final Map<String,ArenaTournament> tournaments=new LinkedHashMap<>(); BotChallengeCycle cycle=BotChallengeCycle.idle(); ArenaConnection connection=new ArenaConnection(ArenaConnectionStatus.DISCONNECTED,Optional.empty(),Optional.empty(),Optional.empty(),Instant.now()); public ArenaConnection connection(){return connection;} public void saveConnection(ArenaConnection c){connection=c;} public void saveChallenge(ArenaChallenge c){challenges.put(c.id(),c);} public Optional<ArenaChallenge> findChallenge(String id){return Optional.ofNullable(challenges.get(id));} public List<ArenaChallenge> listChallenges(){return List.copyOf(challenges.values());} public boolean reserveChallenge(String id,int max){return true;} public void saveGame(ArenaGame g){games.put(g.lichessGameId(),g);} public Optional<ArenaGame> findGame(String id){return Optional.ofNullable(games.get(id));} public List<ArenaGame> listActiveGames(){return List.copyOf(games.values());} public void saveTournament(ArenaTournament tournament){tournaments.put(tournament.lichessTournamentId(),tournament);} public Optional<ArenaTournament> findTournament(String id){return Optional.ofNullable(tournaments.get(id));} public List<ArenaTournament> listTournaments(){return List.copyOf(tournaments.values());} public BotChallengeCycle botChallengeCycle(){return cycle;} public void saveBotChallengeCycle(BotChallengeCycle value){cycle=value;} }
-  private static final class FakeClient implements LichessBotClient { String accepted; Consumer<JsonNode> account; Consumer<Throwable> accountClosed; int accountSubscriptions,tournamentRequests,challengeSequence; final Map<String,Integer> gameSubscriptions=new HashMap<>(); final Map<String,Consumer<JsonNode>> gameEvents=new HashMap<>(); final Map<String,Consumer<Throwable>> gameClosed=new HashMap<>(); List<LichessTournamentSnapshot> tournaments=List.of(); List<LichessBotCandidate> bots=List.of(); RuntimeException tournamentFailure; public StreamHandle streamEvents(String t,Consumer<JsonNode> c,Consumer<Throwable> x){account=c;accountClosed=x;accountSubscriptions++;return ()->{};} public StreamHandle streamGame(String t,String id,Consumer<JsonNode> c,Consumer<Throwable> x){gameSubscriptions.merge(id,1,Integer::sum);gameEvents.put(id,c);gameClosed.put(id,x);return ()->{};} public JsonNode currentGames(String t){return new ObjectMapper().createObjectNode().putArray("nowPlaying");} public List<LichessTournamentSnapshot> currentTournaments(String t){tournamentRequests++;if(tournamentFailure!=null)throw tournamentFailure;return tournaments;} public List<LichessBotCandidate> onlineBots(String token){return bots;} public Set<String> currentOutgoingChallengeIds(String token){return challengeSequence==0?Set.of():Set.of("next-"+challengeSequence);} public LichessChallengeSubmission challengeBot(String token,String username,BotChallengeConfiguration configuration){return LichessChallengeSubmission.pending("next-"+(++challengeSequence));} public void acceptChallenge(String t,String id){accepted=id;} public void declineChallenge(String t,String id,String r){} public void sendMove(String t,String g,String u){} public void resign(String t,String g){} public void offerDraw(String t,String g){} }
+  private static final class FakeClient implements LichessBotClient { String accepted; Consumer<JsonNode> account; Consumer<Throwable> accountClosed; int accountSubscriptions,tournamentRequests,challengeSequence; boolean immediateChallenge, outgoingChallengeListingUnavailable; final Map<String,Integer> gameSubscriptions=new HashMap<>(); final Map<String,Consumer<JsonNode>> gameEvents=new HashMap<>(); final Map<String,Consumer<Throwable>> gameClosed=new HashMap<>(); List<LichessTournamentSnapshot> tournaments=List.of(); List<LichessBotCandidate> bots=List.of(); RuntimeException tournamentFailure; public StreamHandle streamEvents(String t,Consumer<JsonNode> c,Consumer<Throwable> x){account=c;accountClosed=x;accountSubscriptions++;return ()->{};} public StreamHandle streamGame(String t,String id,Consumer<JsonNode> c,Consumer<Throwable> x){gameSubscriptions.merge(id,1,Integer::sum);gameEvents.put(id,c);gameClosed.put(id,x);return ()->{};} public JsonNode currentGames(String t){return new ObjectMapper().createObjectNode().putArray("nowPlaying");} public List<LichessTournamentSnapshot> currentTournaments(String t){tournamentRequests++;if(tournamentFailure!=null)throw tournamentFailure;return tournaments;} public List<LichessBotCandidate> onlineBots(String token){return bots;} public Set<String> currentOutgoingChallengeIds(String token){if(outgoingChallengeListingUnavailable)throw new IllegalStateException("HTTP 404");return challengeSequence==0?Set.of():Set.of("next-"+challengeSequence);} public LichessChallengeSubmission challengeBot(String token,String username,BotChallengeConfiguration configuration){int id=++challengeSequence;return immediateChallenge?LichessChallengeSubmission.started("g"+id,Optional.of("next-"+id)):LichessChallengeSubmission.pending("next-"+id);} public void acceptChallenge(String t,String id){accepted=id;} public void declineChallenge(String t,String id,String r){} public void sendMove(String t,String g,String u){} public void resign(String t,String g){} public void offerDraw(String t,String g){} }
 }

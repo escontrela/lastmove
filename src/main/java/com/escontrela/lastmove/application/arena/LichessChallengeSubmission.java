@@ -7,7 +7,8 @@ public record LichessChallengeSubmission(Optional<String> challengeId, Optional<
   public LichessChallengeSubmission {
     challengeId = challengeId == null ? Optional.empty() : challengeId.filter(value -> !value.isBlank());
     gameId = gameId == null ? Optional.empty() : gameId.filter(value -> !value.isBlank());
-    if (challengeId.isEmpty() && gameId.isEmpty()) throw new IllegalArgumentException("A Lichess challenge submission needs a challenge or game id.");
+    // Some bot-to-bot challenge responses are acknowledged with an empty JSON
+    // object. The account stream then carries the authoritative gameStart event.
   }
   public static LichessChallengeSubmission pending(String challengeId) { return new LichessChallengeSubmission(Optional.of(challengeId), Optional.empty()); }
   public static LichessChallengeSubmission started(String gameId, Optional<String> challengeId) { return new LichessChallengeSubmission(challengeId, Optional.of(gameId)); }

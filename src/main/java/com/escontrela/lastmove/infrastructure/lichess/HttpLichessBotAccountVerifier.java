@@ -74,7 +74,7 @@ public class HttpLichessBotAccountVerifier implements LichessBotAccountVerifier 
       JsonNode performances = account.path("perfs");
       return new LichessBotAccount(account.path("id").asText(), account.path("username").asText(),
           ratingFrom(performances, "blitz"), ratingFrom(performances, "rapid"),
-          ratingFrom(performances, "classical"), Optional.empty());
+          ratingFrom(performances, "standard"), Optional.empty());
     } catch (IOException | IllegalArgumentException exception) {
       throw new LichessBotAccountValidationException("Lichess returned an invalid account response.", exception);
     }

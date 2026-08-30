@@ -20,6 +20,9 @@ public class PreferencesKnightshadeArenaSettingsRepository
   private static final String VALIDATED_ACCOUNT_RATING_KEY = "lichess.validated-account.standard-rating";
   private static final String VALIDATED_ACCOUNT_BLITZ_RATING_KEY = "lichess.validated-account.blitz-rating";
   private static final String VALIDATED_ACCOUNT_RAPID_RATING_KEY = "lichess.validated-account.rapid-rating";
+  private static final String VALIDATED_ACCOUNT_RATINGS_CONFIRMED_KEY = "lichess.validated-account.ratings-confirmed";
+  private static final String VALIDATED_ACCOUNT_RATINGS_FORMAT_KEY = "lichess.validated-account.ratings-format";
+  private static final int CURRENT_RATINGS_FORMAT = 2;
   private static final String VALIDATED_ACCOUNT_PREVIOUS_RATING_KEY = "lichess.validated-account.previous-standard-rating";
 
   private final Preferences preferences;
@@ -73,11 +76,13 @@ public class PreferencesKnightshadeArenaSettingsRepository
     if (id.isEmpty() || username.isEmpty()) return Optional.empty();
     try {
       String rating = preferences.get(VALIDATED_ACCOUNT_RATING_KEY, "").trim();
-      Optional<Integer> current = rating.isEmpty() ? Optional.empty() : Optional.of(Integer.parseInt(rating));
+      boolean confirmed = preferences.getBoolean(VALIDATED_ACCOUNT_RATINGS_CONFIRMED_KEY, false)
+          && preferences.getInt(VALIDATED_ACCOUNT_RATINGS_FORMAT_KEY, 0) == CURRENT_RATINGS_FORMAT;
+      Optional<Integer> current = !confirmed || rating.isEmpty() ? Optional.empty() : Optional.of(Integer.parseInt(rating));
       String previousRating = preferences.get(VALIDATED_ACCOUNT_PREVIOUS_RATING_KEY, "").trim();
-      Optional<Integer> previous = previousRating.isEmpty() ? Optional.empty() : Optional.of(Integer.parseInt(previousRating));
+      Optional<Integer> previous = !confirmed || previousRating.isEmpty() ? Optional.empty() : Optional.of(Integer.parseInt(previousRating));
       return Optional.of(new LichessBotAccount(id, username,
-          optionalRating(VALIDATED_ACCOUNT_BLITZ_RATING_KEY), optionalRating(VALIDATED_ACCOUNT_RAPID_RATING_KEY), current, previous));
+          confirmed ? optionalRating(VALIDATED_ACCOUNT_BLITZ_RATING_KEY) : Optional.empty(), confirmed ? optionalRating(VALIDATED_ACCOUNT_RAPID_RATING_KEY) : Optional.empty(), current, previous));
     } catch (IllegalArgumentException ignored) {
       return Optional.empty();
     }
@@ -91,6 +96,8 @@ public class PreferencesKnightshadeArenaSettingsRepository
         () -> preferences.remove(VALIDATED_ACCOUNT_RATING_KEY));
     saveRating(VALIDATED_ACCOUNT_BLITZ_RATING_KEY, account.blitzRating());
     saveRating(VALIDATED_ACCOUNT_RAPID_RATING_KEY, account.rapidRating());
+    preferences.putBoolean(VALIDATED_ACCOUNT_RATINGS_CONFIRMED_KEY, true);
+    preferences.putInt(VALIDATED_ACCOUNT_RATINGS_FORMAT_KEY, CURRENT_RATINGS_FORMAT);
     account.previousStandardRating().ifPresentOrElse(rating -> preferences.put(VALIDATED_ACCOUNT_PREVIOUS_RATING_KEY, rating.toString()),
         () -> preferences.remove(VALIDATED_ACCOUNT_PREVIOUS_RATING_KEY));
   }

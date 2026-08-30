@@ -6,6 +6,7 @@ import com.escontrela.lastmove.application.arena.LichessTournamentSnapshot;
 import com.escontrela.lastmove.application.arena.LichessBotCandidate;
 import com.escontrela.lastmove.application.arena.BotChallengeConfiguration;
 import com.escontrela.lastmove.application.arena.LichessChallengeSubmission;
+import com.escontrela.lastmove.application.arena.LichessBotChallengeRejectedException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.*;
@@ -57,12 +58,11 @@ public final class HttpLichessBotClient implements LichessBotClient {
       return List.copyOf(bots);
     } catch(InterruptedException e){Thread.currentThread().interrupt();throw new IllegalStateException("Lichess bot discovery was interrupted.",e);}catch(IOException e){throw new IllegalStateException("Could not read Lichess online bots.",e);}
   }
-  @Override public Set<String> currentOutgoingChallengeIds(String token) {
-    try { HttpResponse<String> response=client.send(request(token,"/api/challenge").header("Accept","application/json").GET().build(),HttpResponse.BodyHandlers.ofString()); if(response.statusCode()!=200)throw botFailure("reconcile outgoing challenges",response.statusCode()); Set<String> ids=new java.util.HashSet<>(); json.readTree(response.body()).path("out").forEach(challenge->{String id=challenge.path("id").asText();if(!id.isBlank())ids.add(id);}); return Set.copyOf(ids); }catch(InterruptedException e){Thread.currentThread().interrupt();throw new IllegalStateException("Lichess challenge reconciliation was interrupted.",e);}catch(IOException e){throw new IllegalStateException("Could not reconcile outgoing Lichess challenges.",e);}
-  }
+  /** Lichess does not expose a supported endpoint to list a bot's outgoing challenges. */
+  @Override public Set<String> currentOutgoingChallengeIds(String token) { return Set.of(); }
   @Override public LichessChallengeSubmission challengeBot(String token,String username,BotChallengeConfiguration configuration) {
     String body="rated="+configuration.rated()+"&variant="+configuration.variant()+"&clock.limit="+configuration.clockLimitSeconds()+"&clock.increment="+configuration.clockIncrementSeconds()+"&color=random";
-    try { HttpResponse<String> response=client.send(request(token,"/api/challenge/"+URLEncoder.encode(username,java.nio.charset.StandardCharsets.UTF_8)).header("Content-Type","application/x-www-form-urlencoded").POST(HttpRequest.BodyPublishers.ofString(body)).build(),HttpResponse.BodyHandlers.ofString()); if(response.statusCode()<200||response.statusCode()>=300)throw botFailure("create bot challenge",response.statusCode()); JsonNode payload=json.readTree(response.body()); Optional<String> challenge=firstText(payload.path("challenge"),"id","challengeId").or(()->firstText(payload,"challengeId")); Optional<String> game=firstText(payload.path("game"),"id","gameId").or(()->firstText(payload,"gameId")); if(game.isPresent())return LichessChallengeSubmission.started(game.orElseThrow(),challenge); if(challenge.isPresent())return LichessChallengeSubmission.pending(challenge.orElseThrow()); throw new IllegalStateException("Lichess returned neither a challenge nor a game id."); }catch(InterruptedException e){Thread.currentThread().interrupt();throw new IllegalStateException("Lichess challenge request interrupted.",e);}catch(IOException e){throw new IllegalStateException("Could not create the Lichess bot challenge.",e);}
+    try { HttpResponse<String> response=client.send(request(token,"/api/challenge/"+URLEncoder.encode(username,java.nio.charset.StandardCharsets.UTF_8)).header("Content-Type","application/x-www-form-urlencoded").POST(HttpRequest.BodyPublishers.ofString(body)).build(),HttpResponse.BodyHandlers.ofString()); if(response.statusCode()<200||response.statusCode()>=300)throw botFailure("create bot challenge",response); log.debug("Lichess challenge response: bot={} status={} body={}",username,response.statusCode(),response.body()); JsonNode parsed=json.readTree(response.body()); final JsonNode payload=parsed==null?json.createObjectNode():parsed; Optional<String> challenge=firstText(payload.path("challenge"),"id","challengeId").or(()->firstText(payload,"id","challengeId")); Optional<String> game=firstText(payload.path("game"),"id","gameId").or(()->firstText(payload,"gameId")); if(game.isPresent())return LichessChallengeSubmission.started(game.orElseThrow(),challenge); if(challenge.isPresent())return LichessChallengeSubmission.pending(challenge.orElseThrow()); log.info("Lichess acknowledged bot challenge without an id; waiting for account stream events: bot={}",username); return new LichessChallengeSubmission(Optional.empty(),Optional.empty()); }catch(InterruptedException e){Thread.currentThread().interrupt();throw new IllegalStateException("Lichess challenge request interrupted.",e);}catch(IOException e){throw new IllegalStateException("Could not create the Lichess bot challenge.",e);}
   }
   @Override public void cancelChallenge(String token,String challengeId){post(token,"/api/challenge/"+challengeId+"/cancel","");}
   public void acceptChallenge(String token,String id){post(token,"/api/challenge/"+id+"/accept","");}
@@ -89,6 +89,17 @@ public final class HttpLichessBotClient implements LichessBotClient {
     };
   }
   private static IllegalStateException botFailure(String action,int status) { return switch(status) { case 401,403 -> new IllegalStateException("Lichess rejected the bot token while trying to "+action+"."); case 429 -> new IllegalStateException("Lichess is rate-limiting requests. Wait one minute before retrying."); default -> new IllegalStateException("Lichess could not "+action+" (HTTP "+status+")."); }; }
+  private IllegalStateException botFailure(String action, HttpResponse<String> response) {
+    int status = response.statusCode();
+    if (status == 401 || status == 403 || status == 429) return botFailure(action, status);
+    String detail = response.body();
+    try { detail = json.readTree(response.body()).path("error").asText(detail); }
+    catch (IOException ignored) { }
+    detail = detail == null ? "" : detail.replaceAll("\\s+", " ").trim();
+    String message = "Lichess could not " + action + " (HTTP " + status + ")"
+        + (detail.isBlank() ? "." : ": " + detail);
+    return status == 400 ? new LichessBotChallengeRejectedException(message) : new IllegalStateException(message);
+  }
   private static Optional<String> firstText(JsonNode node,String... fields){for(String field:fields){String value=node.path(field).asText();if(!value.isBlank())return Optional.of(value);}return Optional.empty();}
   private HttpRequest.Builder request(String token,String path){return HttpRequest.newBuilder(URI.create(API+path)).timeout(TIMEOUT).header("Accept","application/x-ndjson, application/json").header("Authorization","Bearer "+required(token));}
   private static String required(String token){String v=Objects.requireNonNull(token).trim();if(v.isEmpty())throw new IllegalArgumentException("Lichess bot token must not be blank");return v;}

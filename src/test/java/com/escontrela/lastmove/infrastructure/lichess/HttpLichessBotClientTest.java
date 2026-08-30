@@ -1,6 +1,7 @@
 package com.escontrela.lastmove.infrastructure.lichess;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.ByteArrayInputStream;
@@ -86,6 +87,30 @@ class HttpLichessBotClientTest {
 
     assertEquals(java.util.Optional.of("game-now"), submission.gameId());
     assertEquals(java.util.Optional.empty(), submission.challengeId());
+  }
+
+  @Test void acceptsAnEmptyAcknowledgementAndWaitsForTheAccountStream() {
+    FakeHttpClient http = new FakeHttpClient().enqueue(response(200, "{}"));
+    HttpLichessBotClient client = new HttpLichessBotClient(http, json);
+
+    var submission = client.challengeBot("token", "LeelaPieceOdds",
+        new com.escontrela.lastmove.application.arena.BotChallengeConfiguration(600, 0, "standard", true, 2000, 30, true, false));
+
+    assertTrue(submission.challengeId().isEmpty());
+    assertTrue(submission.gameId().isEmpty());
+  }
+
+  @Test void exposesLichessChallengeRejectionDetails() {
+    FakeHttpClient http = new FakeHttpClient().enqueue(response(400,
+        "{\"error\":\"This bot only accepts rated challenges.\"}"));
+    HttpLichessBotClient client = new HttpLichessBotClient(http, json);
+
+    IllegalStateException failure = org.junit.jupiter.api.Assertions.assertThrows(
+        IllegalStateException.class, () -> client.challengeBot("token", "turkjs",
+            new com.escontrela.lastmove.application.arena.BotChallengeConfiguration(
+                600, 0, "standard", true, 1800, 30, true, false)));
+
+    assertTrue(failure.getMessage().contains("This bot only accepts rated challenges."));
   }
 
   private static HttpResponse<InputStream> streamResponse(InputStream body) { return new TestResponse<>(200, body); }

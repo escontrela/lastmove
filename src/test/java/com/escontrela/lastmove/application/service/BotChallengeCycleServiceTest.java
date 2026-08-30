@@ -27,6 +27,29 @@ class BotChallengeCycleServiceTest {
     assertEquals(List.of("one", "two"), arena.cycle.attemptedBotIds());
   }
 
+  @Test void skipsBotsOutsideTheConfiguredOpponentRatingRange() {
+    MemoryArena arena = new MemoryArena(); FakeClient client = new FakeClient();
+    client.bots = List.of(bot("too-low", 1200), bot("eligible", 1600), bot("too-high", 2200));
+    BotChallengeCycleService service = new BotChallengeCycleService(arena, new FakeSettings(), client, event -> {});
+
+    service.start(new BotChallengeConfiguration(300, 0, "standard", false, 1500, 2000, 2, true, false));
+
+    assertEquals("eligible", arena.cycle.currentBotId().orElseThrow());
+  }
+
+  @Test void skipsARejectedBotAndContinuesWithTheNextCandidate() {
+    MemoryArena arena = new MemoryArena(); FakeClient client = new FakeClient();
+    client.bots = List.of(bot("daily-limit", 1500), bot("next", 1600));
+    client.rejectedBot = "daily-limit";
+    BotChallengeCycleService service = new BotChallengeCycleService(arena, new FakeSettings(), client, event -> {});
+
+    service.start(new BotChallengeConfiguration(300, 0, "standard", true, 2000, 2, true, false));
+
+    assertEquals(BotChallengeCycleStatus.WAITING_FOR_GAME, arena.cycle.status());
+    assertEquals("next", arena.cycle.currentBotId().orElseThrow());
+    assertEquals(List.of("daily-limit", "next"), arena.cycle.attemptedBotIds());
+  }
+
   @Test void stopCancelsPendingChallengeWithoutStartingAnother() {
     MemoryArena arena = new MemoryArena(); FakeClient client = new FakeClient(); client.bots = List.of(bot("one", 1400));
     BotChallengeCycleService service = new BotChallengeCycleService(arena, new FakeSettings(), client, event -> {});
@@ -94,6 +117,6 @@ class BotChallengeCycleServiceTest {
   }
   private static LichessBotCandidate bot(String id, int rating) { return new LichessBotCandidate(id, id, true, true, Optional.of(rating), Optional.empty(), Instant.now()); }
   private static final class FakeSettings implements KnightshadeArenaSettingsRepository { public KnightshadeArenaSettings loadSettings(){return KnightshadeArenaSettings.defaults();} public void saveSettings(KnightshadeArenaSettings s){} public Optional<String> findBotToken(){return Optional.of("token");} public void saveBotToken(String s){} public void deleteBotToken(){} public Optional<LichessBotAccount> findValidatedBotAccount(){return Optional.empty();} public void saveValidatedBotAccount(LichessBotAccount account){} }
-  private static final class FakeClient implements LichessBotClient { List<LichessBotCandidate> bots=List.of(); int sequence; String cancelled; boolean immediateGames; public List<LichessBotCandidate> onlineBots(String token){return bots;} public LichessChallengeSubmission challengeBot(String token,String username,BotChallengeConfiguration config){int id=++sequence;return immediateGames?LichessChallengeSubmission.started("g"+id,Optional.empty()):LichessChallengeSubmission.pending("c"+id);} public void cancelChallenge(String token,String id){cancelled=id;} public StreamHandle streamEvents(String t,Consumer<JsonNode> e,Consumer<Throwable> c){return ()->{};} public StreamHandle streamGame(String t,String i,Consumer<JsonNode> e,Consumer<Throwable> c){return ()->{};} public JsonNode currentGames(String t){return null;} public List<LichessTournamentSnapshot> currentTournaments(String t){return List.of();} public void acceptChallenge(String t,String i){} public void declineChallenge(String t,String i,String r){} public void sendMove(String t,String g,String u){} public void resign(String t,String g){} public void offerDraw(String t,String g){} }
+  private static final class FakeClient implements LichessBotClient { List<LichessBotCandidate> bots=List.of(); int sequence; String cancelled, rejectedBot; boolean immediateGames; public List<LichessBotCandidate> onlineBots(String token){return bots;} public LichessChallengeSubmission challengeBot(String token,String username,BotChallengeConfiguration config){if(username.equals(rejectedBot))throw new LichessBotChallengeRejectedException("Daily challenge limit reached");int id=++sequence;return immediateGames?LichessChallengeSubmission.started("g"+id,Optional.empty()):LichessChallengeSubmission.pending("c"+id);} public void cancelChallenge(String token,String id){cancelled=id;} public StreamHandle streamEvents(String t,Consumer<JsonNode> e,Consumer<Throwable> c){return ()->{};} public StreamHandle streamGame(String t,String i,Consumer<JsonNode> e,Consumer<Throwable> c){return ()->{};} public JsonNode currentGames(String t){return null;} public List<LichessTournamentSnapshot> currentTournaments(String t){return List.of();} public void acceptChallenge(String t,String i){} public void declineChallenge(String t,String i,String r){} public void sendMove(String t,String g,String u){} public void resign(String t,String g){} public void offerDraw(String t,String g){} }
   private static final class MemoryArena implements LichessArenaRepository { BotChallengeCycle cycle=BotChallengeCycle.idle(); public BotChallengeCycle botChallengeCycle(){return cycle;} public void saveBotChallengeCycle(BotChallengeCycle value){cycle=value;} public ArenaConnection connection(){return null;} public void saveConnection(ArenaConnection value){} public void saveChallenge(ArenaChallenge value){} public Optional<ArenaChallenge> findChallenge(String id){return Optional.empty();} public List<ArenaChallenge> listChallenges(){return List.of();} public boolean reserveChallenge(String id,int maximum){return false;} public void saveGame(ArenaGame value){} public Optional<ArenaGame> findGame(String id){return Optional.empty();} public List<ArenaGame> listActiveGames(){return List.of();} public void saveTournament(ArenaTournament value){} public Optional<ArenaTournament> findTournament(String id){return Optional.empty();} public List<ArenaTournament> listTournaments(){return List.of();} }
 }
