@@ -63,6 +63,31 @@ class HttpLichessBotClientTest {
     assertEquals(com.escontrela.lastmove.application.arena.LichessTournamentRequestException.Kind.RATE_LIMITED, failure.kind());
   }
 
+  @Test void readsOnlineBotsFromTheOfficialNdjsonEndpoint() {
+    FakeHttpClient http = new FakeHttpClient().enqueue(response(200,
+        "{\"id\":\"bot-one\",\"username\":\"Bot One\",\"perfs\":{\"blitz\":{\"rating\":1520}}}\n"
+            + "{\"id\":\"bot-two\",\"username\":\"Bot Two\",\"playing\":true,\"perfs\":{\"rapid\":{\"rating\":1810}}}\n"));
+    HttpLichessBotClient client = new HttpLichessBotClient(http, json);
+
+    var bots = client.onlineBots("token");
+
+    assertEquals(2, bots.size());
+    assertEquals(1520, bots.getFirst().rating().orElseThrow());
+    assertEquals(true, bots.getFirst().available());
+    assertEquals(false, bots.get(1).available());
+  }
+
+  @Test void acceptsAnImmediatelyStartedGameAsChallengeSubmission() {
+    FakeHttpClient http = new FakeHttpClient().enqueue(response(200, "{\"game\":{\"id\":\"game-now\"}}"));
+    HttpLichessBotClient client = new HttpLichessBotClient(http, json);
+
+    var submission = client.challengeBot("token", "maia1",
+        new com.escontrela.lastmove.application.arena.BotChallengeConfiguration(300, 0, "standard", false, 2000, 2, true, false));
+
+    assertEquals(java.util.Optional.of("game-now"), submission.gameId());
+    assertEquals(java.util.Optional.empty(), submission.challengeId());
+  }
+
   private static HttpResponse<InputStream> streamResponse(InputStream body) { return new TestResponse<>(200, body); }
   private static HttpResponse<String> response(int status, String body) { return new TestResponse<>(status, body); }
 

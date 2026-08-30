@@ -226,9 +226,16 @@ public class MainWindowController implements UiScreenController {
     }
     @org.springframework.context.event.EventListener
     public void lichessArenaChanged(LichessArenaEvent event) {
-        Platform.runLater(() -> { refreshArenaSummary(); updateWelcomeAndRecentGames(); });
+        try {
+            Platform.runLater(() -> { refreshArenaSummary(); updateWelcomeAndRecentGames(); });
+        } catch (IllegalStateException ignored) {
+            // The durable Arena state will be rendered when JavaFX creates the main view.
+        }
     }
     private void refreshArenaSummary() {
+        if (arenaStatusLabel == null || arenaAccountLabel == null || arenaActivityLabel == null) {
+            return;
+        }
         ArenaConnection connection = lichessArena.connection();
         List<ArenaGame> games = lichessArena.activeGames();
         long active = games.stream().filter(game -> game.status() == ArenaGameStatus.STARTED || game.status() == ArenaGameStatus.ACTIVE).count();
@@ -343,6 +350,9 @@ public class MainWindowController implements UiScreenController {
     }
 
     private void updateWelcomeAndRecentGames() {
+        if (welcomeLabel == null || recentGamesBox == null) {
+            return;
+        }
         String name = currentUserService.currentUser().name();
         welcomeLabel.setText("unknown".equalsIgnoreCase(name) ? "Welcome back" : "Welcome back, " + name);
 

@@ -14,6 +14,7 @@ public class PreferencesKnightshadeArenaSettingsRepository
   private static final String TOKEN_KEY = "lichess.bot-token";
   private static final String MAXIMUM_GAMES_KEY = "arena.maximum-concurrent-games";
   private static final String AUTO_ACCEPT_KEY = "arena.automatic-challenge-acceptance";
+  private static final String AUTO_RECONNECT_KEY = "arena.auto-reconnect";
   private static final String VALIDATED_ACCOUNT_ID_KEY = "lichess.validated-account.id";
   private static final String VALIDATED_ACCOUNT_USERNAME_KEY = "lichess.validated-account.username";
   private static final String VALIDATED_ACCOUNT_RATING_KEY = "lichess.validated-account.standard-rating";
@@ -33,9 +34,9 @@ public class PreferencesKnightshadeArenaSettingsRepository
   public KnightshadeArenaSettings loadSettings() {
     int maximum = preferences.getInt(
         MAXIMUM_GAMES_KEY, KnightshadeArenaSettings.DEFAULT_MAXIMUM_CONCURRENT_GAMES);
-    boolean automatic = preferences.getBoolean(AUTO_ACCEPT_KEY, false);
+    boolean automatic = preferences.getBoolean(AUTO_ACCEPT_KEY, false), reconnect = preferences.getBoolean(AUTO_RECONNECT_KEY, false);
     try {
-      return new KnightshadeArenaSettings(maximum, automatic);
+      return new KnightshadeArenaSettings(maximum, automatic, reconnect);
     } catch (IllegalArgumentException ignored) {
       return KnightshadeArenaSettings.defaults();
     }
@@ -45,6 +46,7 @@ public class PreferencesKnightshadeArenaSettingsRepository
   public void saveSettings(KnightshadeArenaSettings settings) {
     preferences.putInt(MAXIMUM_GAMES_KEY, settings.maximumConcurrentGames());
     preferences.putBoolean(AUTO_ACCEPT_KEY, settings.automaticChallengeAcceptance());
+    preferences.putBoolean(AUTO_RECONNECT_KEY, settings.autoReconnect());
   }
 
   @Override

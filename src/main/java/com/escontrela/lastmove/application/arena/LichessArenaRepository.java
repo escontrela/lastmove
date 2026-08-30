@@ -18,4 +18,6 @@ public interface LichessArenaRepository {
   void saveTournament(ArenaTournament tournament);
   Optional<ArenaTournament> findTournament(String lichessTournamentId);
   List<ArenaTournament> listTournaments();
+  default BotChallengeCycle botChallengeCycle() { return BotChallengeCycle.idle(); }
+  default void saveBotChallengeCycle(BotChallengeCycle cycle) { }
 }

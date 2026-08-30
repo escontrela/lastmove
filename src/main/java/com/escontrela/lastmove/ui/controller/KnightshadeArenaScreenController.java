@@ -29,6 +29,9 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.scene.control.Spinner;
+import javafx.scene.control.SpinnerValueFactory;
+import javafx.scene.control.CheckBox;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
@@ -51,9 +54,13 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
 
   @FXML private StackPane root;
   @FXML private Label connectionLabel, accountLabel, capacityLabel, statusLabel, tournamentStateLabel;
-  @FXML private Button connectButton, disconnectButton, refreshTournamentsButton;
+  @FXML private Button connectButton, disconnectButton, refreshTournamentsButton, refreshBotsButton, startBotCycleButton, stopBotCycleButton;
+  @FXML private Label botCycleStateLabel;
+  @FXML private Spinner<Integer> botRatingSpinner, botGamesSpinner, botClockMinutesSpinner, botClockIncrementSpinner;
+  @FXML private CheckBox botRatedCheckBox, botRepeatCheckBox;
   @FXML private ListView<String> challengesList, gamesList, activityList;
   @FXML private ListView<ArenaTournament> tournamentsList;
+  @FXML private ListView<LichessBotCandidate> onlineBotsList;
   @FXML private ContextualMenuPanel tournamentContextMenu;
 
   public KnightshadeArenaScreenController(LichessArenaService arena, @Lazy UiFlowManager flow,
@@ -78,14 +85,25 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
     gamesList.setPlaceholder(emptyState("No Arena games yet."));
     activityList.setPlaceholder(emptyState("No recent Arena events."));
     tournamentsList.setPlaceholder(emptyState("No bot tournaments available."));
+    onlineBotsList.setPlaceholder(emptyState("No online bots loaded yet."));
+    onlineBotsList.setCellFactory(list -> new ListCell<>() { @Override protected void updateItem(LichessBotCandidate bot, boolean empty) { super.updateItem(bot, empty); setText(empty || bot == null ? null : bot.username()+" · "+bot.rating().map(Object::toString).orElse("rating unavailable")+" · "+(bot.available()?"available":"busy")); } });
+    botRatingSpinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(400, 4000, 2000, 100));
+    botGamesSpinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 100, 5));
+    botClockMinutesSpinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 180, 5));
+    botClockIncrementSpinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 180, 0));
+    botRepeatCheckBox.setSelected(false);
     activityList.setCellFactory(this::activityCell);
     tournamentsList.setCellFactory(list -> new TournamentCell());
   }
 
   @Override public void onShow() {
+    applyCycleConfiguration(arena.botChallengeCycle().configuration());
     refresh();
     refreshTournaments();
     reconcileCurrentGames();
+    if (arena.connection().status() == ArenaConnectionStatus.CONNECTED && arena.onlineBots().isEmpty()) {
+      refreshOnlineBots();
+    }
   }
 
   @FXML public void connect() {
@@ -113,6 +131,16 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
     CompletableFuture.runAsync(arena::refreshTournaments).whenComplete((ignored, failure) ->
         Platform.runLater(() -> { tournamentRefreshInFlight = false; refresh(); }));
   }
+  @FXML public void refreshOnlineBots() {
+    if (arena.connection().status() != ArenaConnectionStatus.CONNECTED) { refresh(); return; }
+    refreshBotsButton.setDisable(true);
+    CompletableFuture.runAsync(arena::refreshOnlineBots).whenComplete((ignored, failure) -> Platform.runLater(() -> { refreshBotsButton.setDisable(false); refresh(); }));
+  }
+  @FXML public void startBotCycle() {
+    try { arena.startBotChallengeCycle(new BotChallengeConfiguration(botClockMinutesSpinner.getValue() * 60, botClockIncrementSpinner.getValue(), "standard", botRatedCheckBox.isSelected(), botRatingSpinner.getValue(), botGamesSpinner.getValue(), true, botRepeatCheckBox.isSelected())); refresh(); }
+    catch (RuntimeException failure) { statusLabel.setText(failure.getMessage()); }
+  }
+  @FXML public void stopBotCycle() { arena.stopBotChallengeCycle(); refresh(); }
 
   @FXML public void openSelectedGame(javafx.scene.input.MouseEvent event) {
     if (event.getClickCount() < 2) return;
@@ -148,7 +176,12 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
     activity.remove(key);
     activity.put(key, event.type().name().replace('_', ' ') + " · " + (event.detail() == null ? "" : event.detail()));
     while (activity.size() > 30) activity.remove(activity.keySet().iterator().next());
-    Platform.runLater(this::refresh);
+    try {
+      Platform.runLater(this::refresh);
+    } catch (IllegalStateException ignored) {
+      // Arena can receive a stream event while Spring is up but JavaFX has not built a view yet.
+      // State is already durable and will be rendered from it on the next onShow().
+    }
   }
 
   private void reconcileCurrentGames() {
@@ -163,6 +196,10 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
   }
 
   private void refresh() {
+    if (connectionLabel == null || accountLabel == null || capacityLabel == null || statusLabel == null
+        || botCycleStateLabel == null || onlineBotsList == null) {
+      return;
+    }
     ArenaConnection connection = arena.connection();
     connectionLabel.setText(connection.status().name());
     connectionLabel.getStyleClass().setAll("arena-state", "arena-state-" + connection.status().name().toLowerCase(Locale.ROOT));
@@ -172,12 +209,30 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
     connectButton.setDisable(connection.status() == ArenaConnectionStatus.CONNECTED || connection.status() == ArenaConnectionStatus.CONNECTING);
     disconnectButton.setDisable(connection.status() == ArenaConnectionStatus.DISCONNECTED);
     refreshTournamentsButton.setDisable(tournamentRefreshInFlight || connection.status() != ArenaConnectionStatus.CONNECTED);
+    BotChallengeCycle cycle = arena.botChallengeCycle();
+    refreshBotsButton.setDisable(connection.status() != ArenaConnectionStatus.CONNECTED);
+    boolean eligibleBot = arena.onlineBots().stream().anyMatch(bot -> bot.available()
+        && bot.rating().map(rating -> rating <= botRatingSpinner.getValue()).orElse(false));
+    startBotCycleButton.setDisable(connection.status() != ArenaConnectionStatus.CONNECTED || cycle.active() || !eligibleBot);
+    stopBotCycleButton.setDisable(!cycle.active());
+    onlineBotsList.setItems(FXCollections.observableArrayList(arena.onlineBots()));
+    botCycleStateLabel.setText(cycle.status()+" · "+cycle.completedGames()+" / "+cycle.configuration().maximumGames()+cycle.currentBotId().map(id -> " · "+id).orElse("")+cycle.stopReason().map(reason -> " — "+reason).orElseGet(() -> arena.onlineBotsError().map(error -> " — "+error).orElse("")));
     challengesList.setItems(FXCollections.observableArrayList(arena.challenges().stream().map(this::challengeText).toList()));
     gamesList.setItems(FXCollections.observableArrayList(games.stream().map(this::gameText).toList()));
     activityList.setItems(FXCollections.observableArrayList(activity.values()));
     tournamentsList.setItems(FXCollections.observableArrayList(arena.tournaments()));
     tournamentStateLabel.setText(tournamentStateText());
     statusLabel.setText(connection.lastError().orElse("Arena ready"));
+  }
+
+  /** FXML is recreated on navigation, so restore the run configuration owned by the durable cycle. */
+  private void applyCycleConfiguration(BotChallengeConfiguration configuration) {
+    botClockMinutesSpinner.getValueFactory().setValue(Math.max(1, Math.min(180, configuration.clockLimitSeconds() / 60)));
+    botClockIncrementSpinner.getValueFactory().setValue(Math.max(0, Math.min(180, configuration.clockIncrementSeconds())));
+    botRatingSpinner.getValueFactory().setValue(Math.max(400, Math.min(4000, configuration.maximumOpponentRating())));
+    botGamesSpinner.getValueFactory().setValue(Math.max(1, Math.min(100, configuration.maximumGames())));
+    botRatedCheckBox.setSelected(configuration.rated());
+    botRepeatCheckBox.setSelected(configuration.allowRepeatWhenExhausted());
   }
 
   private String tournamentStateText() {
@@ -256,7 +311,7 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
   }
 
   private String gameText(ArenaGame game) {
-    String opponent = game.localGameId().flatMap(savedGames::findSaved).map(saved -> {
+    String opponent = game.localGameId().flatMap(this::findSavedSafely).map(saved -> {
       var record = saved.game().toRecord();
       String white = record.whitePlayer().orElseThrow().getName();
       String black = record.blackPlayer().orElseThrow().getName();
@@ -269,6 +324,12 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
         .filter(candidate -> candidate.lichessTournamentId().equals(id)).map(ArenaTournament::name).findFirst())
         .or(() -> game.tournamentId()).map(name -> " · Tournament: " + name).orElse("");
     return opponent + tournament + " · " + game.status() + " · " + DateTimeFormatter.ISO_INSTANT.format(game.updatedAt()) + game.lastError().map(error -> " — " + error).orElse("");
+  }
+
+  /** A partially written or legacy local record must not take down the JavaFX event loop. */
+  private Optional<com.escontrela.lastmove.application.game.SavedGame> findSavedSafely(com.escontrela.lastmove.domain.game.GameId id) {
+    try { return savedGames.findSaved(id); }
+    catch (RuntimeException failure) { return Optional.empty(); }
   }
 
   private Optional<String> externalOpponent(ArenaGame game) {
