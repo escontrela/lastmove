@@ -265,7 +265,10 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
       if ("White".equalsIgnoreCase(name) || "Black".equalsIgnoreCase(name)) return externalOpponent(game).orElse(name);
       return name;
     }).or(() -> externalOpponent(game)).orElse("Opponent pending");
-    return opponent + " · " + game.status() + " · " + DateTimeFormatter.ISO_INSTANT.format(game.updatedAt()) + game.lastError().map(error -> " — " + error).orElse("");
+    String tournament = game.tournamentId().flatMap(id -> arena.tournaments().stream()
+        .filter(candidate -> candidate.lichessTournamentId().equals(id)).map(ArenaTournament::name).findFirst())
+        .or(() -> game.tournamentId()).map(name -> " · Tournament: " + name).orElse("");
+    return opponent + tournament + " · " + game.status() + " · " + DateTimeFormatter.ISO_INSTANT.format(game.updatedAt()) + game.lastError().map(error -> " — " + error).orElse("");
   }
 
   private Optional<String> externalOpponent(ArenaGame game) {

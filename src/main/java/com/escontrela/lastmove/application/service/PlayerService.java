@@ -65,9 +65,9 @@ public class PlayerService {
         assertAvailable();
         Objects.requireNonNull(account, "account must not be null");
         return playerRepository.findByExternalIdentity("LICHESS", account.id())
-                .map(existing -> existing.firstName().equals(account.username())
-                        ? existing : playerRepository.update(existing.refreshSystemDisplayName(account.username())))
-                .orElseGet(() -> playerRepository.save(Player.lichessBot(account.id(), account.username())));
+                .map(existing -> existing.firstName().equals("Knightshade") && existing.lastName().equals("Arena Bot")
+                        ? existing : playerRepository.update(existing.refreshSystemDisplayName("Knightshade", "Arena Bot")))
+                .orElseGet(() -> playerRepository.save(Player.knightshadeBot(account.id())));
     }
 
     public java.util.Optional<PlayerSummary> playerSummary(PlayerId id) {

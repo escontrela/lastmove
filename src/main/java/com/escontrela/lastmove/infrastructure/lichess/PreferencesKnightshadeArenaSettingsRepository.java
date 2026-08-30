@@ -16,6 +16,8 @@ public class PreferencesKnightshadeArenaSettingsRepository
   private static final String AUTO_ACCEPT_KEY = "arena.automatic-challenge-acceptance";
   private static final String VALIDATED_ACCOUNT_ID_KEY = "lichess.validated-account.id";
   private static final String VALIDATED_ACCOUNT_USERNAME_KEY = "lichess.validated-account.username";
+  private static final String VALIDATED_ACCOUNT_RATING_KEY = "lichess.validated-account.standard-rating";
+  private static final String VALIDATED_ACCOUNT_PREVIOUS_RATING_KEY = "lichess.validated-account.previous-standard-rating";
 
   private final Preferences preferences;
 
@@ -66,7 +68,11 @@ public class PreferencesKnightshadeArenaSettingsRepository
     String username = preferences.get(VALIDATED_ACCOUNT_USERNAME_KEY, "").trim();
     if (id.isEmpty() || username.isEmpty()) return Optional.empty();
     try {
-      return Optional.of(new LichessBotAccount(id, username));
+      String rating = preferences.get(VALIDATED_ACCOUNT_RATING_KEY, "").trim();
+      Optional<Integer> current = rating.isEmpty() ? Optional.empty() : Optional.of(Integer.parseInt(rating));
+      String previousRating = preferences.get(VALIDATED_ACCOUNT_PREVIOUS_RATING_KEY, "").trim();
+      Optional<Integer> previous = previousRating.isEmpty() ? Optional.empty() : Optional.of(Integer.parseInt(previousRating));
+      return Optional.of(new LichessBotAccount(id, username, current, previous));
     } catch (IllegalArgumentException ignored) {
       return Optional.empty();
     }
@@ -76,5 +82,9 @@ public class PreferencesKnightshadeArenaSettingsRepository
   public void saveValidatedBotAccount(LichessBotAccount account) {
     preferences.put(VALIDATED_ACCOUNT_ID_KEY, account.id());
     preferences.put(VALIDATED_ACCOUNT_USERNAME_KEY, account.username());
+    account.standardRating().ifPresentOrElse(rating -> preferences.put(VALIDATED_ACCOUNT_RATING_KEY, rating.toString()),
+        () -> preferences.remove(VALIDATED_ACCOUNT_RATING_KEY));
+    account.previousStandardRating().ifPresentOrElse(rating -> preferences.put(VALIDATED_ACCOUNT_PREVIOUS_RATING_KEY, rating.toString()),
+        () -> preferences.remove(VALIDATED_ACCOUNT_PREVIOUS_RATING_KEY));
   }
 }

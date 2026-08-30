@@ -69,6 +69,18 @@ public final class Player {
 
     /** Creates the non-editable local representation of a Lichess bot account. */
     public static Player lichessBot(String accountId, String username) {
+        return lichessAccount(accountId, username);
+    }
+
+    /** Creates the local application identity that represents the configured Knightshade bot. */
+    public static Player knightshadeBot(String accountId) {
+        String id = normalizeRequired(accountId, "accountId");
+        return new Player(null, id + "@lichess.local", "Knightshade", "Arena Bot", Optional.empty(), Instant.now(),
+                PlayerType.SYSTEM, Optional.of("LICHESS"), Optional.of(id));
+    }
+
+    /** Creates the non-editable local representation of a Lichess account. */
+    public static Player lichessAccount(String accountId, String username) {
         String id = normalizeRequired(accountId, "accountId");
         String name = normalizeRequired(username, "username");
         return new Player(null, id + "@lichess.local", name, "Lichess Bot", Optional.empty(), Instant.now(),
@@ -88,10 +100,15 @@ public final class Player {
 
     /** Refreshes the display name of an externally managed system player without changing its identity. */
     public Player refreshSystemDisplayName(String displayName) {
+        return refreshSystemDisplayName(displayName, lastName);
+    }
+
+    /** Refreshes the presentation of an externally managed system player without changing its identity. */
+    public Player refreshSystemDisplayName(String displayName, String role) {
         if (id == null || type != PlayerType.SYSTEM) {
             throw new IllegalStateException("Only persisted system players can refresh their display name");
         }
-        return new Player(id, email, displayName, lastName, photo, createdAt, type, externalProvider, externalAccountId);
+        return new Player(id, email, displayName, role, photo, createdAt, type, externalProvider, externalAccountId);
     }
 
     public PlayerId id() {

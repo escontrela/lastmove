@@ -10,6 +10,10 @@ import com.escontrela.lastmove.application.arena.ArenaTournamentStatus;
 import java.time.Instant;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import java.util.stream.Stream;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 class TournamentRowSummaryTest {
   private static final Instant NOW = Instant.parse("2026-08-30T12:00:00Z");
@@ -28,6 +32,24 @@ class TournamentRowSummaryTest {
 
     assertEquals("Joining…", summary.registration());
     assertFalse(summary.canRequestRegistration());
+  }
+
+  @ParameterizedTest
+  @MethodSource("registrationStates")
+  void rendersEveryPersistedRegistrationState(ArenaTournamentRegistrationStatus state, String label, boolean canRegister) {
+    TournamentRowSummary summary = TournamentRowSummary.from(tournament(state), NOW);
+    assertEquals(label, summary.registration());
+    assertEquals(canRegister, summary.canRequestRegistration());
+  }
+
+  private static Stream<Arguments> registrationStates() {
+    return Stream.of(
+        Arguments.of(ArenaTournamentRegistrationStatus.AVAILABLE, "Available", true),
+        Arguments.of(ArenaTournamentRegistrationStatus.JOINED, "Joined", false),
+        Arguments.of(ArenaTournamentRegistrationStatus.NOT_ELIGIBLE, "Not eligible", false),
+        Arguments.of(ArenaTournamentRegistrationStatus.CLOSED, "Closed", false),
+        Arguments.of(ArenaTournamentRegistrationStatus.INCOMPATIBLE, "Unsupported variant", false),
+        Arguments.of(ArenaTournamentRegistrationStatus.ERROR, "Registration error", false));
   }
 
   private static ArenaTournament tournament(ArenaTournamentRegistrationStatus registration) {

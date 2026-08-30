@@ -8,6 +8,7 @@ import com.escontrela.lastmove.application.game.SavedGameSummary;
 import com.escontrela.lastmove.application.service.AnalysisSessionService;
 import com.escontrela.lastmove.application.service.ComputerVsComputerGameService;
 import com.escontrela.lastmove.application.service.LichessArenaService;
+import com.escontrela.lastmove.application.service.KnightshadeArenaSettingsService;
 import com.escontrela.lastmove.application.arena.*;
 import com.escontrela.lastmove.application.event.LichessArenaEvent;
 import com.escontrela.lastmove.ui.component.notification.NotificationsPanel;
@@ -29,6 +30,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javafx.collections.ListChangeListener;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
@@ -61,6 +64,7 @@ public class MainWindowController implements UiScreenController {
     private final UiEventBus uiEventBus;
     private final ComputerVsComputerGameService computerVsComputerGames;
     private final LichessArenaService lichessArena;
+    private final KnightshadeArenaSettingsService arenaSettings;
 
     @FXML
     private AnchorPane root;
@@ -79,9 +83,10 @@ public class MainWindowController implements UiScreenController {
     @FXML
     private ContextualMenuPanel contextualMenuPanel;
     @FXML private NotificationsPanel notificationsPanel;
-    @FXML private Label arenaStatusLabel, arenaActivityLabel;
+    @FXML private Label arenaStatusLabel, arenaAccountLabel, arenaActivityLabel;
 
     private final ListChangeListener<String> themeStyleListener = change -> updateThemeAssets();
+    private final AtomicBoolean arenaAccountRefreshInFlight = new AtomicBoolean();
     private boolean startupMessageShown;
 
     public MainWindowController(
@@ -89,7 +94,8 @@ public class MainWindowController implements UiScreenController {
             ChessSoundService chessSoundService,
             CurrentUserService currentUserService, GameNotificationRepository notifications, SavedGameRepository savedGames,
             AnalysisSessionService analysisSessionService, UiEventBus uiEventBus,
-            ComputerVsComputerGameService computerVsComputerGames, LichessArenaService lichessArena) {
+            ComputerVsComputerGameService computerVsComputerGames, LichessArenaService lichessArena,
+            KnightshadeArenaSettingsService arenaSettings) {
         this.uiFlowManager = uiFlowManager;
         this.chessSoundService = chessSoundService;
         this.currentUserService = currentUserService;
@@ -99,6 +105,7 @@ public class MainWindowController implements UiScreenController {
         this.uiEventBus = uiEventBus;
         this.computerVsComputerGames = computerVsComputerGames;
         this.lichessArena = lichessArena;
+        this.arenaSettings = arenaSettings;
     }
 
     @FXML
@@ -125,11 +132,25 @@ public class MainWindowController implements UiScreenController {
         updateStudiesAvailability();
         refreshNotifications();
         refreshArenaSummary();
+        refreshArenaAccount();
         if (!startupMessageShown) {
             startupMessageShown = true;
             chessSoundService.play(ChessSound.NOTIFY);
             startupMessageBox.show();
         }
+    }
+
+    /** Refreshes the cached bot profile so the Home card can show its current rating. */
+    private void refreshArenaAccount() {
+        if (!arenaSettings.hasBotToken()
+                || !arenaAccountRefreshInFlight.compareAndSet(false, true)) {
+            return;
+        }
+        CompletableFuture.runAsync(arenaSettings::validateConfiguredBotAccount)
+                .whenComplete((ignored, failure) -> {
+                    arenaAccountRefreshInFlight.set(false);
+                    Platform.runLater(this::refreshArenaSummary);
+                });
     }
 
     @FXML
@@ -212,10 +233,15 @@ public class MainWindowController implements UiScreenController {
         List<ArenaGame> games = lichessArena.activeGames();
         long active = games.stream().filter(game -> game.status() == ArenaGameStatus.STARTED || game.status() == ArenaGameStatus.ACTIVE).count();
         arenaStatusLabel.setText(connection.status() == ArenaConnectionStatus.CONNECTED ? "Connected" : connection.status().name());
+        arenaAccountLabel.setText(lichessArena.account().map(account -> account.username() + account.standardRating().map(rating -> " · ELO " + rating + ratingTrend(account)).orElse(""))
+                .orElse("Knight Shade"));
         long pending = lichessArena.challenges().stream().filter(challenge -> challenge.decision() == ArenaChallengeDecision.RECEIVED).count();
         String accepting = connection.status() == ArenaConnectionStatus.CONNECTED && lichessArena.automaticChallengeAcceptance() ? " · accepting" : "";
         arenaActivityLabel.setText(active + " active · " + pending + " challenges" + accepting);
         arenaStatusLabel.getStyleClass().setAll("knightshade-arena-status", "knightshade-arena-status-" + connection.status().name().toLowerCase(java.util.Locale.ROOT));
+    }
+    private static String ratingTrend(LichessBotAccount account) {
+        return account.previousStandardRating().map(previous -> previous < account.standardRating().orElse(previous) ? " ↑" : previous > account.standardRating().orElse(previous) ? " ↓" : "").orElse("");
     }
     private void refreshNotifications() {
         notificationsPanel.setComputerMatchAvailable(
