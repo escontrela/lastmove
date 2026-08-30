@@ -18,6 +18,8 @@ public class PreferencesKnightshadeArenaSettingsRepository
   private static final String VALIDATED_ACCOUNT_ID_KEY = "lichess.validated-account.id";
   private static final String VALIDATED_ACCOUNT_USERNAME_KEY = "lichess.validated-account.username";
   private static final String VALIDATED_ACCOUNT_RATING_KEY = "lichess.validated-account.standard-rating";
+  private static final String VALIDATED_ACCOUNT_BLITZ_RATING_KEY = "lichess.validated-account.blitz-rating";
+  private static final String VALIDATED_ACCOUNT_RAPID_RATING_KEY = "lichess.validated-account.rapid-rating";
   private static final String VALIDATED_ACCOUNT_PREVIOUS_RATING_KEY = "lichess.validated-account.previous-standard-rating";
 
   private final Preferences preferences;
@@ -74,7 +76,8 @@ public class PreferencesKnightshadeArenaSettingsRepository
       Optional<Integer> current = rating.isEmpty() ? Optional.empty() : Optional.of(Integer.parseInt(rating));
       String previousRating = preferences.get(VALIDATED_ACCOUNT_PREVIOUS_RATING_KEY, "").trim();
       Optional<Integer> previous = previousRating.isEmpty() ? Optional.empty() : Optional.of(Integer.parseInt(previousRating));
-      return Optional.of(new LichessBotAccount(id, username, current, previous));
+      return Optional.of(new LichessBotAccount(id, username,
+          optionalRating(VALIDATED_ACCOUNT_BLITZ_RATING_KEY), optionalRating(VALIDATED_ACCOUNT_RAPID_RATING_KEY), current, previous));
     } catch (IllegalArgumentException ignored) {
       return Optional.empty();
     }
@@ -86,7 +89,17 @@ public class PreferencesKnightshadeArenaSettingsRepository
     preferences.put(VALIDATED_ACCOUNT_USERNAME_KEY, account.username());
     account.standardRating().ifPresentOrElse(rating -> preferences.put(VALIDATED_ACCOUNT_RATING_KEY, rating.toString()),
         () -> preferences.remove(VALIDATED_ACCOUNT_RATING_KEY));
+    saveRating(VALIDATED_ACCOUNT_BLITZ_RATING_KEY, account.blitzRating());
+    saveRating(VALIDATED_ACCOUNT_RAPID_RATING_KEY, account.rapidRating());
     account.previousStandardRating().ifPresentOrElse(rating -> preferences.put(VALIDATED_ACCOUNT_PREVIOUS_RATING_KEY, rating.toString()),
         () -> preferences.remove(VALIDATED_ACCOUNT_PREVIOUS_RATING_KEY));
+  }
+
+  private Optional<Integer> optionalRating(String key) {
+    String value = preferences.get(key, "").trim();
+    return value.isEmpty() ? Optional.empty() : Optional.of(Integer.parseInt(value));
+  }
+  private void saveRating(String key, Optional<Integer> rating) {
+    rating.ifPresentOrElse(value -> preferences.put(key, value.toString()), () -> preferences.remove(key));
   }
 }

@@ -21,8 +21,6 @@ import org.springframework.stereotype.Component;
 public class HttpLichessBotAccountVerifier implements LichessBotAccountVerifier {
   private static final URI ACCOUNT_URI = URI.create("https://lichess.org/api/account");
   private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(10);
-  private static final List<String> RATING_PERFORMANCE_PRIORITY = List.of(
-      "blitz", "rapid", "bullet", "classical", "correspondence");
 
   private final HttpClient client;
   private final ObjectMapper objectMapper;
@@ -73,17 +71,25 @@ public class HttpLichessBotAccountVerifier implements LichessBotAccountVerifier 
       if (!"BOT".equalsIgnoreCase(account.path("title").asText())) {
         throw new LichessBotAccountValidationException("The configured Lichess account is not a bot account.");
       }
-      Optional<Integer> rating = ratingFrom(account.path("perfs"));
-      return new LichessBotAccount(account.path("id").asText(), account.path("username").asText(), rating, Optional.empty());
+      JsonNode performances = account.path("perfs");
+      return new LichessBotAccount(account.path("id").asText(), account.path("username").asText(),
+          ratingFrom(performances, "blitz"), ratingFrom(performances, "rapid"),
+          ratingFrom(performances, "classical"), Optional.empty());
     } catch (IOException | IllegalArgumentException exception) {
       throw new LichessBotAccountValidationException("Lichess returned an invalid account response.", exception);
     }
   }
 
+  static Optional<Integer> ratingFrom(JsonNode performances, String performance) {
+    JsonNode rating = performances.path(performance).path("rating");
+    if (rating.isInt() || rating.isLong()) return Optional.of(rating.asInt());
+    return Optional.empty();
+  }
+
   static Optional<Integer> ratingFrom(JsonNode performances) {
-    for (String performance : RATING_PERFORMANCE_PRIORITY) {
-      JsonNode rating = performances.path(performance).path("rating");
-      if (rating.isInt() || rating.isLong()) return Optional.of(rating.asInt());
+    for (String performance : List.of("blitz", "rapid", "bullet", "classical", "correspondence")) {
+      Optional<Integer> rating = ratingFrom(performances, performance);
+      if (rating.isPresent()) return rating;
     }
     return Optional.empty();
   }

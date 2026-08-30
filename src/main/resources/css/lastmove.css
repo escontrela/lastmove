@@ -2022,6 +2022,23 @@
 .arena-state-connected { -fx-text-fill: #16874d; }
 .arena-state-connecting { -fx-text-fill: #a96800; }
 .arena-state-error { -fx-text-fill: #b42318; }
+.arena-rating { -fx-min-width: 62px; -fx-padding: 2 8; -fx-background-color: #ffffff; -fx-background-radius: 8px; -fx-border-color: #dce5ef; -fx-border-radius: 8px; }
+.arena-rating-value { -fx-font-size: 17px; -fx-font-weight: 800; -fx-text-fill: #0b63e8; }
+.arena-game-timeline { -fx-padding: 14; -fx-background-color: #ffffff; -fx-background-radius: 10px; -fx-border-color: #dce5ef; -fx-border-radius: 10px; }
+.arena-timeline-support { -fx-font-size: 12px; -fx-text-fill: #617084; }
+.arena-timeline-range { -fx-min-width: 145px; }
+.arena-timeline-scroll, .arena-timeline-scroll > .viewport { -fx-background-color: transparent; }
+.arena-timeline-lane { -fx-background-color: #f8fafc; -fx-background-radius: 8px; }
+.arena-timeline-baseline { -fx-stroke: #7c8da1; -fx-stroke-width: 2px; }
+.arena-timeline-stem { -fx-stroke-width: 4px; -fx-stroke-line-cap: round; }
+.arena-timeline-win { -fx-stroke: #16874d; }
+.arena-timeline-loss { -fx-stroke: #c43d36; }
+.arena-timeline-neutral { -fx-stroke: #718096; }
+.arena-timeline-detail { -fx-font-size: 11px; -fx-font-weight: 700; -fx-alignment: center; -fx-text-alignment: center; }
+.arena-timeline-detail-win { -fx-text-fill: #16874d; }
+.arena-timeline-detail-loss { -fx-text-fill: #c43d36; }
+.arena-timeline-detail-neutral { -fx-text-fill: #617084; }
+.arena-timeline-time { -fx-font-size: 10px; -fx-text-fill: #617084; }
 .arena-activity-entry { -fx-text-fill: #425466; -fx-padding: 3 0; }
 .arena-tournament-state { -fx-font-size: 12px; -fx-text-fill: #617084; }
 .arena-tournaments-list { -fx-min-height: 196px; }
@@ -2043,6 +2060,16 @@
 .night-mode .arena-state-connected { -fx-text-fill: #7edca7; }
 .night-mode .arena-state-connecting { -fx-text-fill: #f3c969; }
 .night-mode .arena-state-error { -fx-text-fill: #ff9b9b; }
+.night-mode .arena-rating { -fx-background-color: #222d3a; -fx-border-color: #415164; }
+.night-mode .arena-rating-value { -fx-text-fill: #78b9ff; }
+.night-mode .arena-game-timeline { -fx-background-color: #202a36; -fx-border-color: #394858; }
+.night-mode .arena-timeline-support, .night-mode .arena-timeline-time { -fx-text-fill: #b7c8dd; }
+.night-mode .arena-timeline-lane { -fx-background-color: #18212b; }
+.night-mode .arena-timeline-baseline { -fx-stroke: #718096; }
+.night-mode .arena-timeline-win { -fx-stroke: #7edca7; }
+.night-mode .arena-timeline-loss { -fx-stroke: #ff9b9b; }
+.night-mode .arena-timeline-detail-win { -fx-text-fill: #7edca7; }
+.night-mode .arena-timeline-detail-loss { -fx-text-fill: #ff9b9b; }
 .night-mode .arena-activity-entry { -fx-text-fill: #c6d3e0; }
 .night-mode .arena-tournament-state, .night-mode .arena-tournament-summary { -fx-text-fill: #b7c8dd; }
 .night-mode .arena-tournament-row { -fx-border-color: transparent transparent #394858 transparent; }

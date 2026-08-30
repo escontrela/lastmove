@@ -6,6 +6,9 @@ import com.escontrela.lastmove.application.repository.SavedGameRepository;
 import com.escontrela.lastmove.application.service.AnalysisSessionService;
 import com.escontrela.lastmove.application.service.LichessArenaService;
 import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
+import com.escontrela.lastmove.ui.component.arena.GameTimelineControl;
+import com.escontrela.lastmove.ui.component.header.ApplicationHeader;
+import com.escontrela.lastmove.ui.component.header.HeaderAction;
 import com.escontrela.lastmove.ui.component.game.LiveGameViewerSource;
 import com.escontrela.lastmove.ui.component.game.LiveGameViewerState;
 import com.escontrela.lastmove.ui.event.OpenAnalysisSessionEvent;
@@ -53,8 +56,9 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
   private boolean tournamentRefreshInFlight;
 
   @FXML private StackPane root;
-  @FXML private Label connectionLabel, accountLabel, capacityLabel, statusLabel, tournamentStateLabel;
-  @FXML private Button connectButton, disconnectButton, refreshTournamentsButton, refreshBotsButton, startBotCycleButton, stopBotCycleButton;
+  @FXML private ApplicationHeader applicationHeader;
+  @FXML private Label connectionLabel, accountLabel, capacityLabel, statusLabel, tournamentStateLabel, blitzRatingLabel, rapidRatingLabel, standardRatingLabel;
+  @FXML private Button refreshTournamentsButton, refreshBotsButton, startBotCycleButton, stopBotCycleButton;
   @FXML private Label botCycleStateLabel;
   @FXML private Spinner<Integer> botRatingSpinner, botGamesSpinner, botClockMinutesSpinner, botClockIncrementSpinner;
   @FXML private CheckBox botRatedCheckBox, botRepeatCheckBox;
@@ -62,6 +66,7 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
   @FXML private ListView<ArenaTournament> tournamentsList;
   @FXML private ListView<LichessBotCandidate> onlineBotsList;
   @FXML private ContextualMenuPanel tournamentContextMenu;
+  @FXML private GameTimelineControl gameTimeline;
 
   public KnightshadeArenaScreenController(LichessArenaService arena, @Lazy UiFlowManager flow,
       SavedGameRepository savedGames, AnalysisSessionService analyses, UiEventBus events,
@@ -94,6 +99,7 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
     botRepeatCheckBox.setSelected(false);
     activityList.setCellFactory(this::activityCell);
     tournamentsList.setCellFactory(list -> new TournamentCell());
+    configureHeaderActions();
   }
 
   @Override public void onShow() {
@@ -206,8 +212,12 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
     accountLabel.setText(arena.account().map(account -> account.username() + " (Lichess bot)").orElse("Not validated"));
     List<ArenaGame> games = arena.activeGames();
     capacityLabel.setText(games.stream().filter(game -> game.status() == ArenaGameStatus.STARTED || game.status() == ArenaGameStatus.ACTIVE).count() + " / " + arena.maximumConcurrentGames());
-    connectButton.setDisable(connection.status() == ArenaConnectionStatus.CONNECTED || connection.status() == ArenaConnectionStatus.CONNECTING);
-    disconnectButton.setDisable(connection.status() == ArenaConnectionStatus.DISCONNECTED);
+    arena.account().ifPresentOrElse(account -> {
+      blitzRatingLabel.setText(ratingText(account.blitzRating()));
+      rapidRatingLabel.setText(ratingText(account.rapidRating()));
+      standardRatingLabel.setText(ratingText(account.standardRating()));
+    }, () -> { blitzRatingLabel.setText("—"); rapidRatingLabel.setText("—"); standardRatingLabel.setText("—"); });
+    configureHeaderActions();
     refreshTournamentsButton.setDisable(tournamentRefreshInFlight || connection.status() != ArenaConnectionStatus.CONNECTED);
     BotChallengeCycle cycle = arena.botChallengeCycle();
     refreshBotsButton.setDisable(connection.status() != ArenaConnectionStatus.CONNECTED);
@@ -219,10 +229,45 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
     botCycleStateLabel.setText(cycle.status()+" · "+cycle.completedGames()+" / "+cycle.configuration().maximumGames()+cycle.currentBotId().map(id -> " · "+id).orElse("")+cycle.stopReason().map(reason -> " — "+reason).orElseGet(() -> arena.onlineBotsError().map(error -> " — "+error).orElse("")));
     challengesList.setItems(FXCollections.observableArrayList(arena.challenges().stream().map(this::challengeText).toList()));
     gamesList.setItems(FXCollections.observableArrayList(games.stream().map(this::gameText).toList()));
+    gameTimeline.setEntries(games.stream().map(this::timelineEntry).toList());
     activityList.setItems(FXCollections.observableArrayList(activity.values()));
     tournamentsList.setItems(FXCollections.observableArrayList(arena.tournaments()));
     tournamentStateLabel.setText(tournamentStateText());
     statusLabel.setText(connection.lastError().orElse("Arena ready"));
+  }
+
+  private void configureHeaderActions() {
+    if (applicationHeader == null) return;
+    ArenaConnectionStatus connection = arena.connection().status();
+    applicationHeader.setContextActions(List.of(
+        new HeaderAction("Connect Knightshade Arena", "Connect Arena", "/images/link_35dp_000000.png", "/images/link_35dp_FFFFFF.png", event -> connect(),
+            connection == ArenaConnectionStatus.CONNECTED || connection == ArenaConnectionStatus.CONNECTING),
+        new HeaderAction("Disconnect Knightshade Arena", "Disconnect Arena", "/images/link_off_35dp_000000.png", "/images/link_off_35dp_FFFFFF.png", event -> disconnect(),
+            connection == ArenaConnectionStatus.DISCONNECTED)));
+  }
+
+  private static String ratingText(Optional<Integer> rating) { return rating.map(Object::toString).orElse("—"); }
+
+  private GameTimelineControl.Entry timelineEntry(ArenaGame game) {
+    String opponent = externalOpponent(game).orElse("Opponent pending");
+    String opponentRating = game.challengeId().flatMap(id -> arena.challenges().stream()
+        .filter(challenge -> challenge.id().equals(id)).findFirst())
+        .flatMap(ArenaChallenge::challengerRating).map(rating -> "Elo " + rating).orElse("Elo unavailable");
+    GameTimelineControl.Outcome outcome = GameTimelineControl.Outcome.IN_PROGRESS;
+    Optional<com.escontrela.lastmove.application.game.SavedGame> saved = game.localGameId().flatMap(this::findSavedSafely);
+    if (saved.isPresent()) {
+      var result = saved.get().game().result();
+      if (result.isPresent()) {
+        boolean botWhite = game.botColor().map(color -> color == com.escontrela.lastmove.domain.common.PieceColor.WHITE).orElse(false);
+        outcome = switch (result.get()) {
+          case DRAW -> GameTimelineControl.Outcome.DRAWN;
+          case WHITE_WINS -> botWhite ? GameTimelineControl.Outcome.WON : GameTimelineControl.Outcome.LOST;
+          case BLACK_WINS -> botWhite ? GameTimelineControl.Outcome.LOST : GameTimelineControl.Outcome.WON;
+          case UNKNOWN -> GameTimelineControl.Outcome.IN_PROGRESS;
+        };
+      }
+    }
+    return new GameTimelineControl.Entry(game.finishedAt().orElse(game.updatedAt()), opponent, opponentRating, outcome);
   }
 
   /** FXML is recreated on navigation, so restore the run configuration owned by the durable cycle. */
