@@ -2023,6 +2023,18 @@
 .arena-state-connecting { -fx-text-fill: #a96800; }
 .arena-state-error { -fx-text-fill: #b42318; }
 .arena-activity-entry { -fx-text-fill: #425466; -fx-padding: 3 0; }
+.arena-tournament-state { -fx-font-size: 12px; -fx-text-fill: #617084; }
+.arena-tournaments-list { -fx-min-height: 196px; }
+.arena-tournament-cell { -fx-padding: 0; -fx-background-color: transparent; }
+.arena-tournament-row { -fx-min-height: 58px; -fx-padding: 10 14; -fx-border-color: transparent transparent #e2e8f0 transparent; -fx-border-width: 0 0 1 0; }
+.arena-tournament-row:hover { -fx-background-color: #eef5fc; }
+.arena-tournament-title { -fx-font-weight: 700; -fx-text-fill: #27384a; }
+.arena-tournament-summary { -fx-font-size: 12px; -fx-text-fill: #617084; }
+.arena-tournament-registration { -fx-font-size: 12px; -fx-font-weight: 800; -fx-text-fill: #617084; }
+.arena-tournament-registration-available { -fx-text-fill: #16874d; }
+.arena-tournament-registration-joining { -fx-text-fill: #a96800; }
+.arena-tournament-registration-joined { -fx-text-fill: #1769aa; }
+.arena-tournament-registration-not_eligible, .arena-tournament-registration-incompatible, .arena-tournament-registration-closed, .arena-tournament-registration-error { -fx-text-fill: #a23a32; }
 
 .night-mode .arena-scroll-pane,
 .night-mode .arena-scroll-pane > .viewport,
@@ -2032,6 +2044,15 @@
 .night-mode .arena-state-connecting { -fx-text-fill: #f3c969; }
 .night-mode .arena-state-error { -fx-text-fill: #ff9b9b; }
 .night-mode .arena-activity-entry { -fx-text-fill: #c6d3e0; }
+.night-mode .arena-tournament-state, .night-mode .arena-tournament-summary { -fx-text-fill: #b7c8dd; }
+.night-mode .arena-tournament-row { -fx-border-color: transparent transparent #394858 transparent; }
+.night-mode .arena-tournament-row:hover { -fx-background-color: #263443; }
+.night-mode .arena-tournament-title { -fx-text-fill: #edf3f8; }
+.night-mode .arena-tournament-registration { -fx-text-fill: #b7c8dd; }
+.night-mode .arena-tournament-registration-available { -fx-text-fill: #7edca7; }
+.night-mode .arena-tournament-registration-joining { -fx-text-fill: #f3c969; }
+.night-mode .arena-tournament-registration-joined { -fx-text-fill: #78b9ff; }
+.night-mode .arena-tournament-registration-not_eligible, .night-mode .arena-tournament-registration-incompatible, .night-mode .arena-tournament-registration-closed, .night-mode .arena-tournament-registration-error { -fx-text-fill: #ff9b9b; }
 .night-mode .arena-scroll-pane .scroll-bar:vertical .track { -fx-background-color: #1c2430; }
 .night-mode .arena-scroll-pane .scroll-bar:vertical .thumb { -fx-background-color: #465465; }
 
