@@ -85,7 +85,7 @@ public final class MyGamesScreenController implements UiScreenController {
           new com.escontrela.lastmove.ui.component.game.LiveGameViewerState(com.escontrela.lastmove.ui.component.game.LiveGameViewerSource.LICHESS,
               game.tournamentId().flatMap(id -> arena.tournaments().stream().filter(tournament -> tournament.lichessTournamentId().equals(id)).map(tournament -> "Lichess Tournament · " + tournament.name()).findFirst()).orElse("Lichess Arena"),
               record.whitePlayer().orElseThrow(), record.blackPlayer().orElseThrow(), record.initialPosition(), record.currentPosition(),
-              record.moves().stream().map(com.escontrela.lastmove.domain.game.RecordedPly::ply).toList(), saved.game().currentClock().whiteRemaining(), saved.game().currentClock().blackRemaining(), false, Optional.of("Following Lichess game live")));
+              record.moves().stream().map(com.escontrela.lastmove.domain.game.RecordedPly::ply).toList(), saved.game().currentClock().whiteRemaining(), saved.game().currentClock().blackRemaining(), record.result().isPresent(), record.result(), record.terminationReason(), Optional.of("Following Lichess game live")));
       flow.show(UiScreenId.COMPUTER_VS_COMPUTER);
     }, () -> statusLabel.setText("The local Lichess game is no longer available."));
   }

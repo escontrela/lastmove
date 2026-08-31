@@ -90,6 +90,12 @@ public class UiFlowManager {
                         currentUserService.selectedPlayerId().filter(notifications::hasUnread).isPresent() ? "/images/notification_sound_35dp_FFFFFF.png" : "/images/notifications_35dp_FFFFFF.png",
                         event -> eventBus.publish(new ToggleNotificationsPanelEvent()),
                         false), new HeaderAction(
+                        "Open Knightshade Arena",
+                        "Knightshade Arena",
+                        "/images/chess_king_2_35dp_000000.png",
+                        "/images/chess_king_2_35dp_FFFFFF.png",
+                        event -> show(UiScreenId.KNIGHTSHADE_ARENA),
+                        false), new HeaderAction(
                         "Open settings",
                         "Settings",
                         "/images/settings_35dp_000000.png",

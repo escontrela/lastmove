@@ -3,6 +3,10 @@ package com.escontrela.lastmove.infrastructure.lichess;
 import com.escontrela.lastmove.application.arena.LichessBotClient;
 import com.escontrela.lastmove.application.arena.LichessTournamentRequestException;
 import com.escontrela.lastmove.application.arena.LichessTournamentSnapshot;
+import com.escontrela.lastmove.application.arena.LichessBotCandidate;
+import com.escontrela.lastmove.application.arena.BotChallengeConfiguration;
+import com.escontrela.lastmove.application.arena.LichessChallengeSubmission;
+import com.escontrela.lastmove.application.arena.LichessBotChallengeRejectedException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.*;
@@ -11,6 +15,10 @@ import java.net.http.*;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.List;
+import java.util.Set;
+import java.util.Optional;
+import java.time.Instant;
+import java.net.URLEncoder;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
 import org.springframework.stereotype.Component;
@@ -40,6 +48,23 @@ public final class HttpLichessBotClient implements LichessBotClient {
       throw new LichessTournamentRequestException(LichessTournamentRequestException.Kind.TRANSPORT,"Could not reach Lichess to load tournaments.",exception);
     }
   }
+  @Override public List<LichessBotCandidate> onlineBots(String token) {
+    try {
+      HttpResponse<String> response=client.send(request(token,"/api/bot/online").header("Accept","application/x-ndjson").GET().build(),HttpResponse.BodyHandlers.ofString());
+      if(response.statusCode()!=200) throw botFailure("discover online bots",response.statusCode());
+      List<LichessBotCandidate> bots=new java.util.ArrayList<>();
+      for(String line:response.body().split("\\R")) if(!line.isBlank()) { JsonNode node=json.readTree(line); String id=node.path("id").asText(); String name=node.path("username").asText(id); if(!id.isBlank()) { JsonNode perfs=node.path("perfs"); JsonNode standard=perfs.path("blitz"); if(standard.isMissingNode()) standard=perfs.path("rapid"); if(standard.isMissingNode()) standard=perfs.path("bullet"); JsonNode playing=node.path("playing"); boolean busy=playing.asBoolean(false)||(playing.isTextual()&&!playing.asText().isBlank()); bots.add(new LichessBotCandidate(id,name,node.path("online").asBoolean(true),!busy,standard.has("rating")?java.util.Optional.of(standard.path("rating").asInt()):java.util.Optional.empty(),playing.isTextual()&&!playing.asText().isBlank()?java.util.Optional.of(playing.asText()):java.util.Optional.empty(),Instant.now())); }
+      }
+      return List.copyOf(bots);
+    } catch(InterruptedException e){Thread.currentThread().interrupt();throw new IllegalStateException("Lichess bot discovery was interrupted.",e);}catch(IOException e){throw new IllegalStateException("Could not read Lichess online bots.",e);}
+  }
+  /** Lichess does not expose a supported endpoint to list a bot's outgoing challenges. */
+  @Override public Set<String> currentOutgoingChallengeIds(String token) { return Set.of(); }
+  @Override public LichessChallengeSubmission challengeBot(String token,String username,BotChallengeConfiguration configuration) {
+    String body="rated="+configuration.rated()+"&variant="+configuration.variant()+"&clock.limit="+configuration.clockLimitSeconds()+"&clock.increment="+configuration.clockIncrementSeconds()+"&color=random";
+    try { HttpResponse<String> response=client.send(request(token,"/api/challenge/"+URLEncoder.encode(username,java.nio.charset.StandardCharsets.UTF_8)).header("Content-Type","application/x-www-form-urlencoded").POST(HttpRequest.BodyPublishers.ofString(body)).build(),HttpResponse.BodyHandlers.ofString()); if(response.statusCode()<200||response.statusCode()>=300)throw botFailure("create bot challenge",response); log.debug("Lichess challenge response: bot={} status={} body={}",username,response.statusCode(),response.body()); JsonNode parsed=json.readTree(response.body()); final JsonNode payload=parsed==null?json.createObjectNode():parsed; Optional<String> challenge=firstText(payload.path("challenge"),"id","challengeId").or(()->firstText(payload,"id","challengeId")); Optional<String> game=firstText(payload.path("game"),"id","gameId").or(()->firstText(payload,"gameId")); if(game.isPresent())return LichessChallengeSubmission.started(game.orElseThrow(),challenge); if(challenge.isPresent())return LichessChallengeSubmission.pending(challenge.orElseThrow()); log.info("Lichess acknowledged bot challenge without an id; waiting for account stream events: bot={}",username); return new LichessChallengeSubmission(Optional.empty(),Optional.empty()); }catch(InterruptedException e){Thread.currentThread().interrupt();throw new IllegalStateException("Lichess challenge request interrupted.",e);}catch(IOException e){throw new IllegalStateException("Could not create the Lichess bot challenge.",e);}
+  }
+  @Override public void cancelChallenge(String token,String challengeId){post(token,"/api/challenge/"+challengeId+"/cancel","");}
   public void acceptChallenge(String token,String id){post(token,"/api/challenge/"+id+"/accept","");}
   public void declineChallenge(String token,String id,String reason){post(token,"/api/challenge/"+id+"/decline","reason="+java.net.URLEncoder.encode(reason,java.nio.charset.StandardCharsets.UTF_8));}
   public void sendMove(String token,String gameId,String uci){post(token,"/api/bot/game/"+gameId+"/move/"+uci,"");}
@@ -63,6 +88,30 @@ public final class HttpLichessBotClient implements LichessBotClient {
       default -> new LichessTournamentRequestException(LichessTournamentRequestException.Kind.UNEXPECTED_RESPONSE,"Lichess tournament request failed (HTTP "+status+").");
     };
   }
+  private static IllegalStateException botFailure(String action,int status) { return switch(status) { case 401,403 -> new IllegalStateException("Lichess rejected the bot token while trying to "+action+"."); case 429 -> new IllegalStateException("Lichess is rate-limiting requests. Wait one minute before retrying."); default -> new IllegalStateException("Lichess could not "+action+" (HTTP "+status+")."); }; }
+  private IllegalStateException botFailure(String action, HttpResponse<String> response) {
+    int status = response.statusCode();
+    String detail = response.body();
+    try { detail = json.readTree(response.body()).path("error").asText(detail); }
+    catch (IOException ignored) { }
+    detail = detail == null ? "" : detail.replaceAll("\\s+", " ").trim();
+    String retryAfter = response.headers().firstValue("Retry-After").orElse("not provided");
+    log.warn("Lichess HTTP failure response: action={} status={} retryAfter={} body={}",
+        action, status, retryAfter, compact(response.body()));
+    if (status == 401 || status == 403) return botFailure(action, status);
+    String message = "Lichess could not " + action + " (HTTP " + status + ")"
+        + (detail.isBlank() ? "." : ": " + detail);
+    if (status == 429) return new IllegalStateException(
+        "Lichess is rate-limiting requests (HTTP 429, Retry-After: " + retryAfter + ")"
+            + (detail.isBlank() ? "." : ": " + detail));
+    return status == 400 ? new LichessBotChallengeRejectedException(message) : new IllegalStateException(message);
+  }
+  private static String compact(String body) {
+    if (body == null) return "";
+    String value = body.replaceAll("\\s+", " ").trim();
+    return value.length() <= 2000 ? value : value.substring(0, 2000) + "…";
+  }
+  private static Optional<String> firstText(JsonNode node,String... fields){for(String field:fields){String value=node.path(field).asText();if(!value.isBlank())return Optional.of(value);}return Optional.empty();}
   private HttpRequest.Builder request(String token,String path){return HttpRequest.newBuilder(URI.create(API+path)).timeout(TIMEOUT).header("Accept","application/x-ndjson, application/json").header("Authorization","Bearer "+required(token));}
   private static String required(String token){String v=Objects.requireNonNull(token).trim();if(v.isEmpty())throw new IllegalArgumentException("Lichess bot token must not be blank");return v;}
 }

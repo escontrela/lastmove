@@ -45,6 +45,21 @@ class KnightshadeArenaSettingsServiceTest {
   }
 
   @Test
+  void keepsEachValidatedLichessPerformance() {
+    InMemoryRepository repository = new InMemoryRepository();
+    LichessBotAccount verified = new LichessBotAccount("bot-id", "Knightshade",
+        Optional.of(1801), Optional.of(1750), Optional.empty(), Optional.empty());
+    KnightshadeArenaSettingsService service = service(repository, token -> verified);
+    service.updateBotToken("token-value");
+
+    LichessBotAccount account = service.validateConfiguredBotAccount();
+
+    assertEquals(Optional.of(1801), account.blitzRating());
+    assertEquals(Optional.of(1750), account.rapidRating());
+    assertTrue(account.standardRating().isEmpty());
+  }
+
+  @Test
   void rejectsBlankTokensAndDoesNotStoreThem() {
     InMemoryRepository repository = new InMemoryRepository();
     KnightshadeArenaSettingsService service = service(repository, token -> new LichessBotAccount("bot-id", "Knightshade"));

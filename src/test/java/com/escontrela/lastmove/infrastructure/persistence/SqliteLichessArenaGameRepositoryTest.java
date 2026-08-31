@@ -40,4 +40,18 @@ class SqliteLichessArenaGameRepositoryTest {
     assertEquals(Optional.of("https://lichess.org/game-1"), restored.gameUrl());
     assertEquals(ArenaGameStatus.ACTIVE, restored.status());
   }
+
+  @Test void persistsFriendlyBotsAcrossRepositoryInstances() {
+    Instant accepted = Instant.parse("2026-08-31T09:00:00Z");
+    repository.saveFriendlyBot(new FriendlyLichessBot("friendly", "Friendly Bot", Optional.of(1700),
+        accepted, accepted));
+    repository.saveFriendlyBot(new FriendlyLichessBot("friendly", "Friendly Bot", Optional.of(1750),
+        accepted.plusSeconds(30), accepted.plusSeconds(30)));
+
+    FriendlyLichessBot restored = repository.listFriendlyBots().getFirst();
+    assertEquals("friendly", restored.lichessId());
+    assertEquals(Optional.of(1750), restored.rating());
+    assertEquals(accepted, restored.firstAcceptedAt());
+    assertEquals(accepted.plusSeconds(30), restored.lastAcceptedAt());
+  }
 }

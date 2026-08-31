@@ -183,6 +183,22 @@ public final class ChessGame {
     return result;
   }
 
+  /** Finishes an externally adjudicated draw whose reason is not necessarily encoded on the board. */
+  public GameResult draw(GameTerminationReason reason) {
+    GameTerminationReason required = Objects.requireNonNull(reason, "reason must not be null");
+    if (required != GameTerminationReason.STALEMATE
+        && required != GameTerminationReason.THREEFOLD_REPETITION
+        && required != GameTerminationReason.DRAW_AGREEMENT
+        && required != GameTerminationReason.INSUFFICIENT_MATERIAL
+        && required != GameTerminationReason.FIFTY_MOVE_RULE) {
+      throw new IllegalArgumentException("reason must describe a drawn game");
+    }
+    requireGameInProgress();
+    result = GameResult.DRAW;
+    terminationReason = required;
+    return result;
+  }
+
   /**
    * Creates a takeback request anchored to the current last move.
    *

@@ -1,0 +1,3 @@
+package com.escontrela.lastmove.application.arena;
+
+public enum BotChallengeCycleStatus { IDLE, DISCOVERING, CHALLENGING, WAITING_FOR_GAME, WAITING_BETWEEN_CANDIDATES, WAITING_FOR_RATE_LIMIT, PLAYING, STOPPING, COMPLETED, STOPPED, ERROR }

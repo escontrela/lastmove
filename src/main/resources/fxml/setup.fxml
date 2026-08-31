@@ -93,7 +93,8 @@
                         <Label styleClass="settings-field-label" text="Maximum concurrent games" />
                         <Spinner fx:id="arenaMaximumGamesSpinner" editable="false" maxWidth="Infinity" />
                         <CheckBox fx:id="arenaAutomaticAcceptanceCheckBox" mnemonicParsing="false" styleClass="settings-check-box" text="Automatically accept eligible standard challenges" />
-                        <Label styleClass="card-copy" text="Arena currently accepts casual and rated standard chess at any clock, increment or rating. Variants and tournaments will be added in a later delivery." wrapText="true" />
+                        <CheckBox fx:id="arenaAutoReconnectCheckBox" mnemonicParsing="false" styleClass="settings-check-box" text="Auto-reconnect to Lichess when LastMove starts" />
+                        <Label styleClass="card-copy" text="Arena supports standard Lichess bot play, autonomous bot challenges and bot tournaments. Configure automatic reconnection to recover safely after restarting LastMove." wrapText="true" />
                         <HBox alignment="CENTER_LEFT" spacing="12.0">
                             <Button fx:id="validateLichessAccountButton" mnemonicParsing="false" onAction="#validateLichessAccount" styleClass="secondary-button" text="Validate account" />
                             <Label fx:id="lichessValidationLabel" maxWidth="Infinity" styleClass="settings-validation-message" wrapText="true" HBox.hgrow="ALWAYS" />

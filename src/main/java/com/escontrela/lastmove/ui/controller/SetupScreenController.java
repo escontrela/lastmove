@@ -87,6 +87,8 @@ public class SetupScreenController implements UiScreenController {
     @FXML
     private CheckBox arenaAutomaticAcceptanceCheckBox;
     @FXML
+    private CheckBox arenaAutoReconnectCheckBox;
+    @FXML
     private Button validateLichessAccountButton;
     @FXML
     private Label lichessValidationLabel;
@@ -205,6 +207,7 @@ public class SetupScreenController implements UiScreenController {
                 updateApplyButtonVisibility());
         arenaAutomaticAcceptanceCheckBox.selectedProperty().addListener((ignored, oldValue, newValue) ->
                 updateApplyButtonVisibility());
+        arenaAutoReconnectCheckBox.selectedProperty().addListener((ignored, oldValue, newValue) -> updateApplyButtonVisibility());
         lichessBotTokenField.textProperty().addListener((ignored, oldValue, newValue) -> {
             if (!loadingArenaToken) {
                 arenaTokenChanged = true;
@@ -250,6 +253,7 @@ public class SetupScreenController implements UiScreenController {
         savedArenaSettings = knightshadeArenaSettingsService.settings();
         arenaMaximumGamesSpinner.getValueFactory().setValue(savedArenaSettings.maximumConcurrentGames());
         arenaAutomaticAcceptanceCheckBox.setSelected(savedArenaSettings.automaticChallengeAcceptance());
+        arenaAutoReconnectCheckBox.setSelected(savedArenaSettings.autoReconnect());
         clearTokenField();
         arenaTokenChanged = false;
         clearSunfishValidation();
@@ -319,7 +323,7 @@ public class SetupScreenController implements UiScreenController {
             arenaTokenChanged = false;
         }
         savedArenaSettings = new KnightshadeArenaSettings(
-                arenaMaximumGamesSpinner.getValue(), arenaAutomaticAcceptanceCheckBox.isSelected());
+                arenaMaximumGamesSpinner.getValue(), arenaAutomaticAcceptanceCheckBox.isSelected(), arenaAutoReconnectCheckBox.isSelected());
         knightshadeArenaSettingsService.updateSettings(savedArenaSettings);
         clearLichessValidation();
     }
@@ -414,7 +418,7 @@ public class SetupScreenController implements UiScreenController {
                         effectiveAnalysisEngineDefaultId(), savedAnalysisEngineDefaultId)
                 || arenaTokenChanged
                 || !Objects.equals(new KnightshadeArenaSettings(
-                        arenaMaximumGamesSpinner.getValue(), arenaAutomaticAcceptanceCheckBox.isSelected()),
+                        arenaMaximumGamesSpinner.getValue(), arenaAutomaticAcceptanceCheckBox.isSelected(), arenaAutoReconnectCheckBox.isSelected()),
                         savedArenaSettings);
     }
 

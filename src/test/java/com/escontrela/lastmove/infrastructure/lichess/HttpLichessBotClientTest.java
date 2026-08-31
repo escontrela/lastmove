@@ -1,6 +1,7 @@
 package com.escontrela.lastmove.infrastructure.lichess;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.ByteArrayInputStream;
@@ -63,8 +64,75 @@ class HttpLichessBotClientTest {
     assertEquals(com.escontrela.lastmove.application.arena.LichessTournamentRequestException.Kind.RATE_LIMITED, failure.kind());
   }
 
+  @Test void readsOnlineBotsFromTheOfficialNdjsonEndpoint() {
+    FakeHttpClient http = new FakeHttpClient().enqueue(response(200,
+        "{\"id\":\"bot-one\",\"username\":\"Bot One\",\"perfs\":{\"blitz\":{\"rating\":1520}}}\n"
+            + "{\"id\":\"bot-two\",\"username\":\"Bot Two\",\"playing\":true,\"perfs\":{\"rapid\":{\"rating\":1810}}}\n"));
+    HttpLichessBotClient client = new HttpLichessBotClient(http, json);
+
+    var bots = client.onlineBots("token");
+
+    assertEquals(2, bots.size());
+    assertEquals(1520, bots.getFirst().rating().orElseThrow());
+    assertEquals(true, bots.getFirst().available());
+    assertEquals(false, bots.get(1).available());
+  }
+
+  @Test void acceptsAnImmediatelyStartedGameAsChallengeSubmission() {
+    FakeHttpClient http = new FakeHttpClient().enqueue(response(200, "{\"game\":{\"id\":\"game-now\"}}"));
+    HttpLichessBotClient client = new HttpLichessBotClient(http, json);
+
+    var submission = client.challengeBot("token", "maia1",
+        new com.escontrela.lastmove.application.arena.BotChallengeConfiguration(300, 0, "standard", false, 2000, 2, true, false));
+
+    assertEquals(java.util.Optional.of("game-now"), submission.gameId());
+    assertEquals(java.util.Optional.empty(), submission.challengeId());
+  }
+
+  @Test void acceptsAnEmptyAcknowledgementAndWaitsForTheAccountStream() {
+    FakeHttpClient http = new FakeHttpClient().enqueue(response(200, "{}"));
+    HttpLichessBotClient client = new HttpLichessBotClient(http, json);
+
+    var submission = client.challengeBot("token", "LeelaPieceOdds",
+        new com.escontrela.lastmove.application.arena.BotChallengeConfiguration(600, 0, "standard", true, 2000, 30, true, false));
+
+    assertTrue(submission.challengeId().isEmpty());
+    assertTrue(submission.gameId().isEmpty());
+  }
+
+  @Test void exposesLichessChallengeRejectionDetails() {
+    FakeHttpClient http = new FakeHttpClient().enqueue(response(400,
+        "{\"error\":\"This bot only accepts rated challenges.\"}"));
+    HttpLichessBotClient client = new HttpLichessBotClient(http, json);
+
+    IllegalStateException failure = org.junit.jupiter.api.Assertions.assertThrows(
+        IllegalStateException.class, () -> client.challengeBot("token", "turkjs",
+            new com.escontrela.lastmove.application.arena.BotChallengeConfiguration(
+                600, 0, "standard", true, 1800, 30, true, false)));
+
+    assertTrue(failure.getMessage().contains("This bot only accepts rated challenges."));
+  }
+
+  @Test void exposesRateLimitBodyAndRetryAfterFromChallengeResponse() {
+    FakeHttpClient http = new FakeHttpClient().enqueue(response(429,
+        "{\"error\":\"Too many requests; slow down.\"}", "75"));
+    HttpLichessBotClient client = new HttpLichessBotClient(http, json);
+
+    IllegalStateException failure = org.junit.jupiter.api.Assertions.assertThrows(
+        IllegalStateException.class, () -> client.challengeBot("token", "busy-bot",
+            new com.escontrela.lastmove.application.arena.BotChallengeConfiguration(
+                600, 0, "standard", true, 1800, 30, true, false)));
+
+    assertTrue(failure.getMessage().contains("HTTP 429"));
+    assertTrue(failure.getMessage().contains("Retry-After: 75"));
+    assertTrue(failure.getMessage().contains("Too many requests; slow down."));
+  }
+
   private static HttpResponse<InputStream> streamResponse(InputStream body) { return new TestResponse<>(200, body); }
   private static HttpResponse<String> response(int status, String body) { return new TestResponse<>(status, body); }
+  private static HttpResponse<String> response(int status, String body, String retryAfter) {
+    return new TestResponse<>(status, body, retryAfter);
+  }
 
   private static final class OneByteInputStream extends InputStream {
     private final ByteArrayInputStream delegate;
@@ -74,11 +142,13 @@ class HttpLichessBotClientTest {
   }
 
   private static final class TestResponse<T> implements HttpResponse<T> {
-    private final int status; private final T body;
-    TestResponse(int status, T body) { this.status = status; this.body = body; }
+    private final int status; private final T body; private final String retryAfter;
+    TestResponse(int status, T body) { this(status, body, null); }
+    TestResponse(int status, T body, String retryAfter) { this.status = status; this.body = body; this.retryAfter = retryAfter; }
     public int statusCode() { return status; } public HttpRequest request() { return null; }
     public Optional<HttpResponse<T>> previousResponse() { return Optional.empty(); }
-    public HttpHeaders headers() { return HttpHeaders.of(java.util.Map.of(), (a,b) -> true); }
+    public HttpHeaders headers() { return HttpHeaders.of(retryAfter == null ? java.util.Map.of()
+        : java.util.Map.of("Retry-After", List.of(retryAfter)), (a,b) -> true); }
     public T body() { return body; } public Optional<SSLSession> sslSession() { return Optional.empty(); }
     public URI uri() { return URI.create("https://lichess.org"); } public Version version() { return Version.HTTP_1_1; }
   }

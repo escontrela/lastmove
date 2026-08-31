@@ -35,6 +35,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 /** Normalized SQLite store for every persisted chess game; mode data stays in side tables. */
 @Repository
@@ -55,7 +56,7 @@ public class SqliteGameRepository implements SavedGameRepository {
     this.notifications = Objects.requireNonNull(notifications);
   }
 
-  @Override public void save(ChessGame game, SavedGameContext context) {
+  @Override @Transactional public void save(ChessGame game, SavedGameContext context) {
     if (!availability.isAvailable()) { fallback.save(game, context); return; }
     Objects.requireNonNull(game); Objects.requireNonNull(context);
     String id = game.id().value().toString(); var record = game.toRecord(); long now = Instant.now().toEpochMilli();
@@ -115,7 +116,7 @@ public class SqliteGameRepository implements SavedGameRepository {
   private void saveComputerConfiguration(String id, ComputerGameConfiguration c) {
     jdbc.update("INSERT INTO computer_game_configuration(game_id,human_name,human_color,engine_id,engine_thinking_ms) VALUES(?,?,?,?,?) ON CONFLICT(game_id) DO UPDATE SET human_name=excluded.human_name,human_color=excluded.human_color,engine_id=excluded.engine_id,engine_thinking_ms=excluded.engine_thinking_ms", id,c.humanName(),c.humanColor().name(),c.engineId(),c.engineThinkingTime().toMillis());
   }
-  @Override public Optional<SavedGame> findSaved(GameId gameId) {
+  @Override @Transactional(readOnly = true) public Optional<SavedGame> findSaved(GameId gameId) {
     if (!availability.isAvailable()) return fallback.findSaved(gameId);
     return jdbc.queryForList("SELECT * FROM games WHERE id=?", gameId.value().toString()).stream().findFirst().map(this::hydrate);
   }

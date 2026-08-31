@@ -132,6 +132,18 @@ class ChessGameTest {
   }
 
   @Test
+  void externallyAdjudicatedDrawIsPersistedWithItsReason() {
+    ChessGame game = newGame();
+
+    assertEquals(GameResult.DRAW, game.draw(GameTerminationReason.DRAW_AGREEMENT));
+
+    assertEquals(GameResult.DRAW, game.toRecord().result().orElseThrow());
+    assertEquals(GameTerminationReason.DRAW_AGREEMENT,
+        game.toRecord().terminationReason().orElseThrow());
+    assertFalse(game.move("e4").accepted());
+  }
+
+  @Test
   void acceptedTakebackRestoresPositionTurnAndBothClocks() {
     ChessGame game = newGame();
     PositionSnapshot initialPosition = game.initialPosition();

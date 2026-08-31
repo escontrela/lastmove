@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.escontrela.lastmove.application.arena.KnightshadeArenaSettings;
 import com.escontrela.lastmove.application.arena.LichessBotAccount;
 import java.util.UUID;
+import java.util.Optional;
 import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 import org.junit.jupiter.api.Test;
@@ -30,6 +31,22 @@ class PreferencesKnightshadeArenaSettingsRepositoryTest {
       repository.deleteBotToken();
 
       assertTrue(repository.findBotToken().isEmpty());
+    } finally {
+      node.removeNode();
+    }
+  }
+
+  @Test
+  void preservesEachDisplayedLichessRating() throws BackingStoreException {
+    Preferences node = Preferences.userRoot().node("lastmove-test/" + UUID.randomUUID());
+    try {
+      PreferencesKnightshadeArenaSettingsRepository repository = new PreferencesKnightshadeArenaSettingsRepository(node);
+      LichessBotAccount account = new LichessBotAccount("knightshade", "Knightshade Arena",
+          Optional.of(1840), Optional.of(1760), Optional.of(1690), Optional.empty());
+
+      repository.saveValidatedBotAccount(account);
+
+      assertEquals(account, repository.findValidatedBotAccount().orElseThrow());
     } finally {
       node.removeNode();
     }

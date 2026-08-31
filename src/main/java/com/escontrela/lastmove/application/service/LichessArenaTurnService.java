@@ -10,6 +10,8 @@ import com.escontrela.lastmove.domain.game.*;
 import com.escontrela.lastmove.domain.notation.Fen;
 import com.escontrela.lastmove.domain.player.*;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -52,14 +54,48 @@ public final class LichessArenaTurnService {
     Runtime runtime = runtimes.get(gameId);
     if (runtime == null || (!"gameFull".equals(type) && !"gameState".equals(type))) return;
     JsonNode state = "gameFull".equals(type) ? event.path("state") : event;
-    runtime.moves = state.path("moves").asText(); runtime.state = state;
-    persist(runtime, account);
+    boolean accepted;
+    synchronized (runtime) {
+      accepted = shouldAcceptState(runtime.moves, runtime.state, state);
+      if (accepted) {
+        runtime.moves = state.path("moves").asText();
+        runtime.state = state;
+        persist(runtime, account);
+      }
+    }
+    if (!accepted) {
+      log.info("Ignoring stale Lichess game state: gameId={} currentPlies={} incomingPlies={} status={}",
+          gameId, plyCount(runtime.moves), plyCount(state.path("moves").asText()),
+          state.path("status").asText());
+      return;
+    }
     log.info("Lichess game state reconciled: gameId={} localGameId={} type={} status={} plies={}", gameId, runtime.localGameId, type, state.path("status").asText(), plyCount(runtime.moves));
     request(gameId, runtime, token, client);
   }
 
   public void close(String gameId) { Optional.ofNullable(runtimes.remove(gameId)).ifPresent(Runtime::close); }
   public Optional<GameId> localGameId(String gameId) { return Optional.ofNullable(runtimes.get(gameId)).map(r -> r.localGameId); }
+
+  /** Persists the terminal account-stream summary when it arrives before the game stream. */
+  public void finishFromAccount(String gameId, JsonNode summary, LichessBotAccount account) {
+    Runtime runtime = runtimes.get(gameId);
+    if (runtime == null) return;
+    String status;
+    String winner;
+    synchronized (runtime) {
+      ObjectNode terminal = runtime.state != null && runtime.state.isObject()
+          ? ((ObjectNode) runtime.state).deepCopy()
+          : JsonNodeFactory.instance.objectNode();
+      status = status(summary.path("status"));
+      winner = summary.path("winner").asText("");
+      if (!status.isBlank()) terminal.put("status", status);
+      if (!winner.isBlank()) terminal.put("winner", winner);
+      runtime.state = terminal;
+      persist(runtime, account);
+    }
+    log.info("Lichess game finish reconciled from account stream: gameId={} status={} winner={}",
+        gameId, status, winner);
+  }
 
   private void request(String gameId, Runtime runtime, String token, LichessBotClient client) {
     if (!"started".equals(runtime.state.path("status").asText())) return;
@@ -81,7 +117,46 @@ public final class LichessArenaTurnService {
     GameRecord record=game.toRecord();
     return games.resume(runtime.localGameId,record.initialPosition(),record.currentPosition(),record.moves().stream().map(RecordedPly::ply).toList(),record.moves().stream().map(RecordedPly::clockBeforeMove).toList(),remoteClock(runtime),record.whitePlayer(),record.blackPlayer(),record.timeControl(),record.result(),record.terminationReason());
   }
-  private void persist(Runtime runtime, LichessBotAccount account) { ChessGame game=replay(runtime.initialFen,runtime.moves,runtime);String winner=runtime.state.path("winner").asText(),status=runtime.state.path("status").asText();if(game.result().isEmpty()&&!winner.isBlank()&&("resign".equals(status)||"outoftime".equals(status)))game.resign("white".equalsIgnoreCase(winner)?PieceColor.BLACK:PieceColor.WHITE);Player bot=players.findByExternalIdentity("LICHESS",account.id()).orElseGet(()->players.save(Player.knightshadeBot(account.id())));List<PlayerId> participants=new ArrayList<>();participants.add(bot.id());participant(runtime.whiteLichessId,runtime.whiteName).ifPresent(participants::add);participant(runtime.blackLichessId,runtime.blackName).ifPresent(participants::add);runtime.localGameId=game.id();GameType type=runtime.tournamentId.isPresent()?GameType.LICHESS_BOT_TOURNAMENT:GameType.HUMAN_VS_COMPUTER;Optional<ComputerGameConfiguration> configuration=type==GameType.HUMAN_VS_COMPUTER?Optional.of(new ComputerGameConfiguration(account.username(),runtime.color,runtime.timeControl,Optional.empty(),ComputerEngineIds.KNIGHTSHADE,DEFAULT_LIMIT)):Optional.empty();savedGames.save(game,new SavedGameContext(type,Optional.of(bot.id()),configuration,participants));}
+  private void persist(Runtime runtime, LichessBotAccount account) {
+    ChessGame game = replay(runtime.initialFen, runtime.moves, runtime);
+    String winner = runtime.state.path("winner").asText();
+    String status = status(runtime.state.path("status"));
+    if (game.result().isEmpty()) {
+      PieceColor loser = "white".equalsIgnoreCase(winner) ? PieceColor.BLACK : PieceColor.WHITE;
+      if (!winner.isBlank() && "resign".equals(status)) game.resign(loser);
+      else if (!winner.isBlank() && ("outoftime".equals(status) || "timeout".equals(status))) game.timeout(loser);
+      else {
+        GameTerminationReason drawReason = switch (status) {
+          case "stalemate" -> GameTerminationReason.STALEMATE;
+          case "repetition" -> GameTerminationReason.THREEFOLD_REPETITION;
+          case "insufficient" -> GameTerminationReason.INSUFFICIENT_MATERIAL;
+          case "fiftymoves" -> GameTerminationReason.FIFTY_MOVE_RULE;
+          case "draw" -> GameTerminationReason.DRAW_AGREEMENT;
+          default -> null;
+        };
+        if (drawReason != null) game.draw(drawReason);
+      }
+    }
+    Player bot = players.findByExternalIdentity("LICHESS", account.id())
+        .orElseGet(() -> players.save(Player.knightshadeBot(account.id())));
+    List<PlayerId> participants = new ArrayList<>();
+    participants.add(bot.id());
+    participant(runtime.whiteLichessId, runtime.whiteName).ifPresent(participants::add);
+    participant(runtime.blackLichessId, runtime.blackName).ifPresent(participants::add);
+    runtime.localGameId = game.id();
+    GameType type = runtime.tournamentId.isPresent()
+        ? GameType.LICHESS_BOT_TOURNAMENT : GameType.HUMAN_VS_COMPUTER;
+    Optional<ComputerGameConfiguration> configuration = type == GameType.HUMAN_VS_COMPUTER
+        ? Optional.of(new ComputerGameConfiguration(account.username(), runtime.color,
+            runtime.timeControl, Optional.empty(), ComputerEngineIds.KNIGHTSHADE, DEFAULT_LIMIT))
+        : Optional.empty();
+    savedGames.save(game, new SavedGameContext(type, Optional.of(bot.id()), configuration, participants));
+  }
+
+  private static String status(JsonNode node) {
+    if (node.isTextual()) return node.asText("").toLowerCase(Locale.ROOT);
+    return node.path("name").asText("").toLowerCase(Locale.ROOT);
+  }
   private static Duration limit(Runtime runtime) {
     long remaining = runtime.color == PieceColor.WHITE ? runtime.state.path("wtime").asLong() : runtime.state.path("btime").asLong();
     return remaining <= 0 ? DEFAULT_LIMIT : Duration.ofMillis(Math.max(100, Math.min(DEFAULT_LIMIT.toMillis(), remaining - 500)));
@@ -104,5 +179,17 @@ public final class LichessArenaTurnService {
   private static TimeControl timeControl(JsonNode clock){return clock.hasNonNull("initial")?TimeControl.of(Duration.ofMillis(clock.path("initial").asLong()),Duration.ofMillis(clock.path("increment").asLong())):TimeControl.unlimited();}
   private static GameClockSnapshot remoteClock(Runtime runtime){if(!runtime.timeControl.initialTime().isPresent())return GameClockSnapshot.initial(Optional.of(runtime.timeControl));return new GameClockSnapshot(Optional.of(Duration.ofMillis(Math.max(0,runtime.state.path("wtime").asLong()))),Optional.of(Duration.ofMillis(Math.max(0,runtime.state.path("btime").asLong()))));}
   private static int plyCount(String moves){return moves==null||moves.isBlank()?0:moves.trim().split("\\s+").length;}
+  static boolean shouldAcceptState(String currentMoves, JsonNode currentState, JsonNode incomingState) {
+    int currentPlies = plyCount(currentMoves);
+    int incomingPlies = plyCount(incomingState.path("moves").asText());
+    if (incomingPlies < currentPlies) return false;
+    if (incomingPlies > currentPlies) return true;
+    return !terminal(currentState) || terminal(incomingState);
+  }
+  private static boolean terminal(JsonNode state) {
+    if (state == null) return false;
+    String value = status(state.path("status"));
+    return !value.isBlank() && !"started".equals(value) && !"created".equals(value);
+  }
   private static final class Runtime { final String initialFen; final PieceColor color; final String whiteName,blackName; final Optional<String> whiteLichessId,blackLichessId,tournamentId; final TimeControl timeControl; final AtomicBoolean thinking = new AtomicBoolean(); volatile String moves = ""; volatile JsonNode state; volatile ComputerMoveEngine engine; volatile GameId localGameId; Runtime(String initialFen, PieceColor color,String whiteName,String blackName,Optional<String> whiteLichessId,Optional<String> blackLichessId,TimeControl timeControl,Optional<String> tournamentId) { this.initialFen=initialFen; this.color=color;this.whiteName=whiteName;this.blackName=blackName;this.whiteLichessId=whiteLichessId;this.blackLichessId=blackLichessId;this.timeControl=timeControl;this.tournamentId=tournamentId; } void close() { if(engine != null) { engine.cancelSearch(); engine.close(); } } }
 }
