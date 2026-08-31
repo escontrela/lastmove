@@ -2,39 +2,473 @@ package com.escontrela.lastmove.application.service;
 
 import com.escontrela.lastmove.application.arena.*;
 import com.escontrela.lastmove.application.event.LichessArenaEvent;
+import jakarta.annotation.PreDestroy;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.stereotype.Service;
+import java.util.concurrent.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Service;
 
-/** Long-lived, durable coordinator for outgoing challenges; it is deliberately independent of JavaFX. */
+/** Durable coordinator for outgoing bot challenges, independent of JavaFX. */
 @Service
 public final class BotChallengeCycleService {
-  private static final Logger log=LoggerFactory.getLogger(BotChallengeCycleService.class);
-  private final LichessArenaRepository repository; private final KnightshadeArenaSettingsRepository settings;
-  private final LichessBotClient client; private final ApplicationEventPublisher events;
-  private volatile List<LichessBotCandidate> bots = List.of(); private volatile Optional<String> botError = Optional.empty();
-  public BotChallengeCycleService(LichessArenaRepository repository, KnightshadeArenaSettingsRepository settings, LichessBotClient client, ApplicationEventPublisher events) { this.repository=repository; this.settings=settings; this.client=client; this.events=events; }
-  public List<LichessBotCandidate> bots() { return bots; } public Optional<String> botError() { return botError; } public BotChallengeCycle cycle() { return repository.botChallengeCycle(); }
-  public synchronized List<LichessBotCandidate> refreshBots() { try { bots=client.onlineBots(token()); botError=Optional.empty(); publish("bots:"+bots.size()); return bots; } catch(RuntimeException failure) { botError=Optional.ofNullable(failure.getMessage()).or(()->Optional.of("Could not load online bots.")); publish(botError.orElse("error")); return bots; } }
-  public synchronized BotChallengeCycle start(BotChallengeConfiguration configuration) { if(cycle().active()) throw new IllegalStateException("A bot challenge cycle is already active."); BotChallengeCycle next=new BotChallengeCycle(BotChallengeCycleStatus.DISCOVERING,configuration,List.of(),Optional.empty(),Optional.empty(),Optional.empty(),0,Optional.empty(),Optional.empty(),Instant.now()); save(next); challengeNext(); return cycle(); }
-  public synchronized BotChallengeCycle stop() { BotChallengeCycle old=cycle(); if(!old.active()) return old; if(old.currentGameId().isPresent()) { save(with(old,BotChallengeCycleStatus.STOPPING,old.currentBotId(),old.currentChallengeId(),old.currentGameId(),old.completedGames(),old.lastResult(),Optional.of("Stop requested; current game will finish."))); } else { old.currentChallengeId().ifPresent(id->{try{client.cancelChallenge(token(),id);}catch(RuntimeException ignored){}}); save(with(old,BotChallengeCycleStatus.STOPPED,Optional.empty(),Optional.empty(),Optional.empty(),old.completedGames(),old.lastResult(),Optional.of("Stopped by user."))); } return cycle(); }
-  public synchronized void onGameStarted(String gameId, Optional<String> challengeId) { onGameStarted(gameId, challengeId, Set.of()); }
-  /** Correlates by challenge id when available, otherwise by the selected opponent identity. */
-  public synchronized void onGameStarted(String gameId, Optional<String> challengeId, Set<String> playerIds) { BotChallengeCycle old=cycle(); if(!old.active()) return; boolean challengeMatches=old.currentChallengeId().isPresent()&&challengeId.filter(old.currentChallengeId().orElseThrow()::equals).isPresent(); boolean opponentMatches=old.currentBotId().map(expected->playerIds.stream().anyMatch(expected::equalsIgnoreCase)).orElse(false); boolean gameMatches=old.currentGameId().filter(gameId::equals).isPresent(); if(!challengeMatches&&!opponentMatches&&!gameMatches)return; save(with(old,BotChallengeCycleStatus.PLAYING,old.currentBotId(),challengeId.or(()->old.currentChallengeId()),Optional.of(gameId),old.completedGames(),old.lastResult(),Optional.empty())); }
-  public synchronized void onChallengeCanceled(String challengeId, String reason) { BotChallengeCycle old=cycle(); if(old.currentChallengeId().filter(challengeId::equals).isEmpty()) return; if(old.status()==BotChallengeCycleStatus.STOPPING) { save(with(old,BotChallengeCycleStatus.STOPPED,Optional.empty(),Optional.empty(),Optional.empty(),old.completedGames(),old.lastResult(),Optional.of("Stopped by user."))); return; } save(with(old,BotChallengeCycleStatus.DISCOVERING,Optional.empty(),Optional.empty(),Optional.empty(),old.completedGames(),old.lastResult(),Optional.of(reason))); challengeNext(); }
-  public synchronized void onGameFinished(String gameId, String result) { BotChallengeCycle old=cycle(); if(old.currentGameId().filter(gameId::equals).isEmpty()) return; int completed=old.completedGames()+1; if(old.status()==BotChallengeCycleStatus.STOPPING) { save(with(old,BotChallengeCycleStatus.STOPPED,Optional.empty(),Optional.empty(),Optional.empty(),completed,Optional.of(result),Optional.of("Stopped by user."))); return; } if(completed>=old.configuration().maximumGames()) { save(with(old,BotChallengeCycleStatus.COMPLETED,Optional.empty(),Optional.empty(),Optional.empty(),completed,Optional.of(result),Optional.of("Maximum games reached."))); return; } save(with(old,BotChallengeCycleStatus.DISCOVERING,Optional.empty(),Optional.empty(),Optional.empty(),completed,Optional.of(result),Optional.empty())); challengeNext(); }
-  /** Repairs persisted state from Lichess' authoritative active-games and outgoing-challenges views. */
-  public synchronized void reconcileRemoteState(Set<String> activeGameIds, Set<String> outgoingChallengeIds) { BotChallengeCycle state=cycle(); if(!state.active()) return; if(state.currentGameId().filter(activeGameIds::contains).isEmpty() && state.currentGameId().isPresent()) { onGameFinished(state.currentGameId().orElseThrow(),"Reconciled after stream interruption"); return; } if(state.currentGameId().isEmpty() && state.currentChallengeId().isPresent() && !outgoingChallengeIds.contains(state.currentChallengeId().orElseThrow())) { onChallengeCanceled(state.currentChallengeId().orElseThrow(),"Challenge is no longer pending on Lichess."); return; } if(state.status()==BotChallengeCycleStatus.ERROR&&state.currentGameId().isEmpty()&&state.currentChallengeId().isEmpty()&&activeGameIds.isEmpty()&&outgoingChallengeIds.isEmpty()) { save(with(state,BotChallengeCycleStatus.DISCOVERING,Optional.empty(),Optional.empty(),Optional.empty(),state.completedGames(),state.lastResult(),Optional.of("Retrying after Lichess reconciliation."))); challengeNext(); } }
-  /** Reconciles only active games. Lichess has no supported endpoint for listing outgoing bot challenges. */
-  public synchronized void reconcileActiveGames(Set<String> activeGameIds) { BotChallengeCycle state=cycle(); if(!state.active()) return; if(state.currentGameId().filter(activeGameIds::contains).isEmpty() && state.currentGameId().isPresent()) { onGameFinished(state.currentGameId().orElseThrow(),"Reconciled after stream interruption"); return; } if(state.status()==BotChallengeCycleStatus.ERROR&&state.currentGameId().isEmpty()&&state.currentChallengeId().isEmpty()&&activeGameIds.isEmpty()) { log.info("Retrying autonomous bot cycle after active-game reconciliation"); save(with(state,BotChallengeCycleStatus.DISCOVERING,Optional.empty(),Optional.empty(),Optional.empty(),state.completedGames(),state.lastResult(),Optional.of("Retrying after Lichess reconciliation."))); challengeNext(); } }
-  /** Re-enters a persisted active cycle after Lichess streams have reconciled. */
-  public synchronized void resume() { BotChallengeCycle state=cycle(); if(!state.active()) return; if(state.status()==BotChallengeCycleStatus.DISCOVERING||state.status()==BotChallengeCycleStatus.CHALLENGING) challengeNext(); else publish(state.status().name()); }
-  private void challengeNext() { BotChallengeCycle old=cycle(); if(!old.active()||old.status()==BotChallengeCycleStatus.STOPPING||old.status()==BotChallengeCycleStatus.ERROR) return; if(bots.isEmpty()) refreshBots(); List<LichessBotCandidate> eligible=bots.stream().filter(LichessBotCandidate::available).filter(bot->bot.rating().map(r->r>=old.configuration().minimumOpponentRating()&&r<=old.configuration().maximumOpponentRating()).orElse(false)).filter(bot->!old.currentBotId().filter(id->id.equalsIgnoreCase(bot.id())).isPresent()).toList(); List<LichessBotCandidate> fresh=eligible.stream().filter(bot->!old.attemptedBotIds().contains(bot.id())).toList(); List<LichessBotCandidate> pool=!fresh.isEmpty()?fresh:(old.configuration().allowRepeatWhenExhausted()?eligible:List.of()); if(pool.isEmpty()) { log.info("No eligible online bot remains: candidates={}, attempted={}, ratingRange={}-{}",eligible.size(),old.attemptedBotIds().size(),old.configuration().minimumOpponentRating(),old.configuration().maximumOpponentRating()); save(with(old,BotChallengeCycleStatus.COMPLETED,Optional.empty(),Optional.empty(),Optional.empty(),old.completedGames(),old.lastResult(),Optional.of("No eligible online bot remains."))); return; } LichessBotCandidate chosen=pool.get(0); List<String> attempted=new ArrayList<>(old.attemptedBotIds()); if(!attempted.contains(chosen.id())) attempted.add(chosen.id()); BotChallengeCycle challenging=new BotChallengeCycle(BotChallengeCycleStatus.CHALLENGING,old.configuration(),attempted,Optional.of(chosen.id()),Optional.empty(),Optional.empty(),old.completedGames(),old.lastResult(),Optional.empty(),Instant.now()); save(challenging); log.info("Challenging online bot: bot={} rating={} clockLimitSeconds={} incrementSeconds={} rated={} attempt={}",chosen.username(),chosen.rating().map(Object::toString).orElse("unknown"),old.configuration().clockLimitSeconds(),old.configuration().clockIncrementSeconds(),old.configuration().rated(),attempted.size()); try { LichessChallengeSubmission submission=client.challengeBot(token(),chosen.username(),old.configuration()); BotChallengeCycleStatus status=submission.gameId().isPresent()?BotChallengeCycleStatus.PLAYING:BotChallengeCycleStatus.WAITING_FOR_GAME; save(with(challenging,status,Optional.of(chosen.id()),submission.challengeId(),submission.gameId(),old.completedGames(),old.lastResult(),Optional.empty())); }catch(LichessBotChallengeRejectedException rejection){log.info("Bot challenge rejected; trying another eligible bot: bot={} reason={}",chosen.username(),rejection.getMessage());save(with(challenging,BotChallengeCycleStatus.DISCOVERING,Optional.empty(),Optional.empty(),Optional.empty(),old.completedGames(),old.lastResult(),Optional.of(rejection.getMessage())));challengeNext();}catch(RuntimeException failure){log.warn("Bot challenge failed unexpectedly: bot={}",chosen.username(),failure);save(with(challenging,BotChallengeCycleStatus.ERROR,Optional.of(chosen.id()),Optional.empty(),Optional.empty(),old.completedGames(),old.lastResult(),Optional.ofNullable(failure.getMessage())));}}
-  private BotChallengeCycle with(BotChallengeCycle old,BotChallengeCycleStatus status,Optional<String> bot,Optional<String> challenge,Optional<String> game,int completed,Optional<String> result,Optional<String> reason){return new BotChallengeCycle(status,old.configuration(),old.attemptedBotIds(),bot,challenge,game,completed,result,reason,Instant.now());}
-  private void save(BotChallengeCycle state){repository.saveBotChallengeCycle(state);publish(state.status()+" · "+state.completedGames()+"/"+state.configuration().maximumGames());}
-  private String token(){return settings.findBotToken().orElseThrow(()->new IllegalStateException("Configure a Lichess bot token before starting the cycle."));}
-  private void publish(String detail){events.publishEvent(new LichessArenaEvent(LichessArenaEvent.Type.BOT_CYCLE_UPDATED,"bot-cycle",detail));}
+  private static final Logger log = LoggerFactory.getLogger(BotChallengeCycleService.class);
+  static final Duration PENDING_CHALLENGE_TIMEOUT = Duration.ofSeconds(20);
+  static final Duration REJECTED_BOT_RETRY_DELAY = Duration.ofSeconds(10);
+  static final Duration RATE_LIMIT_RETRY_DELAY = Duration.ofMinutes(1);
+
+  private final LichessArenaRepository repository;
+  private final KnightshadeArenaSettingsRepository settings;
+  private final LichessBotClient client;
+  private final ApplicationEventPublisher events;
+  private final ScheduledExecutorService retryScheduler;
+  private final Duration rejectedRetryDelay;
+  private final Duration rateLimitRetryDelay;
+  private final Set<String> challengedBotIds = ConcurrentHashMap.newKeySet();
+  private final Set<String> rejectedBotIds = ConcurrentHashMap.newKeySet();
+  private final Map<String, String> challengeResults = new ConcurrentHashMap<>();
+  private volatile List<LichessBotCandidate> bots = List.of();
+  private volatile Optional<String> botError = Optional.empty();
+  private ScheduledFuture<?> scheduledRetry;
+
+  @Autowired
+  public BotChallengeCycleService(LichessArenaRepository repository,
+      KnightshadeArenaSettingsRepository settings, LichessBotClient client,
+      ApplicationEventPublisher events) {
+    this(repository, settings, client, events, daemonScheduler(),
+        REJECTED_BOT_RETRY_DELAY, RATE_LIMIT_RETRY_DELAY);
+  }
+
+  BotChallengeCycleService(LichessArenaRepository repository,
+      KnightshadeArenaSettingsRepository settings, LichessBotClient client,
+      ApplicationEventPublisher events, ScheduledExecutorService scheduler) {
+    this(repository, settings, client, events, scheduler,
+        REJECTED_BOT_RETRY_DELAY, RATE_LIMIT_RETRY_DELAY);
+  }
+
+  BotChallengeCycleService(LichessArenaRepository repository,
+      KnightshadeArenaSettingsRepository settings, LichessBotClient client,
+      ApplicationEventPublisher events, ScheduledExecutorService scheduler, Duration retryDelay) {
+    this(repository, settings, client, events, scheduler, retryDelay, retryDelay);
+  }
+
+  BotChallengeCycleService(LichessArenaRepository repository,
+      KnightshadeArenaSettingsRepository settings, LichessBotClient client,
+      ApplicationEventPublisher events, ScheduledExecutorService scheduler,
+      Duration rejectedRetryDelay, Duration rateLimitRetryDelay) {
+    this.repository = Objects.requireNonNull(repository);
+    this.settings = Objects.requireNonNull(settings);
+    this.client = Objects.requireNonNull(client);
+    this.events = Objects.requireNonNull(events);
+    this.retryScheduler = Objects.requireNonNull(scheduler);
+    this.rejectedRetryDelay = Objects.requireNonNull(rejectedRetryDelay);
+    this.rateLimitRetryDelay = Objects.requireNonNull(rateLimitRetryDelay);
+  }
+
+  public List<LichessBotCandidate> bots() { return bots; }
+  public Optional<String> botError() { return botError; }
+  public BotChallengeCycle cycle() { return repository.botChallengeCycle(); }
+  public Set<String> challengedBotIds() { return Set.copyOf(challengedBotIds); }
+  public Set<String> rejectedBotIds() { return Set.copyOf(rejectedBotIds); }
+  public Map<String, String> challengeResults() { return Map.copyOf(challengeResults); }
+
+  public void markBotChallengeSent(String botId) {
+    if (blank(botId)) return;
+    challengedBotIds.add(botId);
+    challengeResults.put(botId, "CHALLENGED");
+    publish("bot-challenged:" + botId);
+  }
+
+  public void markBotChallengeRejected(String botId) { markBotChallengeRejected(botId, "Rejected"); }
+
+  public void markBotChallengeRejected(String botId, String reason) {
+    if (blank(botId)) return;
+    challengedBotIds.remove(botId);
+    rejectedBotIds.add(botId);
+    challengeResults.put(botId, "REJECTED — " + readable(reason, "Rejected"));
+    publish("bot-rejected:" + botId);
+  }
+
+  public void markBotChallengeAccepted(String botId) {
+    if (blank(botId)) return;
+    challengedBotIds.remove(botId);
+    challengeResults.put(botId, "ACCEPTED");
+    publish("bot-accepted:" + botId);
+  }
+
+  public synchronized List<LichessBotCandidate> refreshBots() {
+    try {
+      bots = List.copyOf(client.onlineBots(token()));
+      botError = Optional.empty();
+      publish("bots:" + bots.size());
+    } catch (RuntimeException failure) {
+      botError = Optional.of(readable(failure.getMessage(), "Could not load online bots."));
+      publish(botError.orElseThrow());
+    }
+    return bots;
+  }
+
+  public synchronized BotChallengeCycle start(BotChallengeConfiguration configuration) {
+    if (cycle().active()) throw new IllegalStateException("A bot challenge cycle is already active.");
+    cancelScheduledRetry();
+    challengedBotIds.clear();
+    rejectedBotIds.clear();
+    challengeResults.clear();
+    save(new BotChallengeCycle(BotChallengeCycleStatus.DISCOVERING, configuration, List.of(),
+        Optional.empty(), Optional.empty(), Optional.empty(), 0, Optional.empty(),
+        Optional.empty(), Instant.now()));
+    challengeNext();
+    return cycle();
+  }
+
+  public synchronized BotChallengeCycle stop() {
+    BotChallengeCycle state = cycle();
+    if (!state.active()) return state;
+    cancelScheduledRetry();
+    if (state.currentGameId().isPresent()) {
+      save(copy(state, BotChallengeCycleStatus.STOPPING, state.currentBotId(),
+          state.currentChallengeId(), state.currentGameId(), state.completedGames(),
+          state.lastResult(), Optional.of("Stop requested; current game will finish.")));
+    } else {
+      state.currentChallengeId().ifPresent(this::cancelQuietly);
+      challengedBotIds.clear();
+      save(copy(state, BotChallengeCycleStatus.STOPPED, Optional.empty(), Optional.empty(),
+          Optional.empty(), state.completedGames(), state.lastResult(),
+          Optional.of("Stopped by user.")));
+    }
+    return cycle();
+  }
+
+  public synchronized void onGameStarted(String gameId, Optional<String> challengeId) {
+    onGameStarted(gameId, challengeId, Set.of());
+  }
+
+  public synchronized void onGameStarted(String gameId, Optional<String> challengeId,
+      Set<String> playerIds) {
+    BotChallengeCycle state = cycle();
+    if (!state.active()) {
+      playerIds.stream().filter(id -> containsIgnoreCase(challengedBotIds, id))
+          .findFirst().ifPresent(this::markBotChallengeAccepted);
+      return;
+    }
+    boolean challengeMatches = state.currentChallengeId().isPresent()
+        && challengeId.filter(state.currentChallengeId().orElseThrow()::equals).isPresent();
+    boolean opponentMatches = state.currentBotId()
+        .map(expected -> playerIds.stream().anyMatch(expected::equalsIgnoreCase)).orElse(false);
+    boolean gameMatches = state.currentGameId().filter(gameId::equals).isPresent();
+    if (!challengeMatches && !opponentMatches && !gameMatches) return;
+    cancelScheduledRetry();
+    state.currentBotId().ifPresent(this::markBotChallengeAccepted);
+    save(copy(state, BotChallengeCycleStatus.PLAYING, state.currentBotId(),
+        challengeId.or(state::currentChallengeId), Optional.of(gameId), state.completedGames(),
+        state.lastResult(), Optional.empty()));
+  }
+
+  public synchronized void onChallengeCanceled(String challengeId, String reason) {
+    onChallengeEnded(Optional.of(challengeId), Optional.empty(), reason);
+  }
+
+  public synchronized void onChallengeDeclined(Optional<String> challengeId,
+      Optional<String> opponentId, String reason) {
+    onChallengeEnded(challengeId, opponentId, reason);
+  }
+
+  private void onChallengeEnded(Optional<String> challengeId, Optional<String> opponentId,
+      String reason) {
+    BotChallengeCycle state = cycle();
+    if (!state.active()) {
+      opponentId.filter(id -> containsIgnoreCase(challengedBotIds, id))
+          .ifPresent(id -> markBotChallengeRejected(id, reason));
+      return;
+    }
+    boolean challengeMatches = challengeId.isPresent()
+        && state.currentChallengeId().filter(challengeId.orElseThrow()::equals).isPresent();
+    boolean opponentMatches = state.currentBotId().isPresent()
+        && opponentId.map(candidate -> state.currentBotId().orElseThrow()
+            .equalsIgnoreCase(candidate)).orElse(false);
+    if (!challengeMatches && !opponentMatches) return;
+    String botId = state.currentBotId().orElse("unknown");
+    markBotChallengeRejected(botId, reason);
+    log.info("Outgoing challenge closed: bot={} challenge={} reason={}", botId,
+        state.currentChallengeId().orElse("unknown"), reason);
+    if (state.status() == BotChallengeCycleStatus.STOPPING) {
+      save(copy(state, BotChallengeCycleStatus.STOPPED, Optional.empty(), Optional.empty(),
+          Optional.empty(), state.completedGames(), state.lastResult(),
+          Optional.of("Stopped by user.")));
+      return;
+    }
+    waitBeforeNextCandidate(state, reason);
+  }
+
+  public synchronized void expireStalePendingChallenge() {
+    BotChallengeCycle state = cycle();
+    if (state.status() != BotChallengeCycleStatus.WAITING_FOR_GAME
+        || state.updatedAt().isAfter(Instant.now().minus(PENDING_CHALLENGE_TIMEOUT))) return;
+    String botId = state.currentBotId().orElse("unknown");
+    state.currentChallengeId().ifPresent(this::cancelQuietly);
+    markBotChallengeRejected(botId, "No response; challenge timed out");
+    waitBeforeNextCandidate(state, "No response from " + botId + "; challenge timed out.");
+  }
+
+  public synchronized void onGameFinished(String gameId, String result) {
+    BotChallengeCycle state = cycle();
+    if (state.currentGameId().filter(gameId::equals).isEmpty()) return;
+    int completed = state.completedGames() + 1;
+    if (state.status() == BotChallengeCycleStatus.STOPPING) {
+      save(copy(state, BotChallengeCycleStatus.STOPPED, Optional.empty(), Optional.empty(),
+          Optional.empty(), completed, Optional.of(result), Optional.of("Stopped by user.")));
+    } else if (completed >= state.configuration().maximumGames()) {
+      save(copy(state, BotChallengeCycleStatus.COMPLETED, Optional.empty(), Optional.empty(),
+          Optional.empty(), completed, Optional.of(result), Optional.of("Maximum games reached.")));
+    } else {
+      save(copy(state, BotChallengeCycleStatus.DISCOVERING, Optional.empty(), Optional.empty(),
+          Optional.empty(), completed, Optional.of(result), Optional.empty()));
+      challengeNext();
+    }
+  }
+
+  public synchronized void reconcileRemoteState(Set<String> activeGameIds,
+      Set<String> outgoingChallengeIds) {
+    BotChallengeCycle state = cycle();
+    if (!state.active()) return;
+    if (state.currentGameId().isPresent()
+        && !activeGameIds.contains(state.currentGameId().orElseThrow())) {
+      onGameFinished(state.currentGameId().orElseThrow(), "Reconciled after stream interruption");
+      return;
+    }
+    if (state.currentGameId().isEmpty() && state.currentChallengeId().isPresent()
+        && !outgoingChallengeIds.contains(state.currentChallengeId().orElseThrow())) {
+      onChallengeCanceled(state.currentChallengeId().orElseThrow(),
+          "Challenge is no longer pending on Lichess.");
+      return;
+    }
+    recoverErroredCycle(state, activeGameIds);
+  }
+
+  public synchronized void reconcileActiveGames(Set<String> activeGameIds) {
+    BotChallengeCycle state = cycle();
+    if (!state.active()) return;
+    if (state.currentGameId().isPresent()
+        && !activeGameIds.contains(state.currentGameId().orElseThrow())) {
+      onGameFinished(state.currentGameId().orElseThrow(), "Reconciled after stream interruption");
+      return;
+    }
+    recoverErroredCycle(state, activeGameIds);
+  }
+
+  /** Rebuilds timers lost on restart and resumes safe transient states. */
+  public synchronized void resume() {
+    BotChallengeCycle state = cycle();
+    if (!state.active() || scheduledRetry != null) return;
+    switch (state.status()) {
+      case DISCOVERING, CHALLENGING -> challengeNext();
+      case WAITING_BETWEEN_CANDIDATES -> scheduleRemaining(state, rejectedRetryDelay, false);
+      case WAITING_FOR_RATE_LIMIT -> scheduleRemaining(state, rateLimitRetryDelay, true);
+      default -> publish(state.status().name());
+    }
+  }
+
+  private void challengeNext() {
+    BotChallengeCycle state = cycle();
+    if (state.status() != BotChallengeCycleStatus.DISCOVERING
+        && state.status() != BotChallengeCycleStatus.CHALLENGING) return;
+    refreshBots();
+    if (botError.isPresent()) {
+      waitForTransientFailure(state, botError.orElseThrow());
+      return;
+    }
+    List<LichessBotCandidate> eligible = bots.stream()
+        .filter(LichessBotCandidate::available)
+        .filter(bot -> !containsIgnoreCase(rejectedBotIds, bot.id()))
+        .filter(bot -> bot.rating().map(rating -> rating >= state.configuration().minimumOpponentRating()
+            && rating <= state.configuration().maximumOpponentRating()).orElse(false))
+        .toList();
+    List<LichessBotCandidate> fresh = eligible.stream()
+        .filter(bot -> !containsIgnoreCase(state.attemptedBotIds(), bot.id())).toList();
+    boolean startingNewRound = fresh.isEmpty()
+        && state.configuration().allowRepeatWhenExhausted() && !eligible.isEmpty();
+    List<LichessBotCandidate> pool = !fresh.isEmpty() ? fresh
+        : startingNewRound ? eligible : List.of();
+    if (pool.isEmpty()) {
+      save(copy(state, BotChallengeCycleStatus.COMPLETED, Optional.empty(), Optional.empty(),
+          Optional.empty(), state.completedGames(), state.lastResult(),
+          Optional.of("No eligible online bot remains.")));
+      return;
+    }
+    LichessBotCandidate chosen = pool.getFirst();
+    List<String> attempted = new ArrayList<>(startingNewRound ? List.of() : state.attemptedBotIds());
+    if (!containsIgnoreCase(attempted, chosen.id())) attempted.add(chosen.id());
+    BotChallengeCycle challenging = new BotChallengeCycle(BotChallengeCycleStatus.CHALLENGING,
+        state.configuration(), attempted, Optional.of(chosen.id()), Optional.empty(),
+        Optional.empty(), state.completedGames(), state.lastResult(), Optional.empty(), Instant.now());
+    markBotChallengeSent(chosen.id());
+    save(challenging);
+    log.info("Challenging online bot: bot={} rating={} attempt={}", chosen.username(),
+        chosen.rating().map(Object::toString).orElse("unknown"), attempted.size());
+    try {
+      LichessChallengeSubmission submission = client.challengeBot(token(), chosen.username(),
+          state.configuration());
+      BotChallengeCycleStatus next = submission.gameId().isPresent()
+          ? BotChallengeCycleStatus.PLAYING : BotChallengeCycleStatus.WAITING_FOR_GAME;
+      submission.challengeId().ifPresent(id -> logOutgoingChallenge(id, chosen, state.configuration(), null));
+      if (submission.gameId().isPresent()) markBotChallengeAccepted(chosen.id());
+      save(copy(challenging, next, Optional.of(chosen.id()), submission.challengeId(),
+          submission.gameId(), state.completedGames(), state.lastResult(), Optional.empty()));
+    } catch (LichessBotChallengeRejectedException rejection) {
+      if (isRateLimited(rejection.getMessage())) waitForRateLimit(challenging, chosen);
+      else rejectAndContinue(challenging, chosen, rejection.getMessage());
+    } catch (RuntimeException failure) {
+      if (isRateLimited(failure.getMessage())) waitForRateLimit(challenging, chosen);
+      else waitForTransientFailure(challenging,
+          readable(failure.getMessage(), "Temporary challenge submission failure"));
+    }
+  }
+
+  private void rejectAndContinue(BotChallengeCycle state, LichessBotCandidate bot, String reason) {
+    markBotChallengeRejected(bot.id(), reason);
+    waitBeforeNextCandidate(state, reason);
+  }
+
+  private void waitBeforeNextCandidate(BotChallengeCycle state, String reason) {
+    save(copy(state, BotChallengeCycleStatus.WAITING_BETWEEN_CANDIDATES, Optional.empty(),
+        Optional.empty(), Optional.empty(), state.completedGames(), state.lastResult(),
+        Optional.of("Waiting 10 seconds before next candidate — " + readable(reason, "rejected"))));
+    scheduleRetry(rejectedRetryDelay, false);
+  }
+
+  private void waitForTransientFailure(BotChallengeCycle state, String reason) {
+    challengedBotIds.clear();
+    save(copy(state, BotChallengeCycleStatus.WAITING_BETWEEN_CANDIDATES, Optional.empty(),
+        Optional.empty(), Optional.empty(), state.completedGames(), state.lastResult(),
+        Optional.of("Temporary Lichess error; retrying in 10 seconds — " + reason)));
+    scheduleRetry(rejectedRetryDelay, false);
+  }
+
+  private void waitForRateLimit(BotChallengeCycle state, LichessBotCandidate bot) {
+    challengedBotIds.remove(bot.id());
+    String message = "Waiting for rate limiting...";
+    logOutgoingChallenge("bot-rate-limit:" + bot.id() + ":" + Instant.now().toEpochMilli(),
+        bot, state.configuration(), message);
+    save(copy(state, BotChallengeCycleStatus.WAITING_FOR_RATE_LIMIT, Optional.empty(),
+        Optional.empty(), Optional.empty(), state.completedGames(), state.lastResult(),
+        Optional.of(message)));
+    scheduleRetry(rateLimitRetryDelay, true);
+  }
+
+  private void scheduleRemaining(BotChallengeCycle state, Duration delay, boolean resetRound) {
+    Duration remaining = delay.minus(Duration.between(state.updatedAt(), Instant.now()));
+    scheduleRetry(remaining.isNegative() ? Duration.ZERO : remaining, resetRound);
+  }
+
+  private void scheduleRetry(Duration delay, boolean resetRound) {
+    cancelScheduledRetry();
+    log.info("Bot challenge retry scheduled: retryInSeconds={} resetRound={}", delay.toSeconds(), resetRound);
+    scheduledRetry = retryScheduler.schedule(() -> {
+      synchronized (this) {
+        scheduledRetry = null;
+        continueAfterWait(resetRound);
+      }
+    }, Math.max(0, delay.toMillis()), TimeUnit.MILLISECONDS);
+  }
+
+  private void continueAfterWait(boolean resetRound) {
+    BotChallengeCycle state = cycle();
+    if (state.status() != BotChallengeCycleStatus.WAITING_BETWEEN_CANDIDATES
+        && state.status() != BotChallengeCycleStatus.WAITING_FOR_RATE_LIMIT) return;
+    List<String> attempted = resetRound ? List.of() : state.attemptedBotIds();
+    if (resetRound) refreshBots();
+    save(new BotChallengeCycle(BotChallengeCycleStatus.DISCOVERING, state.configuration(),
+        attempted, Optional.empty(), Optional.empty(), Optional.empty(), state.completedGames(),
+        state.lastResult(), Optional.empty(), Instant.now()));
+    challengeNext();
+  }
+
+  /** Deterministic hook for testing delayed transitions without sleeping. */
+  synchronized void triggerScheduledRetryForTest() {
+    BotChallengeCycle state = cycle();
+    boolean resetRound = state.status() == BotChallengeCycleStatus.WAITING_FOR_RATE_LIMIT;
+    cancelScheduledRetry();
+    continueAfterWait(resetRound);
+  }
+
+  private void recoverErroredCycle(BotChallengeCycle state, Set<String> activeGameIds) {
+    if (state.status() == BotChallengeCycleStatus.ERROR && state.currentGameId().isEmpty()
+        && state.currentChallengeId().isEmpty() && activeGameIds.isEmpty())
+      waitForTransientFailure(state, "Retrying after Lichess reconciliation");
+  }
+
+  private void logOutgoingChallenge(String challengeId, LichessBotCandidate bot,
+      BotChallengeConfiguration configuration, String reason) {
+    try {
+      Instant now = Instant.now();
+      repository.saveChallenge(new ArenaChallenge(challengeId, Optional.of(bot.id()), bot.username(),
+          bot.rating(), configuration.variant(), configuration.rated(),
+          Optional.of(configuration.clockLimitSeconds()), Optional.of(configuration.clockIncrementSeconds()),
+          ArenaChallengeDecision.SENT, Optional.ofNullable(reason), now, Optional.empty(), now));
+    } catch (RuntimeException failure) {
+      log.warn("Could not persist outgoing challenge: bot={} challenge={}", bot.username(), challengeId, failure);
+    }
+  }
+
+  private BotChallengeCycle copy(BotChallengeCycle old, BotChallengeCycleStatus status,
+      Optional<String> bot, Optional<String> challenge, Optional<String> game, int completed,
+      Optional<String> result, Optional<String> reason) {
+    return new BotChallengeCycle(status, old.configuration(), old.attemptedBotIds(), bot,
+        challenge, game, completed, result, reason, Instant.now());
+  }
+
+  private void cancelQuietly(String challengeId) {
+    try { client.cancelChallenge(token(), challengeId); }
+    catch (RuntimeException failure) { log.debug("Could not cancel challenge {}", challengeId, failure); }
+  }
+
+  private void cancelScheduledRetry() {
+    if (scheduledRetry != null) { scheduledRetry.cancel(false); scheduledRetry = null; }
+  }
+
+  private void save(BotChallengeCycle state) {
+    repository.saveBotChallengeCycle(state);
+    publish(state.status() + " · " + state.completedGames() + "/" + state.configuration().maximumGames());
+  }
+
+  private String token() {
+    return settings.findBotToken().orElseThrow(() ->
+        new IllegalStateException("Configure a Lichess bot token before starting the cycle."));
+  }
+
+  private void publish(String detail) {
+    events.publishEvent(new LichessArenaEvent(LichessArenaEvent.Type.BOT_CYCLE_UPDATED, "bot-cycle", detail));
+  }
+
+  private static boolean containsIgnoreCase(Collection<String> values, String candidate) {
+    return values.stream().anyMatch(candidate::equalsIgnoreCase);
+  }
+
+  private static boolean isRateLimited(String reason) {
+    if (reason == null) return false;
+    String normalized = reason.toLowerCase(Locale.ROOT);
+    return normalized.contains("rate limit") || normalized.contains("rate-limit")
+        || normalized.contains("rate limiting")
+        || (normalized.contains("games against other bots") && normalized.contains("wait"));
+  }
+
+  private static String readable(String value, String fallback) {
+    return value == null || value.isBlank() ? fallback : value;
+  }
+
+  private static boolean blank(String value) { return value == null || value.isBlank(); }
+
+  private static ScheduledExecutorService daemonScheduler() {
+    return Executors.newSingleThreadScheduledExecutor(task -> {
+      Thread thread = new Thread(task, "lichess-bot-challenge-retry");
+      thread.setDaemon(true);
+      return thread;
+    });
+  }
+
+  @PreDestroy void close() { retryScheduler.shutdownNow(); }
 }

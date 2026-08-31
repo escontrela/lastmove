@@ -21,5 +21,5 @@ public record BotChallengeCycle(BotChallengeCycleStatus status, BotChallengeConf
     updatedAt = updatedAt == null ? Instant.now() : updatedAt;
   }
   public static BotChallengeCycle idle() { return new BotChallengeCycle(BotChallengeCycleStatus.IDLE, BotChallengeConfiguration.defaults(), List.of(), Optional.empty(), Optional.empty(), Optional.empty(), 0, Optional.empty(), Optional.empty(), Instant.now()); }
-  public boolean active() { return switch (status) { case DISCOVERING, CHALLENGING, WAITING_FOR_GAME, PLAYING, STOPPING, ERROR -> true; default -> false; }; }
+  public boolean active() { return switch (status) { case DISCOVERING, CHALLENGING, WAITING_FOR_GAME, WAITING_BETWEEN_CANDIDATES, WAITING_FOR_RATE_LIMIT, PLAYING, STOPPING, ERROR -> true; default -> false; }; }
 }

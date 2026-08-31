@@ -6,6 +6,10 @@
     -fx-background-color: #ffffff;
 }
 
+.arena-bot-cell.arena-bot-challenged { -fx-text-fill: #b26a00; -fx-background-color: #fff4d6; }
+.arena-bot-cell.arena-bot-rejected { -fx-text-fill: #b42318; -fx-background-color: #ffebe9; }
+.arena-bot-cell.arena-bot-accepted { -fx-text-fill: #147a3d; -fx-background-color: #e9f8ef; }
+
 .app-shell {
     -fx-background-color: #ffffff;
 }

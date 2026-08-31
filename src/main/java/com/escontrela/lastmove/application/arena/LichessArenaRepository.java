@@ -10,6 +10,8 @@ public interface LichessArenaRepository {
   void saveChallenge(ArenaChallenge challenge);
   Optional<ArenaChallenge> findChallenge(String id);
   List<ArenaChallenge> listChallenges();
+  /** Removes every persisted challenge row (incoming and outgoing log entries). */
+  default void clearChallenges() { }
   /** Atomically reserves one accepting slot when fewer than {@code maximum} games are reserved or active. */
   boolean reserveChallenge(String id, int maximum);
   void saveGame(ArenaGame game);

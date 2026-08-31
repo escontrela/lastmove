@@ -21,10 +21,12 @@ import com.escontrela.lastmove.ui.screen.UiFlowManager;
 import com.escontrela.lastmove.ui.screen.UiScreenController;
 import com.escontrela.lastmove.ui.screen.UiScreenId;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import javafx.application.Platform;
@@ -46,6 +48,7 @@ import org.springframework.stereotype.Component;
 /** Arena dashboard. Tournament discovery is delegated to {@link LichessArenaService}. */
 @Component
 public final class KnightshadeArenaScreenController implements UiScreenController {
+  private static final DateTimeFormatter CONSOLE_TIME = DateTimeFormatter.ofPattern("HH:mm:ss").withZone(ZoneId.systemDefault());
   private final LichessArenaService arena;
   private final UiFlowManager flow;
   private final SavedGameRepository savedGames;
@@ -63,6 +66,7 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
   @FXML private Button nowPlayingButton;
   @FXML private VBox nowPlayingBox;
   @FXML private Button refreshTournamentsButton;
+  @FXML private Button clearChallengesButton;
   @FXML private ToolbarIconButton refreshBotsButton, startBotCycleButton, stopBotCycleButton;
   @FXML private Label botCycleStateLabel;
   @FXML private Label botBaseTimeLabel, botIncrementLabel, botMinimumRatingLabel, botMaximumRatingLabel, botMaximumGamesLabel;
@@ -70,6 +74,7 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
   @FXML private ArenaConsoleControl challengesConsole, gamesConsole, activityConsole;
   @FXML private ListView<ArenaTournament> tournamentsList;
   @FXML private ListView<LichessBotCandidate> onlineBotsList;
+  @FXML private ListView<BotChallengeRow> botChallengeResultsList;
   @FXML private ContextualMenuPanel tournamentContextMenu;
   @FXML private GameTimelineControl gameTimeline;
 
@@ -95,6 +100,7 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
     onlineBotsList.setPlaceholder(emptyState("No online bots loaded yet."));
     onlineBotsList.setAccessibleHelp("Online Lichess bots. Open a bot's context menu to send a challenge.");
     onlineBotsList.setCellFactory(list -> new BotCell());
+    botChallengeResultsList.setCellFactory(list -> new BotChallengeResultCell());
     botChallengeSettingsModal.setOnSave(configuration -> { botConfiguration = configuration; renderBotConfiguration(); refresh(); });
     tournamentsList.setCellFactory(list -> new TournamentCell());
     configureHeaderActions();
@@ -146,6 +152,11 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
   }
   @FXML public void changeBotChallengeSettings() { botChallengeSettingsModal.show(botConfiguration); }
   @FXML public void stopBotCycle() { arena.stopBotChallengeCycle(); refresh(); }
+  @FXML public void clearChallenges() {
+    arena.clearChallenges();
+    refresh();
+    statusLabel.setText("Challenges log cleared.");
+  }
   @FXML public void openNowPlaying() { currentGame().ifPresent(this::openArenaGame); }
 
   private void openArenaGame(ArenaGame game) {
@@ -165,7 +176,8 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
                 record.whitePlayer().orElseThrow(), record.blackPlayer().orElseThrow(),
                 record.initialPosition(), record.currentPosition(),
                 record.moves().stream().map(com.escontrela.lastmove.domain.game.RecordedPly::ply).toList(),
-                saved.game().currentClock().whiteRemaining(), saved.game().currentClock().blackRemaining(), false,
+                saved.game().currentClock().whiteRemaining(), saved.game().currentClock().blackRemaining(),
+                record.result().isPresent(), record.result(), record.terminationReason(),
                 Optional.of("Following Lichess game live")));
         flow.show(UiScreenId.COMPUTER_VS_COMPUTER);
       }
@@ -173,10 +185,9 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
   }
 
   @EventListener public void onArenaEvent(LichessArenaEvent event) {
-    String key = event.type() + ":" + event.externalId();
-    activity.remove(key);
-    activity.put(key, event.type().name().replace('_', ' ') + " · " + (event.detail() == null ? "" : event.detail()));
-    while (activity.size() > 30) activity.remove(activity.keySet().iterator().next());
+    String key = event.type() + ":" + event.externalId() + ":" + System.nanoTime();
+    activity.put(key, CONSOLE_TIME.format(Instant.now()) + " · " + event.type().name().replace('_', ' ') + " · " + (event.detail() == null ? "" : event.detail()));
+    while (activity.size() > 60) activity.remove(activity.keySet().iterator().next());
     try {
       Platform.runLater(this::refresh);
     } catch (IllegalStateException ignored) {
@@ -198,7 +209,7 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
 
   private void refresh() {
     if (connectionLabel == null || accountLabel == null || capacityLabel == null || statusLabel == null
-        || botCycleStateLabel == null || onlineBotsList == null) {
+        || botCycleStateLabel == null || onlineBotsList == null || botChallengeResultsList == null) {
       return;
     }
     ArenaConnection connection = arena.connection();
@@ -233,6 +244,9 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
     onlineBotsList.setPlaceholder(emptyState(visibleBots.isEmpty() && !arena.onlineBots().isEmpty()
         ? "No online bots match the configured rating range." : "No online bots loaded yet."));
     onlineBotsList.setItems(FXCollections.observableArrayList(visibleBots));
+    Map<String,String> results = arena.challengeResults();
+    botChallengeResultsList.setItems(FXCollections.observableArrayList(results.entrySet().stream()
+        .map(entry -> new BotChallengeRow(botName(entry.getKey()), entry.getValue())).toList()));
     botCycleStateLabel.setText(cycle.status()+" · "+cycle.completedGames()+" / "+cycle.configuration().maximumGames()+cycle.currentBotId().map(id -> " · "+id).orElse("")+cycle.stopReason().map(reason -> " — "+reason).orElseGet(() -> arena.onlineBotsError().map(error -> " — "+error).orElse("")));
     challengesConsole.setEntries(arena.challenges().stream().map(challenge ->
         new ArenaConsoleControl.Entry(challengeText(challenge), () -> statusLabel.setText("Challenge " + challenge.id() + ": " + challenge.decision()))).toList(),
@@ -240,7 +254,9 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
     gamesConsole.setEntries(games.stream().map(game ->
         new ArenaConsoleControl.Entry(gameText(game), () -> openArenaGame(game))).toList(), "No completed Arena games yet.");
     gameTimeline.setEntries(games.stream().map(this::timelineEntry).toList());
-    activityConsole.setEntries(activity.values().stream().map(item ->
+    List<String> recentActivity = new java.util.ArrayList<>(activity.values());
+    java.util.Collections.reverse(recentActivity);
+    activityConsole.setEntries(recentActivity.stream().map(item ->
         new ArenaConsoleControl.Entry(item, () -> statusLabel.setText(item))).toList(), "No recent Arena events.");
     tournamentsList.setItems(FXCollections.observableArrayList(arena.tournaments()));
     tournamentStateLabel.setText(tournamentStateText());
@@ -427,14 +443,39 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
 
     @Override protected void updateItem(LichessBotCandidate bot, boolean empty) {
       super.updateItem(bot, empty);
+      getStyleClass().removeAll("arena-bot-challenged", "arena-bot-rejected");
       setText(empty || bot == null ? null : bot.username() + " · "
           + bot.rating().map(Object::toString).orElse("rating unavailable") + " · "
-          + (bot.available() ? "available" : "busy"));
+          + (arena.rejectedBotIds().contains(bot.id()) ? "rejected" : arena.challengedBotIds().contains(bot.id()) ? "challenged" : (bot.available() ? "available" : "busy")));
+      if (!empty && bot != null) {
+        if (arena.rejectedBotIds().contains(bot.id())) getStyleClass().add("arena-bot-rejected");
+        else if (arena.challengedBotIds().contains(bot.id())) getStyleClass().add("arena-bot-challenged");
+      }
+    }
+  }
+
+  private String botName(String id) { return arena.onlineBots().stream().filter(bot -> bot.id().equalsIgnoreCase(id))
+      .map(LichessBotCandidate::username).findFirst().orElse(id); }
+  private record BotChallengeRow(String botName, String result) {}
+  private final class BotChallengeResultCell extends ListCell<BotChallengeRow> {
+    @Override protected void updateItem(BotChallengeRow row, boolean empty) {
+      super.updateItem(row, empty);
+      getStyleClass().removeAll("arena-bot-challenged", "arena-bot-rejected", "arena-bot-accepted");
+      setText(empty || row == null ? null : row.botName() + " · " + row.result());
+      if (!empty && row != null) {
+        if (row.result().startsWith("REJECTED")) getStyleClass().add("arena-bot-rejected");
+        else if (row.result().startsWith("ACCEPTED")) getStyleClass().add("arena-bot-accepted");
+        else getStyleClass().add("arena-bot-challenged");
+      }
     }
   }
 
   private String challengeText(ArenaChallenge challenge) {
-    return challenge.challengerName() + " · " + challenge.variant() + " · " + (challenge.rated() ? "rated" : "casual") + " · " + challenge.decision() + challenge.decisionReason().map(reason -> " — " + reason).orElse("");
+    boolean outgoing = challenge.decision() == ArenaChallengeDecision.SENT;
+    String direction = outgoing ? "→ " : "← ";
+    return CONSOLE_TIME.format(challenge.decidedAt().orElse(challenge.updatedAt())) + " · " + direction + challenge.challengerName()
+        + " · " + challenge.variant() + " · " + (challenge.rated() ? "rated" : "casual") + " · " + challenge.decision()
+        + challenge.decisionReason().map(reason -> " — " + reason).orElse("");
   }
 
   private String gameText(ArenaGame game) {

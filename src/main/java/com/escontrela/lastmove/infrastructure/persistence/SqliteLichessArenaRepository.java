@@ -30,6 +30,7 @@ public class SqliteLichessArenaRepository implements LichessArenaRepository {
   }
   public Optional<ArenaChallenge> findChallenge(String id) { return availability.isAvailable()?jdbc.queryForList("SELECT * FROM lichess_challenges WHERE lichess_challenge_id=?",id).stream().findFirst().map(this::challenge):Optional.empty(); }
   public List<ArenaChallenge> listChallenges() { return availability.isAvailable()?jdbc.queryForList("SELECT * FROM lichess_challenges ORDER BY updated_at DESC").stream().map(this::challenge).toList():List.of(); }
+  @Override public void clearChallenges() { if (availability.isAvailable()) jdbc.update("DELETE FROM lichess_challenges"); }
   @Transactional
   public synchronized boolean reserveChallenge(String id, int maximum) {
     if (!availability.isAvailable()) return false;
