@@ -151,7 +151,13 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
     catch (RuntimeException failure) { statusLabel.setText(failure.getMessage()); }
   }
   @FXML public void changeBotChallengeSettings() { botChallengeSettingsModal.show(botConfiguration); }
-  @FXML public void stopBotCycle() { arena.stopBotChallengeCycle(); refresh(); }
+  @FXML public void stopBotCycle() {
+    BotChallengeCycle stopped = arena.stopBotChallengeCycle();
+    refresh();
+    if (stopped.status() == BotChallengeCycleStatus.STOPPING) {
+      statusLabel.setText("Challenge loop stopped. The current game will finish normally.");
+    }
+  }
   @FXML public void clearChallenges() {
     arena.clearChallenges();
     refresh();
@@ -219,13 +225,20 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
     List<ArenaGame> allGames = arena.activeGames();
     List<ArenaGame> games = effectiveGames();
     List<ArenaGame> playing = allGames.stream().filter(this::isCurrentGame).toList();
+    BotChallengeCycle cycle = arena.botChallengeCycle();
     capacityLabel.setText(playing.size() + " / " + arena.maximumConcurrentGames());
     playing.stream().findFirst().ifPresentOrElse(game -> {
-      nowPlayingOpponentLabel.setText(opponentName(game));
+      nowPlayingOpponentLabel.setText(opponentName(game, cycle));
       nowPlayingButton.setDisable(false);
       nowPlayingBox.setVisible(true);
       nowPlayingBox.setManaged(true);
-    }, () -> { nowPlayingOpponentLabel.setText(""); nowPlayingButton.setDisable(true); nowPlayingBox.setVisible(false); nowPlayingBox.setManaged(false); });
+    }, () -> cycle.currentGameId().ifPresentOrElse(gameId -> {
+      nowPlayingOpponentLabel.setText("Challenge accepted · "
+          + cycle.currentBotId().orElse("opponent") + " (syncing game…)");
+      nowPlayingButton.setDisable(true);
+      nowPlayingBox.setVisible(true);
+      nowPlayingBox.setManaged(true);
+    }, () -> { nowPlayingOpponentLabel.setText(""); nowPlayingButton.setDisable(true); nowPlayingBox.setVisible(false); nowPlayingBox.setManaged(false); }));
     arena.account().ifPresentOrElse(account -> {
       blitzRatingLabel.setText(ratingText(account.blitzRating()));
       rapidRatingLabel.setText(ratingText(account.rapidRating()));
@@ -233,13 +246,12 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
     }, () -> { blitzRatingLabel.setText("?"); rapidRatingLabel.setText("?"); standardRatingLabel.setText("?"); });
     configureHeaderActions();
     refreshTournamentsButton.setDisable(tournamentRefreshInFlight || connection.status() != ArenaConnectionStatus.CONNECTED);
-    BotChallengeCycle cycle = arena.botChallengeCycle();
     refreshBotsButton.setDisable(connection.status() != ArenaConnectionStatus.CONNECTED);
     boolean eligibleBot = arena.onlineBots().stream().anyMatch(bot -> bot.available()
         && bot.rating().map(rating -> rating >= botConfiguration.minimumOpponentRating()
             && rating <= botConfiguration.maximumOpponentRating()).orElse(false));
     startBotCycleButton.setDisable(connection.status() != ArenaConnectionStatus.CONNECTED || cycle.active() || !eligibleBot || manualBotChallengeInFlight);
-    stopBotCycleButton.setDisable(!cycle.active());
+    stopBotCycleButton.setDisable(!cycle.active() || cycle.status() == BotChallengeCycleStatus.STOPPING);
     List<LichessBotCandidate> visibleBots = filteredOnlineBots();
     onlineBotsList.setPlaceholder(emptyState(visibleBots.isEmpty() && !arena.onlineBots().isEmpty()
         ? "No online bots match the configured rating range." : "No online bots loaded yet."));
@@ -443,13 +455,16 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
 
     @Override protected void updateItem(LichessBotCandidate bot, boolean empty) {
       super.updateItem(bot, empty);
-      getStyleClass().removeAll("arena-bot-challenged", "arena-bot-rejected");
-      setText(empty || bot == null ? null : bot.username() + " · "
+      getStyleClass().removeAll("arena-bot-challenged", "arena-bot-rejected", "arena-bot-friendly");
+      boolean friendly = !empty && bot != null && arena.friendlyBotIds().stream()
+          .anyMatch(id -> id.equalsIgnoreCase(bot.id()));
+      setText(empty || bot == null ? null : bot.username() + (friendly ? " *" : "") + " · "
           + bot.rating().map(Object::toString).orElse("rating unavailable") + " · "
           + (arena.rejectedBotIds().contains(bot.id()) ? "rejected" : arena.challengedBotIds().contains(bot.id()) ? "challenged" : (bot.available() ? "available" : "busy")));
       if (!empty && bot != null) {
         if (arena.rejectedBotIds().contains(bot.id())) getStyleClass().add("arena-bot-rejected");
         else if (arena.challengedBotIds().contains(bot.id())) getStyleClass().add("arena-bot-challenged");
+        else if (friendly) getStyleClass().add("arena-bot-friendly");
       }
     }
   }
@@ -514,8 +529,8 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
         || game.status() == ArenaGameStatus.STREAM_CLOSED;
   }
 
-  private String opponentName(ArenaGame game) {
-    return externalOpponent(game).orElse("Opponent pending");
+  private String opponentName(ArenaGame game, BotChallengeCycle cycle) {
+    return externalOpponent(game).or(() -> cycle.currentBotId()).orElse("Opponent pending");
   }
 
   private Label emptyState(String text) {

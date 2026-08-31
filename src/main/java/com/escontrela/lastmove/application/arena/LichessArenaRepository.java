@@ -22,4 +22,6 @@ public interface LichessArenaRepository {
   List<ArenaTournament> listTournaments();
   default BotChallengeCycle botChallengeCycle() { return BotChallengeCycle.idle(); }
   default void saveBotChallengeCycle(BotChallengeCycle cycle) { }
+  default List<FriendlyLichessBot> listFriendlyBots() { return List.of(); }
+  default void saveFriendlyBot(FriendlyLichessBot bot) { }
 }

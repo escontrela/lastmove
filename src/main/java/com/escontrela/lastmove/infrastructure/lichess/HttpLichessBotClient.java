@@ -91,14 +91,25 @@ public final class HttpLichessBotClient implements LichessBotClient {
   private static IllegalStateException botFailure(String action,int status) { return switch(status) { case 401,403 -> new IllegalStateException("Lichess rejected the bot token while trying to "+action+"."); case 429 -> new IllegalStateException("Lichess is rate-limiting requests. Wait one minute before retrying."); default -> new IllegalStateException("Lichess could not "+action+" (HTTP "+status+")."); }; }
   private IllegalStateException botFailure(String action, HttpResponse<String> response) {
     int status = response.statusCode();
-    if (status == 401 || status == 403 || status == 429) return botFailure(action, status);
     String detail = response.body();
     try { detail = json.readTree(response.body()).path("error").asText(detail); }
     catch (IOException ignored) { }
     detail = detail == null ? "" : detail.replaceAll("\\s+", " ").trim();
+    String retryAfter = response.headers().firstValue("Retry-After").orElse("not provided");
+    log.warn("Lichess HTTP failure response: action={} status={} retryAfter={} body={}",
+        action, status, retryAfter, compact(response.body()));
+    if (status == 401 || status == 403) return botFailure(action, status);
     String message = "Lichess could not " + action + " (HTTP " + status + ")"
         + (detail.isBlank() ? "." : ": " + detail);
+    if (status == 429) return new IllegalStateException(
+        "Lichess is rate-limiting requests (HTTP 429, Retry-After: " + retryAfter + ")"
+            + (detail.isBlank() ? "." : ": " + detail));
     return status == 400 ? new LichessBotChallengeRejectedException(message) : new IllegalStateException(message);
+  }
+  private static String compact(String body) {
+    if (body == null) return "";
+    String value = body.replaceAll("\\s+", " ").trim();
+    return value.length() <= 2000 ? value : value.substring(0, 2000) + "…";
   }
   private static Optional<String> firstText(JsonNode node,String... fields){for(String field:fields){String value=node.path(field).asText();if(!value.isBlank())return Optional.of(value);}return Optional.empty();}
   private HttpRequest.Builder request(String token,String path){return HttpRequest.newBuilder(URI.create(API+path)).timeout(TIMEOUT).header("Accept","application/x-ndjson, application/json").header("Authorization","Bearer "+required(token));}

@@ -55,6 +55,7 @@ public final class LichessArenaService {
   public List<LichessBotCandidate> onlineBots(){return botCycle == null ? List.of() : botCycle.bots();}
   public Set<String> challengedBotIds(){return botCycle == null ? Set.of() : botCycle.challengedBotIds();}
   public Set<String> rejectedBotIds(){return botCycle == null ? Set.of() : botCycle.rejectedBotIds();}
+  public Set<String> friendlyBotIds(){return botCycle == null ? Set.of() : botCycle.friendlyBotIds();}
   public Map<String,String> challengeResults(){return botCycle == null ? Map.of() : botCycle.challengeResults();}
   public Optional<String> onlineBotsError(){return botCycle == null ? Optional.empty() : botCycle.botError();}
   public List<LichessBotCandidate> refreshOnlineBots(){if(botCycle==null) return List.of(); return botCycle.refreshBots();}

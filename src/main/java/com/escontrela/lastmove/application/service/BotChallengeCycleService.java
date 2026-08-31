@@ -18,8 +18,9 @@ import org.springframework.stereotype.Service;
 public final class BotChallengeCycleService {
   private static final Logger log = LoggerFactory.getLogger(BotChallengeCycleService.class);
   static final Duration PENDING_CHALLENGE_TIMEOUT = Duration.ofSeconds(20);
-  static final Duration REJECTED_BOT_RETRY_DELAY = Duration.ofSeconds(10);
+  static final Duration REJECTED_BOT_RETRY_DELAY = Duration.ofSeconds(40);
   static final Duration RATE_LIMIT_RETRY_DELAY = Duration.ofMinutes(1);
+  static final int FRIENDLY_BOT_REJECTION_THRESHOLD = 10;
 
   private final LichessArenaRepository repository;
   private final KnightshadeArenaSettingsRepository settings;
@@ -30,6 +31,7 @@ public final class BotChallengeCycleService {
   private final Duration rateLimitRetryDelay;
   private final Set<String> challengedBotIds = ConcurrentHashMap.newKeySet();
   private final Set<String> rejectedBotIds = ConcurrentHashMap.newKeySet();
+  private final Set<String> friendlyBotIds = ConcurrentHashMap.newKeySet();
   private final Map<String, String> challengeResults = new ConcurrentHashMap<>();
   private volatile List<LichessBotCandidate> bots = List.of();
   private volatile Optional<String> botError = Optional.empty();
@@ -74,6 +76,7 @@ public final class BotChallengeCycleService {
   public BotChallengeCycle cycle() { return repository.botChallengeCycle(); }
   public Set<String> challengedBotIds() { return Set.copyOf(challengedBotIds); }
   public Set<String> rejectedBotIds() { return Set.copyOf(rejectedBotIds); }
+  public Set<String> friendlyBotIds() { return Set.copyOf(friendlyBotIds); }
   public Map<String, String> challengeResults() { return Map.copyOf(challengeResults); }
 
   public void markBotChallengeSent(String botId) {
@@ -96,6 +99,7 @@ public final class BotChallengeCycleService {
   public void markBotChallengeAccepted(String botId) {
     if (blank(botId)) return;
     challengedBotIds.remove(botId);
+    rememberFriendlyBot(botId);
     challengeResults.put(botId, "ACCEPTED");
     publish("bot-accepted:" + botId);
   }
@@ -103,6 +107,7 @@ public final class BotChallengeCycleService {
   public synchronized List<LichessBotCandidate> refreshBots() {
     try {
       bots = List.copyOf(client.onlineBots(token()));
+      refreshFriendlyBots();
       botError = Optional.empty();
       publish("bots:" + bots.size());
     } catch (RuntimeException failure) {
@@ -112,12 +117,28 @@ public final class BotChallengeCycleService {
     return bots;
   }
 
+  private void refreshFriendlyBots() {
+    friendlyBotIds.clear();
+    repository.listFriendlyBots().forEach(bot -> friendlyBotIds.add(bot.lichessId()));
+  }
+
+  private void rememberFriendlyBot(String botId) {
+    LichessBotCandidate candidate = bots.stream()
+        .filter(bot -> bot.id().equalsIgnoreCase(botId)).findFirst().orElse(null);
+    Instant now = Instant.now();
+    repository.saveFriendlyBot(new FriendlyLichessBot(botId,
+        candidate == null ? botId : candidate.username(),
+        candidate == null ? Optional.empty() : candidate.rating(), now, now));
+    friendlyBotIds.add(botId);
+  }
+
   public synchronized BotChallengeCycle start(BotChallengeConfiguration configuration) {
     if (cycle().active()) throw new IllegalStateException("A bot challenge cycle is already active.");
     cancelScheduledRetry();
     challengedBotIds.clear();
     rejectedBotIds.clear();
     challengeResults.clear();
+    refreshFriendlyBots();
     save(new BotChallengeCycle(BotChallengeCycleStatus.DISCOVERING, configuration, List.of(),
         Optional.empty(), Optional.empty(), Optional.empty(), 0, Optional.empty(),
         Optional.empty(), Instant.now()));
@@ -128,11 +149,12 @@ public final class BotChallengeCycleService {
   public synchronized BotChallengeCycle stop() {
     BotChallengeCycle state = cycle();
     if (!state.active()) return state;
+    if (state.status() == BotChallengeCycleStatus.STOPPING) return state;
     cancelScheduledRetry();
     if (state.currentGameId().isPresent()) {
       save(copy(state, BotChallengeCycleStatus.STOPPING, state.currentBotId(),
           state.currentChallengeId(), state.currentGameId(), state.completedGames(),
-          state.lastResult(), Optional.of("Stop requested; current game will finish.")));
+          state.lastResult(), Optional.of("Challenge loop stopped; current game will finish normally.")));
     } else {
       state.currentChallengeId().ifPresent(this::cancelQuietly);
       challengedBotIds.clear();
@@ -267,7 +289,8 @@ public final class BotChallengeCycleService {
     switch (state.status()) {
       case DISCOVERING, CHALLENGING -> challengeNext();
       case WAITING_BETWEEN_CANDIDATES -> scheduleRemaining(state, rejectedRetryDelay, false);
-      case WAITING_FOR_RATE_LIMIT -> scheduleRemaining(state, rateLimitRetryDelay, true);
+      case WAITING_FOR_RATE_LIMIT -> scheduleRemaining(state,
+          rateLimitDelay(state.stopReason().orElse("")), false);
       default -> publish(state.status().name());
     }
   }
@@ -289,10 +312,17 @@ public final class BotChallengeCycleService {
         .toList();
     List<LichessBotCandidate> fresh = eligible.stream()
         .filter(bot -> !containsIgnoreCase(state.attemptedBotIds(), bot.id())).toList();
+    boolean preferFriendlyBots = rejectedBotIds.size() >= FRIENDLY_BOT_REJECTION_THRESHOLD;
+    List<LichessBotCandidate> friendlyFresh = fresh.stream()
+        .filter(bot -> containsIgnoreCase(friendlyBotIds, bot.id())).toList();
+    List<LichessBotCandidate> friendlyEligible = eligible.stream()
+        .filter(bot -> containsIgnoreCase(friendlyBotIds, bot.id())).toList();
     boolean startingNewRound = fresh.isEmpty()
         && state.configuration().allowRepeatWhenExhausted() && !eligible.isEmpty();
-    List<LichessBotCandidate> pool = !fresh.isEmpty() ? fresh
+    List<LichessBotCandidate> normalPool = !fresh.isEmpty() ? fresh
         : startingNewRound ? eligible : List.of();
+    List<LichessBotCandidate> pool = preferFriendlyBots && !friendlyFresh.isEmpty() ? friendlyFresh
+        : preferFriendlyBots && !friendlyEligible.isEmpty() ? friendlyEligible : normalPool;
     if (pool.isEmpty()) {
       save(copy(state, BotChallengeCycleStatus.COMPLETED, Optional.empty(), Optional.empty(),
           Optional.empty(), state.completedGames(), state.lastResult(),
@@ -319,10 +349,11 @@ public final class BotChallengeCycleService {
       save(copy(challenging, next, Optional.of(chosen.id()), submission.challengeId(),
           submission.gameId(), state.completedGames(), state.lastResult(), Optional.empty()));
     } catch (LichessBotChallengeRejectedException rejection) {
-      if (isRateLimited(rejection.getMessage())) waitForRateLimit(challenging, chosen);
-      else rejectAndContinue(challenging, chosen, rejection.getMessage());
+      // The adapter uses this exception only for HTTP 400: it is a restriction or cooldown
+      // belonging to this opponent, not a global throttle on our account.
+      rejectAndContinue(challenging, chosen, rejection.getMessage());
     } catch (RuntimeException failure) {
-      if (isRateLimited(failure.getMessage())) waitForRateLimit(challenging, chosen);
+      if (isRateLimited(failure.getMessage())) waitForRateLimit(challenging, chosen, failure.getMessage());
       else waitForTransientFailure(challenging,
           readable(failure.getMessage(), "Temporary challenge submission failure"));
     }
@@ -336,7 +367,8 @@ public final class BotChallengeCycleService {
   private void waitBeforeNextCandidate(BotChallengeCycle state, String reason) {
     save(copy(state, BotChallengeCycleStatus.WAITING_BETWEEN_CANDIDATES, Optional.empty(),
         Optional.empty(), Optional.empty(), state.completedGames(), state.lastResult(),
-        Optional.of("Waiting 10 seconds before next candidate — " + readable(reason, "rejected"))));
+        Optional.of("Waiting " + rejectedRetryDelay.toSeconds()
+            + " seconds before next candidate — " + readable(reason, "rejected"))));
     scheduleRetry(rejectedRetryDelay, false);
   }
 
@@ -344,19 +376,24 @@ public final class BotChallengeCycleService {
     challengedBotIds.clear();
     save(copy(state, BotChallengeCycleStatus.WAITING_BETWEEN_CANDIDATES, Optional.empty(),
         Optional.empty(), Optional.empty(), state.completedGames(), state.lastResult(),
-        Optional.of("Temporary Lichess error; retrying in 10 seconds — " + reason)));
+        Optional.of("Temporary Lichess error; retrying in " + rejectedRetryDelay.toSeconds()
+            + " seconds — " + reason)));
     scheduleRetry(rejectedRetryDelay, false);
   }
 
-  private void waitForRateLimit(BotChallengeCycle state, LichessBotCandidate bot) {
+  private void waitForRateLimit(BotChallengeCycle state, LichessBotCandidate bot, String response) {
     challengedBotIds.remove(bot.id());
-    String message = "Waiting for rate limiting...";
+    String detail = readable(response, "Lichess returned a global rate limit");
+    Duration delay = rateLimitDelay(detail);
+    String message = "Waiting for Lichess rate limiting (" + delay.toSeconds()
+        + " seconds) — " + detail;
+    log.warn("Global Lichess rate limit detected: bot={} response={}", bot.username(), detail);
     logOutgoingChallenge("bot-rate-limit:" + bot.id() + ":" + Instant.now().toEpochMilli(),
         bot, state.configuration(), message);
     save(copy(state, BotChallengeCycleStatus.WAITING_FOR_RATE_LIMIT, Optional.empty(),
         Optional.empty(), Optional.empty(), state.completedGames(), state.lastResult(),
         Optional.of(message)));
-    scheduleRetry(rateLimitRetryDelay, true);
+    scheduleRetry(delay, false);
   }
 
   private void scheduleRemaining(BotChallengeCycle state, Duration delay, boolean resetRound) {
@@ -390,7 +427,7 @@ public final class BotChallengeCycleService {
   /** Deterministic hook for testing delayed transitions without sleeping. */
   synchronized void triggerScheduledRetryForTest() {
     BotChallengeCycle state = cycle();
-    boolean resetRound = state.status() == BotChallengeCycleStatus.WAITING_FOR_RATE_LIMIT;
+    boolean resetRound = false;
     cancelScheduledRetry();
     continueAfterWait(resetRound);
   }
@@ -452,8 +489,20 @@ public final class BotChallengeCycleService {
     if (reason == null) return false;
     String normalized = reason.toLowerCase(Locale.ROOT);
     return normalized.contains("rate limit") || normalized.contains("rate-limit")
-        || normalized.contains("rate limiting")
-        || (normalized.contains("games against other bots") && normalized.contains("wait"));
+        || normalized.contains("rate limiting");
+  }
+
+  private Duration rateLimitDelay(String response) {
+    java.util.regex.Matcher matcher = java.util.regex.Pattern
+        .compile("Retry-After:\\s*(\\d+)", java.util.regex.Pattern.CASE_INSENSITIVE)
+        .matcher(response == null ? "" : response);
+    if (!matcher.find()) return rateLimitRetryDelay;
+    try {
+      Duration requested = Duration.ofSeconds(Long.parseLong(matcher.group(1)));
+      return requested.compareTo(rateLimitRetryDelay) > 0 ? requested : rateLimitRetryDelay;
+    } catch (NumberFormatException ignored) {
+      return rateLimitRetryDelay;
+    }
   }
 
   private static String readable(String value, String fallback) {

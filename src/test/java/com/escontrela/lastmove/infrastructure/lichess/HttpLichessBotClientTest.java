@@ -113,8 +113,26 @@ class HttpLichessBotClientTest {
     assertTrue(failure.getMessage().contains("This bot only accepts rated challenges."));
   }
 
+  @Test void exposesRateLimitBodyAndRetryAfterFromChallengeResponse() {
+    FakeHttpClient http = new FakeHttpClient().enqueue(response(429,
+        "{\"error\":\"Too many requests; slow down.\"}", "75"));
+    HttpLichessBotClient client = new HttpLichessBotClient(http, json);
+
+    IllegalStateException failure = org.junit.jupiter.api.Assertions.assertThrows(
+        IllegalStateException.class, () -> client.challengeBot("token", "busy-bot",
+            new com.escontrela.lastmove.application.arena.BotChallengeConfiguration(
+                600, 0, "standard", true, 1800, 30, true, false)));
+
+    assertTrue(failure.getMessage().contains("HTTP 429"));
+    assertTrue(failure.getMessage().contains("Retry-After: 75"));
+    assertTrue(failure.getMessage().contains("Too many requests; slow down."));
+  }
+
   private static HttpResponse<InputStream> streamResponse(InputStream body) { return new TestResponse<>(200, body); }
   private static HttpResponse<String> response(int status, String body) { return new TestResponse<>(status, body); }
+  private static HttpResponse<String> response(int status, String body, String retryAfter) {
+    return new TestResponse<>(status, body, retryAfter);
+  }
 
   private static final class OneByteInputStream extends InputStream {
     private final ByteArrayInputStream delegate;
@@ -124,11 +142,13 @@ class HttpLichessBotClientTest {
   }
 
   private static final class TestResponse<T> implements HttpResponse<T> {
-    private final int status; private final T body;
-    TestResponse(int status, T body) { this.status = status; this.body = body; }
+    private final int status; private final T body; private final String retryAfter;
+    TestResponse(int status, T body) { this(status, body, null); }
+    TestResponse(int status, T body, String retryAfter) { this.status = status; this.body = body; this.retryAfter = retryAfter; }
     public int statusCode() { return status; } public HttpRequest request() { return null; }
     public Optional<HttpResponse<T>> previousResponse() { return Optional.empty(); }
-    public HttpHeaders headers() { return HttpHeaders.of(java.util.Map.of(), (a,b) -> true); }
+    public HttpHeaders headers() { return HttpHeaders.of(retryAfter == null ? java.util.Map.of()
+        : java.util.Map.of("Retry-After", List.of(retryAfter)), (a,b) -> true); }
     public T body() { return body; } public Optional<SSLSession> sslSession() { return Optional.empty(); }
     public URI uri() { return URI.create("https://lichess.org"); } public Version version() { return Version.HTTP_1_1; }
   }

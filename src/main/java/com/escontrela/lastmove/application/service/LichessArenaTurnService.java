@@ -54,8 +54,21 @@ public final class LichessArenaTurnService {
     Runtime runtime = runtimes.get(gameId);
     if (runtime == null || (!"gameFull".equals(type) && !"gameState".equals(type))) return;
     JsonNode state = "gameFull".equals(type) ? event.path("state") : event;
-    runtime.moves = state.path("moves").asText(); runtime.state = state;
-    persist(runtime, account);
+    boolean accepted;
+    synchronized (runtime) {
+      accepted = shouldAcceptState(runtime.moves, runtime.state, state);
+      if (accepted) {
+        runtime.moves = state.path("moves").asText();
+        runtime.state = state;
+        persist(runtime, account);
+      }
+    }
+    if (!accepted) {
+      log.info("Ignoring stale Lichess game state: gameId={} currentPlies={} incomingPlies={} status={}",
+          gameId, plyCount(runtime.moves), plyCount(state.path("moves").asText()),
+          state.path("status").asText());
+      return;
+    }
     log.info("Lichess game state reconciled: gameId={} localGameId={} type={} status={} plies={}", gameId, runtime.localGameId, type, state.path("status").asText(), plyCount(runtime.moves));
     request(gameId, runtime, token, client);
   }
@@ -67,15 +80,19 @@ public final class LichessArenaTurnService {
   public void finishFromAccount(String gameId, JsonNode summary, LichessBotAccount account) {
     Runtime runtime = runtimes.get(gameId);
     if (runtime == null) return;
-    ObjectNode terminal = runtime.state != null && runtime.state.isObject()
-        ? ((ObjectNode) runtime.state).deepCopy()
-        : JsonNodeFactory.instance.objectNode();
-    String status = status(summary.path("status"));
-    String winner = summary.path("winner").asText("");
-    if (!status.isBlank()) terminal.put("status", status);
-    if (!winner.isBlank()) terminal.put("winner", winner);
-    runtime.state = terminal;
-    persist(runtime, account);
+    String status;
+    String winner;
+    synchronized (runtime) {
+      ObjectNode terminal = runtime.state != null && runtime.state.isObject()
+          ? ((ObjectNode) runtime.state).deepCopy()
+          : JsonNodeFactory.instance.objectNode();
+      status = status(summary.path("status"));
+      winner = summary.path("winner").asText("");
+      if (!status.isBlank()) terminal.put("status", status);
+      if (!winner.isBlank()) terminal.put("winner", winner);
+      runtime.state = terminal;
+      persist(runtime, account);
+    }
     log.info("Lichess game finish reconciled from account stream: gameId={} status={} winner={}",
         gameId, status, winner);
   }
@@ -162,5 +179,17 @@ public final class LichessArenaTurnService {
   private static TimeControl timeControl(JsonNode clock){return clock.hasNonNull("initial")?TimeControl.of(Duration.ofMillis(clock.path("initial").asLong()),Duration.ofMillis(clock.path("increment").asLong())):TimeControl.unlimited();}
   private static GameClockSnapshot remoteClock(Runtime runtime){if(!runtime.timeControl.initialTime().isPresent())return GameClockSnapshot.initial(Optional.of(runtime.timeControl));return new GameClockSnapshot(Optional.of(Duration.ofMillis(Math.max(0,runtime.state.path("wtime").asLong()))),Optional.of(Duration.ofMillis(Math.max(0,runtime.state.path("btime").asLong()))));}
   private static int plyCount(String moves){return moves==null||moves.isBlank()?0:moves.trim().split("\\s+").length;}
+  static boolean shouldAcceptState(String currentMoves, JsonNode currentState, JsonNode incomingState) {
+    int currentPlies = plyCount(currentMoves);
+    int incomingPlies = plyCount(incomingState.path("moves").asText());
+    if (incomingPlies < currentPlies) return false;
+    if (incomingPlies > currentPlies) return true;
+    return !terminal(currentState) || terminal(incomingState);
+  }
+  private static boolean terminal(JsonNode state) {
+    if (state == null) return false;
+    String value = status(state.path("status"));
+    return !value.isBlank() && !"started".equals(value) && !"created".equals(value);
+  }
   private static final class Runtime { final String initialFen; final PieceColor color; final String whiteName,blackName; final Optional<String> whiteLichessId,blackLichessId,tournamentId; final TimeControl timeControl; final AtomicBoolean thinking = new AtomicBoolean(); volatile String moves = ""; volatile JsonNode state; volatile ComputerMoveEngine engine; volatile GameId localGameId; Runtime(String initialFen, PieceColor color,String whiteName,String blackName,Optional<String> whiteLichessId,Optional<String> blackLichessId,TimeControl timeControl,Optional<String> tournamentId) { this.initialFen=initialFen; this.color=color;this.whiteName=whiteName;this.blackName=blackName;this.whiteLichessId=whiteLichessId;this.blackLichessId=blackLichessId;this.timeControl=timeControl;this.tournamentId=tournamentId; } void close() { if(engine != null) { engine.cancelSearch(); engine.close(); } } }
 }
