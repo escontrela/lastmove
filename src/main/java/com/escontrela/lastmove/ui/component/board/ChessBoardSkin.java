@@ -779,19 +779,19 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
 
   private void layoutV2CoordinateLabels(
       double frameThickness, double boardSide, double squareSize) {
-    double labelInset = Math.max(2.0, frameThickness * 0.12);
-    double labelExtent = Math.max(10.0, frameThickness - labelInset * 2.0);
+    double labelExtent = Math.min(18.0, Math.max(12.0, Math.floor(frameThickness * 0.55)));
+    double axisInset = Math.floor((frameThickness - labelExtent) / 2.0);
     for (int index = 0; index < ChessConstants.FILES; index++) {
       fileLabels[index].resizeRelocate(
           frameThickness + index * squareSize,
-          frameThickness + boardSide + labelInset,
+          frameThickness + boardSide + axisInset,
           squareSize,
           labelExtent);
       rankLabels[index].resizeRelocate(
-          labelInset,
-          frameThickness + index * squareSize,
+          axisInset,
+          frameThickness + index * squareSize + Math.floor((squareSize - labelExtent) / 2.0),
           labelExtent,
-          squareSize);
+          labelExtent);
     }
   }
 
