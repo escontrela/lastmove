@@ -1266,15 +1266,12 @@
     -fx-effect: null;
 }
 
-.board-v2 .board-v2-glow {
-    -fx-background-color: linear-gradient(to right,
-        rgba(231, 139, 50, 0.02) 0%,
-        rgba(255, 181, 82, 0.34) 22%,
-        rgba(255, 215, 143, 0.46) 50%,
-        rgba(255, 170, 67, 0.32) 78%,
-        rgba(224, 117, 38, 0.02) 100%);
-    -fx-background-radius: 999;
-    -fx-effect: dropshadow(gaussian, rgba(246, 142, 48, 0.30), 22, 0.32, 0, 4);
+.board-v2 .board-v2-inner-glow {
+    -fx-background-color: transparent;
+    -fx-border-color: rgba(225, 166, 103, 0.20);
+    -fx-border-width: 1;
+    -fx-border-radius: 7;
+    -fx-effect: dropshadow(gaussian, rgba(222, 146, 76, 0.16), 7, 0.18, 0, 0);
 }
 
 .board-v2 .board-v2-frame {
@@ -1291,11 +1288,11 @@
 
 .board-v2 .board-v2-frame-inset {
     -fx-background-color: transparent;
-    -fx-border-color: rgba(20, 12, 11, 0.76);
-    -fx-border-insets: 0;
-    -fx-border-width: 2;
-    -fx-border-radius: 6;
-    -fx-effect: innershadow(gaussian, rgba(9, 6, 6, 0.42), 5, 0.20, 0, 1);
+    -fx-border-color: rgba(20, 12, 11, 0.72), rgba(246, 206, 154, 0.16);
+    -fx-border-insets: 0, 2;
+    -fx-border-width: 2, 1;
+    -fx-border-radius: 6, 4;
+    -fx-effect: innershadow(gaussian, rgba(239, 181, 111, 0.13), 5, 0.18, 0, 0);
 }
 
 .board-v2 .chess-square-light {
@@ -2481,8 +2478,8 @@
 .night-mode .board-v2 .board-v2-frame {
     -fx-effect: null;
 }
-.night-mode .board-v2 .board-v2-glow {
-    -fx-opacity: 0.58;
+.night-mode .board-v2 .board-v2-inner-glow {
+    -fx-opacity: 0.72;
 }
 .night-mode .board-v2 .board-coordinate-label { -fx-text-fill: #d7b88e; -fx-effect: null; }
 .night-mode .computer-thinking-dot { -fx-background-color: #6ba5f0; }

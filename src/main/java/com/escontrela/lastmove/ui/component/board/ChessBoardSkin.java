@@ -45,7 +45,7 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
   private static final double MIN_COORDINATE_GUTTER = 12.0;
   private static final double MAX_COORDINATE_GUTTER = 22.0;
 
-  private final Region boardGlow = new Region();
+  private final Region boardInnerGlow = new Region();
   private final GridPane grid = new GridPane();
   private final Region boardFrame = new Region();
   private final Region boardFrameInset = new Region();
@@ -129,8 +129,8 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     arrowOverlay.setSnapToPixel(true);
 
     // Arrows sit above squares and pieces, while the drag feedback remains the topmost overlay.
-    getChildren().add(boardGlow);
     getChildren().add(boardFrame);
+    getChildren().add(boardInnerGlow);
     getChildren().add(boardFrameInset);
     getChildren().add(grid);
     getChildren().add(arrowOverlay);
@@ -139,8 +139,8 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
   }
 
   private void configureFrame() {
-    boardGlow.setMouseTransparent(true);
-    boardGlow.getStyleClass().add("board-v2-glow");
+    boardInnerGlow.setMouseTransparent(true);
+    boardInnerGlow.getStyleClass().add("board-v2-inner-glow");
     boardFrame.setMouseTransparent(true);
     boardFrame.getStyleClass().add("board-v2-frame");
     boardFrameInset.setMouseTransparent(true);
@@ -290,7 +290,7 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
         squares[file][rank].setVisualEffectsEnabled(enabled);
       }
     }
-    boardGlow.setVisible(getSkinnable().getAppearancePreset().framed() && enabled);
+    boardInnerGlow.setVisible(getSkinnable().getAppearancePreset().framed() && enabled);
   }
 
   private void applyAppearancePreset(BoardAppearancePreset preset) {
@@ -304,7 +304,7 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     }
     boardFrame.setVisible(preset.framed());
     boardFrameInset.setVisible(preset.framed());
-    boardGlow.setVisible(preset.framed() && getSkinnable().isVisualEffectsEnabled());
+    boardInnerGlow.setVisible(preset.framed() && getSkinnable().isVisualEffectsEnabled());
     if (getSkinnable().getPosition() != null) {
       renderPosition(getSkinnable().getPosition());
     }
@@ -728,7 +728,7 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     double squareSize = boardSide / ChessConstants.FILES;
     applySquareSizes(squareSize);
 
-    boardGlow.resizeRelocate(x, y, 0, 0);
+    boardInnerGlow.resizeRelocate(x, y, 0, 0);
     boardFrame.resizeRelocate(x, y, 0, 0);
     boardFrameInset.resizeRelocate(x, y, 0, 0);
     grid.resizeRelocate(x, y, boardSide, boardSide);
@@ -755,15 +755,14 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     double squareSize = boardSide / ChessConstants.FILES;
     applySquareSizes(squareSize);
 
-    double glowInset = Math.max(10.0, frameThickness * 0.45);
-    double glowHeight = Math.max(18.0, frameThickness * 0.9);
-    boardGlow.resizeRelocate(
-        frameX + glowInset,
-        frameY + frameSide - glowHeight * 0.35,
-        frameSide - glowInset * 2.0,
-        glowHeight);
     boardFrame.resizeRelocate(frameX, frameY, frameSide, frameSide);
     double innerLip = Math.max(3.0, Math.floor(frameThickness * 0.18));
+    double glowLip = innerLip + 1.0;
+    boardInnerGlow.resizeRelocate(
+        boardX - glowLip,
+        boardY - glowLip,
+        boardSide + glowLip * 2.0,
+        boardSide + glowLip * 2.0);
     boardFrameInset.resizeRelocate(
         boardX - innerLip,
         boardY - innerLip,
