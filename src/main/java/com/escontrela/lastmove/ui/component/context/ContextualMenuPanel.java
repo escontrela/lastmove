@@ -12,6 +12,7 @@ import javafx.scene.control.Separator;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.Parent;
+import javafx.scene.Node;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -115,6 +116,11 @@ public class ContextualMenuPanel extends StackPane {
         Separator separator = new Separator();
         separator.getStyleClass().add("context-menu-separator");
         menuContent.getChildren().add(separator);
+    }
+
+    /** Adds interactive content that should remain open while the user works with it. */
+    public void addContent(Node content) {
+        menuContent.getChildren().add(java.util.Objects.requireNonNull(content, "content must not be null"));
     }
 
     /** Shows the panel at the supplied scene coordinates. */

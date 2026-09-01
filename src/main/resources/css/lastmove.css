@@ -172,6 +172,82 @@
 .regex-search-button { -fx-min-width: 40px; -fx-min-height: 40px; }
 .regex-search-validation { -fx-font-size: 12px; -fx-font-weight: 600; -fx-text-fill: #a72e3e; }
 
+.tag-filter-control {
+    -fx-max-width: 720px;
+    -fx-padding: 10 12;
+    -fx-background-color: #f7f9fc;
+    -fx-background-radius: 8px;
+    -fx-border-color: #dfe5ec;
+    -fx-border-radius: 8px;
+}
+.tag-filter-title { -fx-font-size: 12px; -fx-font-weight: 700; -fx-text-fill: #4c5a68; }
+.tag-filter-clear {
+    -fx-padding: 2 7;
+    -fx-font-size: 11px;
+    -fx-text-fill: #1c69d4;
+    -fx-background-color: transparent;
+}
+.tag-filter-choice, .tag-chip {
+    -fx-padding: 3 8;
+    -fx-font-size: 11px;
+    -fx-font-weight: 600;
+    -fx-text-fill: #315b87;
+    -fx-background-color: #e6f0fb;
+    -fx-background-radius: 999px;
+    -fx-border-color: #bfd6ef;
+    -fx-border-radius: 999px;
+}
+.tag-filter-choice:hover, .tag-chip:hover { -fx-background-color: #d7e8f9; -fx-border-color: #77a9df; }
+.tag-filter-choice-selected {
+    -fx-text-fill: #ffffff;
+    -fx-background-color: #1c69d4;
+    -fx-border-color: #1c69d4;
+}
+.tag-filter-choice-selected:hover { -fx-background-color: #1257b5; -fx-border-color: #1257b5; }
+.tag-assignment-control { -fx-min-width: 235px; }
+.tag-entry-field {
+    -fx-min-height: 30px;
+    -fx-padding: 0 8px;
+    -fx-font-size: 11px;
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 6px;
+    -fx-border-color: #cbd5df;
+    -fx-border-radius: 6px;
+}
+.tag-add-button {
+    -fx-min-width: 30px;
+    -fx-min-height: 30px;
+    -fx-padding: 0;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #ffffff;
+    -fx-background-color: #1c69d4;
+    -fx-background-radius: 6px;
+}
+.tag-add-button:hover { -fx-background-color: #1257b5; }
+.tag-display-control { -fx-padding: 1 0 0 0; }
+.tag-display-chip {
+    -fx-padding: 2 7;
+    -fx-font-size: 11px;
+    -fx-font-weight: 600;
+    -fx-text-fill: #315b87;
+    -fx-background-color: #e6f0fb;
+    -fx-background-radius: 999px;
+    -fx-border-color: #bfd6ef;
+    -fx-border-radius: 999px;
+}
+.tag-match-flow { -fx-padding: 2 0 0 0; }
+.tag-match {
+    -fx-padding: 3 8;
+    -fx-font-size: 11px;
+    -fx-text-fill: #315b87;
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 6px;
+    -fx-border-color: #bfd6ef;
+    -fx-border-radius: 6px;
+}
+.tag-match:hover { -fx-background-color: #e6f0fb; -fx-border-color: #1c69d4; }
+
 .study-library-list, .chapter-list {
     -fx-background-color: #ffffff;
     -fx-border-color: #dfe5ec;
@@ -1746,6 +1822,21 @@
 }
 .night-mode .regex-search-field:focused { -fx-border-color: #6ba5f0; }
 .night-mode .regex-search-validation { -fx-text-fill: #ff9aa6; }
+.night-mode .tag-filter-control { -fx-background-color: #1c2430; -fx-border-color: #465465; }
+.night-mode .tag-filter-title { -fx-text-fill: #c5d0dd; }
+.night-mode .tag-filter-clear { -fx-text-fill: #79aeef; }
+.night-mode .tag-filter-choice, .night-mode .tag-chip {
+    -fx-text-fill: #b8d6f3;
+    -fx-background-color: #29415f;
+    -fx-border-color: #496887;
+}
+.night-mode .tag-filter-choice:hover, .night-mode .tag-chip:hover { -fx-background-color: #334f70; -fx-border-color: #79aeef; }
+.night-mode .tag-filter-choice-selected { -fx-text-fill: #ffffff; -fx-background-color: #3a81d8; -fx-border-color: #6ba5f0; }
+.night-mode .tag-entry-field { -fx-text-fill: #f1f3f5; -fx-prompt-text-fill: #93a0ae; -fx-background-color: #151d26; -fx-border-color: #465465; }
+.night-mode .tag-add-button { -fx-background-color: #3a81d8; }
+.night-mode .tag-display-chip { -fx-text-fill: #b8d6f3; -fx-background-color: #29415f; -fx-border-color: #496887; }
+.night-mode .tag-match { -fx-text-fill: #b8d6f3; -fx-background-color: #24303d; -fx-border-color: #496887; }
+.night-mode .tag-match:hover { -fx-background-color: #334f70; -fx-border-color: #79aeef; }
 .night-mode .study-library-list,
 .night-mode .chapter-list {
     -fx-background-color: #1c2430;
@@ -2122,6 +2213,44 @@
 .night-mode .arena-tournament-registration-not_eligible, .night-mode .arena-tournament-registration-incompatible, .night-mode .arena-tournament-registration-closed, .night-mode .arena-tournament-registration-error { -fx-text-fill: #ff9b9b; }
 .night-mode .arena-scroll-pane .scroll-bar:vertical .track { -fx-background-color: #1c2430; }
 .night-mode .arena-scroll-pane .scroll-bar:vertical .thumb { -fx-background-color: #465465; }
+
+/* Knightshade Arena controls need their own dark surfaces.  The shared
+   settings/list styles otherwise fall back to the light workspace palette. */
+.night-mode .arena-bot-settings {
+    -fx-background-color: #202a36;
+    -fx-border-color: #43576d;
+}
+.night-mode .arena-bot-settings .settings-field-label { -fx-text-fill: #b7c8dd; }
+.night-mode .arena-bot-settings .status-text,
+.night-mode .arena-bot-setting-value { -fx-text-fill: #f1f3f5; }
+.night-mode .arena-bot-settings-change { -fx-text-fill: #78b9ff; }
+
+.night-mode .arena-bot-cell,
+.night-mode .arena-bot-cell:filled {
+    -fx-background-color: #1c2430;
+    -fx-text-fill: #edf3f8;
+    -fx-border-color: transparent transparent #394858 transparent;
+}
+.night-mode .arena-bot-cell:filled:hover { -fx-background-color: #263443; }
+.night-mode .arena-bot-cell:selected,
+.night-mode .arena-bot-cell:filled:selected {
+    -fx-background-color: #2d4056;
+    -fx-text-fill: #9fc8f7;
+}
+.night-mode .arena-bot-cell.arena-bot-challenged { -fx-text-fill: #f3c969; -fx-background-color: #3d3523; }
+.night-mode .arena-bot-cell.arena-bot-rejected { -fx-text-fill: #ff9b9b; -fx-background-color: #432b31; }
+.night-mode .arena-bot-cell.arena-bot-accepted { -fx-text-fill: #7edca7; -fx-background-color: #203c31; }
+.night-mode .arena-bot-cell.arena-bot-friendly { -fx-text-fill: #9fc8f7; -fx-background-color: #243a55; }
+.night-mode .study-library-list .list-cell.arena-bot-challenged { -fx-text-fill: #f3c969; -fx-background-color: #3d3523; }
+.night-mode .study-library-list .list-cell.arena-bot-rejected { -fx-text-fill: #ff9b9b; -fx-background-color: #432b31; }
+.night-mode .study-library-list .list-cell.arena-bot-accepted { -fx-text-fill: #7edca7; -fx-background-color: #203c31; }
+
+.night-mode .arena-tournaments-list,
+.night-mode .arena-tournaments-list .virtual-flow,
+.night-mode .arena-tournaments-list .viewport,
+.night-mode .arena-tournaments-list .list-cell {
+    -fx-background-color: #1c2430;
+}
 
 .night-mode .status-rail {
     -fx-background-color: #1a2129;
