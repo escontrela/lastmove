@@ -2,6 +2,7 @@ package com.escontrela.lastmove.ui.component.tree;
 
 import com.escontrela.lastmove.domain.game.PositionSnapshot;
 import com.escontrela.lastmove.ui.component.board.ChessBoardControl;
+import com.escontrela.lastmove.ui.component.board.BoardAppearancePreset;
 import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -9,6 +10,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -201,6 +203,11 @@ public final class MoveTreeOverlay extends StackPane {
     configureResize(resizeHandle);
     configurePan();
     hide();
+  }
+
+  /** Lets owning screens keep the preview board aligned with their global board appearance. */
+  public void bindBoardAppearance(ReadOnlyObjectProperty<BoardAppearancePreset> appearancePreset) {
+    previewBoard.appearancePresetProperty().bind(appearancePreset);
   }
 
   /** Replaces the full rendered tree. */

@@ -21,7 +21,7 @@ import com.escontrela.lastmove.ui.support.CssClassNames;
 public class ChessSquareControl extends StackPane {
 
   /** Proporción del tamaño de la casilla que ocupa la imagen de la pieza. */
-  private static final double PIECE_SCALE = 0.88;
+  private double pieceScale = 0.88;
 
   private static final Border DRAG_TARGET_BORDER =
       new Border(
@@ -53,6 +53,7 @@ public class ChessSquareControl extends StackPane {
     // La ImageView NO debe consumir eventos de mouse -> permitir que pasen a través
     pieceImageView.setPreserveRatio(true);
     pieceImageView.setPickOnBounds(false); // Clave: no interceptar eventos de mouse
+    pieceImageView.getStyleClass().add("chess-piece");
 
     threatenedOverlay.setMouseTransparent(true);
     threatenedOverlay.getStyleClass().add("chess-square-threatened-glow");
@@ -76,6 +77,15 @@ public class ChessSquareControl extends StackPane {
   public void setVisualEffectsEnabled(boolean enabled) {
     visualEffectsEnabled = enabled;
     applyTheme(theme);
+  }
+
+  /** Updates the palette in place so changing board presets preserves all square interaction state. */
+  public void setTheme(BoardTheme theme) {
+    applyTheme(theme);
+  }
+
+  public void setPieceScale(double scale) {
+    pieceScale = scale;
   }
 
   public int getFile() {
@@ -116,7 +126,7 @@ public class ChessSquareControl extends StackPane {
     setPrefSize(size, size);
     setMaxSize(size, size);
 
-    double pieceSize = Math.floor(size * PIECE_SCALE);
+    double pieceSize = Math.floor(size * pieceScale);
     pieceImageView.setFitWidth(pieceSize);
     pieceImageView.setFitHeight(pieceSize);
   }

@@ -33,6 +33,7 @@ import com.escontrela.lastmove.ui.screen.UiFlowManager;
 import com.escontrela.lastmove.ui.screen.UiScreenController;
 import com.escontrela.lastmove.ui.screen.UiScreenId;
 import com.escontrela.lastmove.ui.service.ClipboardService;
+import com.escontrela.lastmove.ui.service.BoardAppearancePreferencesService;
 import java.util.Optional;
 import javafx.fxml.FXML;
 import javafx.scene.control.CheckBox;
@@ -77,6 +78,7 @@ public final class PositionEditorScreenController implements UiScreenController 
   private final TacticService tacticService;
   private final CurrentUserService currentUserService;
   private final ClipboardService clipboard;
+  private final BoardAppearancePreferencesService boardAppearancePreferencesService;
   private final UiEventBus events;
   private final UiFlowManager flow;
   private PieceType selectedType;
@@ -86,12 +88,17 @@ public final class PositionEditorScreenController implements UiScreenController 
   private TacticPositionEditContext tacticEditContext;
 
   public PositionEditorScreenController(PositionEditorService editor, StudyService studyService, AnalysisSessionService analysisSessions,
-      TacticService tacticService, CurrentUserService currentUserService, ClipboardService clipboard, UiEventBus events, @Lazy UiFlowManager flow) {
+      TacticService tacticService, CurrentUserService currentUserService, ClipboardService clipboard,
+      BoardAppearancePreferencesService boardAppearancePreferencesService, UiEventBus events, @Lazy UiFlowManager flow) {
     this.editor = editor; this.studyService = studyService; this.analysisSessions = analysisSessions; this.tacticService = tacticService; this.currentUserService = currentUserService;
-    this.clipboard = clipboard; this.events = events; this.flow = flow;
+    this.clipboard = clipboard; this.boardAppearancePreferencesService = boardAppearancePreferencesService; this.events = events; this.flow = flow;
   }
   @FXML public void initialize() {
     root.getProperties().put("controller", this);
+    chessBoard.visualEffectsEnabledProperty().bind(
+        boardAppearancePreferencesService.boardVisualEffectsEnabledProperty());
+    chessBoard.appearancePresetProperty().bind(
+        boardAppearancePreferencesService.boardAppearancePresetProperty());
     chessBoard.setEditorMode(true);
     chessBoard.setOnMoveRequested(event -> { editor.move(event.getMoveInput().fromSquare(), event.getMoveInput().toSquare()); refresh(); });
     chessBoard.setOnPieceRemovalRequested(event -> { editor.remove(event.getSquare()); refresh(); });

@@ -25,6 +25,7 @@ import javafx.scene.input.TransferMode;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.RowConstraints;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
@@ -45,6 +46,8 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
   private static final double MAX_COORDINATE_GUTTER = 22.0;
 
   private final GridPane grid = new GridPane();
+  private final Region boardFrame = new Region();
+  private final Region boardFrameInset = new Region();
   private final Pane arrowOverlay = new Pane();
   private final Pane coordinateOverlay = new Pane();
   private final StackPane dragOverlay = new StackPane(); // Overlay para pieza flotante durante drag
@@ -83,6 +86,8 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
       (observable, oldValue, flipped) -> applyOrientation();
   private final ChangeListener<Boolean> visualEffectsListener =
       (observable, oldValue, enabled) -> updateSquareVisualEffects(enabled);
+  private final ChangeListener<BoardAppearancePreset> appearancePresetListener =
+      (observable, oldValue, preset) -> applyAppearancePreset(preset);
   private final ChangeListener<Square> hintSquareListener =
       (observable, oldSquare, newSquare) -> updateHintSquare(oldSquare, newSquare);
   private final ListChangeListener<Square> threatenedSquaresListener = change -> updateThreatenedSquares();
@@ -92,10 +97,12 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     super(control);
     configureGrid();
     configureCoordinateOverlay();
+    configureFrame();
     buildGrid(control); // Pasó 1: Construcción estructural del Grid e interacción pura
     control.positionProperty().addListener(positionListener);
     control.flippedProperty().addListener(orientationListener);
     control.visualEffectsEnabledProperty().addListener(visualEffectsListener);
+    control.appearancePresetProperty().addListener(appearancePresetListener);
     control.hintSquareProperty().addListener(hintSquareListener);
     control.observableThreatenedSquares().addListener(threatenedSquaresListener);
     control.observableArrows().addListener(arrowsListener);
@@ -105,6 +112,7 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     }
     updateHintSquare(null, control.getHintSquare());
     updateThreatenedSquares();
+    applyAppearancePreset(control.getAppearancePreset());
 
     // Configurar overlay para pieza flotante
     dragOverlay.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
@@ -120,10 +128,19 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     arrowOverlay.setSnapToPixel(true);
 
     // Arrows sit above squares and pieces, while the drag feedback remains the topmost overlay.
+    getChildren().add(boardFrame);
+    getChildren().add(boardFrameInset);
     getChildren().add(grid);
     getChildren().add(arrowOverlay);
     getChildren().add(dragOverlay);
     getChildren().add(coordinateOverlay);
+  }
+
+  private void configureFrame() {
+    boardFrame.setMouseTransparent(true);
+    boardFrame.getStyleClass().add("board-v2-frame");
+    boardFrameInset.setMouseTransparent(true);
+    boardFrameInset.getStyleClass().add("board-v2-frame-inset");
   }
 
   private void configureGrid() {
@@ -269,6 +286,23 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
         squares[file][rank].setVisualEffectsEnabled(enabled);
       }
     }
+  }
+
+  private void applyAppearancePreset(BoardAppearancePreset preset) {
+    pieceImages.clear();
+    for (int file = 0; file < ChessConstants.FILES; file++) {
+      for (int rank = 0; rank < ChessConstants.RANKS; rank++) {
+        ChessSquareControl square = squares[file][rank];
+        square.setTheme(preset.boardTheme());
+        square.setPieceScale(preset.pieceScale());
+      }
+    }
+    boardFrame.setVisible(preset.framed());
+    boardFrameInset.setVisible(preset.framed());
+    if (getSkinnable().getPosition() != null) {
+      renderPosition(getSkinnable().getPosition());
+    }
+    getSkinnable().requestLayout();
   }
   private void updateThreatenedSquares() {
     var threatened = new java.util.HashSet<>(getSkinnable().observableThreatenedSquares());
@@ -569,11 +603,12 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
 
   private Image pieceImage(PositionPiece piece) {
     String key = piece.color().name().toLowerCase() + "-" + piece.type().name().toLowerCase();
-    return pieceImages.computeIfAbsent(key, this::loadPieceImage);
+    String root = getSkinnable().getAppearancePreset().pieceResourceRoot();
+    return pieceImages.computeIfAbsent(root + "/" + key, unused -> loadPieceImage(root, key));
   }
 
-  private Image loadPieceImage(String key) {
-    String resourcePath = "/chess-pieces/" + key + ".png";
+  private Image loadPieceImage(String root, String key) {
+    String resourcePath = root + "/" + key + ".png";
     var stream = ChessBoardSkin.class.getResourceAsStream(resourcePath);
     if (stream == null) {
       throw new IllegalArgumentException("No se encontró el recurso: " + resourcePath);
@@ -655,6 +690,9 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     getSkinnable().positionProperty().removeListener(positionListener);
     getSkinnable().flippedProperty().removeListener(orientationListener);
     getSkinnable().visualEffectsEnabledProperty().removeListener(visualEffectsListener);
+    getSkinnable().appearancePresetProperty().removeListener(appearancePresetListener);
+    getSkinnable().hintSquareProperty().removeListener(hintSquareListener);
+    getSkinnable().observableThreatenedSquares().removeListener(threatenedSquaresListener);
     getSkinnable().observableArrows().removeListener(arrowsListener);
     getSkinnable().removeEventFilter(ContextMenuEvent.CONTEXT_MENU_REQUESTED, contextMenuFilter);
     super.dispose();
@@ -680,6 +718,15 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     double squareSize = boardSide / ChessConstants.FILES;
     applySquareSizes(squareSize);
 
+    double frameMargin =
+        getSkinnable().getAppearancePreset().framed()
+            ? Math.min(18.0, Math.max(7.0, Math.floor(boardSide * 0.035)))
+            : 0.0;
+    boardFrame.resizeRelocate(
+        x - frameMargin, y - frameMargin, boardSide + frameMargin * 2, boardSide + frameMargin * 2);
+    double inset = Math.max(2.0, frameMargin * 0.3);
+    boardFrameInset.resizeRelocate(
+        x - inset, y - inset, boardSide + inset * 2, boardSide + inset * 2);
     grid.resizeRelocate(x, y, boardSide, boardSide);
     arrowOverlay.resizeRelocate(x, y, boardSide, boardSide);
     dragOverlay.resizeRelocate(x, y, boardSide, boardSide);

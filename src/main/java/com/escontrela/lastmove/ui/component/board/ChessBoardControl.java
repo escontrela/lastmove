@@ -31,7 +31,8 @@ import javafx.scene.control.Skin;
  */
 public class ChessBoardControl extends Control {
 
-  private BoardTheme theme = BoardTheme.LASTMOVE;
+  private final ObjectProperty<BoardAppearancePreset> appearancePreset =
+      new SimpleObjectProperty<>(this, "appearancePreset", BoardAppearancePreset.STANDARD);
   private ChessSoundService soundService;
   private final ObjectProperty<PositionSnapshot> position =
       new SimpleObjectProperty<>(this, "position");
@@ -66,7 +67,10 @@ public class ChessBoardControl extends Control {
     setPrefSize(720, 720);
     setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
     visualEffectsEnabled.addListener((observable, oldValue, enabled) -> updateVisualEffectsStyle());
+    appearancePreset.addListener(
+        (observable, oldPreset, newPreset) -> updateAppearancePresetStyle(newPreset));
     updateVisualEffectsStyle();
+    updateAppearancePresetStyle(appearancePreset.get());
   }
 
   @Override
@@ -75,7 +79,20 @@ public class ChessBoardControl extends Control {
   }
 
   public BoardTheme getTheme() {
-    return theme;
+    return getAppearancePreset().boardTheme();
+  }
+
+  public final ObjectProperty<BoardAppearancePreset> appearancePresetProperty() {
+    return appearancePreset;
+  }
+
+  public final BoardAppearancePreset getAppearancePreset() {
+    return appearancePreset.get();
+  }
+
+  /** Applies a complete presentation preset without changing chess state or interaction handlers. */
+  public final void setAppearancePreset(BoardAppearancePreset preset) {
+    appearancePreset.set(Objects.requireNonNull(preset, "preset must not be null"));
   }
 
   /** Updates the complete board state that the skin must render. */
@@ -180,12 +197,20 @@ public class ChessBoardControl extends Control {
     }
   }
 
+  /**
+   * @deprecated Use {@link #setAppearancePreset(BoardAppearancePreset)}. Themes no longer own a
+   *     complete board appearance.
+   */
+  @Deprecated
   public void setTheme(BoardTheme theme) {
-    this.theme = theme;
-    if (getSkin() != null) {
-      getSkin().dispose();
-      setSkin(createDefaultSkin());
+    BoardTheme requiredTheme = Objects.requireNonNull(theme, "theme must not be null");
+    for (BoardAppearancePreset preset : BoardAppearancePreset.values()) {
+      if (preset.boardTheme() == requiredTheme) {
+        setAppearancePreset(preset);
+        return;
+      }
     }
+    throw new IllegalArgumentException("No board appearance preset uses theme " + requiredTheme);
   }
 
   private void updateVisualEffectsStyle() {
@@ -193,6 +218,14 @@ public class ChessBoardControl extends Control {
     if (isVisualEffectsEnabled()) {
       getStyleClass().add("board-visual-effects");
     }
+  }
+
+  private void updateAppearancePresetStyle(BoardAppearancePreset preset) {
+    getStyleClass().remove("board-v2");
+    if (preset.framed()) {
+      getStyleClass().add("board-v2");
+    }
+    requestLayout();
   }
 
   // 2. MÉTODOS DE LA API DE PROPIEDADES DE JAVAFX
