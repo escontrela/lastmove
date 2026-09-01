@@ -53,6 +53,13 @@ class ChessBoardOrientationTest {
     assertResponsiveGeometry(720.0);
   }
 
+  @Test
+  void v2FrameAndGridStayCenteredInsideTheControl() {
+    assertV2Geometry(240.0);
+    assertV2Geometry(480.0);
+    assertV2Geometry(720.0);
+  }
+
   private void assertDisplayPosition(
       String algebraic, boolean flipped, int expectedColumn, int expectedRow) {
     Square square = Square.of(algebraic);
@@ -66,5 +73,17 @@ class ChessBoardOrientationTest {
     assertTrue(gutter >= 12.0 && gutter <= 22.0);
     assertEquals(0.0, boardSide % 8.0);
     assertTrue(boardSide + gutter <= availableSide);
+  }
+
+  private void assertV2Geometry(double availableSide) {
+    double frameThickness = ChessBoardSkin.v2FrameThickness(availableSide);
+    double boardSide = ChessBoardSkin.v2BoardSideFor(availableSide, frameThickness);
+    double frameSide = boardSide + frameThickness * 2.0;
+
+    assertTrue(frameThickness >= 16.0 && frameThickness <= 36.0);
+    assertEquals(0.0, boardSide % 8.0);
+    assertTrue(frameSide <= availableSide);
+    double frameStart = (availableSide - frameSide) / 2.0;
+    assertEquals(availableSide / 2.0, frameStart + frameSide / 2.0);
   }
 }

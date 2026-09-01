@@ -45,6 +45,7 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
   private static final double MIN_COORDINATE_GUTTER = 12.0;
   private static final double MAX_COORDINATE_GUTTER = 22.0;
 
+  private final Region boardGlow = new Region();
   private final GridPane grid = new GridPane();
   private final Region boardFrame = new Region();
   private final Region boardFrameInset = new Region();
@@ -128,6 +129,7 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     arrowOverlay.setSnapToPixel(true);
 
     // Arrows sit above squares and pieces, while the drag feedback remains the topmost overlay.
+    getChildren().add(boardGlow);
     getChildren().add(boardFrame);
     getChildren().add(boardFrameInset);
     getChildren().add(grid);
@@ -137,6 +139,8 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
   }
 
   private void configureFrame() {
+    boardGlow.setMouseTransparent(true);
+    boardGlow.getStyleClass().add("board-v2-glow");
     boardFrame.setMouseTransparent(true);
     boardFrame.getStyleClass().add("board-v2-frame");
     boardFrameInset.setMouseTransparent(true);
@@ -286,6 +290,7 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
         squares[file][rank].setVisualEffectsEnabled(enabled);
       }
     }
+    boardGlow.setVisible(getSkinnable().getAppearancePreset().framed() && enabled);
   }
 
   private void applyAppearancePreset(BoardAppearancePreset preset) {
@@ -299,6 +304,7 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     }
     boardFrame.setVisible(preset.framed());
     boardFrameInset.setVisible(preset.framed());
+    boardGlow.setVisible(preset.framed() && getSkinnable().isVisualEffectsEnabled());
     if (getSkinnable().getPosition() != null) {
       renderPosition(getSkinnable().getPosition());
     }
@@ -702,9 +708,13 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
   protected void layoutChildren(
       double contentX, double contentY, double contentWidth, double contentHeight) {
 
-    // El gutter vive dentro del cuadrado asignado al control. Así las coordenadas nunca empujan
-    // al resto de la pantalla y el tablero interior sigue compuesto por ocho casillas exactas.
     double availableSide = Math.floor(Math.min(contentWidth, contentHeight));
+    if (getSkinnable().getAppearancePreset().framed()) {
+      layoutV2Board(contentX, contentY, contentWidth, contentHeight, availableSide);
+      return;
+    }
+
+    // The standard board keeps its coordinate gutter inside the assigned square.
     double gutter = coordinateGutter(availableSide);
     double boardSide = boardSideFor(availableSide, gutter);
     double usedSide = boardSide + gutter;
@@ -718,21 +728,71 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     double squareSize = boardSide / ChessConstants.FILES;
     applySquareSizes(squareSize);
 
-    double frameMargin =
-        getSkinnable().getAppearancePreset().framed()
-            ? Math.min(18.0, Math.max(7.0, Math.floor(boardSide * 0.035)))
-            : 0.0;
-    boardFrame.resizeRelocate(
-        x - frameMargin, y - frameMargin, boardSide + frameMargin * 2, boardSide + frameMargin * 2);
-    double inset = Math.max(2.0, frameMargin * 0.3);
-    boardFrameInset.resizeRelocate(
-        x - inset, y - inset, boardSide + inset * 2, boardSide + inset * 2);
+    boardGlow.resizeRelocate(x, y, 0, 0);
+    boardFrame.resizeRelocate(x, y, 0, 0);
+    boardFrameInset.resizeRelocate(x, y, 0, 0);
     grid.resizeRelocate(x, y, boardSide, boardSide);
     arrowOverlay.resizeRelocate(x, y, boardSide, boardSide);
     dragOverlay.resizeRelocate(x, y, boardSide, boardSide);
     coordinateOverlay.resizeRelocate(x, y, usedSide, usedSide);
     layoutCoordinateLabels(boardSide, gutter, squareSize);
     renderArrows();
+  }
+
+  private void layoutV2Board(
+      double contentX,
+      double contentY,
+      double contentWidth,
+      double contentHeight,
+      double availableSide) {
+    double frameThickness = v2FrameThickness(availableSide);
+    double boardSide = v2BoardSideFor(availableSide, frameThickness);
+    double frameSide = boardSide + frameThickness * 2.0;
+    double frameX = Math.floor(contentX + (contentWidth - frameSide) / 2.0);
+    double frameY = Math.floor(contentY + (contentHeight - frameSide) / 2.0);
+    double boardX = frameX + frameThickness;
+    double boardY = frameY + frameThickness;
+    double squareSize = boardSide / ChessConstants.FILES;
+    applySquareSizes(squareSize);
+
+    double glowInset = Math.max(10.0, frameThickness * 0.45);
+    double glowHeight = Math.max(18.0, frameThickness * 0.9);
+    boardGlow.resizeRelocate(
+        frameX + glowInset,
+        frameY + frameSide - glowHeight * 0.35,
+        frameSide - glowInset * 2.0,
+        glowHeight);
+    boardFrame.resizeRelocate(frameX, frameY, frameSide, frameSide);
+    double innerLip = Math.max(3.0, Math.floor(frameThickness * 0.18));
+    boardFrameInset.resizeRelocate(
+        boardX - innerLip,
+        boardY - innerLip,
+        boardSide + innerLip * 2.0,
+        boardSide + innerLip * 2.0);
+    grid.resizeRelocate(boardX, boardY, boardSide, boardSide);
+    arrowOverlay.resizeRelocate(boardX, boardY, boardSide, boardSide);
+    dragOverlay.resizeRelocate(boardX, boardY, boardSide, boardSide);
+    coordinateOverlay.resizeRelocate(frameX, frameY, frameSide, frameSide);
+    layoutV2CoordinateLabels(frameThickness, boardSide, squareSize);
+    renderArrows();
+  }
+
+  private void layoutV2CoordinateLabels(
+      double frameThickness, double boardSide, double squareSize) {
+    double labelInset = Math.max(2.0, frameThickness * 0.12);
+    double labelExtent = Math.max(10.0, frameThickness - labelInset * 2.0);
+    for (int index = 0; index < ChessConstants.FILES; index++) {
+      fileLabels[index].resizeRelocate(
+          frameThickness + index * squareSize,
+          frameThickness + boardSide + labelInset,
+          squareSize,
+          labelExtent);
+      rankLabels[index].resizeRelocate(
+          labelInset,
+          frameThickness + index * squareSize,
+          labelExtent,
+          squareSize);
+    }
   }
 
   private void layoutCoordinateLabels(double boardSide, double gutter, double squareSize) {
@@ -778,6 +838,19 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
   static String rankLabelAt(int displayRow, boolean flipped) {
     int rank = flipped ? displayRow : ChessConstants.RANKS - 1 - displayRow;
     return Integer.toString(rank + 1);
+  }
+
+  static double v2FrameThickness(double availableSide) {
+    if (availableSide <= 0.0) {
+      return 0.0;
+    }
+    double preferred = Math.min(36.0, Math.max(16.0, Math.floor(availableSide * 0.05)));
+    return Math.min(preferred, availableSide / 2.0);
+  }
+
+  static double v2BoardSideFor(double availableSide, double frameThickness) {
+    double drawableSide = Math.max(0.0, availableSide - frameThickness * 2.0);
+    return Math.floor(drawableSide / ChessConstants.FILES) * ChessConstants.FILES;
   }
 
   static double coordinateGutter(double availableSide) {

@@ -1252,23 +1252,47 @@
 }
 
 /* v2 keeps the same interactive 8×8 grid, then places a physical-board treatment behind it. */
+.chess-board.board-v2.board-visual-effects {
+    -fx-effect: null;
+}
+
+.board-v2 .board-v2-glow {
+    -fx-background-color: linear-gradient(to right,
+        rgba(231, 139, 50, 0.08) 0%,
+        rgba(255, 181, 82, 0.92) 22%,
+        rgba(255, 215, 143, 0.96) 50%,
+        rgba(255, 170, 67, 0.88) 78%,
+        rgba(224, 117, 38, 0.06) 100%);
+    -fx-background-radius: 999;
+    -fx-effect: dropshadow(gaussian, rgba(246, 142, 48, 0.78), 30, 0.45, 0, 6);
+}
+
 .board-v2 .board-v2-frame {
     -fx-background-color:
-        linear-gradient(to bottom, #322522 0%, #171113 38%, #4a3023 72%, #110c0d 100%),
-        linear-gradient(to right, #a97842, #e0b173, #845728);
-    -fx-background-insets: 0, 3;
-    -fx-background-radius: 20, 17;
-    -fx-border-color: linear-gradient(to bottom, #f1c681, #57351e);
-    -fx-border-width: 1;
-    -fx-border-radius: 20;
-    -fx-effect: dropshadow(gaussian, rgba(38, 21, 12, 0.78), 22, 0.35, 0, 10);
+        linear-gradient(to bottom, #4d392f 0%, #251a18 24%, #130d0d 62%, #3b281f 84%, #100b0c 100%),
+        linear-gradient(to right, #8e5b2c 0%, #e8b56f 18%, #b27437 52%, #f0c47d 82%, #70431f 100%),
+        linear-gradient(to bottom, #3c2b27 0%, #171010 48%, #4a3021 100%),
+        linear-gradient(to bottom, rgba(255, 224, 180, 0.18), rgba(17, 10, 9, 0.22));
+    -fx-background-insets: 0, 2, 6, 10;
+    -fx-background-radius: 24, 22, 18, 14;
+    -fx-border-color: linear-gradient(to bottom, #f4cd8b 0%, #9a642f 42%, #4b2c19 100%);
+    -fx-border-width: 1.25;
+    -fx-border-radius: 24;
+    -fx-effect: dropshadow(gaussian, rgba(26, 16, 13, 0.68), 31, 0.28, 0, 13);
 }
 
 .board-v2 .board-v2-frame-inset {
-    -fx-background-color: transparent;
-    -fx-border-color: rgba(255, 211, 148, 0.62), rgba(18, 12, 12, 0.92), rgba(10, 7, 8, 0.92), rgba(234, 183, 112, 0.38);
-    -fx-border-width: 1 2 3 2;
-    -fx-border-radius: 5;
+    -fx-background-color:
+        linear-gradient(to bottom, rgba(255, 220, 169, 0.24), rgba(72, 43, 27, 0.20)),
+        transparent;
+    -fx-background-insets: 0, 4;
+    -fx-border-color:
+        linear-gradient(to bottom, rgba(255, 226, 181, 0.88), rgba(133, 78, 38, 0.72)),
+        rgba(15, 9, 9, 0.92);
+    -fx-border-insets: 0, 3;
+    -fx-border-width: 1.4, 2.4;
+    -fx-border-radius: 7, 4;
+    -fx-effect: innershadow(gaussian, rgba(9, 6, 6, 0.82), 9, 0.35, 0, 2);
 }
 
 .board-v2 .chess-square-light {
@@ -1282,7 +1306,7 @@
 }
 
 .board-v2 .chess-piece {
-    -fx-effect: dropshadow(gaussian, rgba(11, 8, 7, 0.78), 6, 0.42, 1.5, 3);
+    -fx-effect: dropshadow(gaussian, rgba(9, 7, 6, 0.72), 8, 0.38, 1.5, 4);
 }
 
 .board-v2 .board-coordinate-label {
@@ -2452,7 +2476,10 @@
     -fx-effect: dropshadow(gaussian, rgba(175, 202, 229, 0.26), 30, 0.14, 0, 0);
 }
 .night-mode .board-v2 .board-v2-frame {
-    -fx-effect: dropshadow(gaussian, rgba(249, 181, 91, 0.28), 24, 0.24, 0, 8);
+    -fx-effect: dropshadow(gaussian, rgba(8, 6, 7, 0.78), 32, 0.28, 0, 14);
+}
+.night-mode .board-v2 .board-v2-glow {
+    -fx-opacity: 0.72;
 }
 .night-mode .board-v2 .board-coordinate-label { -fx-text-fill: #f5d8ac; }
 .night-mode .computer-thinking-dot { -fx-background-color: #6ba5f0; }
