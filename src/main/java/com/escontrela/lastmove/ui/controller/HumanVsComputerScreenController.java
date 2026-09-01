@@ -25,6 +25,7 @@ import com.escontrela.lastmove.ui.component.notation.MoveNotationControl;
 import com.escontrela.lastmove.ui.component.notation.MoveNotationEntry;
 import com.escontrela.lastmove.ui.component.notation.MoveNotationNode;
 import com.escontrela.lastmove.ui.component.promotion.PromotionPickerControl;
+import com.escontrela.lastmove.ui.component.profile.PlayerAvatarControl;
 import com.escontrela.lastmove.ui.event.OpenAnalysisSessionEvent;
 import com.escontrela.lastmove.ui.event.UiEventBus;
 import com.escontrela.lastmove.ui.model.BoardMoveInput;
@@ -34,7 +35,6 @@ import com.escontrela.lastmove.ui.screen.UiScreenId;
 import com.escontrela.lastmove.ui.service.ChessSoundService;
 import com.escontrela.lastmove.ui.service.BoardAppearancePreferencesService;
 import com.escontrela.lastmove.domain.service.ThreatenedSquaresService;
-import java.io.ByteArrayInputStream;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
@@ -51,7 +51,6 @@ import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
-import javafx.scene.shape.Circle;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -66,7 +65,6 @@ import org.springframework.stereotype.Component;
 public final class HumanVsComputerScreenController implements UiScreenController {
 
   private static final double BOARD_MAX_SIZE = 720.0;
-  private static final double PLAYER_ICON_SIZE = 28.0;
   private static final String NIGHT_MODE_STYLE_CLASS = "night-mode";
 
   private final UiFlowManager uiFlowManager;
@@ -91,8 +89,8 @@ public final class HumanVsComputerScreenController implements UiScreenController
   @FXML private MessageBox resultMessageBox;
   @FXML private Label opponentPlayerLabel;
   @FXML private Label humanPlayerLabel;
-  @FXML private ImageView opponentPlayerIcon;
-  @FXML private ImageView humanPlayerIcon;
+  @FXML private PlayerAvatarControl opponentPlayerIcon;
+  @FXML private PlayerAvatarControl humanPlayerIcon;
   @FXML private ImageView threatHintsIcon;
   @FXML private CapturedPiecesControl opponentCapturedPieces;
   @FXML private CapturedPiecesControl humanCapturedPieces;
@@ -603,25 +601,13 @@ public final class HumanVsComputerScreenController implements UiScreenController
   }
 
   private void updatePlayerIcons() {
-    String iconColor = root.getStyleClass().contains(NIGHT_MODE_STYLE_CLASS) ? "FFFFFF" : "000000";
     currentUserService.currentUserPhoto().ifPresentOrElse(
-        photo -> {
-          humanPlayerIcon.setImage(new Image(new ByteArrayInputStream(photo)));
-          humanPlayerIcon.setClip(
-              new Circle(PLAYER_ICON_SIZE / 2, PLAYER_ICON_SIZE / 2, PLAYER_ICON_SIZE / 2));
-        },
-        () -> {
-          humanPlayerIcon.setImage(loadImage("/images/face_35dp_" + iconColor + ".png"));
-          humanPlayerIcon.setClip(null);
-        });
+        photo -> humanPlayerIcon.showPhoto(photo, humanPlayerLabel.getText()),
+        () -> humanPlayerIcon.showInitials(humanPlayerLabel.getText()));
     boolean knightshadeOpponent = renderedState != null
         && ComputerEngineIds.KNIGHTSHADE.equals(renderedState.engine().id());
-    opponentPlayerIcon.setImage(knightshadeOpponent
-        ? loadImage(root.getStyleClass().contains(NIGHT_MODE_STYLE_CLASS)
-            ? "/images/knightshade-engine-mark-dark.png"
-            : "/images/knightshade-engine-mark.png")
-        : loadImage("/images/robot_2_35dp_" + iconColor + ".png"));
-    opponentPlayerIcon.setClip(null);
+    if (knightshadeOpponent) opponentPlayerIcon.showKnightshade(opponentPlayerLabel.getText());
+    else opponentPlayerIcon.showInitials(opponentPlayerLabel.getText());
   }
 
   private Image loadImage(String resource) {

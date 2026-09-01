@@ -133,6 +133,16 @@
 .current-user-avatar:hover { -fx-opacity: 0.9; }
 .current-user-avatar:pressed { -fx-opacity: 0.82; }
 
+.player-avatar { -fx-alignment: center; }
+.player-avatar-ring { -fx-fill: transparent; -fx-stroke: #607386; -fx-stroke-width: 1.5px; }
+.player-avatar-face { -fx-stroke: transparent; }
+.player-avatar-initials { -fx-font-size: 10px; -fx-font-weight: 700; -fx-text-fill: #ffffff; }
+.player-avatar-tone-0 .player-avatar-face { -fx-fill: #1c69d4; }
+.player-avatar-tone-1 .player-avatar-face { -fx-fill: #287fe0; }
+.player-avatar-tone-2 .player-avatar-face { -fx-fill: #466fb2; }
+.player-avatar-tone-3 .player-avatar-face { -fx-fill: #6454a4; }
+.player-avatar-tone-4 .player-avatar-face { -fx-fill: #315f91; }
+
 .hero-support, .card-copy, .status-text {
     -fx-text-fill: #3c3c3c;
     -fx-font-size: 13px;
