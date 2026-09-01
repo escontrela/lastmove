@@ -53,4 +53,15 @@ class BoardAppearancePreferencesServiceTest {
                 BoardAppearancePreset.STANDARD,
                 new BoardAppearancePreferencesService(preferences).getBoardAppearancePreset());
     }
+
+    @Test
+    void persistsTheV2GraySelectionIndependentlyFromV2Wood() {
+        BoardAppearancePreferencesService service = new BoardAppearancePreferencesService(preferences);
+
+        service.setBoardAppearancePreset(BoardAppearancePreset.V2_GRAY);
+
+        assertEquals(
+                BoardAppearancePreset.V2_GRAY,
+                new BoardAppearancePreferencesService(preferences).getBoardAppearancePreset());
+    }
 }

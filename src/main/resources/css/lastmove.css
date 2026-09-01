@@ -1324,6 +1324,38 @@
     -fx-border-color: #ffbf42;
 }
 
+/* v2 Gray shares all v2 geometry and interaction; only its material palette changes. */
+.board-v2-gray .board-v2-frame {
+    -fx-background-color: linear-gradient(to bottom,
+        #aab5c1 0%,
+        #929eaa 48%,
+        #6f7a86 86%,
+        #5d6874 100%);
+}
+
+.board-v2-gray .board-v2-inner-glow {
+    -fx-border-color: rgba(224, 235, 246, 0.24);
+    -fx-effect: dropshadow(gaussian, rgba(181, 205, 229, 0.18), 7, 0.18, 0, 0);
+}
+
+.board-v2-gray .board-v2-frame-inset {
+    -fx-border-color: rgba(35, 45, 56, 0.70), rgba(244, 248, 252, 0.20);
+    -fx-effect: innershadow(gaussian, rgba(221, 235, 248, 0.15), 5, 0.18, 0, 0);
+}
+
+.board-v2-gray .chess-square-light {
+    -fx-border-color: rgba(255, 255, 255, 0.20);
+}
+
+.board-v2-gray .chess-square-dark {
+    -fx-border-color: rgba(53, 67, 82, 0.16);
+}
+
+.board-v2-gray .board-coordinate-label {
+    -fx-text-fill: #f4f7fa;
+    -fx-effect: null;
+}
+
 .board-coordinate-overlay { -fx-background-color: transparent; }
 
 .board-coordinate-label {
@@ -2482,6 +2514,7 @@
     -fx-opacity: 0.72;
 }
 .night-mode .board-v2 .board-coordinate-label { -fx-text-fill: #d7b88e; -fx-effect: null; }
+.night-mode .board-v2-gray .board-coordinate-label { -fx-text-fill: #eef3f8; -fx-effect: null; }
 .night-mode .computer-thinking-dot { -fx-background-color: #6ba5f0; }
 .night-mode .progressive-action-button {
     -fx-background-color: #262e38;

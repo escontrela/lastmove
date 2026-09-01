@@ -222,8 +222,16 @@ public class ChessBoardControl extends Control {
 
   private void updateAppearancePresetStyle(BoardAppearancePreset preset) {
     getStyleClass().remove("board-v2");
+    for (BoardAppearancePreset candidate : BoardAppearancePreset.values()) {
+      if (candidate.styleClass() != null) {
+        getStyleClass().remove(candidate.styleClass());
+      }
+    }
     if (preset.framed()) {
       getStyleClass().add("board-v2");
+    }
+    if (preset.styleClass() != null) {
+      getStyleClass().add(preset.styleClass());
     }
     requestLayout();
   }
