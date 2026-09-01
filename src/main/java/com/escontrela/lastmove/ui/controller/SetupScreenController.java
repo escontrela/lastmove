@@ -10,6 +10,7 @@ import com.escontrela.lastmove.application.service.PositionAnalysisService;
 import com.escontrela.lastmove.application.arena.KnightshadeArenaSettings;
 import com.escontrela.lastmove.ui.component.header.ApplicationHeader;
 import com.escontrela.lastmove.ui.component.header.HeaderAction;
+import com.escontrela.lastmove.ui.component.board.BoardAppearancePreset;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
 import com.escontrela.lastmove.ui.screen.UiScreenController;
 import com.escontrela.lastmove.ui.screen.UiScreenId;
@@ -58,6 +59,8 @@ public class SetupScreenController implements UiScreenController {
     private CheckBox showSplashCheckBox;
     @FXML
     private CheckBox boardVisualEffectsCheckBox;
+    @FXML
+    private ComboBox<BoardAppearancePreset> boardAppearancePresetCombo;
     @FXML
     private ApplicationHeader applicationHeader;
     @FXML
@@ -142,6 +145,7 @@ public class SetupScreenController implements UiScreenController {
     private boolean savedNightMode;
     private boolean savedSplashScreen;
     private boolean savedBoardVisualEffects;
+    private BoardAppearancePreset savedBoardAppearancePreset;
     private String savedSunfishExecutablePath;
     private String savedMaiaExecutablePath;
     private String savedMaiaWeightsPath;
@@ -178,6 +182,9 @@ public class SetupScreenController implements UiScreenController {
         showSplashCheckBox.selectedProperty().addListener((ignored, oldValue, newValue) ->
                 updateApplyButtonVisibility());
         boardVisualEffectsCheckBox.selectedProperty().addListener((ignored, oldValue, newValue) ->
+                updateApplyButtonVisibility());
+        boardAppearancePresetCombo.setItems(FXCollections.observableArrayList(BoardAppearancePreset.values()));
+        boardAppearancePresetCombo.valueProperty().addListener((ignored, oldValue, newValue) ->
                 updateApplyButtonVisibility());
         sunfishExecutablePathField.textProperty().addListener((ignored, oldValue, newValue) -> {
             clearSunfishValidation();
@@ -222,6 +229,7 @@ public class SetupScreenController implements UiScreenController {
         savedNightMode = themeService.currentThemeMode().isNightMode();
         savedSplashScreen = startupPreferencesService.isSplashScreenEnabled();
         savedBoardVisualEffects = boardAppearancePreferencesService.isBoardVisualEffectsEnabled();
+        savedBoardAppearancePreset = boardAppearancePreferencesService.getBoardAppearancePreset();
         savedSunfishExecutablePath = computerEngineSettingsService
                 .sunfishSettings()
                 .executablePath()
@@ -238,6 +246,7 @@ public class SetupScreenController implements UiScreenController {
         nightModeCheckBox.setSelected(savedNightMode);
         showSplashCheckBox.setSelected(savedSplashScreen);
         boardVisualEffectsCheckBox.setSelected(savedBoardVisualEffects);
+        boardAppearancePresetCombo.setValue(savedBoardAppearancePreset);
         sunfishExecutablePathField.setText(savedSunfishExecutablePath);
         maiaExecutablePathField.setText(savedMaiaExecutablePath);
         maiaWeightsPathField.setText(savedMaiaWeightsPath);
@@ -288,9 +297,11 @@ public class SetupScreenController implements UiScreenController {
         themeService.setNightMode(nightModeCheckBox.isSelected());
         startupPreferencesService.setSplashScreenEnabled(showSplashCheckBox.isSelected());
         boardAppearancePreferencesService.setBoardVisualEffectsEnabled(boardVisualEffectsCheckBox.isSelected());
+        boardAppearancePreferencesService.setBoardAppearancePreset(boardAppearancePresetCombo.getValue());
         savedNightMode = nightModeCheckBox.isSelected();
         savedSplashScreen = showSplashCheckBox.isSelected();
         savedBoardVisualEffects = boardVisualEffectsCheckBox.isSelected();
+        savedBoardAppearancePreset = boardAppearancePresetCombo.getValue();
         updateApplyButtonVisibility();
     }
 
@@ -409,6 +420,7 @@ public class SetupScreenController implements UiScreenController {
         return nightModeCheckBox.isSelected() != savedNightMode
                 || showSplashCheckBox.isSelected() != savedSplashScreen
                 || boardVisualEffectsCheckBox.isSelected() != savedBoardVisualEffects
+                || boardAppearancePresetCombo.getValue() != savedBoardAppearancePreset
                 || !sunfishExecutablePathField.getText().trim().equals(savedSunfishExecutablePath)
                 || !trimmed(maiaExecutablePathField.getText()).equals(savedMaiaExecutablePath)
                 || !trimmed(maiaWeightsPathField.getText()).equals(savedMaiaWeightsPath)

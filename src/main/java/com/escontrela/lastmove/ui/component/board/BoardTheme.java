@@ -9,7 +9,9 @@ public enum BoardTheme {
     LASTMOVE("#e9ebee", "#9ca3aa"),
     CLASSIC("#f0d9b5", "#b58863"),
     BLUE_GREY("#dee3e6", "#8ca2ad"),
-    GREEN("#ffffdd", "#86a666");
+    GREEN("#ffffdd", "#86a666"),
+    V2("#efd7bd", "#715f59"),
+    V2_GRAY("#e7eaed", "#aab5c2");
 
     private final String lightColor;
     private final String darkColor;

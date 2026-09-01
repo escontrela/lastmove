@@ -133,6 +133,8 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
     chessBoard.setSoundService(chessSoundService);
     chessBoard.visualEffectsEnabledProperty().bind(
         boardAppearancePreferencesService.boardVisualEffectsEnabledProperty());
+    chessBoard.appearancePresetProperty().bind(
+        boardAppearancePreferencesService.boardAppearancePresetProperty());
     exerciseList.setCellFactory(ignored -> new ExerciseCell());
     chessBoard.setOnMoveRequested(event -> submitMove(event.getMoveInput()));
     chessBoard.setOnPromotionRequested(

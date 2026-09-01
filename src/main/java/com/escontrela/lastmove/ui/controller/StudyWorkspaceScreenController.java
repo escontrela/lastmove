@@ -164,6 +164,10 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
     chessBoard.setSoundService(chessSoundService);
     chessBoard.visualEffectsEnabledProperty().bind(
         boardAppearancePreferencesService.boardVisualEffectsEnabledProperty());
+    chessBoard.appearancePresetProperty().bind(
+        boardAppearancePreferencesService.boardAppearancePresetProperty());
+    moveTreeOverlay.bindBoardAppearance(
+        boardAppearancePreferencesService.boardAppearancePresetProperty());
     chapterList.setCellFactory(ignored -> new ChapterCell());
     configurePromotionPicker();
     configureNotation();

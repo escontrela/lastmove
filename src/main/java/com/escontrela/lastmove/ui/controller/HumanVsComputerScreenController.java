@@ -153,6 +153,8 @@ public final class HumanVsComputerScreenController implements UiScreenController
     chessBoard.setSoundService(chessSoundService);
     chessBoard.visualEffectsEnabledProperty().bind(
         boardAppearancePreferencesService.boardVisualEffectsEnabledProperty());
+    chessBoard.appearancePresetProperty().bind(
+        boardAppearancePreferencesService.boardAppearancePresetProperty());
     configureBoardInput();
     configurePromotionPicker();
     configureSetupOverlay();

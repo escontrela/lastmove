@@ -1,8 +1,10 @@
 package com.escontrela.lastmove.ui.service;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.escontrela.lastmove.ui.component.board.BoardAppearancePreset;
 import java.util.UUID;
 import java.util.prefs.Preferences;
 import org.junit.jupiter.api.AfterEach;
@@ -27,5 +29,39 @@ class BoardAppearancePreferencesServiceTest {
 
         assertFalse(service.isBoardVisualEffectsEnabled());
         assertFalse(new BoardAppearancePreferencesService(preferences).isBoardVisualEffectsEnabled());
+    }
+
+    @Test
+    void usesStandardAppearanceByDefaultAndPersistsTheV2Selection() {
+        BoardAppearancePreferencesService service = new BoardAppearancePreferencesService(preferences);
+
+        assertEquals(BoardAppearancePreset.STANDARD, service.getBoardAppearancePreset());
+
+        service.setBoardAppearancePreset(BoardAppearancePreset.V2);
+
+        assertEquals(BoardAppearancePreset.V2, service.getBoardAppearancePreset());
+        assertEquals(
+                BoardAppearancePreset.V2,
+                new BoardAppearancePreferencesService(preferences).getBoardAppearancePreset());
+    }
+
+    @Test
+    void fallsBackToStandardAppearanceWhenTheStoredValueIsInvalid() {
+        preferences.put("board-appearance-preset", "RETIRED_STYLE");
+
+        assertEquals(
+                BoardAppearancePreset.STANDARD,
+                new BoardAppearancePreferencesService(preferences).getBoardAppearancePreset());
+    }
+
+    @Test
+    void persistsTheV2GraySelectionIndependentlyFromV2Wood() {
+        BoardAppearancePreferencesService service = new BoardAppearancePreferencesService(preferences);
+
+        service.setBoardAppearancePreset(BoardAppearancePreset.V2_GRAY);
+
+        assertEquals(
+                BoardAppearancePreset.V2_GRAY,
+                new BoardAppearancePreferencesService(preferences).getBoardAppearancePreset());
     }
 }

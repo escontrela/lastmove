@@ -25,6 +25,7 @@ import javafx.scene.input.TransferMode;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.RowConstraints;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
@@ -44,7 +45,10 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
   private static final double MIN_COORDINATE_GUTTER = 12.0;
   private static final double MAX_COORDINATE_GUTTER = 22.0;
 
+  private final Region boardInnerGlow = new Region();
   private final GridPane grid = new GridPane();
+  private final Region boardFrame = new Region();
+  private final Region boardFrameInset = new Region();
   private final Pane arrowOverlay = new Pane();
   private final Pane coordinateOverlay = new Pane();
   private final StackPane dragOverlay = new StackPane(); // Overlay para pieza flotante durante drag
@@ -83,6 +87,8 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
       (observable, oldValue, flipped) -> applyOrientation();
   private final ChangeListener<Boolean> visualEffectsListener =
       (observable, oldValue, enabled) -> updateSquareVisualEffects(enabled);
+  private final ChangeListener<BoardAppearancePreset> appearancePresetListener =
+      (observable, oldValue, preset) -> applyAppearancePreset(preset);
   private final ChangeListener<Square> hintSquareListener =
       (observable, oldSquare, newSquare) -> updateHintSquare(oldSquare, newSquare);
   private final ListChangeListener<Square> threatenedSquaresListener = change -> updateThreatenedSquares();
@@ -92,10 +98,12 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     super(control);
     configureGrid();
     configureCoordinateOverlay();
+    configureFrame();
     buildGrid(control); // Pasó 1: Construcción estructural del Grid e interacción pura
     control.positionProperty().addListener(positionListener);
     control.flippedProperty().addListener(orientationListener);
     control.visualEffectsEnabledProperty().addListener(visualEffectsListener);
+    control.appearancePresetProperty().addListener(appearancePresetListener);
     control.hintSquareProperty().addListener(hintSquareListener);
     control.observableThreatenedSquares().addListener(threatenedSquaresListener);
     control.observableArrows().addListener(arrowsListener);
@@ -105,6 +113,7 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     }
     updateHintSquare(null, control.getHintSquare());
     updateThreatenedSquares();
+    applyAppearancePreset(control.getAppearancePreset());
 
     // Configurar overlay para pieza flotante
     dragOverlay.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
@@ -120,10 +129,22 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     arrowOverlay.setSnapToPixel(true);
 
     // Arrows sit above squares and pieces, while the drag feedback remains the topmost overlay.
+    getChildren().add(boardFrame);
+    getChildren().add(boardInnerGlow);
+    getChildren().add(boardFrameInset);
     getChildren().add(grid);
     getChildren().add(arrowOverlay);
     getChildren().add(dragOverlay);
     getChildren().add(coordinateOverlay);
+  }
+
+  private void configureFrame() {
+    boardInnerGlow.setMouseTransparent(true);
+    boardInnerGlow.getStyleClass().add("board-v2-inner-glow");
+    boardFrame.setMouseTransparent(true);
+    boardFrame.getStyleClass().add("board-v2-frame");
+    boardFrameInset.setMouseTransparent(true);
+    boardFrameInset.getStyleClass().add("board-v2-frame-inset");
   }
 
   private void configureGrid() {
@@ -269,6 +290,25 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
         squares[file][rank].setVisualEffectsEnabled(enabled);
       }
     }
+    boardInnerGlow.setVisible(getSkinnable().getAppearancePreset().framed() && enabled);
+  }
+
+  private void applyAppearancePreset(BoardAppearancePreset preset) {
+    pieceImages.clear();
+    for (int file = 0; file < ChessConstants.FILES; file++) {
+      for (int rank = 0; rank < ChessConstants.RANKS; rank++) {
+        ChessSquareControl square = squares[file][rank];
+        square.setTheme(preset.boardTheme());
+        square.setPieceScale(preset.pieceScale());
+      }
+    }
+    boardFrame.setVisible(preset.framed());
+    boardFrameInset.setVisible(preset.framed());
+    boardInnerGlow.setVisible(preset.framed() && getSkinnable().isVisualEffectsEnabled());
+    if (getSkinnable().getPosition() != null) {
+      renderPosition(getSkinnable().getPosition());
+    }
+    getSkinnable().requestLayout();
   }
   private void updateThreatenedSquares() {
     var threatened = new java.util.HashSet<>(getSkinnable().observableThreatenedSquares());
@@ -569,11 +609,12 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
 
   private Image pieceImage(PositionPiece piece) {
     String key = piece.color().name().toLowerCase() + "-" + piece.type().name().toLowerCase();
-    return pieceImages.computeIfAbsent(key, this::loadPieceImage);
+    String root = getSkinnable().getAppearancePreset().pieceResourceRoot();
+    return pieceImages.computeIfAbsent(root + "/" + key, unused -> loadPieceImage(root, key));
   }
 
-  private Image loadPieceImage(String key) {
-    String resourcePath = "/chess-pieces/" + key + ".png";
+  private Image loadPieceImage(String root, String key) {
+    String resourcePath = root + "/" + key + ".png";
     var stream = ChessBoardSkin.class.getResourceAsStream(resourcePath);
     if (stream == null) {
       throw new IllegalArgumentException("No se encontró el recurso: " + resourcePath);
@@ -655,6 +696,9 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     getSkinnable().positionProperty().removeListener(positionListener);
     getSkinnable().flippedProperty().removeListener(orientationListener);
     getSkinnable().visualEffectsEnabledProperty().removeListener(visualEffectsListener);
+    getSkinnable().appearancePresetProperty().removeListener(appearancePresetListener);
+    getSkinnable().hintSquareProperty().removeListener(hintSquareListener);
+    getSkinnable().observableThreatenedSquares().removeListener(threatenedSquaresListener);
     getSkinnable().observableArrows().removeListener(arrowsListener);
     getSkinnable().removeEventFilter(ContextMenuEvent.CONTEXT_MENU_REQUESTED, contextMenuFilter);
     super.dispose();
@@ -664,9 +708,13 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
   protected void layoutChildren(
       double contentX, double contentY, double contentWidth, double contentHeight) {
 
-    // El gutter vive dentro del cuadrado asignado al control. Así las coordenadas nunca empujan
-    // al resto de la pantalla y el tablero interior sigue compuesto por ocho casillas exactas.
     double availableSide = Math.floor(Math.min(contentWidth, contentHeight));
+    if (getSkinnable().getAppearancePreset().framed()) {
+      layoutV2Board(contentX, contentY, contentWidth, contentHeight, availableSide);
+      return;
+    }
+
+    // The standard board keeps its coordinate gutter inside the assigned square.
     double gutter = coordinateGutter(availableSide);
     double boardSide = boardSideFor(availableSide, gutter);
     double usedSide = boardSide + gutter;
@@ -680,12 +728,70 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     double squareSize = boardSide / ChessConstants.FILES;
     applySquareSizes(squareSize);
 
+    boardInnerGlow.resizeRelocate(x, y, 0, 0);
+    boardFrame.resizeRelocate(x, y, 0, 0);
+    boardFrameInset.resizeRelocate(x, y, 0, 0);
     grid.resizeRelocate(x, y, boardSide, boardSide);
     arrowOverlay.resizeRelocate(x, y, boardSide, boardSide);
     dragOverlay.resizeRelocate(x, y, boardSide, boardSide);
     coordinateOverlay.resizeRelocate(x, y, usedSide, usedSide);
     layoutCoordinateLabels(boardSide, gutter, squareSize);
     renderArrows();
+  }
+
+  private void layoutV2Board(
+      double contentX,
+      double contentY,
+      double contentWidth,
+      double contentHeight,
+      double availableSide) {
+    double frameThickness = v2FrameThickness(availableSide);
+    double boardSide = v2BoardSideFor(availableSide, frameThickness);
+    double frameSide = boardSide + frameThickness * 2.0;
+    double frameX = Math.floor(contentX + (contentWidth - frameSide) / 2.0);
+    double frameY = Math.floor(contentY + (contentHeight - frameSide) / 2.0);
+    double boardX = frameX + frameThickness;
+    double boardY = frameY + frameThickness;
+    double squareSize = boardSide / ChessConstants.FILES;
+    applySquareSizes(squareSize);
+
+    boardFrame.resizeRelocate(frameX, frameY, frameSide, frameSide);
+    double innerLip = Math.max(3.0, Math.floor(frameThickness * 0.18));
+    double glowLip = innerLip + 1.0;
+    boardInnerGlow.resizeRelocate(
+        boardX - glowLip,
+        boardY - glowLip,
+        boardSide + glowLip * 2.0,
+        boardSide + glowLip * 2.0);
+    boardFrameInset.resizeRelocate(
+        boardX - innerLip,
+        boardY - innerLip,
+        boardSide + innerLip * 2.0,
+        boardSide + innerLip * 2.0);
+    grid.resizeRelocate(boardX, boardY, boardSide, boardSide);
+    arrowOverlay.resizeRelocate(boardX, boardY, boardSide, boardSide);
+    dragOverlay.resizeRelocate(boardX, boardY, boardSide, boardSide);
+    coordinateOverlay.resizeRelocate(frameX, frameY, frameSide, frameSide);
+    layoutV2CoordinateLabels(frameThickness, boardSide, squareSize);
+    renderArrows();
+  }
+
+  private void layoutV2CoordinateLabels(
+      double frameThickness, double boardSide, double squareSize) {
+    double labelExtent = Math.min(18.0, Math.max(12.0, Math.floor(frameThickness * 0.55)));
+    double axisInset = Math.floor((frameThickness - labelExtent) / 2.0);
+    for (int index = 0; index < ChessConstants.FILES; index++) {
+      fileLabels[index].resizeRelocate(
+          frameThickness + index * squareSize,
+          frameThickness + boardSide + axisInset,
+          squareSize,
+          labelExtent);
+      rankLabels[index].resizeRelocate(
+          axisInset,
+          frameThickness + index * squareSize + Math.floor((squareSize - labelExtent) / 2.0),
+          labelExtent,
+          labelExtent);
+    }
   }
 
   private void layoutCoordinateLabels(double boardSide, double gutter, double squareSize) {
@@ -731,6 +837,19 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
   static String rankLabelAt(int displayRow, boolean flipped) {
     int rank = flipped ? displayRow : ChessConstants.RANKS - 1 - displayRow;
     return Integer.toString(rank + 1);
+  }
+
+  static double v2FrameThickness(double availableSide) {
+    if (availableSide <= 0.0) {
+      return 0.0;
+    }
+    double preferred = Math.min(36.0, Math.max(16.0, Math.floor(availableSide * 0.05)));
+    return Math.min(preferred, availableSide / 2.0);
+  }
+
+  static double v2BoardSideFor(double availableSide, double frameThickness) {
+    double drawableSide = Math.max(0.0, availableSide - frameThickness * 2.0);
+    return Math.floor(drawableSide / ChessConstants.FILES) * ChessConstants.FILES;
   }
 
   static double coordinateGutter(double availableSide) {
