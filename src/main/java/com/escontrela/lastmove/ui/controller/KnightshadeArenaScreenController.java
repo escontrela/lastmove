@@ -39,8 +39,12 @@ import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.Parent;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -104,6 +108,118 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
     botChallengeSettingsModal.setOnSave(configuration -> { botConfiguration = configuration; renderBotConfiguration(); refresh(); });
     tournamentsList.setCellFactory(list -> new TournamentCell());
     configureHeaderActions();
+    configureChallengeControls();
+  }
+
+  private void configureChallengeControls() {
+    Label sectionTitle = findLabel(root, "Online bots · autonomous challenges");
+    if (sectionTitle != null) {
+      ImageView icon = new ImageView(new Image(getClass().getResource("/images/robot_2_35dp_000000.png").toExternalForm()));
+      icon.setFitWidth(26); icon.setFitHeight(26); icon.setPreserveRatio(true);
+      sectionTitle.setGraphic(icon); sectionTitle.setGraphicTextGap(10);
+    }
+    addSettingIcon("/images/chess_king_2_35dp_000000.png", "Variant");
+    addSettingIcon("/images/history_35dp_000000.png", "Base time");
+    addSettingIcon("/images/add_35dp_000000.png", "Increment");
+    addSettingIcon("/images/graph_2_35dp_000000.png", "Min opponent rating");
+    addSettingIcon("/images/looks_one_35dp_000000.png", "Maximum games");
+    organizeChallengeSettings();
+    styleRatingCards();
+    startBotCycleButton.setText("Start");
+    startBotCycleButton.getStyleClass().addAll("arena-action-button", "arena-action-primary");
+    stopBotCycleButton.setText("Stop");
+    stopBotCycleButton.getStyleClass().add("arena-action-button");
+    refreshBotsButton.setText("Refresh");
+    refreshBotsButton.getStyleClass().add("arena-action-button");
+    Button change = findButton(root, "Change");
+    if (change != null) {
+      ImageView icon = new ImageView(new Image(getClass().getResource("/images/settings_35dp_000000.png").toExternalForm()));
+      icon.setFitWidth(17); icon.setFitHeight(17); icon.setPreserveRatio(true);
+      change.setGraphic(icon); change.getStyleClass().add("arena-action-change");
+    }
+  }
+
+  private void styleRatingCards() {
+    var node = findNodeWithStyle(root, "arena-summary");
+    if (!(node instanceof HBox summary)) return;
+    int size = summary.getChildren().size();
+    for (int index = Math.max(0, size - 3); index < size; index++) {
+      if (!(summary.getChildren().get(index) instanceof VBox card)) continue;
+      card.getStyleClass().add("arena-rating");
+      card.getChildren().stream().filter(Label.class::isInstance).map(Label.class::cast)
+          .skip(1).findFirst().ifPresent(label -> label.getStyleClass().add("arena-rating-value"));
+    }
+  }
+
+  private void organizeChallengeSettings() {
+    Parent settings = findNodeWithStyle(root, "arena-bot-settings");
+    if (!(settings instanceof HBox row) || findNodeWithStyle(row, "arena-bot-metrics-card") != null) return;
+    List<javafx.scene.Node> metrics = row.getChildren().stream()
+        .filter(node -> node instanceof HBox && node.getStyleClass().contains("arena-bot-setting"))
+        .limit(5).toList();
+    if (metrics.size() != 5) return;
+    HBox metricsCard = new HBox(0);
+    metricsCard.getStyleClass().add("arena-bot-metrics-card");
+    metricsCard.getChildren().addAll(metrics);
+    row.getChildren().removeAll(metrics);
+    row.getChildren().add(0, metricsCard);
+
+    row.getChildren().removeIf(node -> node == findButton(root, "Change") || node == refreshBotsButton
+        || node == startBotCycleButton || node == stopBotCycleButton || node instanceof Region);
+    row.getChildren().addAll(new Region(), refreshBotsButton, startBotCycleButton, stopBotCycleButton,
+        findButton(root, "Change"));
+    HBox.setHgrow(row.getChildren().get(1), Priority.ALWAYS);
+  }
+
+  private static Label findLabel(Parent parent, String text) {
+    for (var child : parent.getChildrenUnmodifiable()) {
+      if (child instanceof Label label && text.equals(label.getText())) return label;
+      if (child instanceof Parent nested) {
+        Label found = findLabel(nested, text);
+        if (found != null) return found;
+      }
+    }
+    return null;
+  }
+
+  private static Parent findNodeWithStyle(Parent parent, String styleClass) {
+    if (parent.getStyleClass().contains(styleClass)) return parent;
+    for (var child : parent.getChildrenUnmodifiable()) {
+      if (child instanceof Parent nested) {
+        Parent found = findNodeWithStyle(nested, styleClass);
+        if (found != null) return found;
+      }
+    }
+    return null;
+  }
+
+  private static Button findButton(Parent parent, String text) {
+    for (var child : parent.getChildrenUnmodifiable()) {
+      if (child instanceof Button button && text.equals(button.getText())) return button;
+      if (child instanceof Parent nested) {
+        Button found = findButton(nested, text);
+        if (found != null) return found;
+      }
+    }
+    return null;
+  }
+
+  private void addSettingIcon(String resource, String labelText) {
+    Parent settings = findNodeWithStyle(root, "arena-bot-settings");
+    if (!(settings instanceof HBox row)) return;
+    for (int index = 0; index < row.getChildren().size(); index++) {
+      var child = row.getChildren().get(index);
+      if (!(child instanceof VBox box) || box.getChildren().stream().noneMatch(node -> node instanceof Label label && labelText.equals(label.getText()))) continue;
+      if (!box.getStyleClass().contains("arena-bot-setting")) box.getStyleClass().add("arena-bot-setting");
+      if (!box.getChildren().isEmpty() && box.getChildren().getFirst() instanceof ImageView) return;
+      ImageView icon = new ImageView(new Image(getClass().getResource(resource).toExternalForm()));
+      icon.setFitWidth(20); icon.setFitHeight(20); icon.setPreserveRatio(true); icon.getStyleClass().add("arena-setting-icon");
+      HBox cell = new HBox(8, icon, box);
+      cell.getStyleClass().add("arena-bot-setting");
+      box.getStyleClass().remove("arena-bot-setting");
+      row.getChildren().set(index, cell);
+      return;
+    }
   }
 
   @Override public void onShow() {

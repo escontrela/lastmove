@@ -1740,13 +1740,24 @@
     -fx-text-fill: #596675;
 }
 .arena-bot-settings {
-    -fx-padding: 12px 14px;
+    -fx-padding: 10px 12px;
     -fx-background-color: #f7f9fc;
     -fx-border-color: #dce5ef;
     -fx-border-width: 1px;
     -fx-background-radius: 10px;
     -fx-border-radius: 10px;
 }
+.arena-bot-metrics-card { -fx-background-color: #ffffff; -fx-border-color: #dce5ef; -fx-border-width: 1px; -fx-background-radius: 10px; -fx-border-radius: 10px; -fx-padding: 8px 0; }
+.arena-bot-setting { -fx-min-width: 134px; -fx-padding: 0 14px; -fx-alignment: center-left; -fx-border-color: transparent #dce5ef transparent transparent; -fx-border-width: 0 1px 0 0; }
+.arena-bot-setting:last-child { -fx-border-color: transparent; }
+.arena-bot-setting > .VBox { -fx-spacing: 2px; }
+.arena-setting-icon { -fx-opacity: 0.78; }
+.toolbar-icon-button.arena-action-button { -fx-min-width: 92px; -fx-pref-width: 104px; -fx-max-width: 118px; -fx-content-display: left; -fx-font-size: 13px; -fx-font-weight: 700; -fx-background-color: #ffffff; -fx-border-color: #d5dde7; -fx-border-width: 1px; -fx-border-radius: 9px; -fx-background-radius: 9px; -fx-text-fill: #25364a; }
+.toolbar-icon-button.arena-action-button:hover { -fx-background-color: #f3f7fc; -fx-border-color: #1c69d4; }
+.toolbar-icon-button.arena-action-primary { -fx-min-width: 104px; -fx-pref-width: 112px; -fx-background-color: #16874d; -fx-border-color: #16874d; -fx-text-fill: #ffffff; }
+.toolbar-icon-button.arena-action-primary:hover { -fx-background-color: #117240; -fx-border-color: #117240; }
+.button.arena-action-change { -fx-min-width: 92px; -fx-pref-width: 104px; -fx-padding: 0 12px; -fx-background-color: #ffffff; -fx-border-color: #d5dde7; -fx-border-width: 1px; -fx-border-radius: 9px; -fx-background-radius: 9px; -fx-text-fill: #1c69d4; -fx-font-weight: 700; }
+.button.arena-action-change:hover { -fx-background-color: #f3f7fc; -fx-border-color: #1c69d4; }
 .arena-bot-setting-value { -fx-font-size: 14px; -fx-font-weight: 700; -fx-text-fill: #262626; }
 .button.arena-bot-settings-change { -fx-background-color: transparent; -fx-padding: 5px 8px; -fx-text-fill: #1c69d4; -fx-font-weight: 700; -fx-cursor: hand; }
 .button.arena-bot-settings-change:hover { -fx-underline: true; }
@@ -2251,6 +2262,9 @@
 .arena-state-error { -fx-text-fill: #b42318; }
 .arena-rating { -fx-min-width: 62px; -fx-padding: 2 8; -fx-background-color: #ffffff; -fx-background-radius: 8px; -fx-border-color: #dce5ef; -fx-border-radius: 8px; }
 .arena-rating-value { -fx-font-size: 17px; -fx-font-weight: 800; -fx-text-fill: #0b63e8; }
+.arena-summary .arena-rating { -fx-min-width: 92px; -fx-min-height: 62px; -fx-pref-width: 112px; -fx-padding: 8px 14px; -fx-alignment: center; -fx-spacing: 3px; }
+.arena-summary .arena-rating .eyebrow-label { -fx-font-size: 12px; -fx-text-fill: #52657a; -fx-alignment: center; }
+.arena-summary .arena-rating-value { -fx-font-size: 18px; -fx-text-fill: #172b44; }
 .arena-game-timeline { -fx-padding: 14; -fx-background-color: #ffffff; -fx-background-radius: 10px; -fx-border-color: #dce5ef; -fx-border-radius: 10px; }
 .arena-timeline-support { -fx-font-size: 12px; -fx-text-fill: #617084; }
 .arena-timeline-range { -fx-min-width: 145px; -fx-background-color: #ffffff; -fx-border-color: #d5dde7; -fx-border-width: 1px; -fx-background-radius: 4px; -fx-border-radius: 4px; -fx-padding: 0; -fx-font-size: 13px; -fx-text-fill: #25364a; }
@@ -2308,6 +2322,8 @@
 .night-mode .arena-state-error { -fx-text-fill: #ff9b9b; }
 .night-mode .arena-rating { -fx-background-color: #222d3a; -fx-border-color: #415164; }
 .night-mode .arena-rating-value { -fx-text-fill: #78b9ff; }
+.night-mode .arena-summary .arena-rating .eyebrow-label { -fx-text-fill: #b7c8dd; }
+.night-mode .arena-summary .arena-rating-value { -fx-text-fill: #f1f3f5; }
 .night-mode .arena-game-timeline { -fx-background-color: #202a36; -fx-border-color: #394858; }
 .night-mode .arena-timeline-support, .night-mode .arena-timeline-time { -fx-text-fill: #b7c8dd; }
 .night-mode .arena-timeline-lane { -fx-background-color: #18212b; }
@@ -2354,6 +2370,12 @@
 .night-mode .arena-bot-settings .status-text,
 .night-mode .arena-bot-setting-value { -fx-text-fill: #f1f3f5; }
 .night-mode .arena-bot-settings-change { -fx-text-fill: #78b9ff; }
+.night-mode .arena-bot-setting { -fx-border-color: transparent #43576d transparent transparent; }
+.night-mode .arena-bot-metrics-card { -fx-background-color: #202a36; -fx-border-color: #43576d; }
+.night-mode .toolbar-icon-button.arena-action-button { -fx-background-color: #263443; -fx-border-color: #52647a; -fx-text-fill: #f1f3f5; }
+.night-mode .toolbar-icon-button.arena-action-button:hover { -fx-background-color: #30445b; -fx-border-color: #78b9ff; }
+.night-mode .toolbar-icon-button.arena-action-primary { -fx-background-color: #167443; -fx-border-color: #167443; -fx-text-fill: #ffffff; }
+.night-mode .button.arena-action-change { -fx-background-color: #263443; -fx-border-color: #52647a; -fx-text-fill: #78b9ff; }
 
 .night-mode .arena-bot-cell,
 .night-mode .arena-bot-cell:filled {
