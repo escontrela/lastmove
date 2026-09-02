@@ -8,9 +8,11 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
+import javafx.scene.Parent;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
@@ -75,6 +77,9 @@ public final class GameTimelineControl extends VBox {
       new ComboBox<>(FXCollections.observableArrayList(Range.values()));
   private final Pane lane = new Pane();
   private final Label empty = new Label("No games in this period yet.");
+  private final ImageView overviewIcon = new ImageView();
+  private final ListChangeListener<String> themeListener = change -> refreshOverviewIcon();
+  private Parent observedRoot;
   private List<Entry> entries = List.of();
   private double panStartX, panStartH;
   private boolean panning;
@@ -84,6 +89,8 @@ public final class GameTimelineControl extends VBox {
     setSpacing(8);
     Label title = new Label("Arena overview");
     title.getStyleClass().add("sessions-section-title");
+    overviewIcon.setFitWidth(24); overviewIcon.setFitHeight(24); overviewIcon.setPreserveRatio(true);
+    title.setGraphic(overviewIcon); title.setGraphicTextGap(9);
     range.setValue(Range.LAST_24_HOURS);
     range.getStyleClass().add("arena-timeline-range");
     range.valueProperty().addListener((o, old, value) -> render());
@@ -104,7 +111,21 @@ public final class GameTimelineControl extends VBox {
     empty.getStyleClass().add("session-empty-state");
     empty.setPadding(new Insets(30, 0, 30, 0));
     getChildren().addAll(toolbar, scroll, empty);
+    sceneProperty().addListener((ignored, oldScene, scene) -> observeTheme(scene == null ? null : scene.getRoot()));
     render();
+  }
+
+  private void observeTheme(Parent root) {
+    if (observedRoot != null) observedRoot.getStyleClass().removeListener(themeListener);
+    observedRoot = root;
+    if (root != null) observedRoot.getStyleClass().addListener(themeListener);
+    refreshOverviewIcon();
+  }
+
+  private void refreshOverviewIcon() {
+    boolean nightMode = observedRoot != null && observedRoot.getStyleClass().contains("night-mode");
+    String resource = nightMode ? "/images/monitoring_35dp_FFFFFF.png" : "/images/monitoring_35dp_000000.png";
+    overviewIcon.setImage(new Image(Objects.requireNonNull(getClass().getResource(resource)).toExternalForm()));
   }
 
   public void setEntries(List<Entry> values) {

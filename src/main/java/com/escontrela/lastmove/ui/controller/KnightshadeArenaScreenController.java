@@ -29,6 +29,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.regex.Pattern;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
@@ -37,6 +38,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.scene.control.ContentDisplay;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -44,7 +46,6 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.Parent;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -53,6 +54,7 @@ import org.springframework.stereotype.Component;
 @Component
 public final class KnightshadeArenaScreenController implements UiScreenController {
   private static final DateTimeFormatter CONSOLE_TIME = DateTimeFormatter.ofPattern("HH:mm:ss").withZone(ZoneId.systemDefault());
+  private static final Pattern HTTP_CODE_PATTERN = Pattern.compile("\\(HTTP\\s+(\\d{3})\\)", Pattern.CASE_INSENSITIVE);
   private final LichessArenaService arena;
   private final UiFlowManager flow;
   private final SavedGameRepository savedGames;
@@ -62,6 +64,8 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
   private final LinkedHashMap<String, String> activity = new LinkedHashMap<>();
   private boolean tournamentRefreshInFlight;
   private boolean manualBotChallengeInFlight;
+  private Image availableBotIcon;
+  private Image unavailableBotIcon;
   private BotChallengeConfiguration botConfiguration = BotChallengeConfiguration.defaults();
 
   @FXML private StackPane root;
@@ -70,12 +74,12 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
   @FXML private Button nowPlayingButton;
   @FXML private VBox nowPlayingBox;
   @FXML private Button refreshTournamentsButton;
-  @FXML private Button clearChallengesButton;
+  @FXML private Button clearChallengesButton, challengesLogToggleButton, activityLogToggleButton;
   @FXML private ToolbarIconButton refreshBotsButton, startBotCycleButton, stopBotCycleButton;
   @FXML private Label botCycleStateLabel;
   @FXML private Label botBaseTimeLabel, botIncrementLabel, botMinimumRatingLabel, botMaximumRatingLabel, botMaximumGamesLabel;
   @FXML private BotChallengeSettingsModal botChallengeSettingsModal;
-  @FXML private ArenaConsoleControl challengesConsole, gamesConsole, activityConsole;
+  @FXML private ArenaConsoleControl challengesConsole, activityConsole;
   @FXML private ListView<ArenaTournament> tournamentsList;
   @FXML private ListView<LichessBotCandidate> onlineBotsList;
   @FXML private ListView<BotChallengeRow> botChallengeResultsList;
@@ -96,7 +100,6 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
   @FXML public void initialize() {
     root.getProperties().put("controller", this);
     challengesConsole.setAccessibleHelp("Persisted Lichess challenges and their decisions");
-    gamesConsole.setAccessibleHelp("Completed Arena games; select a command to analyse it");
     activityConsole.setAccessibleHelp("Recent Arena events");
     tournamentsList.setAccessibleHelp("Bot-eligible Lichess Arena tournaments. Right-click a tournament for actions.");
     statusLabel.setAccessibleRole(javafx.scene.AccessibleRole.TEXT);
@@ -108,118 +111,23 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
     botChallengeSettingsModal.setOnSave(configuration -> { botConfiguration = configuration; renderBotConfiguration(); refresh(); });
     tournamentsList.setCellFactory(list -> new TournamentCell());
     configureHeaderActions();
-    configureChallengeControls();
+    setLogExpanded(challengesConsole, challengesLogToggleButton, false, "challenges");
+    setLogExpanded(activityConsole, activityLogToggleButton, false, "recent activity");
   }
 
-  private void configureChallengeControls() {
-    Label sectionTitle = findLabel(root, "Online bots · autonomous challenges");
-    if (sectionTitle != null) {
-      ImageView icon = new ImageView(new Image(getClass().getResource("/images/robot_2_35dp_000000.png").toExternalForm()));
-      icon.setFitWidth(26); icon.setFitHeight(26); icon.setPreserveRatio(true);
-      sectionTitle.setGraphic(icon); sectionTitle.setGraphicTextGap(10);
-    }
-    addSettingIcon("/images/chess_king_2_35dp_000000.png", "Variant");
-    addSettingIcon("/images/history_35dp_000000.png", "Base time");
-    addSettingIcon("/images/add_35dp_000000.png", "Increment");
-    addSettingIcon("/images/graph_2_35dp_000000.png", "Min opponent rating");
-    addSettingIcon("/images/looks_one_35dp_000000.png", "Maximum games");
-    organizeChallengeSettings();
-    styleRatingCards();
-    startBotCycleButton.setText("Start");
-    startBotCycleButton.getStyleClass().addAll("arena-action-button", "arena-action-primary");
-    stopBotCycleButton.setText("Stop");
-    stopBotCycleButton.getStyleClass().add("arena-action-button");
-    refreshBotsButton.setText("Refresh");
-    refreshBotsButton.getStyleClass().add("arena-action-button");
-    Button change = findButton(root, "Change");
-    if (change != null) {
-      ImageView icon = new ImageView(new Image(getClass().getResource("/images/settings_35dp_000000.png").toExternalForm()));
-      icon.setFitWidth(17); icon.setFitHeight(17); icon.setPreserveRatio(true);
-      change.setGraphic(icon); change.getStyleClass().add("arena-action-change");
-    }
+  @FXML private void toggleChallengesLog() {
+    setLogExpanded(challengesConsole, challengesLogToggleButton, !challengesConsole.isVisible(), "challenges");
   }
 
-  private void styleRatingCards() {
-    var node = findNodeWithStyle(root, "arena-summary");
-    if (!(node instanceof HBox summary)) return;
-    int size = summary.getChildren().size();
-    for (int index = Math.max(0, size - 3); index < size; index++) {
-      if (!(summary.getChildren().get(index) instanceof VBox card)) continue;
-      card.getStyleClass().add("arena-rating");
-      card.getChildren().stream().filter(Label.class::isInstance).map(Label.class::cast)
-          .skip(1).findFirst().ifPresent(label -> label.getStyleClass().add("arena-rating-value"));
-    }
+  @FXML private void toggleActivityLog() {
+    setLogExpanded(activityConsole, activityLogToggleButton, !activityConsole.isVisible(), "recent activity");
   }
 
-  private void organizeChallengeSettings() {
-    Parent settings = findNodeWithStyle(root, "arena-bot-settings");
-    if (!(settings instanceof HBox row) || findNodeWithStyle(row, "arena-bot-metrics-card") != null) return;
-    List<javafx.scene.Node> metrics = row.getChildren().stream()
-        .filter(node -> node instanceof HBox && node.getStyleClass().contains("arena-bot-setting"))
-        .limit(5).toList();
-    if (metrics.size() != 5) return;
-    HBox metricsCard = new HBox(0);
-    metricsCard.getStyleClass().add("arena-bot-metrics-card");
-    metricsCard.getChildren().addAll(metrics);
-    row.getChildren().removeAll(metrics);
-    row.getChildren().add(0, metricsCard);
-
-    row.getChildren().removeIf(node -> node == findButton(root, "Change") || node == refreshBotsButton
-        || node == startBotCycleButton || node == stopBotCycleButton || node instanceof Region);
-    row.getChildren().addAll(new Region(), refreshBotsButton, startBotCycleButton, stopBotCycleButton,
-        findButton(root, "Change"));
-    HBox.setHgrow(row.getChildren().get(1), Priority.ALWAYS);
-  }
-
-  private static Label findLabel(Parent parent, String text) {
-    for (var child : parent.getChildrenUnmodifiable()) {
-      if (child instanceof Label label && text.equals(label.getText())) return label;
-      if (child instanceof Parent nested) {
-        Label found = findLabel(nested, text);
-        if (found != null) return found;
-      }
-    }
-    return null;
-  }
-
-  private static Parent findNodeWithStyle(Parent parent, String styleClass) {
-    if (parent.getStyleClass().contains(styleClass)) return parent;
-    for (var child : parent.getChildrenUnmodifiable()) {
-      if (child instanceof Parent nested) {
-        Parent found = findNodeWithStyle(nested, styleClass);
-        if (found != null) return found;
-      }
-    }
-    return null;
-  }
-
-  private static Button findButton(Parent parent, String text) {
-    for (var child : parent.getChildrenUnmodifiable()) {
-      if (child instanceof Button button && text.equals(button.getText())) return button;
-      if (child instanceof Parent nested) {
-        Button found = findButton(nested, text);
-        if (found != null) return found;
-      }
-    }
-    return null;
-  }
-
-  private void addSettingIcon(String resource, String labelText) {
-    Parent settings = findNodeWithStyle(root, "arena-bot-settings");
-    if (!(settings instanceof HBox row)) return;
-    for (int index = 0; index < row.getChildren().size(); index++) {
-      var child = row.getChildren().get(index);
-      if (!(child instanceof VBox box) || box.getChildren().stream().noneMatch(node -> node instanceof Label label && labelText.equals(label.getText()))) continue;
-      if (!box.getStyleClass().contains("arena-bot-setting")) box.getStyleClass().add("arena-bot-setting");
-      if (!box.getChildren().isEmpty() && box.getChildren().getFirst() instanceof ImageView) return;
-      ImageView icon = new ImageView(new Image(getClass().getResource(resource).toExternalForm()));
-      icon.setFitWidth(20); icon.setFitHeight(20); icon.setPreserveRatio(true); icon.getStyleClass().add("arena-setting-icon");
-      HBox cell = new HBox(8, icon, box);
-      cell.getStyleClass().add("arena-bot-setting");
-      box.getStyleClass().remove("arena-bot-setting");
-      row.getChildren().set(index, cell);
-      return;
-    }
+  private void setLogExpanded(ArenaConsoleControl console, Button toggle, boolean expanded, String name) {
+    console.setVisible(expanded);
+    console.setManaged(expanded);
+    toggle.setText(expanded ? "Hide logs ▴" : "Show logs ▾");
+    toggle.setAccessibleText((expanded ? "Hide " : "Show ") + name + " log");
   }
 
   @Override public void onShow() {
@@ -335,9 +243,11 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
       return;
     }
     ArenaConnection connection = arena.connection();
-    connectionLabel.setText(connection.status().name());
-    connectionLabel.getStyleClass().setAll("arena-state", "arena-state-" + connection.status().name().toLowerCase(Locale.ROOT));
-    accountLabel.setText(arena.account().map(account -> account.username() + " (Lichess bot)").orElse("Not validated"));
+    connectionLabel.setText(connection.status() == ArenaConnectionStatus.CONNECTED
+        ? "✓ CONNECTED" : connection.status().name());
+    connectionLabel.getStyleClass().setAll("arena-state", "arena-connection-status",
+        "arena-state-" + connection.status().name().toLowerCase(Locale.ROOT));
+    accountLabel.setText(arena.account().map(LichessBotAccount::username).orElse("Not validated"));
     List<ArenaGame> allGames = arena.activeGames();
     List<ArenaGame> games = effectiveGames();
     List<ArenaGame> playing = allGames.stream().filter(this::isCurrentGame).toList();
@@ -374,13 +284,11 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
     onlineBotsList.setItems(FXCollections.observableArrayList(visibleBots));
     Map<String,String> results = arena.challengeResults();
     botChallengeResultsList.setItems(FXCollections.observableArrayList(results.entrySet().stream()
-        .map(entry -> new BotChallengeRow(botName(entry.getKey()), entry.getValue())).toList()));
+        .map(entry -> challengeResultRow(botName(entry.getKey()), entry.getValue())).toList()));
     botCycleStateLabel.setText(cycle.status()+" · "+cycle.completedGames()+" / "+cycle.configuration().maximumGames()+cycle.currentBotId().map(id -> " · "+id).orElse("")+cycle.stopReason().map(reason -> " — "+reason).orElseGet(() -> arena.onlineBotsError().map(error -> " — "+error).orElse("")));
     challengesConsole.setEntries(arena.challenges().stream().map(challenge ->
         new ArenaConsoleControl.Entry(challengeText(challenge), () -> statusLabel.setText("Challenge " + challenge.id() + ": " + challenge.decision()))).toList(),
         "No challenges received yet.");
-    gamesConsole.setEntries(games.stream().map(game ->
-        new ArenaConsoleControl.Entry(gameText(game), () -> openArenaGame(game))).toList(), "No completed Arena games yet.");
     gameTimeline.setEntries(games.stream().map(this::timelineEntry).toList());
     List<String> recentActivity = new java.util.ArrayList<>(activity.values());
     java.util.Collections.reverse(recentActivity);
@@ -558,8 +466,32 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
   }
 
   private final class BotCell extends ListCell<LichessBotCandidate> {
+    private final HBox row = new HBox(10);
+    private final ImageView avatar = new ImageView();
+    private final Label name = new Label();
+    private final Label rating = new Label();
+    private final Label availability = new Label();
+    private final Label relationship = new Label();
+    private final HBox statuses = new HBox(5, availability, relationship);
+    private final Region spacer = new Region();
+    private final Button challenge = new Button("Challenge");
+
     private BotCell() {
       getStyleClass().add("arena-bot-cell");
+      setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+      avatar.setFitWidth(34); avatar.setFitHeight(34); avatar.setPreserveRatio(true); avatar.setSmooth(true);
+      avatar.getStyleClass().add("arena-bot-avatar");
+      name.getStyleClass().add("arena-bot-name");
+      rating.getStyleClass().add("arena-bot-rating");
+      statuses.getStyleClass().add("arena-bot-statuses");
+      challenge.getStyleClass().add("arena-bot-challenge-button");
+      challenge.setOnAction(event -> {
+        if (getItem() != null) challengeBotManually(getItem());
+      });
+      row.getStyleClass().add("arena-bot-row");
+      row.setAlignment(Pos.CENTER_LEFT);
+      HBox.setHgrow(spacer, Priority.ALWAYS);
+      row.getChildren().addAll(avatar, name, rating, statuses, spacer, challenge);
       setOnContextMenuRequested(event -> {
         if (getItem() != null) {
           onlineBotsList.getSelectionModel().select(getItem());
@@ -572,32 +504,108 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
     @Override protected void updateItem(LichessBotCandidate bot, boolean empty) {
       super.updateItem(bot, empty);
       getStyleClass().removeAll("arena-bot-challenged", "arena-bot-rejected", "arena-bot-friendly");
-      boolean friendly = !empty && bot != null && arena.friendlyBotIds().stream()
-          .anyMatch(id -> id.equalsIgnoreCase(bot.id()));
-      setText(empty || bot == null ? null : bot.username() + (friendly ? " *" : "") + " · "
-          + bot.rating().map(Object::toString).orElse("rating unavailable") + " · "
-          + (arena.rejectedBotIds().contains(bot.id()) ? "rejected" : arena.challengedBotIds().contains(bot.id()) ? "challenged" : (bot.available() ? "available" : "busy")));
-      if (!empty && bot != null) {
-        if (arena.rejectedBotIds().contains(bot.id())) getStyleClass().add("arena-bot-rejected");
-        else if (arena.challengedBotIds().contains(bot.id())) getStyleClass().add("arena-bot-challenged");
-        else if (friendly) getStyleClass().add("arena-bot-friendly");
-      }
+      setText(null);
+      if (empty || bot == null) { setGraphic(null); return; }
+
+      boolean friendly = arena.friendlyBotIds().stream().anyMatch(id -> id.equalsIgnoreCase(bot.id()));
+      boolean banned = arena.rejectedBotIds().stream().anyMatch(id -> id.equalsIgnoreCase(bot.id()));
+      boolean challenged = arena.challengedBotIds().stream().anyMatch(id -> id.equalsIgnoreCase(bot.id()));
+      name.setText(bot.username());
+      rating.setText(bot.rating().map(Object::toString).orElse("—"));
+      availability.setText(banned ? "Banned" : bot.available() ? "Available" : "Busy");
+      availability.getStyleClass().setAll("arena-bot-status", banned ? "arena-bot-status-banned"
+          : bot.available() ? "arena-bot-status-available" : "arena-bot-status-busy");
+      relationship.setText(friendly ? "Friendly" : challenged ? "Challenged" : "");
+      relationship.setVisible(friendly || challenged); relationship.setManaged(friendly || challenged);
+      relationship.getStyleClass().setAll("arena-bot-status", friendly
+          ? "arena-bot-status-friendly" : "arena-bot-status-challenged");
+      avatar.setImage(botIcon(!banned && bot.available()));
+      challenge.setText(banned ? "Banned" : challenged ? "Sent" : "Challenge");
+      challenge.setDisable(banned || challenged || manualBotChallengeInFlight
+          || arena.botChallengeCycle().active()
+          || arena.connection().status() != ArenaConnectionStatus.CONNECTED || !bot.available());
+      if (banned) getStyleClass().add("arena-bot-rejected");
+      else if (challenged) getStyleClass().add("arena-bot-challenged");
+      else if (friendly) getStyleClass().add("arena-bot-friendly");
+      setGraphic(row);
     }
   }
 
   private String botName(String id) { return arena.onlineBots().stream().filter(bot -> bot.id().equalsIgnoreCase(id))
       .map(LichessBotCandidate::username).findFirst().orElse(id); }
-  private record BotChallengeRow(String botName, String result) {}
+
+  private Image botIcon(boolean available) {
+    if (available && availableBotIcon == null) availableBotIcon = new Image(getClass()
+        .getResource("/images/bot-win-icon.png").toExternalForm(), 34, 34, true, true);
+    if (!available && unavailableBotIcon == null) unavailableBotIcon = new Image(getClass()
+        .getResource("/images/bot-lose-icon.png").toExternalForm(), 34, 34, true, true);
+    return available ? availableBotIcon : unavailableBotIcon;
+  }
+
+  private BotChallengeRow challengeResultRow(String botName, String rawResult) {
+    String result = rawResult == null || rawResult.isBlank() ? "UNKNOWN" : rawResult.trim();
+    int separator = result.indexOf(" — ");
+    String status = separator < 0 ? result : result.substring(0, separator).trim();
+    String detail = separator < 0 ? "" : result.substring(separator + 3).trim();
+    var httpMatcher = HTTP_CODE_PATTERN.matcher(detail);
+    String httpCode = httpMatcher.find() ? httpMatcher.group(1) : "";
+    if (!httpCode.isBlank()) {
+      String before = detail.substring(0, httpMatcher.start()).trim();
+      String after = detail.substring(httpMatcher.end()).trim().replaceFirst("^:\\s*", "");
+      detail = before.isBlank() ? after : after.isBlank() ? before : before + " — " + after;
+    }
+    if (detail.isBlank()) detail = switch (status.toUpperCase(Locale.ROOT)) {
+      case "ACCEPTED" -> "Challenge accepted by the bot.";
+      case "CHALLENGED" -> "Challenge sent; waiting for the bot response.";
+      default -> "No additional response was provided.";
+    };
+    return new BotChallengeRow(botName, status, httpCode, detail);
+  }
+
+  private record BotChallengeRow(String botName, String status, String httpCode, String response) {}
   private final class BotChallengeResultCell extends ListCell<BotChallengeRow> {
+    private final VBox card = new VBox(6);
+    private final HBox heading = new HBox(8);
+    private final ImageView avatar = new ImageView();
+    private final Label botName = new Label();
+    private final Region spacer = new Region();
+    private final Label status = new Label();
+    private final Label httpCode = new Label();
+    private final Label response = new Label();
+
+    private BotChallengeResultCell() {
+      getStyleClass().add("arena-challenge-result-cell");
+      setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+      avatar.setFitWidth(30); avatar.setFitHeight(30); avatar.setPreserveRatio(true); avatar.setSmooth(true);
+      botName.getStyleClass().add("arena-result-bot-name");
+      status.getStyleClass().add("arena-result-status");
+      httpCode.getStyleClass().add("arena-result-http-code");
+      response.getStyleClass().add("arena-result-response");
+      response.setWrapText(true); response.setMaxWidth(Double.MAX_VALUE);
+      HBox.setHgrow(spacer, Priority.ALWAYS);
+      heading.setAlignment(Pos.CENTER_LEFT);
+      heading.getChildren().addAll(avatar, botName, spacer, status, httpCode);
+      card.getStyleClass().add("arena-challenge-result-row");
+      card.getChildren().addAll(heading, response);
+      card.prefWidthProperty().bind(widthProperty().subtract(18));
+    }
+
     @Override protected void updateItem(BotChallengeRow row, boolean empty) {
       super.updateItem(row, empty);
-      getStyleClass().removeAll("arena-bot-challenged", "arena-bot-rejected", "arena-bot-accepted");
-      setText(empty || row == null ? null : row.botName() + " · " + row.result());
-      if (!empty && row != null) {
-        if (row.result().startsWith("REJECTED")) getStyleClass().add("arena-bot-rejected");
-        else if (row.result().startsWith("ACCEPTED")) getStyleClass().add("arena-bot-accepted");
-        else getStyleClass().add("arena-bot-challenged");
-      }
+      setText(null);
+      if (empty || row == null) { setGraphic(null); return; }
+      String state = row.status().toLowerCase(Locale.ROOT);
+      boolean rejected = state.contains("reject") || state.contains("fail") || state.contains("error");
+      boolean accepted = state.contains("accept");
+      avatar.setImage(botIcon(!rejected));
+      botName.setText(row.botName());
+      status.setText(row.status());
+      status.getStyleClass().setAll("arena-result-status", rejected ? "arena-result-status-rejected"
+          : accepted ? "arena-result-status-accepted" : "arena-result-status-pending");
+      httpCode.setText(row.httpCode().isBlank() ? "" : "HTTP " + row.httpCode());
+      httpCode.setVisible(!row.httpCode().isBlank()); httpCode.setManaged(!row.httpCode().isBlank());
+      response.setText(row.response());
+      setGraphic(card);
     }
   }
 
@@ -607,22 +615,6 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
     return CONSOLE_TIME.format(challenge.decidedAt().orElse(challenge.updatedAt())) + " · " + direction + challenge.challengerName()
         + " · " + challenge.variant() + " · " + (challenge.rated() ? "rated" : "casual") + " · " + challenge.decision()
         + challenge.decisionReason().map(reason -> " — " + reason).orElse("");
-  }
-
-  private String gameText(ArenaGame game) {
-    String opponent = game.localGameId().flatMap(this::findSavedSafely).map(saved -> {
-      var record = saved.game().toRecord();
-      String white = record.whitePlayer().map(com.escontrela.lastmove.domain.game.GamePlayer::getName).orElse("White");
-      String black = record.blackPlayer().map(com.escontrela.lastmove.domain.game.GamePlayer::getName).orElse("Black");
-      String name = game.botColor().map(color -> color == com.escontrela.lastmove.domain.common.PieceColor.WHITE ? black : white)
-          .orElseGet(() -> { String bot = arena.account().map(LichessBotAccount::username).orElse(""); return bot.equalsIgnoreCase(white) ? black : white; });
-      if ("White".equalsIgnoreCase(name) || "Black".equalsIgnoreCase(name)) return externalOpponent(game).orElse(name);
-      return name;
-    }).or(() -> externalOpponent(game)).orElse("Opponent pending");
-    String tournament = game.tournamentId().flatMap(id -> arena.tournaments().stream()
-        .filter(candidate -> candidate.lichessTournamentId().equals(id)).map(ArenaTournament::name).findFirst())
-        .or(() -> game.tournamentId()).map(name -> " · Tournament: " + name).orElse("");
-    return opponent + tournament + " · " + game.status() + " · " + DateTimeFormatter.ISO_INSTANT.format(game.updatedAt()) + game.lastError().map(error -> " — " + error).orElse("");
   }
 
   /** A partially written or legacy local record must not take down the JavaFX event loop. */
