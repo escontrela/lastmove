@@ -39,7 +39,7 @@ public final class GameClockControl extends VBox {
       {0, 1, 2, 3, 5, 6}
   };
 
-  private final StackPane progressTrack = new StackPane();
+  private final HBox progressTrack = new HBox();
   private final Region remainingFill = new Region();
   private final Region elapsedFill = new Region();
   private final HBox display = new HBox(4);
@@ -63,8 +63,6 @@ public final class GameClockControl extends VBox {
     progressTrack.getStyleClass().add("game-clock-progress-track");
     remainingFill.getStyleClass().add("game-clock-progress-remaining");
     elapsedFill.getStyleClass().add("game-clock-progress-elapsed");
-    StackPane.setAlignment(remainingFill, Pos.CENTER_LEFT);
-    StackPane.setAlignment(elapsedFill, Pos.CENTER_RIGHT);
     remainingFill.prefHeightProperty().bind(progressTrack.heightProperty());
     elapsedFill.prefHeightProperty().bind(progressTrack.heightProperty());
     progressTrack.getChildren().setAll(remainingFill, elapsedFill);
