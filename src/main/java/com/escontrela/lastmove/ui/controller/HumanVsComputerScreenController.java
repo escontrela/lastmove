@@ -18,6 +18,7 @@ import com.escontrela.lastmove.domain.game.PositionPiece;
 import com.escontrela.lastmove.ui.component.board.ChessBoardControl;
 import com.escontrela.lastmove.ui.component.game.CapturedPiecesControl;
 import com.escontrela.lastmove.ui.component.game.HumanVsComputerSetupOverlay;
+import com.escontrela.lastmove.ui.component.game.GameClockControl;
 import com.escontrela.lastmove.ui.component.game.ThinkingIndicatorControl;
 import com.escontrela.lastmove.ui.component.game.TypewriterStatusLabel;
 import com.escontrela.lastmove.ui.component.message.MessageBox;
@@ -94,8 +95,8 @@ public final class HumanVsComputerScreenController implements UiScreenController
   @FXML private ImageView threatHintsIcon;
   @FXML private CapturedPiecesControl opponentCapturedPieces;
   @FXML private CapturedPiecesControl humanCapturedPieces;
-  @FXML private Label opponentClockLabel;
-  @FXML private Label humanClockLabel;
+  @FXML private GameClockControl opponentClock;
+  @FXML private GameClockControl humanClock;
   @FXML private TypewriterStatusLabel statusLabel;
   @FXML private ThinkingIndicatorControl opponentThinkingIndicator;
   @FXML private Button takeBackButton;
@@ -502,12 +503,11 @@ public final class HumanVsComputerScreenController implements UiScreenController
     if (previousState == null || !previousState.engine().id().equals(state.engine().id())) {
       updatePlayerIcons();
     }
-    humanClockLabel.setText(
-        formatClock(
-            humanIsWhite ? state.clock().whiteRemaining() : state.clock().blackRemaining()));
-    opponentClockLabel.setText(
-        formatClock(
-            humanIsWhite ? state.clock().blackRemaining() : state.clock().whiteRemaining()));
+    var initialTime = state.timeControl().flatMap(com.escontrela.lastmove.domain.game.TimeControl::initialTime);
+    humanClock.setTime(
+        humanIsWhite ? state.clock().whiteRemaining() : state.clock().blackRemaining(), initialTime);
+    opponentClock.setTime(
+        humanIsWhite ? state.clock().blackRemaining() : state.clock().whiteRemaining(), initialTime);
     String currentTurnText = turnText(state);
     boolean enteredHumanTurn =
         state.phase() == ComputerGamePhase.WAITING_FOR_HUMAN
@@ -528,6 +528,8 @@ public final class HumanVsComputerScreenController implements UiScreenController
     restartButton.setDisable(false);
     resignButton.setDisable(state.result().isPresent());
     boolean engineThinking = state.phase() == ComputerGamePhase.ENGINE_THINKING;
+    humanClock.setActive(state.phase() == ComputerGamePhase.WAITING_FOR_HUMAN);
+    opponentClock.setActive(engineThinking);
     opponentThinkingIndicator.setThinking(engineThinking);
     refreshNotation(state.moves());
     updateReviewControls();
@@ -582,8 +584,10 @@ public final class HumanVsComputerScreenController implements UiScreenController
     renderedState = null;
     opponentPlayerLabel.setText("Computer");
     humanPlayerLabel.setText(currentUserService.currentUser().name());
-    opponentClockLabel.setText("--:--");
-    humanClockLabel.setText("--:--");
+    opponentClock.clear();
+    humanClock.clear();
+    opponentClock.setActive(false);
+    humanClock.setActive(false);
     statusLabel.showImmediately("Choose an opponent, colour and time control");
     moveNotation.setTree(List.of());
     opponentCapturedPieces.render(List.of());
@@ -631,14 +635,6 @@ public final class HumanVsComputerScreenController implements UiScreenController
       case FINISHED -> "Game finished";
       case ENGINE_ERROR -> "Computer engine error";
     };
-  }
-
-  private String formatClock(java.util.Optional<Duration> remaining) {
-    if (remaining.isEmpty()) {
-      return "∞";
-    }
-    long seconds = Math.max(0, remaining.orElseThrow().toSeconds());
-    return "%02d:%02d".formatted(seconds / 60, seconds % 60);
   }
 
   private void activateGame(ComputerGameState state) {

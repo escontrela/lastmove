@@ -1962,17 +1962,69 @@
     -fx-background-position: center;
     -fx-background-repeat: no-repeat;
 }
-.progressive-player-card { -fx-background-color: #ffffff; }
+.progressive-game-side-panel { -fx-padding: 2px 0 0 0; }
+.progressive-player-zone { -fx-padding: 0 10px; }
+.progressive-player-identity { -fx-min-height: 30px; }
 .progressive-player-name {
     -fx-font-size: 16px;
     -fx-font-weight: 700;
     -fx-text-fill: #262626;
 }
-.progressive-player-clock {
+.game-clock {
+    -fx-min-height: 88px;
+    -fx-pref-height: 88px;
+    -fx-padding: 9px 18px 10px 18px;
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 12px;
+    -fx-border-color: #e1e8f0;
+    -fx-border-width: 1px;
+    -fx-border-radius: 12px;
+    -fx-effect: dropshadow(three-pass-box, rgba(28, 52, 75, 0.08), 7, 0, 0, 2);
+}
+.game-clock:active {
+    -fx-border-color: #1c69d4;
+    -fx-border-width: 1.5px;
+    -fx-effect: dropshadow(three-pass-box, rgba(28, 105, 212, 0.18), 8, 0, 0, 2);
+}
+.game-clock-progress-track {
+    -fx-min-height: 4px;
+    -fx-pref-height: 4px;
+    -fx-max-height: 4px;
+    -fx-max-width: Infinity;
+    -fx-background-color: #e8edf3;
+    -fx-background-radius: 3px;
+}
+.game-clock-progress-remaining {
+    -fx-background-color: #16874d;
+    -fx-background-radius: 3px 0 0 3px;
+}
+.game-clock-progress-elapsed {
+    -fx-background-color: #c43d36;
+    -fx-background-radius: 0 3px 3px 0;
+}
+.game-clock-display { -fx-min-height: 44px; }
+.game-clock-digit { -fx-min-width: 23px; -fx-pref-width: 23px; -fx-max-width: 23px; }
+.game-clock-segment {
+    -fx-background-color: transparent;
+    -fx-background-radius: 2px;
+}
+.game-clock-segment.on { -fx-background-color: #092d5c; }
+.game-clock-colon { -fx-min-width: 7px; -fx-pref-width: 7px; -fx-max-width: 7px; }
+.game-clock-colon-dot {
+    -fx-min-width: 4px;
+    -fx-min-height: 4px;
+    -fx-pref-width: 4px;
+    -fx-pref-height: 4px;
+    -fx-max-width: 4px;
+    -fx-max-height: 4px;
+    -fx-background-color: #092d5c;
+    -fx-background-radius: 2px;
+}
+.game-clock-unlimited {
     -fx-font-family: "Monospaced";
-    -fx-font-size: 30px;
+    -fx-font-size: 43px;
     -fx-font-weight: 700;
-    -fx-text-fill: #1c69d4;
+    -fx-text-fill: #092d5c;
 }
 .captured-pieces {
     -fx-min-height: 24px;
@@ -1999,8 +2051,31 @@
     -fx-background-color: #1c69d4;
     -fx-background-radius: 2px;
 }
-.progressive-moves-card { -fx-min-height: 300px; }
-.progressive-navigation-row { -fx-padding: 0 0 2px 0; }
+.progressive-moves-card {
+    -fx-min-height: 250px;
+    -fx-padding: 10px;
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 12px;
+    -fx-border-color: #e1e8f0;
+    -fx-border-radius: 12px;
+    -fx-border-width: 1px;
+    -fx-effect: dropshadow(three-pass-box, rgba(28, 52, 75, 0.08), 7, 0, 0, 2);
+}
+.progressive-navigation-row { -fx-padding: 2px 0 0 0; }
+.progressive-navigation-row .toolbar-icon-button {
+    -fx-min-width: 66px;
+    -fx-pref-width: 66px;
+    -fx-max-width: Infinity;
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+}
+.progressive-actions-row { -fx-padding: 2px 0 0 0; }
+.toolbar-icon-button.arena-action-button.progressive-game-action {
+    -fx-min-width: 0;
+    -fx-pref-width: 106px;
+    -fx-max-width: Infinity;
+    -fx-min-height: 44px;
+}
 .progressive-action-button {
     -fx-min-height: 42px;
     -fx-alignment: center;
@@ -2027,6 +2102,14 @@
     -fx-text-fill: #a72e3e;
 }
 .progressive-danger-action-button:hover {
+    -fx-background-color: #fff1f3;
+    -fx-border-color: #a72e3e;
+}
+.toolbar-icon-button.arena-action-button.progressive-danger-action-button {
+    -fx-border-color: #d1495b;
+    -fx-text-fill: #a72e3e;
+}
+.toolbar-icon-button.arena-action-button.progressive-danger-action-button:hover {
     -fx-background-color: #fff1f3;
     -fx-border-color: #a72e3e;
 }
@@ -2797,13 +2880,20 @@
 .night-mode .settings-validation-message { -fx-text-fill: #aeb8c3; }
 .night-mode .settings-validation-message.settings-validation-error { -fx-text-fill: #ff9aa6; }
 .night-mode .settings-validation-message.settings-validation-success { -fx-text-fill: #7edca7; }
-.night-mode .progressive-player-card,
 .night-mode .progressive-moves-card {
     -fx-background-color: #262e38;
     -fx-border-color: #3b4654;
 }
 .night-mode .progressive-player-name { -fx-text-fill: #f1f3f5; }
-.night-mode .progressive-player-clock { -fx-text-fill: #79aeef; }
+.night-mode .game-clock {
+    -fx-background-color: #202a36;
+    -fx-border-color: #394858;
+}
+.night-mode .game-clock:active { -fx-border-color: #78b9ff; }
+.night-mode .game-clock-progress-track { -fx-background-color: #354352; }
+.night-mode .game-clock-segment.on,
+.night-mode .game-clock-colon-dot { -fx-background-color: #9fc8f7; }
+.night-mode .game-clock-unlimited { -fx-text-fill: #9fc8f7; }
 .night-mode .chess-board.board-visual-effects {
     -fx-effect: dropshadow(gaussian, rgba(175, 202, 229, 0.26), 30, 0.14, 0, 0);
 }
@@ -2831,6 +2921,14 @@
     -fx-text-fill: #ff9aa6;
 }
 .night-mode .progressive-danger-action-button:hover {
+    -fx-background-color: #442932;
+    -fx-border-color: #ff9aa6;
+}
+.night-mode .toolbar-icon-button.arena-action-button.progressive-danger-action-button {
+    -fx-border-color: #e06a78;
+    -fx-text-fill: #ff9aa6;
+}
+.night-mode .toolbar-icon-button.arena-action-button.progressive-danger-action-button:hover {
     -fx-background-color: #442932;
     -fx-border-color: #ff9aa6;
 }
