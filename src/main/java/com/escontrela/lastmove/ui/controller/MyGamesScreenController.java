@@ -68,8 +68,9 @@ public final class MyGamesScreenController implements UiScreenController {
   public MyGamesScreenController(SavedGameRepository games, CurrentUserService currentUser, AnalysisSessionService analyses, UiEventBus events, @Lazy UiFlowManager flow, LichessArenaService arena, @Lazy ComputerVsComputerScreenController computerViewer, PlayerService players, KnightshadeArenaSettingsService arenaSettings, TagService tagService) {
     this.games=games; this.currentUser=currentUser; this.analyses=analyses; this.events=events; this.flow=flow; this.arena=arena; this.computerViewer=computerViewer; this.players=players; this.arenaSettings=arenaSettings; this.tagService=tagService;
   }
-  @FXML public void initialize() { root.getProperties().put("controller",this); gamesList.setCellFactory(v -> new Cell()); regexSearch.setOnSearch(event -> { searchPattern=event.pattern(); showGames(); }); tagFilter.setOnSelectionChanged(ignored -> showGames()); playerSelector.setOnPlayerSelected(event -> { selectedPlayer=Optional.of(event.player()); playerLabel.setText(event.player().fullName()); refresh(); }); playerSelector.setOnCancel(event -> statusLabel.setText("Games unchanged")); }
-  @Override public void onShow() { synchronizeConfiguredBot(); if (selectedPlayer.isEmpty()) selectedPlayer=currentUser.selectedPlayerId().flatMap(players::playerSummary); playerLabel.setText(selectedPlayer.map(PlayerSummary::fullName).orElse("Choose player")); refresh(); }
+  @FXML public void initialize() { root.getProperties().put("controller",this); gamesList.setCellFactory(v -> new Cell()); regexSearch.setOnSearch(event -> { searchPattern=event.pattern(); showGames(); }); tagFilter.setOnSelectionChanged(ignored -> showGames()); playerSelector.setOnPlayerSelected(event -> { selectedPlayer=Optional.of(event.player()); updatePlayerButton(); refresh(); }); playerSelector.setOnCancel(event -> statusLabel.setText("Games unchanged")); }
+  @Override public void onShow() { synchronizeConfiguredBot(); if (selectedPlayer.isEmpty()) selectedPlayer=currentUser.selectedPlayerId().flatMap(players::playerSummary); updatePlayerButton(); refresh(); }
+  private void updatePlayerButton() { playerLabel.setText(selectedPlayer.map(PlayerSummary::fullName).orElse("Choose player")); }
   @FXML public void backToHome() { flow.show(UiScreenId.MAIN); }
   @FXML public void choosePlayer() { if (!players.isPersistenceAvailable()) { statusLabel.setText("Player persistence is unavailable."); return; } if (arenaSettings.configuredBotAccount().isEmpty() && arenaSettings.hasBotToken()) { statusLabel.setText("Validating the configured Knightshade Lichess account…"); java.util.concurrent.CompletableFuture.supplyAsync(arenaSettings::validateConfiguredBotAccount).whenComplete((account,failure)->javafx.application.Platform.runLater(()->{ if (failure!=null) { statusLabel.setText("Could not validate Knightshade. Open Settings to check the Lichess token."); return; } players.synchronizeLichessBot(account); showPlayerSelector(); })); return; } showPlayerSelector(); }
   private void showPlayerSelector() { List<PlayerSummary> options=players.listPlayers(); if (options.isEmpty()) { statusLabel.setText("Create or validate a player profile before viewing games."); return; } playerSelector.show(options, selectedPlayer.map(summary->summary.id().value()).orElse(null), "Choose player", "View saved games for an app player or Knightshade. Uncheck to include Lichess participants.", arenaSettings.configuredBotAccount().map(com.escontrela.lastmove.application.arena.LichessBotAccount::id)); }
@@ -156,10 +157,10 @@ public final class MyGamesScreenController implements UiScreenController {
       String tournament=arena.gameForLocal(game.gameId()).flatMap(linked->linked.tournamentId()).flatMap(id->arena.tournaments().stream().filter(item->item.lichessTournamentId().equals(id)).map(item->item.name()).findFirst()).map(name->"Tournament · "+name).orElse(game.finished() ? "Saved game" : "Game in progress");
       context.setText(tournament);
       String resultText = resultText(game);
-      marker.setText(game.finished() ? game.result().map(com.escontrela.lastmove.domain.game.GameResult::getPgn).orElse("*") : "…");
+      marker.setText(resultText.equals("Won") ? "WON" : resultText.equals("Lost") ? "LOST" : resultText.equals("Draw") ? "DRAW" : resultText.equals("In progress") ? "LIVE" : "—");
       marker.getStyleClass().setAll("my-games-marker", resultStyle(game));
-      result.setText(resultText);
-      result.getStyleClass().setAll("my-games-result", resultStyle(game));
+      result.setText(game.finished() ? game.result().map(com.escontrela.lastmove.domain.game.GameResult::getPgn).orElse("—") : "—");
+      result.getStyleClass().setAll("my-games-score");
       moves.setText(Integer.toString(game.movesCount()));
       type.setText(game.gameType() == com.escontrela.lastmove.application.game.GameType.LICHESS_BOT_TOURNAMENT ? "Lichess Arena" : "Vs computer");
       updated.setText(GAME_DATE.format(game.updatedAt()));

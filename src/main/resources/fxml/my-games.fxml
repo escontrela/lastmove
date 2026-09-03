@@ -26,7 +26,7 @@
       </HBox>
       <HBox alignment="TOP_LEFT" spacing="18" styleClass="my-games-filter-card">
         <VBox spacing="7" HBox.hgrow="ALWAYS"><Label text="Search games" styleClass="my-games-filter-title"/><RegexSearchControl fx:id="regexSearch" /></VBox>
-        <VBox spacing="7" HBox.hgrow="ALWAYS"><Label text="Filter library" styleClass="my-games-filter-title"/><TagFilterControl fx:id="tagFilter" /></VBox>
+        <VBox spacing="4" HBox.hgrow="ALWAYS"><TagFilterControl fx:id="tagFilter" /></VBox>
       </HBox>
       <VBox spacing="0" styleClass="arena-bots-card, my-games-list-card" VBox.vgrow="ALWAYS">
         <HBox alignment="CENTER_LEFT" spacing="8" styleClass="arena-bots-title-row, my-games-list-title-row"><ThemeIcon lightIconResource="/images/menu_book_35dp_000000.png" darkIconResource="/images/menu_book_35dp_FFFFFF.png"/><Label text="Game library" styleClass="settings-field-label"/><Region HBox.hgrow="ALWAYS"/><Label fx:id="gameCountLabel" text="0 games" styleClass="my-games-count"/></HBox>

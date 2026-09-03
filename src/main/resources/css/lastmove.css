@@ -25,9 +25,10 @@
 
 .application-header {
     -fx-background-color: #ffffff;
-    -fx-padding: 13px 28px;
-    -fx-min-height: 74px;
-    -fx-pref-height: 74px;
+    /* Keep the chrome clear of the native macOS title bar when the window is compact. */
+    -fx-padding: 18px 28px 16px 28px;
+    -fx-min-height: 84px;
+    -fx-pref-height: 84px;
     -fx-border-color: transparent transparent #e6eaf0 transparent;
     -fx-border-width: 0 0 1px 0;
 }
@@ -203,9 +204,9 @@
     -fx-font-weight: 600;
     -fx-text-fill: #315b87;
     -fx-background-color: #e6f0fb;
-    -fx-background-radius: 999px;
+    -fx-background-radius: 5px;
     -fx-border-color: #bfd6ef;
-    -fx-border-radius: 999px;
+    -fx-border-radius: 5px;
 }
 .tag-filter-choice:hover, .tag-chip:hover { -fx-background-color: #d7e8f9; -fx-border-color: #77a9df; }
 .tag-filter-choice-selected {
@@ -218,16 +219,17 @@
 .my-games-title { -fx-font-size: 28px; -fx-font-weight: 800; -fx-text-fill: #101d32; }
 .my-games-support { -fx-font-size: 14px; -fx-text-fill: #6d7f92; }
 .my-games-player-card {
-    -fx-min-width: 210px;
+    -fx-min-width: 240px;
     -fx-padding: 9px 12px;
+    -fx-alignment: center;
     -fx-background-color: #ffffff;
     -fx-border-color: #dce5ef;
     -fx-border-width: 1px;
     -fx-background-radius: 10px;
     -fx-border-radius: 10px;
 }
-.button.my-games-player-button { -fx-padding: 0; -fx-background-color: transparent; -fx-font-size: 14px; -fx-font-weight: 800; -fx-text-fill: #172b44; -fx-alignment: center-left; -fx-cursor: hand; }
-.button.my-games-player-button:hover { -fx-text-fill: #0b63e8; }
+.button.my-games-player-button { -fx-max-width: Infinity; -fx-padding: 0; -fx-background-color: transparent; -fx-font-size: 14px; -fx-font-weight: 800; -fx-text-fill: #0b63e8; -fx-alignment: center; -fx-cursor: hand; }
+.button.my-games-player-button:hover { -fx-text-fill: #0752bd; -fx-underline: true; }
 .my-games-filter-card {
     -fx-padding: 13px 15px;
     -fx-background-color: #ffffff;
@@ -243,14 +245,16 @@
 .my-games-list-title-row { -fx-min-height: 52px; -fx-padding: 10px 14px; }
 .my-games-count { -fx-padding: 4px 9px; -fx-background-color: #eaf2ff; -fx-background-radius: 999px; -fx-font-size: 11px; -fx-font-weight: 800; -fx-text-fill: #255da8; }
 .my-games-table-header {
-    -fx-padding: 6px 14px;
+    /* Matches the row's marker gap (10px) plus the ListView vertical scrollbar gutter (16px). */
+    -fx-padding: 6px 26px 6px 14px;
     -fx-border-color: transparent transparent #dce5ef transparent;
     -fx-border-width: 0 0 1px 0;
     -fx-font-size: 11px;
     -fx-font-weight: 700;
     -fx-text-fill: #617084;
 }
-.my-games-header-result, .my-games-result { -fx-min-width: 90px; -fx-pref-width: 90px; }
+.my-games-header-game { -fx-max-width: Infinity; -fx-padding: 0 0 0 52px; }
+.my-games-header-result, .my-games-score { -fx-min-width: 90px; -fx-pref-width: 90px; }
 .my-games-header-moves, .my-games-moves { -fx-min-width: 56px; -fx-pref-width: 56px; }
 .my-games-header-type, .my-games-type { -fx-min-width: 130px; -fx-pref-width: 130px; }
 .my-games-header-updated, .my-games-updated { -fx-min-width: 120px; -fx-pref-width: 120px; }
@@ -258,14 +262,20 @@
 .my-games-list, .my-games-list .virtual-flow, .my-games-list .viewport { -fx-background-color: transparent; }
 .my-games-list { -fx-border-color: transparent; -fx-background-radius: 0 0 12px 12px; -fx-border-radius: 0 0 12px 12px; }
 .my-games-cell, .my-games-cell:filled { -fx-padding: 0; -fx-background-color: #ffffff; -fx-border-color: transparent transparent #e7edf4 transparent; -fx-border-width: 0 0 1px 0; }
+.my-games-cell:empty { -fx-background-color: transparent; -fx-border-color: transparent; -fx-border-width: 0; }
 .my-games-cell:filled:hover { -fx-background-color: #f7faff; }
 .my-games-cell:selected, .my-games-cell:filled:selected { -fx-background-color: #edf5ff; }
 .my-games-row { -fx-min-height: 76px; -fx-padding: 9px 14px; }
-.my-games-marker { -fx-min-width: 38px; -fx-pref-width: 38px; -fx-min-height: 38px; -fx-pref-height: 38px; -fx-alignment: center; -fx-background-radius: 999px; -fx-border-radius: 999px; -fx-font-size: 10px; -fx-font-weight: 900; }
+.my-games-marker { -fx-min-width: 42px; -fx-pref-width: 42px; -fx-min-height: 24px; -fx-pref-height: 24px; -fx-alignment: center; -fx-background-radius: 6px; -fx-border-radius: 6px; -fx-font-size: 9px; -fx-font-weight: 900; }
+.my-games-marker.my-games-result-win, .my-games-marker.my-games-result-loss,
+.my-games-marker.my-games-result-active, .my-games-marker.my-games-result-neutral {
+    -fx-background-radius: 6px;
+    -fx-border-radius: 6px;
+}
 .my-games-details { -fx-min-width: 230px; }
 .my-games-row-title { -fx-font-size: 14px; -fx-font-weight: 800; -fx-text-fill: #172b44; }
 .my-games-row-context { -fx-font-size: 11px; -fx-text-fill: #6d7f92; }
-.my-games-result { -fx-padding: 4px 7px; -fx-alignment: center; -fx-background-radius: 999px; -fx-border-radius: 999px; -fx-font-size: 10px; -fx-font-weight: 800; }
+.my-games-score { -fx-alignment: center-left; -fx-font-size: 12px; -fx-font-weight: 800; -fx-text-fill: #40566d; }
 .my-games-moves, .my-games-type, .my-games-updated { -fx-font-size: 12px; -fx-text-fill: #52657a; }
 .my-games-result-win { -fx-background-color: #e9f8ef; -fx-border-color: #bde9cc; -fx-text-fill: #147a3d; }
 .my-games-result-loss { -fx-background-color: #ffebe9; -fx-border-color: #f2b8b5; -fx-text-fill: #b42318; }
@@ -301,9 +311,9 @@
     -fx-font-weight: 600;
     -fx-text-fill: #315b87;
     -fx-background-color: #e6f0fb;
-    -fx-background-radius: 999px;
+    -fx-background-radius: 5px;
     -fx-border-color: #bfd6ef;
-    -fx-border-radius: 999px;
+    -fx-border-radius: 5px;
 }
 .tag-match-flow { -fx-padding: 2 0 0 0; }
 .tag-match {
@@ -2126,19 +2136,23 @@
 }
 .night-mode .tag-filter-choice:hover, .night-mode .tag-chip:hover { -fx-background-color: #334f70; -fx-border-color: #79aeef; }
 .night-mode .tag-filter-choice-selected { -fx-text-fill: #ffffff; -fx-background-color: #3a81d8; -fx-border-color: #6ba5f0; }
+.night-mode .my-games-filter-card .tag-filter-control { -fx-background-color: transparent; -fx-border-color: transparent; }
 .night-mode .my-games-title, .night-mode .my-games-row-title { -fx-text-fill: #f1f3f5; }
 .night-mode .my-games-support, .night-mode .my-games-row-context { -fx-text-fill: #b7c8dd; }
 .night-mode .my-games-player-card, .night-mode .my-games-filter-card { -fx-background-color: #202a36; -fx-border-color: #43576d; }
-.night-mode .button.my-games-player-button { -fx-text-fill: #f1f3f5; }
-.night-mode .button.my-games-player-button:hover { -fx-text-fill: #78b9ff; }
+.night-mode .button.my-games-player-button { -fx-text-fill: #68a9ff; }
+.night-mode .button.my-games-player-button:hover { -fx-text-fill: #9fc8f7; }
 .night-mode .my-games-filter-title { -fx-text-fill: #c6d3e0; }
 .night-mode .my-games-count { -fx-background-color: #243a55; -fx-text-fill: #9fc8f7; }
 .night-mode .my-games-table-header { -fx-border-color: transparent transparent #43576d transparent; -fx-text-fill: #b7c8dd; }
+.night-mode .my-games-table-header .label { -fx-text-fill: #b7c8dd; }
 .night-mode .my-games-list, .night-mode .my-games-list .virtual-flow, .night-mode .my-games-list .viewport { -fx-background-color: #202a36; }
 .night-mode .my-games-cell, .night-mode .my-games-cell:filled { -fx-background-color: #202a36; -fx-border-color: transparent transparent #394858 transparent; }
+.night-mode .my-games-cell:empty, .night-mode .my-games-list .list-cell:empty { -fx-background-color: #202a36; -fx-border-color: transparent; }
 .night-mode .my-games-cell:filled:hover { -fx-background-color: #263443; }
 .night-mode .my-games-cell:selected, .night-mode .my-games-cell:filled:selected { -fx-background-color: #2d4056; }
 .night-mode .my-games-moves, .night-mode .my-games-type, .night-mode .my-games-updated { -fx-text-fill: #c6d3e0; }
+.night-mode .my-games-score { -fx-text-fill: #c6d3e0; }
 .night-mode .my-games-result-win { -fx-background-color: #203c31; -fx-border-color: #356e4e; -fx-text-fill: #7edca7; }
 .night-mode .my-games-result-loss { -fx-background-color: #432b31; -fx-border-color: #77434c; -fx-text-fill: #ff9b9b; }
 .night-mode .my-games-result-active { -fx-background-color: #243a55; -fx-border-color: #3f6693; -fx-text-fill: #9fc8f7; }
