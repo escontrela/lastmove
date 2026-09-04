@@ -7,7 +7,6 @@ import com.escontrela.lastmove.domain.training.memory.MemoryGameState;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -18,7 +17,7 @@ import org.springframework.stereotype.Service;
 @Service
 public final class MemoryGameOrchestrator {
   private static final Duration CLOCK_TICK = Duration.ofSeconds(1);
-  private static final Duration FEEDBACK_DURATION = Duration.ofMillis(700);
+  private static final Duration FEEDBACK_DURATION = Duration.ofSeconds(2);
   private final MemoryGamePositionSelector selector;
   private final MemoryGameClock clock;
   private final MemoryGameUiDispatcher ui;
@@ -26,10 +25,11 @@ public final class MemoryGameOrchestrator {
   private final List<MemoryGameCancellable> callbacks = new ArrayList<>();
   private MemoryGame game;
   private MemoryGameChallenge challenge;
-  private boolean answerSubmitted;
   private boolean emptySource;
   private boolean abandoned;
   private List<MemoryGameFeedback> feedback = List.of();
+  private final List<MemoryGamePiece> resolvedPieces = new ArrayList<>();
+  private int correctlyResolved;
   private Duration memorizationStartedAt = Duration.ZERO;
 
   public MemoryGameOrchestrator(MemoryGamePositionSelector selector, MemoryGameClock clock, MemoryGameUiDispatcher ui) {
@@ -56,10 +56,10 @@ public final class MemoryGameOrchestrator {
     });
   }
 
-  /** Submits exactly one answer map; calls after the first are ignored. */
-  public void submitAnswer(Map<Square, MemoryGamePiece> answer) {
-    Map<Square, MemoryGamePiece> snapshot = Map.copyOf(Objects.requireNonNull(answer, "answer must not be null"));
-    ui.dispatch(() -> submitInternal(snapshot));
+  /** Immediately evaluates one reconstructed piece. The round completes after every hidden piece. */
+  public void submitPiece(MemoryGamePiece piece) {
+    MemoryGamePiece required = Objects.requireNonNull(piece, "piece must not be null");
+    ui.dispatch(() -> submitPieceInternal(required));
   }
 
   /** Abandons the screen and cancels every pending callback. */
@@ -74,8 +74,9 @@ public final class MemoryGameOrchestrator {
   private void startInternal(int attempt) {
     abandoned = false;
     emptySource = false;
-    answerSubmitted = false;
     feedback = List.of();
+    resolvedPieces.clear();
+    correctlyResolved = 0;
     cancelCallbacks();
     clock.cancelAll();
     clock.reset();
@@ -101,7 +102,9 @@ public final class MemoryGameOrchestrator {
       return false;
     }
     challenge = next.orElseThrow();
-    answerSubmitted = false;
+    feedback = List.of();
+    resolvedPieces.clear();
+    correctlyResolved = 0;
     memorizationStartedAt = clock.elapsed();
     return true;
   }
@@ -133,32 +136,39 @@ public final class MemoryGameOrchestrator {
     publish();
   }
 
-  private void submitInternal(Map<Square, MemoryGamePiece> answer) {
-    if (abandoned || game == null || game.state() != MemoryGameState.GUESSING || answerSubmitted) return;
-    answerSubmitted = true;
-    int correct = 0;
-    var evaluated = new ArrayList<MemoryGameFeedback>();
-    for (MemoryGamePiece expected : challenge.hiddenPieces()) {
-      var submitted = answer.get(expected.square());
-      boolean matches = expected.equals(submitted);
-      if (matches) correct++;
-      evaluated.add(new MemoryGameFeedback(expected.square(), expected, submitted, matches));
-    }
-    if (!game.submitEvaluation(correct, clock.elapsed())) {
+  private void submitPieceInternal(MemoryGamePiece submitted) {
+    if (abandoned || game == null || game.state() != MemoryGameState.GUESSING || !feedback.isEmpty()) return;
+    List<MemoryGamePiece> unresolved = challenge.hiddenPieces().stream()
+        .filter(expected -> resolvedPieces.stream().noneMatch(resolved -> resolved.square().equals(expected.square())))
+        .toList();
+    if (unresolved.isEmpty()) return;
+    MemoryGamePiece expected = unresolved.stream()
+        .filter(candidate -> candidate.square().equals(submitted.square()))
+        .findFirst()
+        .orElse(unresolved.getFirst());
+    boolean correct = expected.equals(submitted);
+    if (correct) correctlyResolved++;
+    resolvedPieces.add(expected);
+    feedback = List.of(new MemoryGameFeedback(expected.square(), expected, submitted, correct));
+    boolean roundComplete = resolvedPieces.size() == challenge.hiddenPieces().size();
+    if (roundComplete && !game.submitEvaluation(correctlyResolved, clock.elapsed())) {
       cancelCallbacks();
       clock.cancelAll();
       publish();
       return;
     }
-    feedback = List.copyOf(evaluated);
     publish();
-    callbacks.add(clock.schedule(FEEDBACK_DURATION, () -> ui.dispatch(this::finishFeedback)));
+    callbacks.add(clock.schedule(FEEDBACK_DURATION, () -> ui.dispatch(() -> finishPieceFeedback(roundComplete))));
   }
 
-  private void finishFeedback() {
+  private void finishPieceFeedback(boolean roundComplete) {
     if (abandoned || game == null || game.state() == MemoryGameState.FINISHED) return;
     if (clock.elapsed().compareTo(MemoryGame.SESSION_DURATION) >= 0) { expireSession(); return; }
     feedback = List.of();
+    if (!roundComplete) {
+      publish();
+      return;
+    }
     if (!selectNextRound(difficultyAtGuessingTime())) { emptySource = true; publish(); return; }
     publish();
     scheduleMemorizationEnd();
@@ -200,7 +210,8 @@ public final class MemoryGameOrchestrator {
         Optional.ofNullable(challenge),
         state == MemoryGameState.MEMORIZING && challenge != null,
         emptySource,
-        feedback);
+        feedback,
+        resolvedPieces);
     observers.forEach(observer -> observer.accept(snapshot));
   }
 

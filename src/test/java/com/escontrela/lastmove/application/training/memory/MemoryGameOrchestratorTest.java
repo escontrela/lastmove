@@ -4,15 +4,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.escontrela.lastmove.domain.common.Square;
 import com.escontrela.lastmove.domain.training.memory.MemoryGameDifficulty;
 import com.escontrela.lastmove.domain.training.memory.MemoryGameState;
 import com.escontrela.lastmove.infrastructure.chesspresso.ChesspressoRulesEngine;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import org.junit.jupiter.api.Test;
 
@@ -53,17 +50,17 @@ class MemoryGameOrchestratorTest {
   }
 
   @Test
-  void evaluatesOneAnswerAndIgnoresDuplicates() {
+  void evaluatesOnePieceImmediatelyAndIgnoresDuplicateSelections() {
     FakeClock clock = new FakeClock();
     List<MemoryGameSnapshot> states = new ArrayList<>();
     MemoryGameOrchestrator orchestrator = orchestrator(clock, states, POSITION_A, POSITION_B);
     orchestrator.start();
     clock.advanceTo(Duration.ofSeconds(5));
-    Map<Square, MemoryGamePiece> answer = answerFrom(last(states).challenge().orElseThrow());
+    MemoryGamePiece answer = last(states).challenge().orElseThrow().hiddenPieces().getFirst();
 
     clock.advanceTo(Duration.ofSeconds(10));
-    orchestrator.submitAnswer(answer);
-    orchestrator.submitAnswer(answer);
+    orchestrator.submitPiece(answer);
+    orchestrator.submitPiece(answer);
 
     assertEquals(1, last(states).score());
     assertEquals(1, last(states).maxPossibleScore());
@@ -73,27 +70,33 @@ class MemoryGameOrchestratorTest {
   }
 
   @Test
-  void awardsPartialCreditPerSquareTypeAndColour() {
+  void keepsAcceptingTheRemainingPiecesAfterAnIncorrectPlacement() {
     FakeClock clock = new FakeClock();
     List<MemoryGameSnapshot> states = new ArrayList<>();
     MemoryGameOrchestrator orchestrator = orchestrator(clock, states, POSITION_A, POSITION_B);
     orchestrator.start();
-    clock.advanceTo(Duration.ofSeconds(5));
-    orchestrator.submitAnswer(answerFrom(last(states).challenge().orElseThrow()));
-
-    clock.advanceTo(Duration.ofSeconds(145));
-    orchestrator.submitAnswer(answerFrom(last(states).challenge().orElseThrow()));
-    clock.advanceTo(Duration.ofSeconds(151));
+    clock.advanceTo(Duration.ofSeconds(88));
+    orchestrator.submitPiece(last(states).challenge().orElseThrow().hiddenPieces().getFirst());
+    clock.advanceTo(Duration.ofSeconds(95));
     MemoryGameChallenge challenge = last(states).challenge().orElseThrow();
-    assertEquals(3, challenge.hiddenPieces().size());
-    Map<Square, MemoryGamePiece> partial = new HashMap<>();
-    challenge.hiddenPieces().stream().limit(2).forEach(piece -> partial.put(piece.square(), piece));
-    orchestrator.submitAnswer(partial);
+    assertEquals(2, challenge.hiddenPieces().size());
+    MemoryGamePiece first = challenge.hiddenPieces().getFirst();
+    MemoryGamePiece wrongSquare = new MemoryGamePiece(
+        com.escontrela.lastmove.domain.common.Square.of("a3"), first.type(), first.color());
 
-    assertEquals(4, last(states).score());
-    assertEquals(5, last(states).maxPossibleScore());
-    assertEquals(2, last(states).feedback().stream().filter(MemoryGameFeedback::correct).count());
-    assertEquals(1, last(states).feedback().stream().filter(feedback -> !feedback.correct()).count());
+    orchestrator.submitPiece(wrongSquare);
+    assertFalse(last(states).feedback().getFirst().correct());
+    assertEquals(List.of(first), last(states).resolvedPieces());
+
+    clock.advanceTo(Duration.ofSeconds(97));
+    assertEquals(MemoryGameState.GUESSING, last(states).state());
+    assertTrue(last(states).feedback().isEmpty());
+    MemoryGamePiece second = challenge.hiddenPieces().get(1);
+    orchestrator.submitPiece(second);
+
+    assertEquals(3, last(states).maxPossibleScore());
+    assertEquals(2, last(states).score());
+    assertTrue(last(states).feedback().getFirst().correct());
   }
 
   @Test
@@ -104,7 +107,7 @@ class MemoryGameOrchestratorTest {
     orchestrator.start();
     clock.advanceTo(Duration.ofSeconds(5));
     clock.advanceTo(Duration.ofMillis(179_500));
-    orchestrator.submitAnswer(answerFrom(last(states).challenge().orElseThrow()));
+    orchestrator.submitPiece(last(states).challenge().orElseThrow().hiddenPieces().getFirst());
 
     clock.advanceTo(Duration.ofSeconds(180));
 
@@ -123,7 +126,7 @@ class MemoryGameOrchestratorTest {
     // Answer the first round just before the boundary so the next guessing phase
     // opens past 90 seconds and must be rebuilt at the two-piece difficulty.
     clock.advanceTo(Duration.ofSeconds(88));
-    orchestrator.submitAnswer(answerFrom(last(states).challenge().orElseThrow()));
+    orchestrator.submitPiece(last(states).challenge().orElseThrow().hiddenPieces().getFirst());
     clock.advanceTo(Duration.ofSeconds(95));
 
     assertEquals(MemoryGameState.GUESSING, last(states).state());
@@ -206,7 +209,7 @@ class MemoryGameOrchestratorTest {
     MemoryGameOrchestrator orchestrator = orchestrator(clock, states, POSITION_A, POSITION_B);
     orchestrator.start();
     clock.advanceTo(Duration.ofSeconds(5));
-    orchestrator.submitAnswer(answerFrom(last(states).challenge().orElseThrow()));
+    orchestrator.submitPiece(last(states).challenge().orElseThrow().hiddenPieces().getFirst());
     clock.advanceTo(Duration.ofSeconds(180));
     assertEquals(MemoryGameState.FINISHED, last(states).state());
 
@@ -243,12 +246,6 @@ class MemoryGameOrchestratorTest {
     MemoryGameOrchestrator orchestrator = new MemoryGameOrchestrator(selector, clock, MemoryGameUiDispatcher.immediate());
     orchestrator.observe(states::add);
     return orchestrator;
-  }
-
-  private static Map<Square, MemoryGamePiece> answerFrom(MemoryGameChallenge challenge) {
-    Map<Square, MemoryGamePiece> answer = new HashMap<>();
-    challenge.hiddenPieces().forEach(piece -> answer.put(piece.square(), piece));
-    return answer;
   }
 
   private static MemoryGameSnapshot last(List<MemoryGameSnapshot> states) {

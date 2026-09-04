@@ -55,6 +55,7 @@ class MemoryGameSnapshotTest {
         Optional.empty(),
         false,
         false,
+        List.of(),
         List.of());
   }
 }

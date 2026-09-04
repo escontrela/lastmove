@@ -17,7 +17,10 @@ class MemoryGameLayoutTest {
     assertTrue(fxml.contains("<MemoryPiecePickerControl fx:id=\"piecePicker\""));
     assertFalse(fxml.contains("fx:id=\"piecePalette\""));
     assertTrue(fxml.contains("accessibleText=\"Memory training chess board\""));
-    assertTrue(fxml.contains("onAction=\"#submitAnswer\""));
+    assertFalse(fxml.contains("onAction=\"#submitAnswer\""));
+    assertTrue(fxml.contains("ToolbarIconButton fx:id=\"resetButton\""));
+    assertTrue(fxml.contains("progressive-danger-action-button"));
+    assertTrue(fxml.contains("styleClass=\"status-text\" text=\"Memorize each position"));
   }
 
   @Test

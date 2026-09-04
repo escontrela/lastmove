@@ -53,6 +53,8 @@ public class ChessBoardControl extends Control {
       new SimpleObjectProperty<>(this, "onPieceRemovalRequested");
   private final ObjectProperty<EventHandler<BoardSquareEvent>> onEditorSquareRequested =
       new SimpleObjectProperty<>(this, "onEditorSquareRequested");
+  private final ObjectProperty<EventHandler<BoardSquareEvent>> onEditorSecondarySquareRequested =
+      new SimpleObjectProperty<>(this, "onEditorSecondarySquareRequested");
   private final ObjectProperty<EventHandler<BoardPieceDropEvent>> onPieceDropped =
       new SimpleObjectProperty<>(this, "onPieceDropped");
 
@@ -306,6 +308,21 @@ public class ChessBoardControl extends Control {
 
     EventHandler<BoardSquareEvent> handler = onEditorSquareRequested.get();
     if (handler != null) handler.handle(new BoardSquareEvent(this, this, square));
+  }
+
+  /** Optional editor-specific secondary-click action; absent handlers preserve piece removal. */
+  public final void setOnEditorSecondarySquareRequested(EventHandler<BoardSquareEvent> value) {
+    onEditorSecondarySquareRequested.set(value);
+  }
+
+  public final EventHandler<BoardSquareEvent> getOnEditorSecondarySquareRequested() {
+    return onEditorSecondarySquareRequested.get();
+  }
+
+  public final void handleEditorSecondarySquare(Square square) {
+    EventHandler<BoardSquareEvent> handler = onEditorSecondarySquareRequested.get();
+    if (handler != null) handler.handle(new BoardSquareEvent(this, this, square));
+    else handlePieceRemoval(square);
   }
 
   public final void setOnPieceDropped(EventHandler<BoardPieceDropEvent> value) {

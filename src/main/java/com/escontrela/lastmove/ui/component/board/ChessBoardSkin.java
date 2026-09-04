@@ -366,7 +366,7 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
   private void handleArrowPressed(ChessBoardControl control, MouseEvent event) {
     if (control.isEditorMode()) {
       Square target = squareAtCoordinate(event.getX(), event.getY());
-      if (target != null) control.handlePieceRemoval(target);
+      if (target != null) control.handleEditorSecondarySquare(target);
       event.consume();
       return;
     }
@@ -620,9 +620,13 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
   }
 
   void showFeedback(java.util.Set<Square> correct, java.util.Set<Square> incorrect) {
-    clearFeedback();
-    for (Square square : correct) squares[square.getFile()][square.getRank()].setAnswerFeedback(true);
-    for (Square square : incorrect) squares[square.getFile()][square.getRank()].setAnswerFeedback(false);
+    for (int file = 0; file < ChessConstants.FILES; file++) {
+      for (int rank = 0; rank < ChessConstants.RANKS; rank++) {
+        Square square = Square.of(file, rank);
+        squares[file][rank].setAnswerFeedback(
+            correct.contains(square) ? Boolean.TRUE : incorrect.contains(square) ? Boolean.FALSE : null);
+      }
+    }
   }
 
   void clearFeedback() {

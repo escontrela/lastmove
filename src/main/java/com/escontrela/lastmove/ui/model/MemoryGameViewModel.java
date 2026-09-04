@@ -11,8 +11,6 @@ import com.escontrela.lastmove.domain.common.Square;
 import com.escontrela.lastmove.domain.game.PositionPiece;
 import com.escontrela.lastmove.domain.game.PositionSnapshot;
 import com.escontrela.lastmove.domain.training.memory.MemoryGameState;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -20,7 +18,6 @@ import java.util.Optional;
 public final class MemoryGameViewModel {
   private final MemoryGameOrchestrator orchestrator;
   private final MemoryGameBoardPositionService positions;
-  private final Map<Square, MemoryGamePiece> answers = new HashMap<>();
   private MemoryGameSnapshot snapshot;
   private PositionSnapshot boardPosition;
 
@@ -34,35 +31,26 @@ public final class MemoryGameViewModel {
   public void restart() { orchestrator.restart(); }
   public void abandon() { orchestrator.abandon(); }
 
-  /** Places a selected overlay piece only when the square is a current hidden target. */
+  /** Places and immediately evaluates a selected overlay piece on any empty square. */
   public void placePiece(Square square, PieceType type, PieceColor color) {
     if (!canAnswer(square)) return;
-    answers.put(square, new MemoryGamePiece(square, type, color));
-    renderGuessingPosition();
-  }
-
-  public void submit() {
-    if (snapshot != null && snapshot.state() == MemoryGameState.GUESSING) {
-      orchestrator.submitAnswer(Map.copyOf(answers));
-    }
+    orchestrator.submitPiece(new MemoryGamePiece(square, type, color));
   }
 
   public Optional<MemoryGameSnapshot> snapshot() { return Optional.ofNullable(snapshot); }
   public Optional<PositionSnapshot> boardPosition() { return Optional.ofNullable(boardPosition); }
   public boolean canAnswer(Square square) {
     return snapshot != null && snapshot.state() == MemoryGameState.GUESSING
-        && snapshot.feedback().isEmpty() && isHidden(square);
+        && snapshot.feedback().isEmpty() && !isOccupied(square);
   }
-  public boolean canSubmit() { return snapshot != null && snapshot.state() == MemoryGameState.GUESSING && !answers.isEmpty(); }
   public boolean finished() { return snapshot != null && snapshot.state() == MemoryGameState.FINISHED; }
   public boolean canRestart() { return snapshot != null && snapshot.canRestart(); }
 
   private void apply(MemoryGameSnapshot next) {
     snapshot = Objects.requireNonNull(next, "snapshot must not be null");
-    if (next.challenge().isEmpty()) { answers.clear(); boardPosition = null; return; }
+    if (next.challenge().isEmpty()) { boardPosition = null; return; }
     MemoryGameChallenge challenge = next.challenge().orElseThrow();
     PositionSnapshot full = positions.snapshot(challenge.position());
-    if (next.state() != MemoryGameState.GUESSING) answers.clear();
     boardPosition = full;
     if (next.state() == MemoryGameState.GUESSING) renderGuessingPosition();
   }
@@ -73,11 +61,12 @@ public final class MemoryGameViewModel {
     PositionSnapshot full = positions.snapshot(challenge.position());
     var hiddenSquares = challenge.hiddenPieces().stream().map(MemoryGamePiece::square).toList();
     var visible = full.pieces().stream().filter(piece -> !hiddenSquares.contains(piece.square())).collect(java.util.stream.Collectors.toCollection(java.util.ArrayList::new));
-    answers.values().forEach(answer -> visible.add(new PositionPiece(answer.square(), answer.type(), answer.color())));
+    snapshot.resolvedPieces().forEach(answer -> visible.add(new PositionPiece(answer.square(), answer.type(), answer.color())));
     boardPosition = new PositionSnapshot(visible, full.activeColor(), full.castlingRights(), full.enPassantTarget(), full.halfmoveClock(), full.fullmoveNumber(), full.lastMove(), full.check(), full.mate(), full.stalemate());
   }
 
-  private boolean isHidden(Square square) {
-    return square != null && snapshot.challenge().orElseThrow().hiddenPieces().stream().anyMatch(piece -> piece.square().equals(square));
+  private boolean isOccupied(Square square) {
+    return square == null || boardPosition == null
+        || boardPosition.pieces().stream().anyMatch(piece -> piece.square().equals(square));
   }
 }

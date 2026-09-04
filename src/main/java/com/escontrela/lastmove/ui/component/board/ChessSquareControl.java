@@ -1,6 +1,9 @@
 package com.escontrela.lastmove.ui.component.board;
 
 import javafx.geometry.Insets;
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
+import javafx.animation.Timeline;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.AccessibleRole;
@@ -13,6 +16,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.css.PseudoClass;
+import javafx.util.Duration;
 import com.escontrela.lastmove.domain.common.PieceColor;
 import com.escontrela.lastmove.domain.common.PieceType;
 import com.escontrela.lastmove.domain.common.Square;
@@ -47,6 +51,8 @@ public class ChessSquareControl extends StackPane {
   private final ImageView pieceImageView =
       new ImageView(); // Cambiado el nombre de la variable para evitar colisión con el tipo Image
   private final Region threatenedOverlay = new Region();
+  private Timeline answerFeedbackBlink;
+  private Boolean answerFeedback;
 
   public ChessSquareControl(int file, int rank, boolean isLight, BoardTheme theme) {
     this.file = file;
@@ -166,9 +172,24 @@ public class ChessSquareControl extends StackPane {
   }
 
   public void setAnswerFeedback(Boolean correct) {
+    if (java.util.Objects.equals(answerFeedback, correct)) return;
+    answerFeedback = correct;
+    if (answerFeedbackBlink != null) {
+      answerFeedbackBlink.stop();
+      answerFeedbackBlink = null;
+    }
+    pieceImageView.setOpacity(1.0);
     pseudoClassStateChanged(ANSWER_CORRECT, Boolean.TRUE.equals(correct));
     pseudoClassStateChanged(ANSWER_INCORRECT, Boolean.FALSE.equals(correct));
     setAccessibleHelp(correct == null ? null : correct ? "Correct answer" : "Incorrect answer; correct piece shown");
+    if (Boolean.FALSE.equals(correct)) {
+      answerFeedbackBlink = new Timeline(
+          new KeyFrame(Duration.ZERO, new KeyValue(pieceImageView.opacityProperty(), 1.0)),
+          new KeyFrame(Duration.millis(250), new KeyValue(pieceImageView.opacityProperty(), 0.15)),
+          new KeyFrame(Duration.millis(500), new KeyValue(pieceImageView.opacityProperty(), 1.0)));
+      answerFeedbackBlink.setCycleCount(4);
+      answerFeedbackBlink.play();
+    }
   }
 
   /** Sets a presentation-only piece image; this control does not model chess rules. */

@@ -7,6 +7,7 @@ import com.escontrela.lastmove.application.training.memory.MemoryGameSnapshot;
 import com.escontrela.lastmove.domain.common.Square;
 import com.escontrela.lastmove.ui.component.board.ChessBoardControl;
 import com.escontrela.lastmove.ui.component.training.MemoryPiecePickerControl;
+import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton;
 import com.escontrela.lastmove.ui.model.MemoryGameViewModel;
 import com.escontrela.lastmove.ui.screen.UiScreenController;
 import java.time.Duration;
@@ -28,7 +29,8 @@ public final class MemoryGameScreenController implements UiScreenController {
   @FXML private Label phaseLabel, globalClockLabel, memorizationClockLabel, scoreLabel, difficultyLabel, attemptLabel, statusLabel;
   @FXML private Label resultScoreLabel, resultVerdictLabel, resultDetailLabel;
   @FXML private VBox resultPanel;
-  @FXML private Button submitButton, playAgainButton;
+  @FXML private ToolbarIconButton resetButton;
+  @FXML private Button playAgainButton;
   private Square pendingSquare;
 
   public MemoryGameScreenController(
@@ -42,12 +44,10 @@ public final class MemoryGameScreenController implements UiScreenController {
     root.getProperties().put("controller", this);
     chessBoard.setEditorMode(false);
     chessBoard.setOnEditorSquareRequested(event -> requestPieceFor(event.getSquare()));
+    chessBoard.setOnEditorSecondarySquareRequested(event -> requestPieceFor(event.getSquare()));
     piecePicker.setOnPieceSelected(event -> {
       if (pendingSquare != null) {
         viewModel.placePiece(pendingSquare, event.pieceType(), event.pieceColor());
-        viewModel.boardPosition().ifPresent(chessBoard::renderPosition);
-        submitButton.setDisable(!viewModel.canSubmit());
-        statusLabel.setText("Piece placed. Choose another hidden square or submit your answer.");
       }
       pendingSquare = null;
     });
@@ -62,7 +62,6 @@ public final class MemoryGameScreenController implements UiScreenController {
   @Override public void onShow() { viewModel.start(); }
   @Override public void onHide() { piecePicker.hide(); pendingSquare = null; viewModel.abandon(); }
 
-  @FXML public void submitAnswer() { viewModel.submit(); }
   @FXML public void playAgain() { viewModel.restart(); }
   @FXML public void resetSession() { piecePicker.hide(); pendingSquare = null; viewModel.start(); }
 
@@ -83,7 +82,6 @@ public final class MemoryGameScreenController implements UiScreenController {
     scoreLabel.setText("%d/%d".formatted(snapshot.score(), snapshot.maxPossibleScore()));
     difficultyLabel.setText(snapshot.difficulty().map(value -> value.hiddenPieceCount() + " hidden piece(s)").orElse("—"));
     attemptLabel.setText("Attempt " + snapshot.attempt());
-    submitButton.setDisable(!viewModel.canSubmit());
     chessBoard.setEditorMode(snapshot.state() == com.escontrela.lastmove.domain.training.memory.MemoryGameState.GUESSING
         && snapshot.feedback().isEmpty());
     if (!snapshot.feedback().isEmpty() || viewModel.finished()) { piecePicker.hide(); pendingSquare = null; }
@@ -125,10 +123,16 @@ public final class MemoryGameScreenController implements UiScreenController {
 
   private static String statusText(MemoryGameSnapshot snapshot) {
     if (snapshot.emptySource()) return "No playable positions available. Return to Home.";
-    if (!snapshot.feedback().isEmpty()) return "Review your answer. Solid means correct; dashed means incorrect.";
+    if (!snapshot.feedback().isEmpty()) {
+      return "Review your answer. An incorrect answer reveals the correct piece blinking for two seconds.";
+    }
     return switch (snapshot.state()) {
       case MEMORIZING -> "Memorize the complete position before pieces disappear.";
-      case GUESSING -> "Select an empty hidden square, then choose its piece.";
+      case GUESSING -> {
+        int total = snapshot.challenge().map(challenge -> challenge.hiddenPieces().size()).orElse(0);
+        yield "Select any empty square, then choose the piece to place there. Pieces: %d/%d."
+            .formatted(snapshot.resolvedPieces().size(), total);
+      }
       case FINISHED -> "Session complete.";
       case READY -> "Preparing training session.";
     };

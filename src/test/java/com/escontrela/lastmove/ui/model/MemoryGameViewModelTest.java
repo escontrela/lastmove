@@ -53,7 +53,6 @@ class MemoryGameViewModelTest {
     viewModel.start();
     clock.advanceTo(Duration.ofSeconds(5));
     answerCorrectly(viewModel);
-    viewModel.submit();
 
     clock.advanceTo(Duration.ofSeconds(180));
 

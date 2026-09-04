@@ -20,7 +20,8 @@ public record MemoryGameSnapshot(
     Optional<MemoryGameChallenge> challenge,
     boolean showingCompletePosition,
     boolean emptySource,
-    List<MemoryGameFeedback> feedback) {
+    List<MemoryGameFeedback> feedback,
+    List<MemoryGamePiece> resolvedPieces) {
   public MemoryGameSnapshot {
     state = Objects.requireNonNull(state, "state must not be null");
     remainingTime = Objects.requireNonNull(remainingTime, "remainingTime must not be null");
@@ -28,6 +29,7 @@ public record MemoryGameSnapshot(
     difficulty = Objects.requireNonNull(difficulty, "difficulty must not be null");
     challenge = Objects.requireNonNull(challenge, "challenge must not be null");
     feedback = List.copyOf(Objects.requireNonNull(feedback, "feedback must not be null"));
+    resolvedPieces = List.copyOf(Objects.requireNonNull(resolvedPieces, "resolvedPieces must not be null"));
     if (score < 0 || maxPossibleScore < 0 || score > maxPossibleScore) {
       throw new IllegalArgumentException("invalid memory-game score");
     }
