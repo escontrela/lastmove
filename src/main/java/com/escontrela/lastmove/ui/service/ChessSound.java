@@ -7,7 +7,15 @@ public enum ChessSound {
   PROMOTE("/chess-sounds/promote.mp3"),
   CASTLE("/chess-sounds/castle.mp3"),
   MOVE_CHECK("/chess-sounds/move-check.mp3"),
-  NOTIFY("/chess-sounds/notify.mp3");
+  NOTIFY("/chess-sounds/notify.mp3"),
+  MEMORY_GAME_OVER("/sounds/mixkit-sad-game-over-trombone-471.wav"),
+  MEMORY_GAME_COMPLETED("/sounds/mixkit-game-level-completed-2059.wav"),
+  MEMORY_CLOCK_URGENT("/sounds/mixkit-clock-countdown-bleeps-916.wav"),
+  MEMORY_INCORRECT_PIECE("/sounds/mixkit-small-hit-in-a-game-2072.wav"),
+  MEMORY_CORRECT_PIECE("/sounds/mixkit-winning-a-coin-video-game-2069.wav"),
+  MEMORY_PIECES_DISAPPEAR("/sounds/mixkit-air-zoom-vacuum-2608.wav"),
+  MEMORY_NEW_POSITION("/sounds/mixkit-unlock-new-item-game-notification-254.wav"),
+  MEMORY_BACKGROUND("/sounds/mixkit-little-birds-singing-in-the-trees-17.wav");
 
   private final String resourcePath;
 

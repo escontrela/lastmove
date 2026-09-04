@@ -9,9 +9,13 @@ import com.escontrela.lastmove.ui.component.board.ChessBoardControl;
 import com.escontrela.lastmove.ui.component.training.MemoryPiecePickerControl;
 import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton;
 import com.escontrela.lastmove.ui.service.BoardAppearancePreferencesService;
+import com.escontrela.lastmove.ui.service.ChessSound;
+import com.escontrela.lastmove.ui.service.ChessSoundService;
 import com.escontrela.lastmove.ui.model.MemoryGameViewModel;
 import com.escontrela.lastmove.ui.screen.UiScreenController;
 import java.time.Duration;
+import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -29,6 +33,7 @@ import org.springframework.stereotype.Component;
 public final class MemoryGameScreenController implements UiScreenController {
   private final MemoryGameViewModel viewModel;
   private final BoardAppearancePreferencesService boardAppearancePreferencesService;
+  private final ChessSoundService chessSoundService;
   @FXML private StackPane root;
   @FXML private ChessBoardControl chessBoard;
   @FXML private MemoryPiecePickerControl piecePicker;
@@ -36,21 +41,40 @@ public final class MemoryGameScreenController implements UiScreenController {
   @FXML private Label resultScoreLabel, resultVerdictLabel, resultDetailLabel;
   @FXML private VBox resultPanel;
   @FXML private ToolbarIconButton resetButton;
+  @FXML private ToolbarIconButton soundToggleButton;
   @FXML private Button playAgainButton;
   private Square pendingSquare;
   private Timeline urgentClockPulse;
+  private MemoryGameSnapshot previousSnapshot;
+  private boolean soundEnabled = true;
+  private boolean backgroundMusicPlaying;
+  private boolean urgentClockSoundPlaying;
+  private static final double BACKGROUND_VOLUME = 0.18;
+  private static final List<ChessSound> MEMORY_SOUNDS = List.of(
+      ChessSound.MEMORY_GAME_OVER,
+      ChessSound.MEMORY_GAME_COMPLETED,
+      ChessSound.MEMORY_CLOCK_URGENT,
+      ChessSound.MEMORY_INCORRECT_PIECE,
+      ChessSound.MEMORY_CORRECT_PIECE,
+      ChessSound.MEMORY_PIECES_DISAPPEAR,
+      ChessSound.MEMORY_NEW_POSITION,
+      ChessSound.MEMORY_BACKGROUND);
 
   public MemoryGameScreenController(
       MemoryGameOrchestrator orchestrator,
       MemoryGameBoardPositionService positions,
-      BoardAppearancePreferencesService boardAppearancePreferencesService) {
+      BoardAppearancePreferencesService boardAppearancePreferencesService,
+      ChessSoundService chessSoundService) {
     this.viewModel = new MemoryGameViewModel(orchestrator, positions);
     this.boardAppearancePreferencesService = boardAppearancePreferencesService;
+    this.chessSoundService = Objects.requireNonNull(chessSoundService, "chessSoundService must not be null");
     orchestrator.observe(this::refresh);
   }
 
   @FXML public void initialize() {
     root.getProperties().put("controller", this);
+    chessSoundService.preload();
+    updateSoundToggleButton();
     chessBoard.visualEffectsEnabledProperty().bind(
         boardAppearancePreferencesService.boardVisualEffectsEnabledProperty());
     chessBoard.appearancePresetProperty().bind(
@@ -72,16 +96,36 @@ public final class MemoryGameScreenController implements UiScreenController {
     attemptLabel.setAccessibleText("Current attempt");
   }
 
-  @Override public void onShow() { viewModel.start(); }
+  @Override public void onShow() {
+    startBackgroundMusic();
+    viewModel.start();
+  }
   @Override public void onHide() {
     piecePicker.hide();
     pendingSquare = null;
     stopUrgentClockPulse();
+    stopMemorySounds();
+    backgroundMusicPlaying = false;
+    urgentClockSoundPlaying = false;
+    previousSnapshot = null;
     viewModel.abandon();
   }
 
   @FXML public void playAgain() { viewModel.restart(); }
   @FXML public void resetSession() { piecePicker.hide(); pendingSquare = null; viewModel.start(); }
+
+  @FXML public void toggleSound() {
+    soundEnabled = !soundEnabled;
+    if (soundEnabled) {
+      startBackgroundMusic();
+      if (isUrgent(previousSnapshot)) startUrgentClockSound();
+    } else {
+      stopMemorySounds();
+      backgroundMusicPlaying = false;
+      urgentClockSoundPlaying = false;
+    }
+    updateSoundToggleButton();
+  }
 
   private void requestPieceFor(Square square) {
     if (!viewModel.canAnswer(square)) return;
@@ -90,6 +134,7 @@ public final class MemoryGameScreenController implements UiScreenController {
   }
 
   private void refresh(MemoryGameSnapshot snapshot) {
+    handleSoundEffects(snapshot);
     viewModel.boardPosition().ifPresent(chessBoard::renderPosition);
     var correct = snapshot.feedback().stream().filter(MemoryGameFeedback::correct).map(MemoryGameFeedback::square).collect(Collectors.toSet());
     var incorrect = snapshot.feedback().stream().filter(feedback -> !feedback.correct()).map(MemoryGameFeedback::square).collect(Collectors.toSet());
@@ -106,6 +151,32 @@ public final class MemoryGameScreenController implements UiScreenController {
     if (!snapshot.feedback().isEmpty() || viewModel.finished()) { piecePicker.hide(); pendingSquare = null; }
     statusLabel.setText(statusText(snapshot));
     refreshResult(snapshot);
+  }
+
+  private void handleSoundEffects(MemoryGameSnapshot snapshot) {
+    MemoryGameSnapshot previous = previousSnapshot;
+    if (previous != null) {
+      if (!previous.feedback().equals(snapshot.feedback()) && !snapshot.feedback().isEmpty()) {
+        playMemorySound(snapshot.feedback().getFirst().correct()
+            ? ChessSound.MEMORY_CORRECT_PIECE
+            : ChessSound.MEMORY_INCORRECT_PIECE);
+      }
+      if (previous.showingCompletePosition() && !snapshot.showingCompletePosition()) {
+        playMemorySound(ChessSound.MEMORY_PIECES_DISAPPEAR);
+      }
+      if (previous.challenge().isPresent()
+          && snapshot.challenge().isPresent()
+          && !previous.challenge().orElseThrow().equals(snapshot.challenge().orElseThrow())) {
+        playMemorySound(ChessSound.MEMORY_NEW_POSITION);
+      }
+      if (previous.state() != com.escontrela.lastmove.domain.training.memory.MemoryGameState.FINISHED
+          && snapshot.state() == com.escontrela.lastmove.domain.training.memory.MemoryGameState.FINISHED) {
+        playMemorySound(snapshot.successful()
+            ? ChessSound.MEMORY_GAME_COMPLETED
+            : ChessSound.MEMORY_GAME_OVER);
+      }
+    }
+    previousSnapshot = snapshot;
   }
 
   /** Shows the final result card with a pass/fail verdict that does not rely on colour alone. */
@@ -168,20 +239,23 @@ public final class MemoryGameScreenController implements UiScreenController {
     globalClockLabel.getStyleClass().remove("memory-global-clock-urgent");
     if (!urgent) {
       stopUrgentClockPulse();
+      stopUrgentClockSound();
       globalClockLabel.setOpacity(1.0);
       return;
     }
     globalClockLabel.getStyleClass().add("memory-global-clock-urgent");
-    if (urgentClockPulse != null) return;
-    urgentClockPulse = new Timeline(
-        new KeyFrame(javafx.util.Duration.ZERO,
-            new KeyValue(globalClockLabel.opacityProperty(), 1.0)),
-        new KeyFrame(javafx.util.Duration.millis(700),
-            new KeyValue(globalClockLabel.opacityProperty(), 0.45)),
-        new KeyFrame(javafx.util.Duration.millis(1400),
-            new KeyValue(globalClockLabel.opacityProperty(), 1.0)));
-    urgentClockPulse.setCycleCount(Animation.INDEFINITE);
-    urgentClockPulse.play();
+    if (urgentClockPulse == null) {
+      urgentClockPulse = new Timeline(
+          new KeyFrame(javafx.util.Duration.ZERO,
+              new KeyValue(globalClockLabel.opacityProperty(), 1.0)),
+          new KeyFrame(javafx.util.Duration.millis(700),
+              new KeyValue(globalClockLabel.opacityProperty(), 0.45)),
+          new KeyFrame(javafx.util.Duration.millis(1400),
+              new KeyValue(globalClockLabel.opacityProperty(), 1.0)));
+      urgentClockPulse.setCycleCount(Animation.INDEFINITE);
+      urgentClockPulse.play();
+    }
+    startUrgentClockSound();
   }
 
   private void stopUrgentClockPulse() {
@@ -189,5 +263,48 @@ public final class MemoryGameScreenController implements UiScreenController {
       urgentClockPulse.stop();
       urgentClockPulse = null;
     }
+  }
+
+  private void stopUrgentClockSound() {
+    if (urgentClockSoundPlaying) {
+      chessSoundService.stop(ChessSound.MEMORY_CLOCK_URGENT);
+      urgentClockSoundPlaying = false;
+    }
+  }
+
+  private void startBackgroundMusic() {
+    if (!soundEnabled || backgroundMusicPlaying) return;
+    chessSoundService.playLoop(ChessSound.MEMORY_BACKGROUND, BACKGROUND_VOLUME);
+    backgroundMusicPlaying = true;
+  }
+
+  private void startUrgentClockSound() {
+    if (!soundEnabled || urgentClockSoundPlaying) return;
+    chessSoundService.playLoop(ChessSound.MEMORY_CLOCK_URGENT);
+    urgentClockSoundPlaying = true;
+  }
+
+  private void playMemorySound(ChessSound sound) {
+    if (soundEnabled) chessSoundService.play(sound);
+  }
+
+  private void stopMemorySounds() {
+    MEMORY_SOUNDS.forEach(chessSoundService::stop);
+  }
+
+  private void updateSoundToggleButton() {
+    if (soundToggleButton == null) return;
+    String icon = soundEnabled ? "stop" : "play_arrow";
+    soundToggleButton.setText(soundEnabled ? "Sound off" : "Sound on");
+    soundToggleButton.setAccessibleText(soundEnabled ? "Turn sound off" : "Turn sound on");
+    soundToggleButton.setTooltipText(soundEnabled ? "Turn sound off" : "Turn sound on");
+    soundToggleButton.setLightIconResource("/images/" + icon + "_35dp_000000.png");
+    soundToggleButton.setDarkIconResource("/images/" + icon + "_35dp_FFFFFF.png");
+  }
+
+  private static boolean isUrgent(MemoryGameSnapshot snapshot) {
+    return snapshot != null
+        && snapshot.remainingTime().compareTo(Duration.ZERO) > 0
+        && snapshot.remainingTime().compareTo(Duration.ofSeconds(30)) < 0;
   }
 }

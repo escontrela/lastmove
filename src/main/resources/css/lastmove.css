@@ -3342,3 +3342,22 @@
     -fx-background-color: #8f1d18;
     -fx-border-color: #ffb0b0;
 }
+
+.toolbar-icon-button.arena-action-button.memory-sound-action-button {
+    -fx-background-color: #64748b;
+    -fx-border-color: #64748b;
+    -fx-text-fill: #ffffff;
+}
+.toolbar-icon-button.arena-action-button.memory-sound-action-button:hover {
+    -fx-background-color: #475569;
+    -fx-border-color: #475569;
+}
+.night-mode .toolbar-icon-button.arena-action-button.memory-sound-action-button {
+    -fx-background-color: #64748b;
+    -fx-border-color: #94a3b8;
+    -fx-text-fill: #ffffff;
+}
+.night-mode .toolbar-icon-button.arena-action-button.memory-sound-action-button:hover {
+    -fx-background-color: #475569;
+    -fx-border-color: #cbd5e1;
+}
