@@ -6,6 +6,8 @@ import com.escontrela.lastmove.application.game.SavedGame;
 import com.escontrela.lastmove.application.game.SavedGameContext;
 import com.escontrela.lastmove.application.game.SavedGameSummary;
 import com.escontrela.lastmove.application.repository.SavedGameRepository;
+import com.escontrela.lastmove.application.training.memory.MemoryGamePosition;
+import com.escontrela.lastmove.application.training.memory.MemoryGamePositionRepository;
 import com.escontrela.lastmove.application.notification.GameNotificationRepository;
 import com.escontrela.lastmove.domain.common.PieceColor;
 import com.escontrela.lastmove.domain.common.PieceType;
@@ -39,7 +41,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /** Normalized SQLite store for every persisted chess game; mode data stays in side tables. */
 @Repository
-public class SqliteGameRepository implements SavedGameRepository {
+public class SqliteGameRepository implements SavedGameRepository, MemoryGamePositionRepository {
   private final JdbcTemplate jdbc;
   private final PersistenceAvailability availability;
   private final ChessGameFactory gameFactory;
@@ -140,6 +142,30 @@ public class SqliteGameRepository implements SavedGameRepository {
     return jdbc.queryForList("SELECT g.id,g.game_type,g.white_name,g.black_name,g.status,g.result,(SELECT COUNT(*) FROM game_moves m WHERE m.game_id=g.id) moves_count,g.updated_at FROM games g LEFT JOIN game_participants gp ON gp.game_id=g.id WHERE gp.player_id=? OR g.owner_player_id=? OR (EXISTS (SELECT 1 FROM players p WHERE p.id=? AND p.player_type='SYSTEM' AND p.external_provider='LICHESS') AND EXISTS (SELECT 1 FROM computer_game_configuration c WHERE c.game_id=g.id AND c.engine_id='knightshade')) GROUP BY g.id ORDER BY g.updated_at DESC",ownerId.value(),ownerId.value(),ownerId.value()).stream().map(r->new SavedGameSummary(new GameId(UUID.fromString((String)r.get("id"))),GameType.valueOf((String)r.get("game_type")),(String)r.get("white_name"),(String)r.get("black_name"),"FINISHED".equals(r.get("status")),optionalEnum(GameResult.class,r.get("result")),((Number)r.get("moves_count")).intValue(),Instant.ofEpochMilli(((Number)r.get("updated_at")).longValue()))).toList();
   }
   @Override public boolean deleteById(GameId gameId) { if(!availability.isAvailable()) return fallback.deleteById(gameId); return jdbc.update("DELETE FROM games WHERE id=?",gameId.value().toString())>0; }
+
+  /** Returns positions reached by real moves across every persisted game and player. */
+  @Override @Transactional(readOnly = true) public List<MemoryGamePosition> findAllPlayedPositions() {
+    if (!availability.isAvailable()) return List.of();
+    return jdbc.queryForList(
+            "SELECT game_id, ply_index, resulting_fen FROM game_moves ORDER BY game_id, ply_index")
+        .stream()
+        .map(row -> normalizePlayedPosition((String) row.get("game_id"),
+            ((Number) row.get("ply_index")).intValue(), (String) row.get("resulting_fen")))
+        .flatMap(Optional::stream)
+        .toList();
+  }
+
+  private Optional<MemoryGamePosition> normalizePlayedPosition(String gameId, int plyIndex, String rawFen) {
+    try {
+      // Re-serializing through the domain snapshot rejects malformed/corrupt FEN rows and
+      // produces the canonical representation consumed by application clients.
+      String normalized = fenService.fromSnapshot(rulesEngine.positionFrom(Fen.of(rawFen))).getValue();
+      return Optional.of(new MemoryGamePosition(gameId + ":" + plyIndex, normalized));
+    } catch (RuntimeException invalidFen) {
+      return Optional.empty();
+    }
+  }
+
   private Ply toPly(java.util.Map<String,Object> r) { return new Ply(UUID.fromString((String)r.get("ply_id")),new MoveDescriptor(Square.of((String)r.get("move_from")),Square.of((String)r.get("move_to")),SanMove.of((String)r.get("san")),((Number)r.get("capture")).intValue()!=0,((Number)r.get("castle")).intValue()!=0,((Number)r.get("en_passant")).intValue()!=0,Optional.ofNullable((String)r.get("promotion")).map(PieceType::valueOf)),rulesEngine.positionFrom(Fen.of((String)r.get("resulting_fen"))),((Number)r.get("move_number")).intValue(),PieceColor.valueOf((String)r.get("moving_color"))); }
   private static Optional<Duration> optionalDuration(Object value) { return Optional.ofNullable((Number)value).map(n->Duration.ofMillis(n.longValue())); }
   private static GameClockSnapshot clock(Object white,Object black){ return new GameClockSnapshot(optionalDuration(white),optionalDuration(black)); }

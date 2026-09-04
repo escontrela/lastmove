@@ -100,6 +100,15 @@ public class ChessBoardControl extends Control {
     position.set(positionSnapshot);
   }
 
+  /** Applies transient, semantic feedback styling to squares without coupling the board to a game. */
+  public final void showFeedback(Set<Square> correct, Set<Square> incorrect) {
+    if (getSkin() instanceof ChessBoardSkin skin) skin.showFeedback(correct, incorrect);
+  }
+
+  public final void clearFeedback() {
+    if (getSkin() instanceof ChessBoardSkin skin) skin.clearFeedback();
+  }
+
   public final ObjectProperty<PositionSnapshot> positionProperty() {
     return position;
   }

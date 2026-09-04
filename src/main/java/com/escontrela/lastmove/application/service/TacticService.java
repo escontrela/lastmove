@@ -9,6 +9,7 @@ import com.escontrela.lastmove.application.tactics.DeleteTacticExerciseCommand;
 import com.escontrela.lastmove.application.tactics.DeleteTacticSuiteCommand;
 import com.escontrela.lastmove.application.tactics.MoveTacticExerciseCommand;
 import com.escontrela.lastmove.application.tactics.MoveTacticSuiteCommand;
+import com.escontrela.lastmove.application.tactics.ImportPgnTacticExerciseCommand;
 import com.escontrela.lastmove.application.tactics.RenameTacticExerciseCommand;
 import com.escontrela.lastmove.application.tactics.RenameTacticSuiteCommand;
 import com.escontrela.lastmove.application.tactics.TacticAuthoringMoveOutcome;
@@ -152,6 +153,31 @@ public final class TacticService {
     TacticExercise exercise =
         exerciseFactory.empty(
             required.title(), gameFactory.createAnalysisGame(required.fen()).currentPosition());
+    suite.addExercise(exercise);
+    tacticRepository.save(suite);
+    return summary(exercise);
+  }
+
+  /** Imports a PGN start position and all its move variations as accepted tactic solutions. */
+  public TacticExerciseSummary importPgnExercise(ImportPgnTacticExerciseCommand command) {
+    assertAvailable();
+    ImportPgnTacticExerciseCommand required =
+        Objects.requireNonNull(command, "command must not be null");
+    TacticSuite suite = ownedSuite(required.ownerId(), required.suiteId());
+    var imported = required.importedGame();
+    if (imported.rootVariations().isEmpty()) {
+      throw new IllegalArgumentException("The PGN must contain at least one solution move.");
+    }
+    var initialPosition =
+        imported
+            .game()
+            .getStartingFen()
+            .map(gameFactory::createAnalysisGame)
+            .orElseGet(gameFactory::createAnalysisGame)
+            .currentPosition();
+    TacticExercise exercise =
+        exerciseFactory.fromImportedPgn(
+            imported.game().displayTitle(), imported, initialPosition);
     suite.addExercise(exercise);
     tacticRepository.save(suite);
     return summary(exercise);

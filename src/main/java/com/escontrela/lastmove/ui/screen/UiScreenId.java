@@ -17,7 +17,8 @@ public enum UiScreenId {
     PLAYERS("/fxml/players.fxml", 1100.0, 720.0),
     MY_GAMES("/fxml/my-games.fxml", 1280.0, 800.0),
     GAME_STATISTICS("/fxml/game-statistics.fxml", 1280.0, 800.0),
-    KNIGHTSHADE_ARENA("/fxml/knightshade-arena.fxml", 1280.0, 800.0);
+    KNIGHTSHADE_ARENA("/fxml/knightshade-arena.fxml", 1280.0, 800.0),
+    MEMORY_GAME("/fxml/memory-game.fxml", 1280.0, 800.0);
 
     private final String fxmlPath;
     private final double width;

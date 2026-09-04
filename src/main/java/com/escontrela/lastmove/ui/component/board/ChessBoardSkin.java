@@ -19,6 +19,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.DragEvent;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
@@ -218,6 +219,14 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
                 } else {
                   handleSquareClick(control, currentSquare);
                 }
+              }
+            });
+        square.setOnKeyPressed(
+            event -> {
+              if ((event.getCode() == KeyCode.ENTER || event.getCode() == KeyCode.SPACE)
+                  && control.isEditorMode()) {
+                control.handleEditorSquare(currentSquare);
+                event.consume();
               }
             });
 
@@ -599,11 +608,26 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     for (int file = 0; file < ChessConstants.FILES; file++) {
       for (int rank = 0; rank < ChessConstants.RANKS; rank++) {
         squares[file][rank].setPieceImageObject(null);
+        squares[file][rank].clearPieceAccessibility();
       }
     }
     for (PositionPiece piece : snapshot.pieces()) {
       squares[piece.square().getFile()][piece.square().getRank()]
           .setPieceImageObject(pieceImage(piece));
+      squares[piece.square().getFile()][piece.square().getRank()]
+          .setPieceAccessibility(piece.type(), piece.color());
+    }
+  }
+
+  void showFeedback(java.util.Set<Square> correct, java.util.Set<Square> incorrect) {
+    clearFeedback();
+    for (Square square : correct) squares[square.getFile()][square.getRank()].setAnswerFeedback(true);
+    for (Square square : incorrect) squares[square.getFile()][square.getRank()].setAnswerFeedback(false);
+  }
+
+  void clearFeedback() {
+    for (int file = 0; file < ChessConstants.FILES; file++) for (int rank = 0; rank < ChessConstants.RANKS; rank++) {
+      squares[file][rank].setAnswerFeedback(null);
     }
   }
 

@@ -3,6 +3,7 @@ package com.escontrela.lastmove.ui.component.board;
 import javafx.geometry.Insets;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.AccessibleRole;
 import javafx.scene.layout.Border;
 import javafx.scene.layout.BorderStroke;
 import javafx.scene.layout.BorderStrokeStyle;
@@ -11,6 +12,10 @@ import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
+import javafx.css.PseudoClass;
+import com.escontrela.lastmove.domain.common.PieceColor;
+import com.escontrela.lastmove.domain.common.PieceType;
+import com.escontrela.lastmove.domain.common.Square;
 import com.escontrela.lastmove.ui.support.CssClassNames;
 
 /**
@@ -19,6 +24,8 @@ import com.escontrela.lastmove.ui.support.CssClassNames;
  * <p>Owns the background color, highlight state, and the piece image (if any).
  */
 public class ChessSquareControl extends StackPane {
+  private static final PseudoClass ANSWER_CORRECT = PseudoClass.getPseudoClass("answer-correct");
+  private static final PseudoClass ANSWER_INCORRECT = PseudoClass.getPseudoClass("answer-incorrect");
 
   /** Proporción del tamaño de la casilla que ocupa la imagen de la pieza. */
   private double pieceScale = 0.88;
@@ -47,6 +54,9 @@ public class ChessSquareControl extends StackPane {
     this.isLight = isLight;
     getStyleClass().add("chess-square");
     getStyleClass().add(isLight ? "chess-square-light" : "chess-square-dark");
+    setAccessibleText("Square " + Square.of(file, rank).toAlgebraic());
+    setAccessibleRole(AccessibleRole.BUTTON);
+    setFocusTraversable(true);
     applyTheme(theme);
     setSnapToPixel(true);
 
@@ -144,6 +154,21 @@ public class ChessSquareControl extends StackPane {
   /** Permite asignar directamente un objeto Image ya instanciado (o null para vaciar). */
   public void setPieceImageObject(Image image) {
     pieceImageView.setImage(image);
+  }
+
+  /** Updates the accessible description while retaining the square identity for screen readers. */
+  public void setPieceAccessibility(PieceType type, PieceColor color) {
+    setAccessibleText(color.name() + " " + type.name() + " on " + Square.of(file, rank).toAlgebraic());
+  }
+
+  public void clearPieceAccessibility() {
+    setAccessibleText("Empty square " + Square.of(file, rank).toAlgebraic());
+  }
+
+  public void setAnswerFeedback(Boolean correct) {
+    pseudoClassStateChanged(ANSWER_CORRECT, Boolean.TRUE.equals(correct));
+    pseudoClassStateChanged(ANSWER_INCORRECT, Boolean.FALSE.equals(correct));
+    setAccessibleHelp(correct == null ? null : correct ? "Correct answer" : "Incorrect answer; correct piece shown");
   }
 
   /** Sets a presentation-only piece image; this control does not model chess rules. */
