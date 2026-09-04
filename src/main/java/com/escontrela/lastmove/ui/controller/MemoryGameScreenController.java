@@ -8,6 +8,7 @@ import com.escontrela.lastmove.domain.common.Square;
 import com.escontrela.lastmove.ui.component.board.ChessBoardControl;
 import com.escontrela.lastmove.ui.component.training.MemoryPiecePickerControl;
 import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton;
+import com.escontrela.lastmove.ui.service.BoardAppearancePreferencesService;
 import com.escontrela.lastmove.ui.model.MemoryGameViewModel;
 import com.escontrela.lastmove.ui.screen.UiScreenController;
 import java.time.Duration;
@@ -17,12 +18,17 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.animation.Animation;
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
+import javafx.animation.Timeline;
 import org.springframework.stereotype.Component;
 
 /** Thin JavaFX controller for the memory-game screen; rules and orchestration stay outside UI. */
 @Component
 public final class MemoryGameScreenController implements UiScreenController {
   private final MemoryGameViewModel viewModel;
+  private final BoardAppearancePreferencesService boardAppearancePreferencesService;
   @FXML private StackPane root;
   @FXML private ChessBoardControl chessBoard;
   @FXML private MemoryPiecePickerControl piecePicker;
@@ -32,16 +38,23 @@ public final class MemoryGameScreenController implements UiScreenController {
   @FXML private ToolbarIconButton resetButton;
   @FXML private Button playAgainButton;
   private Square pendingSquare;
+  private Timeline urgentClockPulse;
 
   public MemoryGameScreenController(
       MemoryGameOrchestrator orchestrator,
-      MemoryGameBoardPositionService positions) {
+      MemoryGameBoardPositionService positions,
+      BoardAppearancePreferencesService boardAppearancePreferencesService) {
     this.viewModel = new MemoryGameViewModel(orchestrator, positions);
+    this.boardAppearancePreferencesService = boardAppearancePreferencesService;
     orchestrator.observe(this::refresh);
   }
 
   @FXML public void initialize() {
     root.getProperties().put("controller", this);
+    chessBoard.visualEffectsEnabledProperty().bind(
+        boardAppearancePreferencesService.boardVisualEffectsEnabledProperty());
+    chessBoard.appearancePresetProperty().bind(
+        boardAppearancePreferencesService.boardAppearancePresetProperty());
     chessBoard.setEditorMode(false);
     chessBoard.setOnEditorSquareRequested(event -> requestPieceFor(event.getSquare()));
     chessBoard.setOnEditorSecondarySquareRequested(event -> requestPieceFor(event.getSquare()));
@@ -60,7 +73,12 @@ public final class MemoryGameScreenController implements UiScreenController {
   }
 
   @Override public void onShow() { viewModel.start(); }
-  @Override public void onHide() { piecePicker.hide(); pendingSquare = null; viewModel.abandon(); }
+  @Override public void onHide() {
+    piecePicker.hide();
+    pendingSquare = null;
+    stopUrgentClockPulse();
+    viewModel.abandon();
+  }
 
   @FXML public void playAgain() { viewModel.restart(); }
   @FXML public void resetSession() { piecePicker.hide(); pendingSquare = null; viewModel.start(); }
@@ -78,6 +96,7 @@ public final class MemoryGameScreenController implements UiScreenController {
     if (correct.isEmpty() && incorrect.isEmpty()) chessBoard.clearFeedback(); else chessBoard.showFeedback(correct, incorrect);
     phaseLabel.setText(phaseText(snapshot));
     globalClockLabel.setText(format(snapshot.remainingTime()));
+    updateUrgentClock(snapshot.remainingTime());
     memorizationClockLabel.setText(format(snapshot.memorizationRemaining()));
     scoreLabel.setText("%d/%d".formatted(snapshot.score(), snapshot.maxPossibleScore()));
     difficultyLabel.setText(snapshot.difficulty().map(value -> value.hiddenPieceCount() + " hidden piece(s)").orElse("—"));
@@ -141,5 +160,34 @@ public final class MemoryGameScreenController implements UiScreenController {
   private static String format(Duration duration) {
     long seconds = duration.isZero() || duration.isNegative() ? 0 : duration.minusNanos(1).toSeconds() + 1;
     return "%d:%02d".formatted(seconds / 60, seconds % 60);
+  }
+
+  private void updateUrgentClock(Duration remaining) {
+    boolean urgent = remaining.compareTo(Duration.ZERO) > 0
+        && remaining.compareTo(Duration.ofSeconds(30)) < 0;
+    globalClockLabel.getStyleClass().remove("memory-global-clock-urgent");
+    if (!urgent) {
+      stopUrgentClockPulse();
+      globalClockLabel.setOpacity(1.0);
+      return;
+    }
+    globalClockLabel.getStyleClass().add("memory-global-clock-urgent");
+    if (urgentClockPulse != null) return;
+    urgentClockPulse = new Timeline(
+        new KeyFrame(javafx.util.Duration.ZERO,
+            new KeyValue(globalClockLabel.opacityProperty(), 1.0)),
+        new KeyFrame(javafx.util.Duration.millis(700),
+            new KeyValue(globalClockLabel.opacityProperty(), 0.45)),
+        new KeyFrame(javafx.util.Duration.millis(1400),
+            new KeyValue(globalClockLabel.opacityProperty(), 1.0)));
+    urgentClockPulse.setCycleCount(Animation.INDEFINITE);
+    urgentClockPulse.play();
+  }
+
+  private void stopUrgentClockPulse() {
+    if (urgentClockPulse != null) {
+      urgentClockPulse.stop();
+      urgentClockPulse = null;
+    }
   }
 }

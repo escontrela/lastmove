@@ -3301,6 +3301,7 @@
     -fx-padding: 16;
 }
 .memory-global-clock { -fx-font-size: 38px; -fx-font-weight: 800; -fx-text-fill: #17283d; }
+.memory-global-clock-urgent { -fx-text-fill: #b3261e; }
 .memory-stat-caption { -fx-font-size: 10px; -fx-font-weight: 800; -fx-text-fill: #718096; }
 .memory-stat-tile { -fx-background-color: #f4f7fa; -fx-background-radius: 8; -fx-padding: 9 11; }
 .memory-stat-value { -fx-font-size: 17px; -fx-font-weight: 700; -fx-text-fill: #26384d; }
@@ -3316,7 +3317,28 @@
 .memory-piece-picker-row { -fx-padding: 2; }
 .night-mode .memory-game-status-card { -fx-background-color: #1c2430; -fx-border-color: #465465; }
 .night-mode .memory-global-clock, .night-mode .memory-stat-value { -fx-text-fill: #f1f3f5; }
+.night-mode .memory-global-clock.memory-global-clock-urgent { -fx-text-fill: #ff8b8b; }
 .night-mode .memory-stat-caption { -fx-text-fill: #9eacba; }
 .night-mode .memory-stat-tile { -fx-background-color: #252f3b; }
 .night-mode .memory-meta-chip { -fx-background-color: #2c3a49; -fx-text-fill: #c7d5e4; }
 .night-mode .memory-piece-picker-close { -fx-text-fill: #f1f3f5; }
+
+/* Memory reset follows the filled action treatment, with the danger accent. */
+.toolbar-icon-button.arena-action-button.progressive-danger-action-button {
+    -fx-background-color: #b3261e;
+    -fx-border-color: #b3261e;
+    -fx-text-fill: #ffffff;
+}
+.toolbar-icon-button.arena-action-button.progressive-danger-action-button:hover {
+    -fx-background-color: #8f1d18;
+    -fx-border-color: #8f1d18;
+}
+.night-mode .toolbar-icon-button.arena-action-button.progressive-danger-action-button {
+    -fx-background-color: #b3261e;
+    -fx-border-color: #ff8b8b;
+    -fx-text-fill: #ffffff;
+}
+.night-mode .toolbar-icon-button.arena-action-button.progressive-danger-action-button:hover {
+    -fx-background-color: #8f1d18;
+    -fx-border-color: #ffb0b0;
+}
