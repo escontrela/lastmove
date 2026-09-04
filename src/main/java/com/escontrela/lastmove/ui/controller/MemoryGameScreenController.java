@@ -16,6 +16,7 @@ import com.escontrela.lastmove.ui.screen.UiScreenController;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -49,6 +50,7 @@ public final class MemoryGameScreenController implements UiScreenController {
   private boolean soundEnabled = true;
   private boolean backgroundMusicPlaying;
   private boolean urgentClockSoundPlaying;
+  private ChessSound backgroundSound;
   private static final double BACKGROUND_VOLUME = 0.18;
   private static final List<ChessSound> MEMORY_SOUNDS = List.of(
       ChessSound.MEMORY_GAME_OVER,
@@ -58,7 +60,13 @@ public final class MemoryGameScreenController implements UiScreenController {
       ChessSound.MEMORY_CORRECT_PIECE,
       ChessSound.MEMORY_PIECES_DISAPPEAR,
       ChessSound.MEMORY_NEW_POSITION,
-      ChessSound.MEMORY_BACKGROUND);
+      ChessSound.MEMORY_BACKGROUND,
+      ChessSound.MEMORY_BACKGROUND_WIND,
+      ChessSound.MEMORY_BACKGROUND_RAIN);
+  private static final List<ChessSound> MEMORY_BACKGROUND_SOUNDS = List.of(
+      ChessSound.MEMORY_BACKGROUND,
+      ChessSound.MEMORY_BACKGROUND_WIND,
+      ChessSound.MEMORY_BACKGROUND_RAIN);
 
   public MemoryGameScreenController(
       MemoryGameOrchestrator orchestrator,
@@ -97,6 +105,7 @@ public final class MemoryGameScreenController implements UiScreenController {
   }
 
   @Override public void onShow() {
+    selectBackgroundSound();
     startBackgroundMusic();
     viewModel.start();
   }
@@ -111,8 +120,18 @@ public final class MemoryGameScreenController implements UiScreenController {
     viewModel.abandon();
   }
 
-  @FXML public void playAgain() { viewModel.restart(); }
-  @FXML public void resetSession() { piecePicker.hide(); pendingSquare = null; viewModel.start(); }
+  @FXML public void playAgain() {
+    selectBackgroundSound();
+    startBackgroundMusic();
+    viewModel.restart();
+  }
+  @FXML public void resetSession() {
+    piecePicker.hide();
+    pendingSquare = null;
+    selectBackgroundSound();
+    startBackgroundMusic();
+    viewModel.start();
+  }
 
   @FXML public void toggleSound() {
     soundEnabled = !soundEnabled;
@@ -135,6 +154,9 @@ public final class MemoryGameScreenController implements UiScreenController {
 
   private void refresh(MemoryGameSnapshot snapshot) {
     handleSoundEffects(snapshot);
+    if (snapshot.state() == com.escontrela.lastmove.domain.training.memory.MemoryGameState.FINISHED) {
+      stopBackgroundMusic();
+    }
     viewModel.boardPosition().ifPresent(chessBoard::renderPosition);
     var correct = snapshot.feedback().stream().filter(MemoryGameFeedback::correct).map(MemoryGameFeedback::square).collect(Collectors.toSet());
     var incorrect = snapshot.feedback().stream().filter(feedback -> !feedback.correct()).map(MemoryGameFeedback::square).collect(Collectors.toSet());
@@ -146,9 +168,8 @@ public final class MemoryGameScreenController implements UiScreenController {
     scoreLabel.setText("%d/%d".formatted(snapshot.score(), snapshot.maxPossibleScore()));
     difficultyLabel.setText(snapshot.difficulty().map(value -> value.hiddenPieceCount() + " hidden piece(s)").orElse("—"));
     attemptLabel.setText("Attempt " + snapshot.attempt());
-    chessBoard.setEditorMode(snapshot.state() == com.escontrela.lastmove.domain.training.memory.MemoryGameState.GUESSING
-        && snapshot.feedback().isEmpty());
-    if (!snapshot.feedback().isEmpty() || viewModel.finished()) { piecePicker.hide(); pendingSquare = null; }
+    chessBoard.setEditorMode(snapshot.state() == com.escontrela.lastmove.domain.training.memory.MemoryGameState.GUESSING);
+    if (viewModel.finished()) { piecePicker.hide(); pendingSquare = null; }
     statusLabel.setText(statusText(snapshot));
     refreshResult(snapshot);
   }
@@ -273,9 +294,21 @@ public final class MemoryGameScreenController implements UiScreenController {
   }
 
   private void startBackgroundMusic() {
-    if (!soundEnabled || backgroundMusicPlaying) return;
-    chessSoundService.playLoop(ChessSound.MEMORY_BACKGROUND, BACKGROUND_VOLUME);
+    if (!soundEnabled || backgroundMusicPlaying || backgroundSound == null) return;
+    chessSoundService.playLoop(backgroundSound, BACKGROUND_VOLUME);
     backgroundMusicPlaying = true;
+  }
+
+  private void stopBackgroundMusic() {
+    if (backgroundMusicPlaying && backgroundSound != null) {
+      chessSoundService.stop(backgroundSound);
+    }
+    backgroundMusicPlaying = false;
+  }
+
+  private void selectBackgroundSound() {
+    backgroundSound = MEMORY_BACKGROUND_SOUNDS.get(
+        ThreadLocalRandom.current().nextInt(MEMORY_BACKGROUND_SOUNDS.size()));
   }
 
   private void startUrgentClockSound() {

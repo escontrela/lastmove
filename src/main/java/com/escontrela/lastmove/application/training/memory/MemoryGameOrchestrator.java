@@ -23,6 +23,7 @@ public final class MemoryGameOrchestrator {
   private final MemoryGameUiDispatcher ui;
   private final List<Consumer<MemoryGameSnapshot>> observers = new CopyOnWriteArrayList<>();
   private final List<MemoryGameCancellable> callbacks = new ArrayList<>();
+  private MemoryGameCancellable feedbackCallback;
   private MemoryGame game;
   private MemoryGameChallenge challenge;
   private boolean emptySource;
@@ -137,7 +138,11 @@ public final class MemoryGameOrchestrator {
   }
 
   private void submitPieceInternal(MemoryGamePiece submitted) {
-    if (abandoned || game == null || game.state() != MemoryGameState.GUESSING || !feedback.isEmpty()) return;
+    if (abandoned || game == null || game.state() != MemoryGameState.GUESSING) return;
+    if (feedbackCallback != null) {
+      feedbackCallback.cancel();
+      feedbackCallback = null;
+    }
     List<MemoryGamePiece> unresolved = challenge.hiddenPieces().stream()
         .filter(expected -> resolvedPieces.stream().noneMatch(resolved -> resolved.square().equals(expected.square())))
         .toList();
@@ -158,11 +163,14 @@ public final class MemoryGameOrchestrator {
       return;
     }
     publish();
-    callbacks.add(clock.schedule(FEEDBACK_DURATION, () -> ui.dispatch(() -> finishPieceFeedback(roundComplete))));
+    feedbackCallback = clock.schedule(
+        FEEDBACK_DURATION, () -> ui.dispatch(() -> finishPieceFeedback(roundComplete)));
+    callbacks.add(feedbackCallback);
   }
 
   private void finishPieceFeedback(boolean roundComplete) {
     if (abandoned || game == null || game.state() == MemoryGameState.FINISHED) return;
+    feedbackCallback = null;
     if (clock.elapsed().compareTo(MemoryGame.SESSION_DURATION) >= 0) { expireSession(); return; }
     feedback = List.of();
     if (!roundComplete) {

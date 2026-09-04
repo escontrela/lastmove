@@ -41,7 +41,7 @@ public final class MemoryGameViewModel {
   public Optional<PositionSnapshot> boardPosition() { return Optional.ofNullable(boardPosition); }
   public boolean canAnswer(Square square) {
     return snapshot != null && snapshot.state() == MemoryGameState.GUESSING
-        && snapshot.feedback().isEmpty() && !isOccupied(square);
+        && !isOccupied(square);
   }
   public boolean finished() { return snapshot != null && snapshot.state() == MemoryGameState.FINISHED; }
   public boolean canRestart() { return snapshot != null && snapshot.canRestart(); }

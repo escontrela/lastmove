@@ -15,7 +15,9 @@ public enum ChessSound {
   MEMORY_CORRECT_PIECE("/sounds/mixkit-winning-a-coin-video-game-2069.wav"),
   MEMORY_PIECES_DISAPPEAR("/sounds/mixkit-air-zoom-vacuum-2608.wav"),
   MEMORY_NEW_POSITION("/sounds/mixkit-unlock-new-item-game-notification-254.wav"),
-  MEMORY_BACKGROUND("/sounds/mixkit-little-birds-singing-in-the-trees-17.wav");
+  MEMORY_BACKGROUND("/sounds/mixkit-little-birds-singing-in-the-trees-17.wav"),
+  MEMORY_BACKGROUND_WIND("/sounds/mixkit-wind-blowing-ambience-2658.wav"),
+  MEMORY_BACKGROUND_RAIN("/sounds/mixkit-light-rain-loop-2393.wav");
 
   private final String resourcePath;
 

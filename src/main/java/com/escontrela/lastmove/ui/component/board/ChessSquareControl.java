@@ -51,6 +51,7 @@ public class ChessSquareControl extends StackPane {
   private final ImageView pieceImageView =
       new ImageView(); // Cambiado el nombre de la variable para evitar colisión con el tipo Image
   private final Region threatenedOverlay = new Region();
+  private final Region correctAnswerGlow = new Region();
   private Timeline answerFeedbackBlink;
   private Boolean answerFeedback;
 
@@ -74,7 +75,11 @@ public class ChessSquareControl extends StackPane {
     threatenedOverlay.setMouseTransparent(true);
     threatenedOverlay.getStyleClass().add("chess-square-threatened-glow");
     threatenedOverlay.setVisible(false);
+    correctAnswerGlow.setMouseTransparent(true);
+    correctAnswerGlow.getStyleClass().add("chess-square-answer-glow");
+    correctAnswerGlow.setVisible(false);
 
+    getChildren().add(correctAnswerGlow);
     getChildren().add(pieceImageView);
     getChildren().add(threatenedOverlay);
   }
@@ -188,6 +193,15 @@ public class ChessSquareControl extends StackPane {
           new KeyFrame(Duration.millis(250), new KeyValue(pieceImageView.opacityProperty(), 0.15)),
           new KeyFrame(Duration.millis(500), new KeyValue(pieceImageView.opacityProperty(), 1.0)));
       answerFeedbackBlink.setCycleCount(4);
+      answerFeedbackBlink.play();
+    } else if (Boolean.TRUE.equals(correct)) {
+      correctAnswerGlow.setVisible(true);
+      correctAnswerGlow.setOpacity(0.0);
+      answerFeedbackBlink = new Timeline(
+          new KeyFrame(Duration.ZERO, new KeyValue(correctAnswerGlow.opacityProperty(), 0.0)),
+          new KeyFrame(Duration.millis(160), new KeyValue(correctAnswerGlow.opacityProperty(), 0.42)),
+          new KeyFrame(Duration.millis(850), new KeyValue(correctAnswerGlow.opacityProperty(), 0.0)));
+      answerFeedbackBlink.setOnFinished(ignored -> correctAnswerGlow.setVisible(false));
       answerFeedbackBlink.play();
     }
   }

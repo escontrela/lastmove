@@ -3270,8 +3270,13 @@
 /* Semantic training feedback remains distinguishable without relying on colour alone. */
 .chess-square:answer-correct { -fx-border-color: #2e8b57; -fx-border-width: 3; -fx-border-style: solid; }
 .chess-square:answer-incorrect { -fx-border-color: #b34747; -fx-border-width: 3; -fx-border-style: dashed; -fx-opacity: 0.9; }
+.chess-square-answer-glow {
+    -fx-background-color: rgba(72, 187, 120, 0.42);
+    -fx-background-radius: 4;
+}
 .night-mode .chess-square:answer-correct { -fx-border-color: #76d39b; }
 .night-mode .chess-square:answer-incorrect { -fx-border-color: #ff8b8b; }
+.night-mode .chess-square-answer-glow { -fx-background-color: rgba(118, 211, 155, 0.48); }
 
 /* Memory-game final result: colour is always paired with a text verdict. */
 .memory-result-card {
