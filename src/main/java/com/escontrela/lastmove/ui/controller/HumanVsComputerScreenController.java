@@ -18,6 +18,7 @@ import com.escontrela.lastmove.domain.game.PositionPiece;
 import com.escontrela.lastmove.ui.component.board.ChessBoardControl;
 import com.escontrela.lastmove.ui.component.game.CapturedPiecesControl;
 import com.escontrela.lastmove.ui.component.game.HumanVsComputerSetupOverlay;
+import com.escontrela.lastmove.ui.component.game.GameClockControl;
 import com.escontrela.lastmove.ui.component.game.ThinkingIndicatorControl;
 import com.escontrela.lastmove.ui.component.game.TypewriterStatusLabel;
 import com.escontrela.lastmove.ui.component.message.MessageBox;
@@ -25,6 +26,7 @@ import com.escontrela.lastmove.ui.component.notation.MoveNotationControl;
 import com.escontrela.lastmove.ui.component.notation.MoveNotationEntry;
 import com.escontrela.lastmove.ui.component.notation.MoveNotationNode;
 import com.escontrela.lastmove.ui.component.promotion.PromotionPickerControl;
+import com.escontrela.lastmove.ui.component.profile.PlayerAvatarControl;
 import com.escontrela.lastmove.ui.event.OpenAnalysisSessionEvent;
 import com.escontrela.lastmove.ui.event.UiEventBus;
 import com.escontrela.lastmove.ui.model.BoardMoveInput;
@@ -34,7 +36,6 @@ import com.escontrela.lastmove.ui.screen.UiScreenId;
 import com.escontrela.lastmove.ui.service.ChessSoundService;
 import com.escontrela.lastmove.ui.service.BoardAppearancePreferencesService;
 import com.escontrela.lastmove.domain.service.ThreatenedSquaresService;
-import java.io.ByteArrayInputStream;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
@@ -51,7 +52,6 @@ import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
-import javafx.scene.shape.Circle;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -66,7 +66,6 @@ import org.springframework.stereotype.Component;
 public final class HumanVsComputerScreenController implements UiScreenController {
 
   private static final double BOARD_MAX_SIZE = 720.0;
-  private static final double PLAYER_ICON_SIZE = 28.0;
   private static final String NIGHT_MODE_STYLE_CLASS = "night-mode";
 
   private final UiFlowManager uiFlowManager;
@@ -91,13 +90,13 @@ public final class HumanVsComputerScreenController implements UiScreenController
   @FXML private MessageBox resultMessageBox;
   @FXML private Label opponentPlayerLabel;
   @FXML private Label humanPlayerLabel;
-  @FXML private ImageView opponentPlayerIcon;
-  @FXML private ImageView humanPlayerIcon;
+  @FXML private PlayerAvatarControl opponentPlayerIcon;
+  @FXML private PlayerAvatarControl humanPlayerIcon;
   @FXML private ImageView threatHintsIcon;
   @FXML private CapturedPiecesControl opponentCapturedPieces;
   @FXML private CapturedPiecesControl humanCapturedPieces;
-  @FXML private Label opponentClockLabel;
-  @FXML private Label humanClockLabel;
+  @FXML private GameClockControl opponentClock;
+  @FXML private GameClockControl humanClock;
   @FXML private TypewriterStatusLabel statusLabel;
   @FXML private ThinkingIndicatorControl opponentThinkingIndicator;
   @FXML private Button takeBackButton;
@@ -504,12 +503,11 @@ public final class HumanVsComputerScreenController implements UiScreenController
     if (previousState == null || !previousState.engine().id().equals(state.engine().id())) {
       updatePlayerIcons();
     }
-    humanClockLabel.setText(
-        formatClock(
-            humanIsWhite ? state.clock().whiteRemaining() : state.clock().blackRemaining()));
-    opponentClockLabel.setText(
-        formatClock(
-            humanIsWhite ? state.clock().blackRemaining() : state.clock().whiteRemaining()));
+    var initialTime = state.timeControl().flatMap(com.escontrela.lastmove.domain.game.TimeControl::initialTime);
+    humanClock.setTime(
+        humanIsWhite ? state.clock().whiteRemaining() : state.clock().blackRemaining(), initialTime);
+    opponentClock.setTime(
+        humanIsWhite ? state.clock().blackRemaining() : state.clock().whiteRemaining(), initialTime);
     String currentTurnText = turnText(state);
     boolean enteredHumanTurn =
         state.phase() == ComputerGamePhase.WAITING_FOR_HUMAN
@@ -530,6 +528,8 @@ public final class HumanVsComputerScreenController implements UiScreenController
     restartButton.setDisable(false);
     resignButton.setDisable(state.result().isPresent());
     boolean engineThinking = state.phase() == ComputerGamePhase.ENGINE_THINKING;
+    humanClock.setActive(state.phase() == ComputerGamePhase.WAITING_FOR_HUMAN);
+    opponentClock.setActive(engineThinking);
     opponentThinkingIndicator.setThinking(engineThinking);
     refreshNotation(state.moves());
     updateReviewControls();
@@ -584,8 +584,10 @@ public final class HumanVsComputerScreenController implements UiScreenController
     renderedState = null;
     opponentPlayerLabel.setText("Computer");
     humanPlayerLabel.setText(currentUserService.currentUser().name());
-    opponentClockLabel.setText("--:--");
-    humanClockLabel.setText("--:--");
+    opponentClock.clear();
+    humanClock.clear();
+    opponentClock.setActive(false);
+    humanClock.setActive(false);
     statusLabel.showImmediately("Choose an opponent, colour and time control");
     moveNotation.setTree(List.of());
     opponentCapturedPieces.render(List.of());
@@ -603,25 +605,13 @@ public final class HumanVsComputerScreenController implements UiScreenController
   }
 
   private void updatePlayerIcons() {
-    String iconColor = root.getStyleClass().contains(NIGHT_MODE_STYLE_CLASS) ? "FFFFFF" : "000000";
     currentUserService.currentUserPhoto().ifPresentOrElse(
-        photo -> {
-          humanPlayerIcon.setImage(new Image(new ByteArrayInputStream(photo)));
-          humanPlayerIcon.setClip(
-              new Circle(PLAYER_ICON_SIZE / 2, PLAYER_ICON_SIZE / 2, PLAYER_ICON_SIZE / 2));
-        },
-        () -> {
-          humanPlayerIcon.setImage(loadImage("/images/face_35dp_" + iconColor + ".png"));
-          humanPlayerIcon.setClip(null);
-        });
+        photo -> humanPlayerIcon.showPhoto(photo, humanPlayerLabel.getText()),
+        () -> humanPlayerIcon.showInitials(humanPlayerLabel.getText()));
     boolean knightshadeOpponent = renderedState != null
         && ComputerEngineIds.KNIGHTSHADE.equals(renderedState.engine().id());
-    opponentPlayerIcon.setImage(knightshadeOpponent
-        ? loadImage(root.getStyleClass().contains(NIGHT_MODE_STYLE_CLASS)
-            ? "/images/knightshade-engine-mark-dark.png"
-            : "/images/knightshade-engine-mark.png")
-        : loadImage("/images/robot_2_35dp_" + iconColor + ".png"));
-    opponentPlayerIcon.setClip(null);
+    if (knightshadeOpponent) opponentPlayerIcon.showKnightshade(opponentPlayerLabel.getText());
+    else opponentPlayerIcon.showInitials(opponentPlayerLabel.getText());
   }
 
   private Image loadImage(String resource) {
@@ -645,14 +635,6 @@ public final class HumanVsComputerScreenController implements UiScreenController
       case FINISHED -> "Game finished";
       case ENGINE_ERROR -> "Computer engine error";
     };
-  }
-
-  private String formatClock(java.util.Optional<Duration> remaining) {
-    if (remaining.isEmpty()) {
-      return "∞";
-    }
-    long seconds = Math.max(0, remaining.orElseThrow().toSeconds());
-    return "%02d:%02d".formatted(seconds / 60, seconds % 60);
   }
 
   private void activateGame(ComputerGameState state) {

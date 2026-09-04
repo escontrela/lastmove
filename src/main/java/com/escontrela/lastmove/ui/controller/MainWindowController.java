@@ -190,6 +190,12 @@ public class MainWindowController implements UiScreenController {
         uiFlowManager.show(UiScreenId.HUMAN_VS_COMPUTER);
     }
 
+    /** Opens the visual-memory Training Game built from persisted game positions. */
+    @FXML
+    public void openMemoryGame() {
+        uiFlowManager.show(UiScreenId.MEMORY_GAME);
+    }
+
     /** Opens a transient match between two configured computer engines. */
     @FXML
     public void openComputerVsComputer() {
@@ -319,6 +325,7 @@ public class MainWindowController implements UiScreenController {
             contextualMenuPanel.addItem("Tactic suites", "", event -> openTactics());
         }
         contextualMenuPanel.addItem("Human vs computer", "", event -> openHumanVsComputer());
+        contextualMenuPanel.addItem("Training Game", "", event -> openMemoryGame());
         contextualMenuPanel.addItem("Computer vs computer", "", event -> openComputerVsComputer());
         contextualMenuPanel.addItem("Knightshade Arena", "", event -> openKnightshadeArena());
         contextualMenuPanel.addSeparator();

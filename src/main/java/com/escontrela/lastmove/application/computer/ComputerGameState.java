@@ -9,6 +9,7 @@ import com.escontrela.lastmove.domain.game.GameTerminationReason;
 import com.escontrela.lastmove.domain.game.GamePlayer;
 import com.escontrela.lastmove.domain.game.Ply;
 import com.escontrela.lastmove.domain.game.PositionSnapshot;
+import com.escontrela.lastmove.domain.game.TimeControl;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -25,6 +26,7 @@ public record ComputerGameState(
     List<Ply> moves,
     GameStateSnapshot gameState,
     GameClockSnapshot clock,
+    Optional<TimeControl> timeControl,
     ComputerGamePhase phase,
     Optional<GameResult> result,
     Optional<GameTerminationReason> terminationReason,
@@ -44,6 +46,7 @@ public record ComputerGameState(
     moves = List.copyOf(Objects.requireNonNull(moves, "moves must not be null"));
     Objects.requireNonNull(gameState, "gameState must not be null");
     Objects.requireNonNull(clock, "clock must not be null");
+    timeControl = Objects.requireNonNull(timeControl, "timeControl must not be null");
     Objects.requireNonNull(phase, "phase must not be null");
     Objects.requireNonNull(openingPracticeState, "openingPracticeState must not be null");
     result = Objects.requireNonNull(result, "result must not be null");

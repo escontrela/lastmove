@@ -413,6 +413,7 @@ public final class ComputerGameService {
         moves,
         game.currentState(),
         displayedClock(game, context),
+        game.timeControl(),
         context.phase,
         game.result(),
         game.terminationReason(),

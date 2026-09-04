@@ -79,7 +79,15 @@ public class ToolbarIconButton extends Button {
         lightIconResource.addListener((ignored, oldValue, newValue) -> refreshIcon());
         darkIconResource.addListener((ignored, oldValue, newValue) -> refreshIcon());
         tooltipText.addListener((ignored, oldValue, newValue) -> refreshTooltip());
+        textProperty().addListener((ignored, oldValue, newValue) -> refreshTextMode());
         sceneProperty().addListener((ignored, oldScene, newScene) -> observeScene(newScene));
+        refreshTextMode();
+    }
+
+    private void refreshTextMode() {
+        boolean labeled = getText() != null && !getText().isBlank();
+        setContentDisplay(labeled ? ContentDisplay.LEFT : ContentDisplay.GRAPHIC_ONLY);
+        setGraphicTextGap(labeled ? 8 : 0);
     }
 
     @Override

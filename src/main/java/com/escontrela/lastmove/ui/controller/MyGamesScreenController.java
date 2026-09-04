@@ -33,8 +33,12 @@ import java.util.regex.Pattern;
 import java.awt.Desktop;
 import java.net.URI;
 import java.util.Optional;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 import javafx.scene.control.Label;
 import javafx.scene.control.Button;
+import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.ListView;
 import javafx.fxml.FXML;
 import javafx.scene.input.MouseButton;
@@ -49,6 +53,8 @@ import org.springframework.stereotype.Component;
 /** History of games owned by the current player. */
 @Component
 public final class MyGamesScreenController implements UiScreenController {
+  private static final DateTimeFormatter GAME_DATE = DateTimeFormatter.ofPattern("dd MMM · HH:mm", Locale.ENGLISH)
+      .withZone(ZoneId.systemDefault());
   private final SavedGameRepository games; private final CurrentUserService currentUser;
   private final AnalysisSessionService analyses; private final UiEventBus events; private final UiFlowManager flow;
   private final LichessArenaService arena; private final ComputerVsComputerScreenController computerViewer; private final PlayerService players; private final KnightshadeArenaSettingsService arenaSettings;
@@ -62,8 +68,9 @@ public final class MyGamesScreenController implements UiScreenController {
   public MyGamesScreenController(SavedGameRepository games, CurrentUserService currentUser, AnalysisSessionService analyses, UiEventBus events, @Lazy UiFlowManager flow, LichessArenaService arena, @Lazy ComputerVsComputerScreenController computerViewer, PlayerService players, KnightshadeArenaSettingsService arenaSettings, TagService tagService) {
     this.games=games; this.currentUser=currentUser; this.analyses=analyses; this.events=events; this.flow=flow; this.arena=arena; this.computerViewer=computerViewer; this.players=players; this.arenaSettings=arenaSettings; this.tagService=tagService;
   }
-  @FXML public void initialize() { root.getProperties().put("controller",this); gamesList.setCellFactory(v -> new Cell()); regexSearch.setOnSearch(event -> { searchPattern=event.pattern(); showGames(); }); tagFilter.setOnSelectionChanged(ignored -> showGames()); playerSelector.setOnPlayerSelected(event -> { selectedPlayer=Optional.of(event.player()); playerLabel.setText(event.player().fullName()); refresh(); }); playerSelector.setOnCancel(event -> statusLabel.setText("Games unchanged")); }
-  @Override public void onShow() { synchronizeConfiguredBot(); if (selectedPlayer.isEmpty()) selectedPlayer=currentUser.selectedPlayerId().flatMap(players::playerSummary); playerLabel.setText(selectedPlayer.map(PlayerSummary::fullName).orElse("Choose player")); refresh(); }
+  @FXML public void initialize() { root.getProperties().put("controller",this); gamesList.setCellFactory(v -> new Cell()); regexSearch.setOnSearch(event -> { searchPattern=event.pattern(); showGames(); }); tagFilter.setOnSelectionChanged(ignored -> showGames()); playerSelector.setOnPlayerSelected(event -> { selectedPlayer=Optional.of(event.player()); updatePlayerButton(); refresh(); }); playerSelector.setOnCancel(event -> statusLabel.setText("Games unchanged")); }
+  @Override public void onShow() { synchronizeConfiguredBot(); if (selectedPlayer.isEmpty()) selectedPlayer=currentUser.selectedPlayerId().flatMap(players::playerSummary); updatePlayerButton(); refresh(); }
+  private void updatePlayerButton() { playerLabel.setText(selectedPlayer.map(PlayerSummary::fullName).orElse("Choose player")); }
   @FXML public void backToHome() { flow.show(UiScreenId.MAIN); }
   @FXML public void choosePlayer() { if (!players.isPersistenceAvailable()) { statusLabel.setText("Player persistence is unavailable."); return; } if (arenaSettings.configuredBotAccount().isEmpty() && arenaSettings.hasBotToken()) { statusLabel.setText("Validating the configured Knightshade Lichess account…"); java.util.concurrent.CompletableFuture.supplyAsync(arenaSettings::validateConfiguredBotAccount).whenComplete((account,failure)->javafx.application.Platform.runLater(()->{ if (failure!=null) { statusLabel.setText("Could not validate Knightshade. Open Settings to check the Lichess token."); return; } players.synchronizeLichessBot(account); showPlayerSelector(); })); return; } showPlayerSelector(); }
   private void showPlayerSelector() { List<PlayerSummary> options=players.listPlayers(); if (options.isEmpty()) { statusLabel.setText("Create or validate a player profile before viewing games."); return; } playerSelector.show(options, selectedPlayer.map(summary->summary.id().value()).orElse(null), "Choose player", "View saved games for an app player or Knightshade. Uncheck to include Lichess participants.", arenaSettings.configuredBotAccount().map(com.escontrela.lastmove.application.arena.LichessBotAccount::id)); }
@@ -112,10 +119,78 @@ public final class MyGamesScreenController implements UiScreenController {
   }
   private void openTournament(String url) { try { Desktop.getDesktop().browse(URI.create(url)); } catch (Exception failure) { statusLabel.setText("Could not open the Lichess tournament: " + failure.getMessage()); } }
   private final class Cell extends ManagedListCell<SavedGameSummary> {
-    private final HBox row = new HBox(12); private final VBox details = new VBox(4); private final Label title = new Label(); private final Label summary = new Label(); private final TagDisplayControl tags = new TagDisplayControl();
-    private Cell() { getStyleClass().add("study-library-cell"); row.getStyleClass().add("study-library-row"); row.setAlignment(Pos.CENTER_LEFT); title.getStyleClass().add("study-library-title"); summary.getStyleClass().add("study-library-summary"); details.getChildren().addAll(title,summary,tags); HBox.setHgrow(details, Priority.ALWAYS); row.getChildren().add(details);
+    private final HBox row = new HBox(10);
+    private final Label marker = new Label();
+    private final VBox details = new VBox(4);
+    private final Label title = new Label();
+    private final Label context = new Label();
+    private final TagDisplayControl tags = new TagDisplayControl();
+    private final Label result = new Label();
+    private final Label moves = new Label();
+    private final Label type = new Label();
+    private final Label updated = new Label();
+    private final Button action = new Button();
+
+    private Cell() {
+      getStyleClass().add("my-games-cell");
+      setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+      row.getStyleClass().add("my-games-row"); row.setAlignment(Pos.CENTER_LEFT);
+      marker.getStyleClass().add("my-games-marker");
+      title.getStyleClass().add("my-games-row-title");
+      context.getStyleClass().add("my-games-row-context");
+      result.getStyleClass().add("my-games-result");
+      moves.getStyleClass().add("my-games-moves");
+      type.getStyleClass().add("my-games-type");
+      updated.getStyleClass().add("my-games-updated");
+      action.getStyleClass().add("my-games-open-button");
+      action.setOnAction(event -> { if (getItem() != null) open(getItem()); });
+      details.getStyleClass().add("my-games-details");
+      details.getChildren().addAll(title, context, tags);
+      HBox.setHgrow(details, Priority.ALWAYS);
+      row.getChildren().addAll(marker, details, result, moves, type, updated, action);
       row.setOnMouseClicked(e -> { if (e.getButton()==MouseButton.PRIMARY && e.getClickCount()==2 && getItem()!=null) open(getItem()); });
       row.setOnContextMenuRequested(e -> { if(getItem()!=null){showActions(getItem(),e.getSceneX(),e.getSceneY()); e.consume();} }); }
-    @Override protected void updateItem(SavedGameSummary game, boolean empty) { super.updateItem(game,empty); if(empty||game==null){setGraphic(null);return;} title.setText(game.whiteName()+" vs "+game.blackName()); String tournament=arena.gameForLocal(game.gameId()).flatMap(linked->linked.tournamentId()).flatMap(id->arena.tournaments().stream().filter(item->item.lichessTournamentId().equals(id)).map(item->item.name()).findFirst()).map(name->" · Tournament: "+name).orElse(""); summary.setText((game.finished()?game.result().map(Enum::name).orElse("Finished"):"In progress")+tournament+" · "+game.movesCount()+" moves · "+game.gameType().name().replace('_',' ')); tags.setTags(tagsByGame.getOrDefault(game.gameId(),List.of())); setGraphic(row); }
+    @Override protected void updateItem(SavedGameSummary game, boolean empty) {
+      super.updateItem(game,empty);
+      if(empty||game==null){setGraphic(null);return;}
+      title.setText(game.whiteName()+" vs "+game.blackName());
+      String tournament=arena.gameForLocal(game.gameId()).flatMap(linked->linked.tournamentId()).flatMap(id->arena.tournaments().stream().filter(item->item.lichessTournamentId().equals(id)).map(item->item.name()).findFirst()).map(name->"Tournament · "+name).orElse(game.finished() ? "Saved game" : "Game in progress");
+      context.setText(tournament);
+      String resultText = resultText(game);
+      marker.setText(resultText.equals("Won") ? "WON" : resultText.equals("Lost") ? "LOST" : resultText.equals("Draw") ? "DRAW" : resultText.equals("In progress") ? "LIVE" : "—");
+      marker.getStyleClass().setAll("my-games-marker", resultStyle(game));
+      result.setText(game.finished() ? game.result().map(com.escontrela.lastmove.domain.game.GameResult::getPgn).orElse("—") : "—");
+      result.getStyleClass().setAll("my-games-score");
+      moves.setText(Integer.toString(game.movesCount()));
+      type.setText(game.gameType() == com.escontrela.lastmove.application.game.GameType.LICHESS_BOT_TOURNAMENT ? "Lichess Arena" : "Vs computer");
+      updated.setText(GAME_DATE.format(game.updatedAt()));
+      Optional<ArenaGame> linked = arena.gameForLocal(game.gameId());
+      action.setText(linked.filter(item -> item.status() != ArenaGameStatus.FINISHED).isPresent() ? "Follow"
+          : game.finished() ? "Review" : "Resume");
+      tags.setTags(tagsByGame.getOrDefault(game.gameId(),List.of()));
+      setGraphic(row);
+    }
+  }
+
+  private String resultText(SavedGameSummary game) {
+    if (!game.finished()) return "In progress";
+    var value = game.result().orElse(com.escontrela.lastmove.domain.game.GameResult.UNKNOWN);
+    String player = selectedPlayer.map(PlayerSummary::fullName).orElse("");
+    boolean isWhite = player.equalsIgnoreCase(game.whiteName());
+    boolean isBlack = player.equalsIgnoreCase(game.blackName());
+    if (value == com.escontrela.lastmove.domain.game.GameResult.DRAW) return "Draw";
+    if (value == com.escontrela.lastmove.domain.game.GameResult.UNKNOWN) return "Finished";
+    boolean playerWon = (isWhite && value == com.escontrela.lastmove.domain.game.GameResult.WHITE_WINS)
+        || (isBlack && value == com.escontrela.lastmove.domain.game.GameResult.BLACK_WINS);
+    if (isWhite || isBlack) return playerWon ? "Won" : "Lost";
+    return value == com.escontrela.lastmove.domain.game.GameResult.WHITE_WINS ? "White won" : "Black won";
+  }
+
+  private String resultStyle(SavedGameSummary game) {
+    String text = resultText(game);
+    if ("Won".equals(text)) return "my-games-result-win";
+    if ("Lost".equals(text)) return "my-games-result-loss";
+    if ("In progress".equals(text)) return "my-games-result-active";
+    return "my-games-result-neutral";
   }
 }

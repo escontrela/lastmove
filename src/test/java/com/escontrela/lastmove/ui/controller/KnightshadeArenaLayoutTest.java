@@ -15,7 +15,9 @@ class KnightshadeArenaLayoutTest {
     assertTrue(fxml.indexOf("text=\"Recent activity\"") < fxml.indexOf("text=\"Challengers · Tournaments\""));
     assertTrue(fxml.contains("fx:id=\"tournamentContextMenu\""));
     assertTrue(fxml.contains("ArenaConsoleControl"));
-    assertTrue(fxml.contains("fx:id=\"gamesConsole\""));
+    assertTrue(!fxml.contains("fx:id=\"gamesConsole\""));
+    assertTrue(fxml.contains("fx:id=\"challengesLogToggleButton\""));
+    assertTrue(fxml.contains("fx:id=\"activityLogToggleButton\""));
     assertTrue(fxml.contains("fx:id=\"applicationHeader\""));
     assertTrue(fxml.contains("GameTimelineControl"));
     assertTrue(fxml.contains("fx:id=\"blitzRatingLabel\""));

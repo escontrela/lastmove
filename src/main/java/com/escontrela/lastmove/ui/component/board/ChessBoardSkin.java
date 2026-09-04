@@ -19,6 +19,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.DragEvent;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
@@ -220,6 +221,14 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
                 }
               }
             });
+        square.setOnKeyPressed(
+            event -> {
+              if ((event.getCode() == KeyCode.ENTER || event.getCode() == KeyCode.SPACE)
+                  && control.isEditorMode()) {
+                control.handleEditorSquare(currentSquare);
+                event.consume();
+              }
+            });
 
         grid.add(square, file, ChessConstants.RANKS - 1 - rank);
       }
@@ -357,7 +366,7 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
   private void handleArrowPressed(ChessBoardControl control, MouseEvent event) {
     if (control.isEditorMode()) {
       Square target = squareAtCoordinate(event.getX(), event.getY());
-      if (target != null) control.handlePieceRemoval(target);
+      if (target != null) control.handleEditorSecondarySquare(target);
       event.consume();
       return;
     }
@@ -599,11 +608,30 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     for (int file = 0; file < ChessConstants.FILES; file++) {
       for (int rank = 0; rank < ChessConstants.RANKS; rank++) {
         squares[file][rank].setPieceImageObject(null);
+        squares[file][rank].clearPieceAccessibility();
       }
     }
     for (PositionPiece piece : snapshot.pieces()) {
       squares[piece.square().getFile()][piece.square().getRank()]
           .setPieceImageObject(pieceImage(piece));
+      squares[piece.square().getFile()][piece.square().getRank()]
+          .setPieceAccessibility(piece.type(), piece.color());
+    }
+  }
+
+  void showFeedback(java.util.Set<Square> correct, java.util.Set<Square> incorrect) {
+    for (int file = 0; file < ChessConstants.FILES; file++) {
+      for (int rank = 0; rank < ChessConstants.RANKS; rank++) {
+        Square square = Square.of(file, rank);
+        squares[file][rank].setAnswerFeedback(
+            correct.contains(square) ? Boolean.TRUE : incorrect.contains(square) ? Boolean.FALSE : null);
+      }
+    }
+  }
+
+  void clearFeedback() {
+    for (int file = 0; file < ChessConstants.FILES; file++) for (int rank = 0; rank < ChessConstants.RANKS; rank++) {
+      squares[file][rank].setAnswerFeedback(null);
     }
   }
 

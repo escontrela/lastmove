@@ -4,6 +4,7 @@ import com.escontrela.lastmove.domain.analysis.AnalysisContent;
 import com.escontrela.lastmove.domain.analysis.AnalysisDocument;
 import com.escontrela.lastmove.domain.analysis.AnalysisDocumentFactory;
 import com.escontrela.lastmove.domain.game.PositionSnapshot;
+import com.escontrela.lastmove.domain.game.ImportedPgnGame;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
@@ -25,6 +26,18 @@ public final class TacticExerciseFactory {
   /** Copies both the position and solution tree, keeping the source study/session independent. */
   public TacticExercise fromDocument(String title, AnalysisDocument source) {
     return exercise(title, documentFactory.copyOf(source).content());
+  }
+
+  /** Builds a tactic whose accepted solution tree is the complete PGN move tree. */
+  public TacticExercise fromImportedPgn(
+      String title, ImportedPgnGame importedGame, PositionSnapshot initialPosition) {
+    return exercise(
+        title,
+        documentFactory
+            .fromImportedPgn(
+                Objects.requireNonNull(importedGame, "importedGame must not be null"),
+                Objects.requireNonNull(initialPosition, "initialPosition must not be null"))
+            .content());
   }
 
   /** Copies the active study variation as a standalone tactic solution. */

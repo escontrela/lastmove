@@ -5,17 +5,94 @@
 <?import com.escontrela.lastmove.ui.component.arena.ArenaConsoleControl?>
 <?import com.escontrela.lastmove.ui.component.arena.BotChallengeSettingsModal?>
 <?import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton?>
+<?import com.escontrela.lastmove.ui.component.toolbar.ThemeIcon?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <StackPane fx:id="root" styleClass="app-shell" stylesheets="@../css/lastmove.css" xmlns="http://javafx.com/javafx/22.0.2" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.escontrela.lastmove.ui.controller.KnightshadeArenaScreenController">
-  <BorderPane styleClass="app-shell"><top><ApplicationHeader fx:id="applicationHeader"/></top><center><ScrollPane fitToWidth="true" hbarPolicy="NEVER" styleClass="arena-scroll-pane"><content><VBox spacing="18" styleClass="studies-workspace"><padding><Insets top="28" right="44" bottom="40" left="44"/></padding>
-    <VBox spacing="5"><Label text="Knightshade Arena" styleClass="catalog-title"/><Label text="Play and monitor your Lichess bot games." styleClass="catalog-support"/></VBox>
-    <HBox spacing="12" styleClass="arena-summary"><VBox spacing="4"><Label text="Connection" styleClass="eyebrow-label"/><Label fx:id="connectionLabel" accessibleText="Arena connection status" text="DISCONNECTED" styleClass="arena-state"/></VBox><VBox spacing="4"><Label text="Account" styleClass="eyebrow-label"/><Label fx:id="accountLabel" accessibleText="Configured Lichess bot account" text="Configured bot account" styleClass="status-text"/></VBox><VBox spacing="4"><Label text="Active games" styleClass="eyebrow-label"/><Label fx:id="capacityLabel" accessibleText="Active Arena games out of configured maximum" text="0 / configured" styleClass="status-text"/></VBox><VBox fx:id="nowPlayingBox" spacing="4" visible="false" managed="false"><Label text="Now playing" styleClass="eyebrow-label"/><Button fx:id="nowPlayingButton" accessibleText="Open current Arena game" onAction="#openNowPlaying" styleClass="arena-now-playing-button"><graphic><Label fx:id="nowPlayingOpponentLabel" text=""/></graphic></Button></VBox><Region HBox.hgrow="ALWAYS"/><VBox spacing="4"><Label text="Blitz" styleClass="eyebrow-label"/><Label fx:id="blitzRatingLabel" text="?" styleClass="status-text"/></VBox><VBox spacing="4"><Label text="Rapid" styleClass="eyebrow-label"/><Label fx:id="rapidRatingLabel" text="?" styleClass="status-text"/></VBox><VBox spacing="4"><Label text="Std" styleClass="eyebrow-label"/><Label fx:id="standardRatingLabel" text="?" styleClass="status-text"/></VBox></HBox>
+  <BorderPane styleClass="app-shell"><top><ApplicationHeader fx:id="applicationHeader"/></top><center><ScrollPane fitToWidth="true" hbarPolicy="NEVER" styleClass="arena-scroll-pane"><content><VBox spacing="18" styleClass="studies-workspace"><padding><Insets top="38" right="44" bottom="40" left="44"/></padding>
+    <HBox alignment="CENTER_LEFT" spacing="24" styleClass="arena-header">
+      <VBox spacing="5" styleClass="arena-heading" HBox.hgrow="ALWAYS"><Label text="Knightshade Arena" styleClass="arena-heading-title"/><Label text="Play and monitor your Lichess bot games" styleClass="arena-heading-support"/></VBox>
+      <HBox alignment="CENTER_LEFT" styleClass="arena-account-summary-card">
+        <Label fx:id="connectionLabel" accessibleText="Arena connection status" text="DISCONNECTED" styleClass="arena-state, arena-connection-status"/>
+        <Region styleClass="arena-summary-divider"/>
+        <VBox spacing="3" styleClass="arena-account-metric"><Label text="Account" styleClass="eyebrow-label"/><Label fx:id="accountLabel" accessibleText="Configured Lichess bot account" text="Configured bot account" styleClass="status-text"/></VBox>
+        <Region styleClass="arena-summary-divider"/>
+        <VBox spacing="3" styleClass="arena-account-metric"><Label text="Active games" styleClass="eyebrow-label"/><Label fx:id="capacityLabel" accessibleText="Active Arena games out of configured maximum" text="0 / configured" styleClass="status-text"/></VBox>
+        <VBox fx:id="nowPlayingBox" spacing="4" visible="false" managed="false"><Label text="Now playing" styleClass="eyebrow-label"/><Button fx:id="nowPlayingButton" accessibleText="Open current Arena game" onAction="#openNowPlaying" styleClass="arena-now-playing-button"><graphic><Label fx:id="nowPlayingOpponentLabel" text=""/></graphic></Button></VBox>
+      </HBox>
+      <HBox alignment="CENTER_LEFT" styleClass="arena-ratings-card">
+        <VBox spacing="3" styleClass="arena-rating"><Label text="Blitz" styleClass="eyebrow-label"/><Label fx:id="blitzRatingLabel" text="?" styleClass="arena-rating-value"/></VBox>
+        <VBox spacing="3" styleClass="arena-rating"><Label text="Rapid" styleClass="eyebrow-label"/><Label fx:id="rapidRatingLabel" text="?" styleClass="arena-rating-value"/></VBox>
+        <VBox spacing="3" styleClass="arena-rating"><Label text="Std" styleClass="eyebrow-label"/><Label fx:id="standardRatingLabel" text="?" styleClass="arena-rating-value"/></VBox>
+      </HBox>
+    </HBox>
     <GameTimelineControl fx:id="gameTimeline" />
-    <VBox spacing="8"><HBox alignment="CENTER_LEFT" spacing="10"><VBox spacing="2" HBox.hgrow="ALWAYS"><Label text="Online bots · autonomous challenges" styleClass="sessions-section-title"/><Label fx:id="botCycleStateLabel" text="Connect Arena to discover bots." styleClass="arena-tournament-state"/></VBox></HBox><HBox alignment="CENTER_LEFT" spacing="14" styleClass="arena-bot-settings"><VBox spacing="2"><Label text="Variant" styleClass="settings-field-label"/><Label text="Standard chess" styleClass="status-text"/></VBox><VBox spacing="2"><Label text="Base time" styleClass="settings-field-label"/><Label fx:id="botBaseTimeLabel" text="5 min" styleClass="arena-bot-setting-value"/></VBox><VBox spacing="2"><Label text="Increment" styleClass="settings-field-label"/><Label fx:id="botIncrementLabel" text="0 sec" styleClass="arena-bot-setting-value"/></VBox><VBox spacing="2"><Label text="Min opponent rating" styleClass="settings-field-label"/><Label fx:id="botMinimumRatingLabel" text="400" styleClass="arena-bot-setting-value"/></VBox><VBox spacing="2"><Label text="Max opponent rating" styleClass="settings-field-label"/><Label fx:id="botMaximumRatingLabel" text="2000" styleClass="arena-bot-setting-value"/></VBox><VBox spacing="2"><Label text="Maximum games" styleClass="settings-field-label"/><Label fx:id="botMaximumGamesLabel" text="5" styleClass="arena-bot-setting-value"/></VBox><Button text="Change" onAction="#changeBotChallengeSettings" styleClass="arena-bot-settings-change"/><Region HBox.hgrow="ALWAYS"/><ToolbarIconButton fx:id="refreshBotsButton" accessibleText="Refresh online bots" tooltipText="Refresh bots" lightIconResource="/images/refresh_35dp_000000.png" darkIconResource="/images/refresh_35dp_FFFFFF.png" onAction="#refreshOnlineBots"/><ToolbarIconButton fx:id="startBotCycleButton" accessibleText="Start autonomous challenges" tooltipText="Start challenges" lightIconResource="/images/play_circle_35dp_000000.png" darkIconResource="/images/play_circle_35dp_FFFFFF.png" onAction="#startBotCycle"/><ToolbarIconButton fx:id="stopBotCycleButton" accessibleText="Stop autonomous challenges" tooltipText="Stop challenges" lightIconResource="/images/stop_circle_35dp_000000.png" darkIconResource="/images/stop_circle_35dp_FFFFFF.png" onAction="#stopBotCycle"/></HBox><HBox spacing="12"><VBox spacing="5" HBox.hgrow="ALWAYS"><Label text="Available bots" styleClass="settings-field-label"/><ListView fx:id="onlineBotsList" prefHeight="240" styleClass="study-library-list"/></VBox><VBox spacing="5" HBox.hgrow="ALWAYS"><Label text="Challenge results" styleClass="settings-field-label"/><ListView fx:id="botChallengeResultsList" prefHeight="240" styleClass="study-library-list"/></VBox></HBox></VBox>
-    <HBox spacing="16" VBox.vgrow="ALWAYS"><VBox spacing="8" HBox.hgrow="ALWAYS"><HBox alignment="CENTER_LEFT" spacing="10"><Label text="Challenges" accessibleHelp="Pending and decided Lichess challenges" styleClass="sessions-section-title" HBox.hgrow="ALWAYS"/><Region HBox.hgrow="ALWAYS"/><Button fx:id="clearChallengesButton" accessibleText="Clear challenges log" text="Clear" onAction="#clearChallenges" styleClass="secondary-button"/></HBox><ArenaConsoleControl fx:id="challengesConsole" prefHeight="260" VBox.vgrow="ALWAYS"/></VBox><VBox spacing="8" HBox.hgrow="ALWAYS"><Label text="Games" accessibleHelp="Completed Arena games; select a label to open analysis" styleClass="sessions-section-title"/><ArenaConsoleControl fx:id="gamesConsole" prefHeight="260" VBox.vgrow="ALWAYS"/></VBox><VBox spacing="8" prefWidth="310"><Label text="Recent activity" styleClass="sessions-section-title"/><ArenaConsoleControl fx:id="activityConsole" prefHeight="260" VBox.vgrow="ALWAYS"/></VBox></HBox>
-    <VBox spacing="8"><HBox alignment="CENTER_LEFT" spacing="10"><VBox spacing="2" HBox.hgrow="ALWAYS"><Label text="Challengers · Tournaments" accessibleHelp="Bot-eligible Lichess Arena tournaments" styleClass="sessions-section-title"/><Label fx:id="tournamentStateLabel" text="Connect Arena to load tournaments." styleClass="arena-tournament-state"/></VBox><Button fx:id="refreshTournamentsButton" accessibleText="Refresh bot tournaments" text="Refresh" onAction="#refreshTournaments" styleClass="secondary-button"/></HBox><ListView fx:id="tournamentsList" prefHeight="196" styleClass="study-library-list, arena-tournaments-list"/></VBox>
+    <VBox spacing="12">
+      <VBox spacing="14" styleClass="arena-challenges-panel">
+        <HBox alignment="CENTER_LEFT" spacing="10">
+          <ThemeIcon fitWidth="26" fitHeight="26" lightIconResource="/images/robot_2_35dp_000000.png" darkIconResource="/images/robot_2_35dp_FFFFFF.png"/>
+          <VBox spacing="2" HBox.hgrow="ALWAYS">
+            <Label text="Autonomous challenges" styleClass="sessions-section-title"/>
+            <Label fx:id="botCycleStateLabel" text="Connect Arena to discover bots." styleClass="arena-tournament-state"/>
+          </VBox>
+        </HBox>
+        <HBox alignment="CENTER_LEFT" spacing="14" styleClass="arena-bot-settings">
+          <HBox styleClass="arena-bot-metrics-card">
+            <HBox spacing="8" styleClass="arena-bot-setting">
+              <ThemeIcon lightIconResource="/images/chess_pawn_35dp_000000.png" darkIconResource="/images/chess_pawn_35dp_FFFFFF.png" styleClass="arena-setting-icon"/>
+              <VBox spacing="2"><Label text="Variant" styleClass="settings-field-label"/><Label text="Standard chess" styleClass="status-text"/></VBox>
+            </HBox>
+            <HBox spacing="8" styleClass="arena-bot-setting">
+              <ThemeIcon lightIconResource="/images/timer_35dp_000000.png" darkIconResource="/images/timer_35dp_FFFFFF.png" styleClass="arena-setting-icon"/>
+              <VBox spacing="2"><Label text="Bot time" styleClass="settings-field-label"/><Label fx:id="botBaseTimeLabel" text="5 min" styleClass="arena-bot-setting-value"/></VBox>
+            </HBox>
+            <HBox spacing="8" styleClass="arena-bot-setting">
+              <ThemeIcon lightIconResource="/images/timer_arrow_up_35dp_000000.png" darkIconResource="/images/timer_arrow_up_35dp_FFFFFF.png" styleClass="arena-setting-icon"/>
+              <VBox spacing="2"><Label text="Increment" styleClass="settings-field-label"/><Label fx:id="botIncrementLabel" text="0 sec" styleClass="arena-bot-setting-value"/></VBox>
+            </HBox>
+            <HBox spacing="8" styleClass="arena-bot-setting">
+              <ThemeIcon lightIconResource="/images/cell_5_bar_35dp_000000.png" darkIconResource="/images/cell_5_bar_35dp_FFFFFF.png" styleClass="arena-setting-icon"/>
+              <VBox spacing="2"><Label text="Rating range" styleClass="settings-field-label"/><HBox spacing="4"><Label fx:id="botMinimumRatingLabel" text="400" styleClass="arena-bot-setting-value"/><Label text="–" styleClass="arena-bot-setting-value"/><Label fx:id="botMaximumRatingLabel" text="2000" styleClass="arena-bot-setting-value"/></HBox></VBox>
+            </HBox>
+            <HBox spacing="8" styleClass="arena-bot-setting">
+              <ThemeIcon lightIconResource="/images/trophy_35dp_000000.png" darkIconResource="/images/trophy_35dp_FFFFFF.png" styleClass="arena-setting-icon"/>
+              <VBox spacing="2"><Label text="Max games" styleClass="settings-field-label"/><Label fx:id="botMaximumGamesLabel" text="5" styleClass="arena-bot-setting-value"/></VBox>
+            </HBox>
+          </HBox>
+          <Region HBox.hgrow="ALWAYS"/>
+          <ToolbarIconButton fx:id="startBotCycleButton" text="Start" accessibleText="Start autonomous challenges" tooltipText="Start challenges" lightIconResource="/images/play_circle_35dp_000000.png" darkIconResource="/images/play_circle_35dp_FFFFFF.png" onAction="#startBotCycle" styleClass="arena-action-button, arena-action-primary"/>
+          <ToolbarIconButton fx:id="stopBotCycleButton" text="Stop" accessibleText="Stop autonomous challenges" tooltipText="Stop challenges" lightIconResource="/images/stop_circle_35dp_000000.png" darkIconResource="/images/stop_circle_35dp_FFFFFF.png" onAction="#stopBotCycle" styleClass="arena-action-button"/>
+          <ToolbarIconButton fx:id="refreshBotsButton" text="Refresh" accessibleText="Refresh online bots" tooltipText="Refresh bots" lightIconResource="/images/refresh_35dp_000000.png" darkIconResource="/images/refresh_35dp_FFFFFF.png" onAction="#refreshOnlineBots" styleClass="arena-action-button"/>
+          <ToolbarIconButton text="Change" accessibleText="Change challenge settings" tooltipText="Change settings" lightIconResource="/images/tune_35dp_000000.png" darkIconResource="/images/tune_35dp_FFFFFF.png" onAction="#changeBotChallengeSettings" styleClass="arena-action-button, arena-action-change"/>
+        </HBox>
+      </VBox>
+      <HBox spacing="12">
+        <VBox spacing="0" styleClass="arena-bots-card" HBox.hgrow="ALWAYS">
+          <HBox alignment="CENTER_LEFT" spacing="8" styleClass="arena-bots-title-row"><ThemeIcon lightIconResource="/images/robot_2_35dp_000000.png" darkIconResource="/images/robot_2_35dp_FFFFFF.png"/><Label text="Available bots" styleClass="settings-field-label"/></HBox>
+          <HBox alignment="CENTER_LEFT" spacing="10" styleClass="arena-bots-table-header"><Label text="Bot" styleClass="arena-bots-header-name"/><Label text="Rating" styleClass="arena-bots-header-rating"/><Label text="Status"/><Region HBox.hgrow="ALWAYS"/><Label text="Action"/></HBox>
+          <ListView fx:id="onlineBotsList" prefHeight="260" VBox.vgrow="ALWAYS" styleClass="study-library-list, arena-bots-list"/>
+        </VBox>
+        <VBox spacing="0" styleClass="arena-bots-card, arena-results-card" HBox.hgrow="ALWAYS">
+          <HBox alignment="CENTER_LEFT" spacing="8" styleClass="arena-bots-title-row"><ThemeIcon lightIconResource="/images/trophy_35dp_000000.png" darkIconResource="/images/trophy_35dp_FFFFFF.png"/><Label text="Challenge results" styleClass="settings-field-label"/></HBox>
+          <ListView fx:id="botChallengeResultsList" prefHeight="260" VBox.vgrow="ALWAYS" styleClass="study-library-list, arena-results-list"/>
+        </VBox>
+      </HBox>
+    </VBox>
+    <HBox spacing="12" fillHeight="false">
+      <VBox spacing="0" styleClass="arena-bots-card, arena-log-card" HBox.hgrow="ALWAYS">
+        <HBox alignment="CENTER_LEFT" spacing="8" styleClass="arena-bots-title-row, arena-log-card-header"><ThemeIcon lightIconResource="/images/swords_35dp_000000.png" darkIconResource="/images/swords_35dp_FFFFFF.png"/><Label text="Challenges" accessibleHelp="Pending and decided Lichess challenges" styleClass="settings-field-label"/><Region HBox.hgrow="ALWAYS"/><Button fx:id="clearChallengesButton" accessibleText="Clear challenges log" text="Clear" onAction="#clearChallenges" styleClass="arena-card-action-button"/><Button fx:id="challengesLogToggleButton" accessibleText="Show challenges log" text="Show logs ▾" onAction="#toggleChallengesLog" styleClass="arena-card-action-button, arena-log-toggle-button"/></HBox>
+        <ArenaConsoleControl fx:id="challengesConsole" prefHeight="220" visible="false" managed="false" VBox.vgrow="ALWAYS"/>
+      </VBox>
+      <VBox spacing="0" styleClass="arena-bots-card, arena-log-card" HBox.hgrow="ALWAYS">
+        <HBox alignment="CENTER_LEFT" spacing="8" styleClass="arena-bots-title-row, arena-log-card-header"><ThemeIcon lightIconResource="/images/history_35dp_000000.png" darkIconResource="/images/history_35dp_FFFFFF.png"/><Label text="Recent activity" styleClass="settings-field-label"/><Region HBox.hgrow="ALWAYS"/><Button fx:id="activityLogToggleButton" accessibleText="Show recent activity log" text="Show logs ▾" onAction="#toggleActivityLog" styleClass="arena-card-action-button, arena-log-toggle-button"/></HBox>
+        <ArenaConsoleControl fx:id="activityConsole" prefHeight="220" visible="false" managed="false" VBox.vgrow="ALWAYS"/>
+      </VBox>
+    </HBox>
+    <VBox spacing="0" styleClass="arena-bots-card, arena-tournaments-card">
+      <HBox alignment="CENTER_LEFT" spacing="8" styleClass="arena-bots-title-row"><ThemeIcon lightIconResource="/images/trophy_35dp_000000.png" darkIconResource="/images/trophy_35dp_FFFFFF.png"/><VBox spacing="2"><Label text="Challengers · Tournaments" accessibleHelp="Bot-eligible Lichess Arena tournaments" styleClass="settings-field-label"/><Label fx:id="tournamentStateLabel" text="Connect Arena to load tournaments." styleClass="arena-tournament-state"/></VBox><Region HBox.hgrow="ALWAYS"/><Button fx:id="refreshTournamentsButton" accessibleText="Refresh bot tournaments" text="Refresh" onAction="#refreshTournaments" styleClass="arena-card-action-button"/></HBox>
+      <ListView fx:id="tournamentsList" prefHeight="196" styleClass="study-library-list, arena-tournaments-list"/>
+    </VBox>
   </VBox></content></ScrollPane></center><bottom><HBox alignment="CENTER_LEFT" spacing="12" styleClass="status-rail"><Label text="Status" styleClass="eyebrow-label"/><Label fx:id="statusLabel" text="Arena ready" styleClass="status-text"/></HBox></bottom></BorderPane>
   <ContextualMenuPanel fx:id="tournamentContextMenu" />
   <BotChallengeSettingsModal fx:id="botChallengeSettingsModal" />
