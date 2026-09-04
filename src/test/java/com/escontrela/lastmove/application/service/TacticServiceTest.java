@@ -11,6 +11,7 @@ import com.escontrela.lastmove.application.tactics.CreateTacticExerciseFromFenCo
 import com.escontrela.lastmove.application.tactics.CreateTacticSuiteCommand;
 import com.escontrela.lastmove.application.tactics.DeleteTacticSuiteCommand;
 import com.escontrela.lastmove.application.tactics.MoveTacticSuiteCommand;
+import com.escontrela.lastmove.application.tactics.ImportPgnTacticExerciseCommand;
 import com.escontrela.lastmove.application.tactics.RenameTacticSuiteCommand;
 import com.escontrela.lastmove.application.tactics.TacticExerciseSummary;
 import com.escontrela.lastmove.application.tactics.TacticSuiteSummary;
@@ -29,6 +30,7 @@ import com.escontrela.lastmove.domain.tactics.TacticRepository;
 import com.escontrela.lastmove.domain.tactics.TacticSuite;
 import com.escontrela.lastmove.domain.tactics.TacticSuiteId;
 import com.escontrela.lastmove.infrastructure.chesspresso.ChesspressoRulesEngine;
+import com.escontrela.lastmove.infrastructure.chesspresso.ChesspressoPgnReader;
 import com.escontrela.lastmove.infrastructure.persistence.PersistenceAvailability;
 import com.escontrela.lastmove.infrastructure.session.InMemoryAnalysisSessionRepository;
 import java.util.ArrayList;
@@ -163,6 +165,31 @@ class TacticServiceTest {
     assertTrue(outcome.accepted());
     assertTrue(outcome.workspace().solved());
     assertEquals("e5", outcome.workspace().position().lastMove().orElseThrow().san().getValue());
+  }
+
+  @Test
+  void importsPgnStartingFromFenAndUsesItsSanLineAsTheSolution() throws Exception {
+    String pgn =
+        "[Event \"Táctica Mix: Max Euwe. Juegan negras.\"]\n"
+            + "[FEN \"4rrk1/pp2p3/2pqP1p1/4Rp1p/P2P1n1P/6Q1/1P3PP1/1N1R2K1 b - - 0 1\"]\n"
+            + "[SetUp \"1\"]\n\n"
+            + "1... Qxe5 2. dxe5 Ne2+ 3. Kh2 Nxg3 4. Kxg3 Rd8 *";
+    var imported = new ChesspressoPgnReader().readImportedFirst(pgn);
+    TacticSuiteSummary suite =
+        service.createSuite(new CreateTacticSuiteCommand(owner, "Imported PGN", Optional.empty()));
+
+    TacticExerciseSummary exercise =
+        service.importPgnExercise(
+            new ImportPgnTacticExerciseCommand(owner, suite.suiteId(), imported));
+
+    assertEquals(PieceColor.BLACK, exercise.solverColor());
+    assertTrue(exercise.readyToSolve());
+    service.startExercise(owner, suite.suiteId(), exercise.exerciseId());
+    var outcome = service.attemptMove(owner, suite.suiteId(), exercise.exerciseId(), move("d6", "e5"));
+
+    // The black Qxe5 is accepted and the imported white reply dxe5 is automatic.
+    assertTrue(outcome.accepted());
+    assertEquals("dxe5", outcome.workspace().position().lastMove().orElseThrow().san().getValue());
   }
 
   @Test

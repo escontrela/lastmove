@@ -4,10 +4,13 @@ import com.escontrela.lastmove.application.service.CurrentUserService;
 import com.escontrela.lastmove.application.service.TacticService;
 import com.escontrela.lastmove.application.service.StudyService;
 import com.escontrela.lastmove.application.service.AnalysisSessionService;
+import com.escontrela.lastmove.application.service.GameLoadService;
+import com.escontrela.lastmove.application.dto.PgnImportRequest;
 import com.escontrela.lastmove.application.tactics.AppendTacticSolutionMoveCommand;
 import com.escontrela.lastmove.application.tactics.CreateTacticExerciseFromFenCommand;
 import com.escontrela.lastmove.application.tactics.DeleteTacticExerciseCommand;
 import com.escontrela.lastmove.application.tactics.MoveTacticExerciseCommand;
+import com.escontrela.lastmove.application.tactics.ImportPgnTacticExerciseCommand;
 import com.escontrela.lastmove.application.tactics.RenameTacticExerciseCommand;
 import com.escontrela.lastmove.application.tactics.TacticAuthoringMoveOutcome;
 import com.escontrela.lastmove.application.tactics.TacticExerciseSummary;
@@ -44,6 +47,8 @@ import com.escontrela.lastmove.ui.screen.UiScreenController;
 import com.escontrela.lastmove.ui.screen.UiScreenId;
 import com.escontrela.lastmove.ui.service.BoardAppearancePreferencesService;
 import com.escontrela.lastmove.ui.service.ChessSoundService;
+import com.escontrela.lastmove.ui.service.ClipboardService;
+import com.escontrela.lastmove.ui.support.FileChooserFactory;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -91,6 +96,9 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
   private final TacticService tacticService;
   private final StudyService studyService;
   private final AnalysisSessionService analysisSessionService;
+  private final GameLoadService gameLoadService;
+  private final FileChooserFactory fileChooserFactory;
+  private final ClipboardService clipboardService;
   private final CurrentUserService currentUserService;
   private final ChessSoundService chessSoundService;
   private final BoardAppearancePreferencesService boardAppearancePreferencesService;
@@ -111,6 +119,9 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
       TacticService tacticService,
       StudyService studyService,
       AnalysisSessionService analysisSessionService,
+      GameLoadService gameLoadService,
+      FileChooserFactory fileChooserFactory,
+      ClipboardService clipboardService,
       CurrentUserService currentUserService,
       ChessSoundService chessSoundService,
       BoardAppearancePreferencesService boardAppearancePreferencesService,
@@ -119,6 +130,9 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
     this.tacticService = tacticService;
     this.studyService = studyService;
     this.analysisSessionService = analysisSessionService;
+    this.gameLoadService = gameLoadService;
+    this.fileChooserFactory = fileChooserFactory;
+    this.clipboardService = clipboardService;
     this.currentUserService = currentUserService;
     this.chessSoundService = chessSoundService;
     this.boardAppearancePreferencesService = boardAppearancePreferencesService;
@@ -236,6 +250,51 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
     textInputModal.setCancelText("Cancel");
     textInputModal.setOnAccept(event -> createFromFen(textInputModal.getText()));
     textInputModal.show();
+  }
+
+  /** Imports a PGN file as a tactic, using its starting position and main solution line. */
+  @FXML
+  public void onAddFromPgn() {
+    fileChooserFactory
+        .choosePgnFile(root.getScene().getWindow())
+        .ifPresent(file -> importPgn(PgnImportRequest.fromFile(file.toPath()), false));
+  }
+
+  /** Imports PGN text from the system clipboard when it contains a valid PGN. */
+  @FXML
+  public void onAddFromClipboard() {
+    Optional<String> clipboardText = clipboardService.text();
+    if (clipboardText.isEmpty()) {
+      statusLabel.setText("El portapapeles no tiene nada compatible con un PGN.");
+      return;
+    }
+    importPgn(PgnImportRequest.fromText(clipboardText.orElseThrow()), true);
+  }
+
+  private void importPgn(PgnImportRequest request, boolean clipboardSource) {
+    Optional<PlayerId> owner = activeOwner();
+    if (owner.isEmpty() || activeSuiteId == null) {
+      statusLabel.setText("Selecciona una suite de tácticas antes de importar un PGN.");
+      return;
+    }
+    try {
+      TacticExerciseSummary exercise =
+          tacticService.importPgnExercise(
+              new ImportPgnTacticExerciseCommand(
+                  owner.orElseThrow(), activeSuiteId, gameLoadService.importPgn(request)));
+      activeExerciseId = exercise.exerciseId();
+      authoring = false;
+      authorParentNodeId = Optional.empty();
+      refreshSuite();
+      statusLabel.setText("Táctica importada desde PGN. Sigue la línea SAN en el tablero.");
+    } catch (RuntimeException exception) {
+      statusLabel.setText(
+          clipboardSource
+              ? "El portapapeles no tiene nada compatible con un PGN."
+              : exception.getMessage() == null
+              ? "El PGN no es válido o no contiene movimientos de solución."
+              : exception.getMessage());
+    }
   }
 
   /** Opens the position editor to compose the starting position of a new tactic exercise. */
