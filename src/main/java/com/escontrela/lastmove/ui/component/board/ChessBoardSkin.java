@@ -832,50 +832,87 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     graphics.clearRect(0, 0, frameSide, frameSide);
     graphics.setStroke(Color.rgb(242, 244, 235, 0.92));
     graphics.setLineWidth(Math.max(1.15, frameThickness * 0.055));
-    double margin = frameThickness * 0.24;
     double stripCenter = frameThickness * 0.50;
-    double step = Math.max(17, Math.min(31, frameSide / 16.0));
-    double motifSize = Math.min(frameThickness * 0.26, step * 0.33);
+    double step = Math.max(20, Math.min(34, frameSide / 14.0));
+    double motifSize = Math.min(frameThickness * 0.16, step * 0.20);
 
-    for (double offset = frameThickness + step * 0.45;
+    int motifIndex = 0;
+    for (double offset = frameThickness + step * 0.55;
         offset < frameSide - frameThickness - step * 0.20;
-        offset += step) {
-      drawTribalMotif(graphics, offset, stripCenter, motifSize, false);
-      drawTribalMotif(graphics, offset, frameSide - stripCenter, motifSize, true);
-      drawTribalMotif(graphics, stripCenter, offset, motifSize, false, true);
-      drawTribalMotif(graphics, frameSide - stripCenter, offset, motifSize, true, true);
+        offset += step, motifIndex++) {
+      int variant = motifIndex % 3;
+      drawTribalMotif(graphics, offset, stripCenter, motifSize, false, false, variant);
+      drawTribalMotif(graphics, offset, frameSide - stripCenter, motifSize, true, false, variant);
+      drawTribalMotif(graphics, stripCenter, offset, motifSize, false, true, variant);
+      drawTribalMotif(graphics, frameSide - stripCenter, offset, motifSize, true, true, variant);
     }
-    graphics.setStroke(Color.rgb(242, 244, 235, 0.42));
-    graphics.setLineWidth(Math.max(0.75, frameThickness * 0.028));
-    graphics.strokeRect(margin, margin, frameSide - margin * 2, frameSide - margin * 2);
   }
 
   private void drawTribalMotif(
-      GraphicsContext graphics, double x, double y, double size, boolean inverted) {
-    drawTribalMotif(graphics, x, y, size, inverted, false);
-  }
-
-  private void drawTribalMotif(
-      GraphicsContext graphics, double x, double y, double size, boolean inverted, boolean vertical) {
+      GraphicsContext graphics,
+      double x,
+      double y,
+      double size,
+      boolean inverted,
+      boolean vertical,
+      int variant) {
     double direction = inverted ? -1 : 1;
+    if (variant == 1) {
+      drawTribalDiamond(graphics, x, y, size, vertical);
+      return;
+    }
+    if (variant == 2) {
+      drawTribalNotch(graphics, x, y, size, direction, vertical);
+      return;
+    }
     if (vertical) {
       graphics.strokePolyline(
           new double[] {x - size * direction, x, x + size * direction},
-          new double[] {y - size, y, y - size},
+          new double[] {y - size * 0.72, y, y - size * 0.72},
           3);
       graphics.strokePolygon(
-          new double[] {x - size * 0.58, x, x + size * 0.58},
-          new double[] {y + size * 0.42, y + size * 1.16, y + size * 0.42},
+          new double[] {x - size * 0.42, x, x + size * 0.42},
+          new double[] {y + size * 0.30, y + size * 0.82, y + size * 0.30},
           3);
       return;
     }
     graphics.strokePolyline(
         new double[] {x - size, x, x - size},
-        new double[] {y - size * direction, y, y + size * direction},
+        new double[] {y - size * 0.72 * direction, y, y + size * 0.72 * direction},
         3);
     graphics.strokePolygon(
-        new double[] {x + size * 0.42, x + size * 1.16, x + size * 0.42},
-        new double[] {y - size * 0.58, y, y + size * 0.58},
+        new double[] {x + size * 0.30, x + size * 0.82, x + size * 0.30},
+        new double[] {y - size * 0.42, y, y + size * 0.42},
+        3);
+  }
+
+  private void drawTribalDiamond(
+      GraphicsContext graphics, double x, double y, double size, boolean vertical) {
+    if (vertical) {
+      graphics.strokePolygon(
+          new double[] {x, x + size * 0.65, x, x - size * 0.65},
+          new double[] {y - size * 0.80, y, y + size * 0.80, y},
+          4);
+      return;
+    }
+    graphics.strokePolygon(
+        new double[] {x - size * 0.80, x, x + size * 0.80, x},
+        new double[] {y, y + size * 0.65, y, y - size * 0.65},
+        4);
+  }
+
+  private void drawTribalNotch(
+      GraphicsContext graphics, double x, double y, double size, double direction, boolean vertical) {
+    if (vertical) {
+      graphics.strokePolyline(
+          new double[] {x - size * direction, x, x + size * direction},
+          new double[] {y + size * 0.55, y - size * 0.55, y + size * 0.55},
+          3);
+      return;
+    }
+    graphics.strokePolyline(
+        new double[] {x + size * 0.55, x - size * 0.55, x + size * 0.55},
+        new double[] {y - size * direction, y, y + size * direction},
         3);
   }
 
