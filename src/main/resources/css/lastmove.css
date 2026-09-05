@@ -2596,12 +2596,18 @@
 .night-mode .secondary-button:hover, .night-mode .ghost-button:hover {
     -fx-background-color: #3b4654;
 }
-.game-session-selector-list { -fx-background-color: #ffffff; -fx-border-color: #d6dee8; -fx-border-radius: 10; -fx-background-radius: 10; }
-.game-session-selector-list .list-cell { -fx-background-color: transparent; -fx-text-fill: #25364a; -fx-padding: 12 14; -fx-border-color: transparent transparent #e6ebf1 transparent; }
-.game-session-selector-list .list-cell:selected { -fx-background-color: #e7f1ff; -fx-text-fill: #0b66c3; }
+.game-session-selector-list { -fx-background-color: #ffffff; -fx-border-color: #d6dee8; -fx-border-radius: 10; -fx-background-radius: 10; -fx-padding: 0; }
+.game-session-selector-list .list-cell { -fx-background-color: #ffffff; -fx-text-fill: #25364a; -fx-padding: 10 14; -fx-border-color: transparent transparent #e6ebf1 transparent; }
+.game-session-selector-list .list-cell:filled:hover { -fx-background-color: #f5f8fc; }
+.game-session-selector-list .list-cell:filled:selected { -fx-background-color: #e7f1ff; -fx-text-fill: #0b66c3; }
+.game-session-selector-title { -fx-font-size: 14px; -fx-font-weight: 700; -fx-text-fill: #25364a; }
+.game-session-selector-detail { -fx-font-size: 12px; -fx-text-fill: #617084; }
 .night-mode .game-session-selector-list { -fx-background-color: #1c2430; -fx-border-color: #465465; }
-.night-mode .game-session-selector-list .list-cell { -fx-text-fill: #dbe7f3; -fx-border-color: transparent transparent #344151 transparent; }
-.night-mode .game-session-selector-list .list-cell:selected { -fx-background-color: #29415e; -fx-text-fill: #9fc8f7; }
+.night-mode .game-session-selector-list .list-cell { -fx-background-color: #1c2430; -fx-text-fill: #dbe7f3; -fx-border-color: transparent transparent #344151 transparent; }
+.night-mode .game-session-selector-list .list-cell:filled:hover { -fx-background-color: #243243; }
+.night-mode .game-session-selector-list .list-cell:filled:selected { -fx-background-color: #29415e; -fx-text-fill: #9fc8f7; }
+.night-mode .game-session-selector-title { -fx-text-fill: #f1f3f5; }
+.night-mode .game-session-selector-detail { -fx-text-fill: #b8c5d3; }
 
 .arena-scroll-pane,
 .arena-scroll-pane > .viewport,
@@ -2659,6 +2665,9 @@
 .arena-timeline-result.arena-timeline-win { -fx-background-color: #e9f8ef; -fx-text-fill: #16874d; -fx-stroke: transparent; }
 .arena-timeline-result.arena-timeline-loss { -fx-background-color: #ffebe9; -fx-text-fill: #c43d36; -fx-stroke: transparent; }
 .arena-timeline-result.arena-timeline-neutral { -fx-background-color: #eef2f6; -fx-text-fill: #617084; -fx-stroke: transparent; }
+.arena-timeline-live { -fx-stroke: #d92d2d; }
+.arena-timeline-result.arena-timeline-live { -fx-background-color: #fff0f0; -fx-text-fill: #d92d2d; -fx-stroke: transparent; }
+.arena-timeline-live-dot { -fx-fill: #d92d2d; }
 .arena-timeline-current-label { -fx-background-color: #1c69d4; -fx-background-radius: 5px 5px 0 0; -fx-padding: 4px 8px; -fx-text-fill: white; -fx-font-size: 10px; -fx-font-weight: 800; }
 .arena-timeline-time { -fx-font-size: 12px; -fx-text-fill: #617084; }
 .arena-console { -fx-min-height: 160px; -fx-background-color: #111a24; -fx-background-radius: 8px; -fx-border-color: #2d4054; -fx-border-radius: 8px; }
@@ -2711,6 +2720,9 @@
 .night-mode .arena-timeline-detail { -fx-text-fill: #f1f3f5; }
 .night-mode .arena-timeline-result.arena-timeline-win { -fx-background-color: #203c31; -fx-text-fill: #7edca7; }
 .night-mode .arena-timeline-result.arena-timeline-loss { -fx-background-color: #432b31; -fx-text-fill: #ff9b9b; }
+.night-mode .arena-timeline-live { -fx-stroke: #ff6b6b; }
+.night-mode .arena-timeline-result.arena-timeline-live { -fx-background-color: #4a252a; -fx-text-fill: #ff8b8b; }
+.night-mode .arena-timeline-live-dot { -fx-fill: #ff6b6b; }
 .night-mode .arena-timeline-range { -fx-background-color: #1a2129; -fx-border-color: #52647a; -fx-text-fill: #f1f3f5; }
 .night-mode .arena-timeline-range:hover, .night-mode .arena-timeline-range:focused { -fx-background-color: #263750; -fx-border-color: #78b9ff; }
 .night-mode .arena-timeline-range .list-cell { -fx-background-color: #1a2129; -fx-text-fill: #f1f3f5; }

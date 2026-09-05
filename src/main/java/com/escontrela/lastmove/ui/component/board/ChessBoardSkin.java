@@ -47,6 +47,10 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
   private static final double COORDINATE_GUTTER_RATIO = 0.035;
   private static final double MIN_COORDINATE_GUTTER = 12.0;
   private static final double MAX_COORDINATE_GUTTER = 22.0;
+  // Fixed rather than random so the tribal trim does not jump between layout passes.
+  private static final double[] TRIBAL_SPACING = {0.88, 1.13, 0.96, 1.08, 0.84, 1.17, 0.93};
+  private static final double[] TRIBAL_SCALES = {0.82, 1.00, 0.73, 0.93, 0.88, 0.68, 0.98};
+  private static final int[] TRIBAL_VARIANTS = {0, 1, 2, 1, 0, 2, 0, 1, 2};
 
   private final Region boardInnerGlow = new Region();
   private final GridPane grid = new GridPane();
@@ -839,13 +843,48 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     int motifIndex = 0;
     for (double offset = frameThickness + step * 0.55;
         offset < frameSide - frameThickness - step * 0.20;
-        offset += step, motifIndex++) {
-      int variant = motifIndex % 3;
-      drawTribalMotif(graphics, offset, stripCenter, motifSize, false, false, variant);
-      drawTribalMotif(graphics, offset, frameSide - stripCenter, motifSize, true, false, variant);
-      drawTribalMotif(graphics, stripCenter, offset, motifSize, false, true, variant);
-      drawTribalMotif(graphics, frameSide - stripCenter, offset, motifSize, true, true, variant);
+        offset += step * TRIBAL_SPACING[motifIndex % TRIBAL_SPACING.length], motifIndex++) {
+      drawTribalMotif(
+          graphics,
+          offset,
+          stripCenter,
+          tribalSize(motifSize, motifIndex),
+          false,
+          false,
+          tribalVariant(motifIndex));
+      drawTribalMotif(
+          graphics,
+          offset,
+          frameSide - stripCenter,
+          tribalSize(motifSize, motifIndex + 3),
+          true,
+          false,
+          tribalVariant(motifIndex + 3));
+      drawTribalMotif(
+          graphics,
+          stripCenter,
+          offset,
+          tribalSize(motifSize, motifIndex + 5),
+          false,
+          true,
+          tribalVariant(motifIndex + 5));
+      drawTribalMotif(
+          graphics,
+          frameSide - stripCenter,
+          offset,
+          tribalSize(motifSize, motifIndex + 1),
+          true,
+          true,
+          tribalVariant(motifIndex + 1));
     }
+  }
+
+  private double tribalSize(double baseSize, int index) {
+    return baseSize * TRIBAL_SCALES[index % TRIBAL_SCALES.length];
+  }
+
+  private int tribalVariant(int index) {
+    return TRIBAL_VARIANTS[index % TRIBAL_VARIANTS.length];
   }
 
   private void drawTribalMotif(
