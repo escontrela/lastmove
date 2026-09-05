@@ -91,7 +91,7 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
   private final ChangeListener<BoardAppearancePreset> appearancePresetListener =
       (observable, oldValue, preset) -> applyAppearancePreset(preset);
   private final ChangeListener<Square> hintSquareListener =
-      (observable, oldSquare, newSquare) -> updateHintSquare(oldSquare, newSquare);
+      (observable, oldSquare, newSquare) -> updateHintSquares();
   private final ListChangeListener<Square> threatenedSquaresListener = change -> updateThreatenedSquares();
 
   public ChessBoardSkin(ChessBoardControl control) {
@@ -106,13 +106,14 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     control.visualEffectsEnabledProperty().addListener(visualEffectsListener);
     control.appearancePresetProperty().addListener(appearancePresetListener);
     control.hintSquareProperty().addListener(hintSquareListener);
+    control.hintTargetSquareProperty().addListener(hintSquareListener);
     control.observableThreatenedSquares().addListener(threatenedSquaresListener);
     control.observableArrows().addListener(arrowsListener);
     control.addEventFilter(ContextMenuEvent.CONTEXT_MENU_REQUESTED, contextMenuFilter);
     if (control.getPosition() != null) {
       renderPosition(control.getPosition());
     }
-    updateHintSquare(null, control.getHintSquare());
+    updateHintSquares();
     updateThreatenedSquares();
     applyAppearancePreset(control.getAppearancePreset());
 
@@ -324,12 +325,14 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     for (int file=0; file<ChessConstants.FILES; file++) for (int rank=0; rank<ChessConstants.RANKS; rank++) squares[file][rank].setThreatened(threatened.contains(Square.of(file, rank)));
   }
 
-  private void updateHintSquare(Square oldSquare, Square newSquare) {
-    if (oldSquare != null) {
-      squares[oldSquare.getFile()][oldSquare.getRank()].setHint(false);
-    }
-    if (newSquare != null) {
-      squares[newSquare.getFile()][newSquare.getRank()].setHint(true);
+  private void updateHintSquares() {
+    Square source = getSkinnable().getHintSquare();
+    Square target = getSkinnable().getHintTargetSquare();
+    for (int file = 0; file < ChessConstants.FILES; file++) {
+      for (int rank = 0; rank < ChessConstants.RANKS; rank++) {
+        Square square = Square.of(file, rank);
+        squares[file][rank].setHint(square.equals(source) || square.equals(target));
+      }
     }
   }
 
@@ -726,6 +729,7 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     getSkinnable().visualEffectsEnabledProperty().removeListener(visualEffectsListener);
     getSkinnable().appearancePresetProperty().removeListener(appearancePresetListener);
     getSkinnable().hintSquareProperty().removeListener(hintSquareListener);
+    getSkinnable().hintTargetSquareProperty().removeListener(hintSquareListener);
     getSkinnable().observableThreatenedSquares().removeListener(threatenedSquaresListener);
     getSkinnable().observableArrows().removeListener(arrowsListener);
     getSkinnable().removeEventFilter(ContextMenuEvent.CONTEXT_MENU_REQUESTED, contextMenuFilter);

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import com.escontrela.lastmove.ui.component.board.ChessBoardControl?>
+<?import com.escontrela.lastmove.ui.component.header.ApplicationHeader?>
+<?import com.escontrela.lastmove.ui.component.message.MessageBox?>
+<?import com.escontrela.lastmove.ui.component.promotion.PromotionPickerControl?>
+<?import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.Circle?>
+<StackPane fx:id="root" styleClass="app-shell, progressive-game-shell, memory-game-shell, storm-game-shell" stylesheets="@../css/lastmove.css" xmlns="http://javafx.com/javafx/22.0.2" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.escontrela.lastmove.ui.controller.StormGameScreenController">
+  <BorderPane><top><ApplicationHeader /></top><center>
+    <HBox spacing="16.0" styleClass="analysis-workspace, progressive-game-workspace"><padding><Insets bottom="16.0" left="20.0" right="20.0" top="8.0" /></padding>
+      <StackPane alignment="CENTER" HBox.hgrow="ALWAYS"><ChessBoardControl fx:id="chessBoard" accessibleText="Training Storm chess board" /></StackPane>
+      <VBox prefWidth="300.0" spacing="14.0" styleClass="board-side-panel, progressive-game-side-panel, memory-game-side-panel, storm-game-side-panel">
+        <VBox spacing="8.0" styleClass="progressive-player-zone, memory-game-status-card, storm-game-status-card"><Label fx:id="phaseLabel" styleClass="eyebrow-label" text="READY" /><Label styleClass="memory-stat-caption" text="TIME LEFT" /><Label fx:id="globalClockLabel" styleClass="memory-global-clock, storm-global-clock" accessibleText="Storm time remaining" text="3:00" /><HBox spacing="8.0"><VBox styleClass="memory-stat-tile" HBox.hgrow="ALWAYS"><Label styleClass="memory-stat-caption" text="CORRECT / COMPLETED PUZZLES" /><Label fx:id="scoreLabel" styleClass="memory-stat-value, storm-score-value" accessibleText="Storm score: correct puzzles over completed puzzles" text="0/0" /></VBox></HBox><Label fx:id="difficultyLabel" styleClass="memory-meta-chip, storm-difficulty-chip" accessibleText="Current Storm difficulty" text="Level: —" /><Label fx:id="puzzleLabel" styleClass="memory-meta-chip, storm-puzzle-chip" accessibleText="Current tactical puzzle" text="—" /><HBox fx:id="solverColorBadge" alignment="CENTER_LEFT" spacing="6.0" styleClass="memory-meta-chip, storm-solver-chip"><Circle fx:id="solverColorIndicator" radius="6.0" fill="#ffffff" stroke="#69727d" strokeWidth="1.0" /><Label fx:id="solverColorLabel" styleClass="storm-solver-color-text" accessibleText="Color to play" text="Color: —" /></HBox></VBox>
+        <VBox fx:id="resultPanel" managed="false" visible="false" spacing="6.0" styleClass="memory-result-card, storm-result-card"><Label styleClass="eyebrow-label" text="Session result" /><Label fx:id="resultScoreLabel" styleClass="memory-result-score, storm-result-score" text="0%" /><Label fx:id="resultVerdictLabel" styleClass="memory-result-verdict, storm-result-verdict" text="✗ Not passed" /><Label fx:id="resultDetailLabel" styleClass="card-copy" wrapText="true" text="Solved puzzles: 0 of 0" /><Button fx:id="playAgainButton" onAction="#playAgain" styleClass="primary-button" text="Play again" /></VBox>
+        <Region VBox.vgrow="ALWAYS" />
+        <Button fx:id="hintButton" accessibleText="Request tactical hint; marks this puzzle as failed" maxWidth="Infinity" onAction="#onHint" styleClass="progressive-action-button, storm-hint-button" text="Hint" />
+        <HBox alignment="CENTER" spacing="8.0"><ToolbarIconButton accessibleText="Reset Storm session" darkIconResource="/images/refresh_35dp_FFFFFF.png" lightIconResource="/images/refresh_35dp_FFFFFF.png" maxWidth="Infinity" onAction="#resetSession" prefWidth="140.0" styleClass="arena-action-button, progressive-game-action, progressive-danger-action-button" text="Reset" HBox.hgrow="ALWAYS" /><ToolbarIconButton fx:id="soundToggleButton" accessibleText="Turn sound off" darkIconResource="/images/stop_35dp_FFFFFF.png" lightIconResource="/images/stop_35dp_000000.png" maxWidth="Infinity" onAction="#toggleSound" prefWidth="140.0" styleClass="arena-action-button, progressive-game-action, memory-sound-action-button" text="Sound off" HBox.hgrow="ALWAYS" /></HBox>
+        <Label fx:id="statusLabel" accessibleText="Storm training status" styleClass="status-text" wrapText="true" />
+      </VBox>
+    </HBox>
+  </center><bottom><HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="status-rail"><Label styleClass="eyebrow-label" text="Training Storm" /><Label styleClass="status-text" text="Solve as many tactical puzzles as possible in three minutes." /></HBox></bottom></BorderPane>
+  <PromotionPickerControl fx:id="promotionPicker" />
+  <MessageBox fx:id="exitConfirmation" />
+</StackPane>

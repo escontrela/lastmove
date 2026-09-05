@@ -40,6 +40,8 @@
                     <Label styleClass="card-copy" text="Start from a FEN position or compose one in the editor, then author its accepted line directly on the board." wrapText="true" />
                     <HBox alignment="CENTER_LEFT" spacing="8.0">
                         <ToolbarIconButton accessibleText="New tactic from FEN" darkIconResource="/images/upload_35dp_FFFFFF.png" lightIconResource="/images/upload_35dp_000000.png" onAction="#onAddFromFen" tooltipText="New tactic from FEN" />
+                        <ToolbarIconButton accessibleText="Import tactic from PGN file" darkIconResource="/images/file_open_35dp_FFFFFF.png" lightIconResource="/images/file_open_35dp_000000.png" onAction="#onAddFromPgn" tooltipText="Import tactic from PGN" />
+                        <ToolbarIconButton accessibleText="Import tactic from clipboard" darkIconResource="/images/copy_35dp_FFFFFF.png" lightIconResource="/images/copy_35dp_000000.png" onAction="#onAddFromClipboard" tooltipText="Import tactic from clipboard" />
                         <ToolbarIconButton accessibleText="New tactic from editor" darkIconResource="/images/add_35dp_FFFFFF.png" lightIconResource="/images/add_35dp_000000.png" onAction="#onAddFromEditor" tooltipText="New tactic from editor" />
                         <ToolbarIconButton accessibleText="Author solution" darkIconResource="/images/edit_35dp_FFFFFF.png" lightIconResource="/images/edit_35dp_000000.png" onAction="#onToggleAuthoring" tooltipText="edit/ solution" />
                     </HBox>

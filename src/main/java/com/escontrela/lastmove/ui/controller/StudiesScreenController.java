@@ -4,6 +4,8 @@ import com.escontrela.lastmove.application.service.CurrentUserService;
 import com.escontrela.lastmove.application.service.CurrentUserService.ActivePlayerState;
 import com.escontrela.lastmove.application.service.CurrentUserService.ActivePlayerStatus;
 import com.escontrela.lastmove.application.service.StudyService;
+import com.escontrela.lastmove.application.service.TagService;
+import com.escontrela.lastmove.application.tag.Tag;
 import com.escontrela.lastmove.application.study.CreateChapterCommand;
 import com.escontrela.lastmove.application.study.CreateStudyCommand;
 import com.escontrela.lastmove.application.study.DeleteStudyCommand;
@@ -21,6 +23,10 @@ import com.escontrela.lastmove.ui.component.list.ManagedListCell;
 import com.escontrela.lastmove.ui.component.message.TextInputModal;
 import com.escontrela.lastmove.ui.component.search.RegexSearchControl;
 import com.escontrela.lastmove.ui.component.search.RegexSearchFilter;
+import com.escontrela.lastmove.ui.component.tag.TagAssignmentControl;
+import com.escontrela.lastmove.ui.component.tag.TagDisplayControl;
+import com.escontrela.lastmove.ui.component.tag.TagFilterControl;
+import com.escontrela.lastmove.ui.component.toolbar.ThemeIcon;
 import com.escontrela.lastmove.ui.event.OpenStudyWorkspaceEvent;
 import com.escontrela.lastmove.ui.event.UiEventBus;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
@@ -29,7 +35,9 @@ import com.escontrela.lastmove.ui.screen.UiScreenId;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -54,8 +62,9 @@ public final class StudiesScreenController implements UiScreenController {
   @FXML private ApplicationHeader applicationHeader;
   @FXML private ListView<StudySummary> studyList;
   @FXML private RegexSearchControl regexSearch;
+  @FXML private TagFilterControl tagFilter;
   @FXML private Label profileStateLabel;
-  @FXML private Label studyCountLabel;
+  @FXML private Label studyCountLabel, studyLibraryCountLabel;
   @FXML private Label emptyStateLabel;
   @FXML private Label statusLabel;
   @FXML private Button createStudyButton;
@@ -63,19 +72,24 @@ public final class StudiesScreenController implements UiScreenController {
   @FXML private ContextualMenuPanel contextualMenuPanel;
 
   private final StudyService studyService;
+  private final TagService tagService;
   private final CurrentUserService currentUserService;
   private final UiEventBus uiEventBus;
   private final UiFlowManager uiFlowManager;
   private Optional<PlayerId> ownerId = Optional.empty();
   private List<StudySummary> visibleStudies = List.of();
   private List<StudySummary> allStudies = List.of();
+  private List<Tag> availableTags = List.of();
+  private Map<StudyId, List<Tag>> tagsByStudy = Map.of();
 
   public StudiesScreenController(
       StudyService studyService,
+      TagService tagService,
       CurrentUserService currentUserService,
       UiEventBus uiEventBus,
       @Lazy UiFlowManager uiFlowManager) {
     this.studyService = studyService;
+    this.tagService = tagService;
     this.currentUserService = currentUserService;
     this.uiEventBus = uiEventBus;
     this.uiFlowManager = uiFlowManager;
@@ -86,6 +100,7 @@ public final class StudiesScreenController implements UiScreenController {
     root.getProperties().put("controller", this);
     studyList.setCellFactory(ignored -> new StudyCell());
     regexSearch.setOnSearch(event -> showStudies(event.pattern()));
+    tagFilter.setOnSelectionChanged(ignored -> { if (regexSearch.isValid()) regexSearch.submit(); });
   }
 
   @Override
@@ -151,6 +166,7 @@ public final class StudiesScreenController implements UiScreenController {
       studyList.getItems().clear();
       studyList.setPrefHeight(116.0);
       studyCountLabel.setText("0 studies");
+      studyLibraryCountLabel.setText("0 studies");
       emptyStateLabel.setText(
           state.status() == ActivePlayerStatus.NO_PROFILE
               ? "Choose an active player profile to create and open studies."
@@ -167,18 +183,25 @@ public final class StudiesScreenController implements UiScreenController {
     }
 
     allStudies = studyService.listStudies(ownerId.orElseThrow());
+    tagsByStudy = tagService.tagsForStudies(allStudies.stream().map(StudySummary::studyId).toList());
+    availableTags = tagService.availableTags();
+    tagFilter.setAvailableTags(availableTags);
     if (regexSearch.isValid()) {
       regexSearch.submit();
     }
   }
 
   private void showStudies(java.util.regex.Pattern pattern) {
+    Set<Long> selectedTags = tagFilter.selectedTagIds();
     visibleStudies = allStudies.stream()
         .filter(study -> RegexSearchFilter.matches(pattern, study.title(), study.description().orElse(""), Integer.toString(study.chapterCount())))
+        .filter(study -> tagsByStudy.getOrDefault(study.studyId(), List.of()).stream().map(Tag::id).collect(java.util.stream.Collectors.toSet()).containsAll(selectedTags))
         .toList();
     studyList.getItems().setAll(visibleStudies);
     studyList.setPrefHeight(Math.max(92.0, Math.min(468.0, visibleStudies.size() * 82.0 + 2.0)));
     studyCountLabel.setText(
+        visibleStudies.size() + (visibleStudies.size() == 1 ? " study" : " studies"));
+    studyLibraryCountLabel.setText(
         visibleStudies.size() + (visibleStudies.size() == 1 ? " study" : " studies"));
     emptyStateLabel.setText(allStudies.isEmpty() ? "Create a study to start collecting persistent chapters." : "No studies match this search.");
     emptyStateLabel.setVisible(visibleStudies.isEmpty());
@@ -287,6 +310,28 @@ public final class StudiesScreenController implements UiScreenController {
         event -> moveStudy(summary, 1));
     contextualMenuPanel.addSeparator();
     contextualMenuPanel.addItem("Delete study…", "", event -> deleteStudy(summary));
+    contextualMenuPanel.addSeparator();
+    TagAssignmentControl tags = new TagAssignmentControl();
+    tags.setAvailableTags(availableTags);
+    tags.setAssignedTags(tagsByStudy.getOrDefault(summary.studyId(), List.of()));
+    tags.setOnAssign(name -> {
+      try {
+        tagService.assignToStudy(summary.studyId(), name);
+        refreshLibrary();
+        tags.setAvailableTags(availableTags);
+        tags.setAssignedTags(tagsByStudy.getOrDefault(summary.studyId(), List.of()));
+        statusLabel.setText("Added tag to " + summary.title());
+      } catch (IllegalArgumentException failure) {
+        statusLabel.setText(failure.getMessage());
+      }
+    });
+    tags.setOnRemove(tag -> {
+      tagService.removeFromStudy(summary.studyId(), tag.id());
+      refreshLibrary();
+      tags.setAssignedTags(tagsByStudy.getOrDefault(summary.studyId(), List.of()));
+      statusLabel.setText("Removed tag " + tag.name());
+    });
+    contextualMenuPanel.addContent(tags);
     contextualMenuPanel.showAtScene(sceneX, sceneY);
   }
 
@@ -299,20 +344,35 @@ public final class StudiesScreenController implements UiScreenController {
   private final class StudyCell extends ManagedListCell<StudySummary> {
 
     private final HBox row = new HBox(12);
+    private final ThemeIcon studyIcon = new ThemeIcon();
     private final VBox details = new VBox(4);
     private final Label title = new Label();
     private final Label summary = new Label();
+    private final TagDisplayControl tags = new TagDisplayControl();
+    private final Label chapters = new Label();
+    private final Label updated = new Label();
+    private final Button action = new Button("Open");
 
     private StudyCell() {
       getStyleClass().add("study-library-cell");
       row.getStyleClass().add("study-library-row");
+      row.getStyleClass().add("tactics-library-row");
+      row.getStyleClass().add("study-library-row-with-icon");
       row.setAlignment(Pos.CENTER_LEFT);
+      studyIcon.setFitWidth(28.0);
+      studyIcon.setFitHeight(28.0);
+      studyIcon.setLightIconResource("/images/menu_book_35dp_000000.png");
+      studyIcon.setDarkIconResource("/images/menu_book_35dp_FFFFFF.png");
       title.getStyleClass().add("study-library-title");
       summary.getStyleClass().add("study-library-summary");
-      details.getChildren().addAll(title, summary);
+      chapters.getStyleClass().add("my-games-moves");
+      updated.getStyleClass().add("my-games-updated");
+      action.getStyleClass().add("my-games-open-button");
+      action.setOnAction(event -> { if (getItem() != null) openStudy(getItem()); });
+      details.getChildren().addAll(title, summary, tags);
       HBox.setHgrow(details, Priority.ALWAYS);
       details.setMaxWidth(Double.MAX_VALUE);
-      row.getChildren().add(details);
+      row.getChildren().addAll(studyIcon, details, chapters, updated, action);
       row.setOnMouseClicked(
           event -> {
             if (event.getButton() == MouseButton.PRIMARY
@@ -346,6 +406,9 @@ public final class StudiesScreenController implements UiScreenController {
               + description
               + " · updated "
               + UPDATED_AT.format(item.updatedAt()));
+      tags.setTags(tagsByStudy.getOrDefault(item.studyId(), List.of()));
+      chapters.setText(Integer.toString(item.chapterCount()));
+      updated.setText(UPDATED_AT.format(item.updatedAt()));
       setGraphic(row);
     }
   }

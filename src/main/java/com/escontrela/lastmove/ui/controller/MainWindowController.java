@@ -196,6 +196,12 @@ public class MainWindowController implements UiScreenController {
         uiFlowManager.show(UiScreenId.MEMORY_GAME);
     }
 
+    /** Opens the three-minute global tactical Training Storm. */
+    @FXML
+    public void openStormGame() {
+        uiFlowManager.show(UiScreenId.STORM_GAME);
+    }
+
     /** Opens a transient match between two configured computer engines. */
     @FXML
     public void openComputerVsComputer() {

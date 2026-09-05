@@ -39,14 +39,17 @@ class MemoryGameLayoutTest {
   }
 
   @Test
-  void placesTrainingCardAtTheEndOfTheSecondaryHomeGrid() throws Exception {
+  void swapsGamesAndPlayCardPositionsOnTheHomeScreen() throws Exception {
     try (var input = Objects.requireNonNull(getClass().getResourceAsStream("/fxml/main-window.fxml"))) {
       String home = new String(input.readAllBytes(), StandardCharsets.UTF_8);
+      int actionGrid = home.indexOf("home-action-grid");
       int secondaryGrid = home.indexOf("home-secondary-grid");
+      int games = home.indexOf("accessibleText=\"Games\"", actionGrid);
       int editor = home.indexOf("accessibleText=\"Position editor\"", secondaryGrid);
-      int training = home.indexOf("accessibleText=\"Training Game\"", secondaryGrid);
+      int play = home.indexOf("accessibleText=\"Play human vs computer\"", secondaryGrid);
+      assertTrue(games > actionGrid && games < secondaryGrid);
       assertTrue(editor > secondaryGrid);
-      assertTrue(training > editor);
+      assertTrue(play > secondaryGrid && play < editor);
     }
   }
 

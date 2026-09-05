@@ -17,6 +17,7 @@ import com.escontrela.lastmove.domain.player.PlayerId;
 import com.escontrela.lastmove.domain.service.FenService;
 import com.escontrela.lastmove.domain.tactics.TacticExercise;
 import com.escontrela.lastmove.domain.tactics.TacticExerciseId;
+import com.escontrela.lastmove.domain.tactics.TacticExerciseReference;
 import com.escontrela.lastmove.domain.tactics.TacticRepository;
 import com.escontrela.lastmove.domain.tactics.TacticSuite;
 import com.escontrela.lastmove.domain.tactics.TacticSuiteId;
@@ -111,6 +112,34 @@ public class SqliteTacticRepository implements TacticRepository {
   }
 
   @Override
+  public List<TacticExerciseReference> findAllTrainableExercises() {
+    assertAvailable();
+    List<SuiteRow> suites = jdbcTemplate.query(
+        "SELECT id, owner_player_id, title, description, created_at, updated_at "
+            + "FROM tactic_suites ORDER BY owner_player_id, display_order",
+        (resultSet, rowNum) -> new SuiteRow(
+            resultSet.getString("id"), resultSet.getLong("owner_player_id"),
+            resultSet.getString("title"), resultSet.getString("description"),
+            resultSet.getLong("created_at"), resultSet.getLong("updated_at")));
+    List<TacticExerciseReference> result = new ArrayList<>();
+    for (SuiteRow row : suites) {
+      TacticSuiteId suiteId = new TacticSuiteId(UUID.fromString(row.id));
+      List<String> exerciseIds = jdbcTemplate.query(
+          "SELECT id FROM tactic_exercises WHERE suite_id = ? ORDER BY display_order",
+          (resultSet, rowNum) -> resultSet.getString(1), row.id);
+      for (String exerciseId : exerciseIds) {
+        try {
+          TacticExercise exercise = restoreExerciseRow(exerciseId);
+          result.add(new TacticExerciseReference(PlayerId.of(row.ownerId), suiteId, exercise));
+        } catch (RuntimeException ignored) {
+          // A single malformed persisted exercise must not make global training unavailable.
+        }
+      }
+    }
+    return List.copyOf(result);
+  }
+
+  @Override
   public boolean deleteByIdAndOwner(TacticSuiteId suiteId, PlayerId ownerId) {
     assertAvailable();
     String id = suiteId.value().toString();
@@ -183,6 +212,19 @@ public class SqliteTacticRepository implements TacticRepository {
         new AnalysisContent(initialPosition, Optional.empty(), tree), Instant.ofEpochMilli(createdAt), Instant.ofEpochMilli(updatedAt));
   }
 
+  private TacticExercise restoreExerciseRow(String exerciseId) {
+    return jdbcTemplate.query(
+            "SELECT id, title, initial_fen, created_at, updated_at FROM tactic_exercises WHERE id = ?",
+            (resultSet, rowNum) -> restoreExercise(
+                resultSet.getString("id"), resultSet.getString("title"),
+                resultSet.getString("initial_fen"), resultSet.getLong("created_at"),
+                resultSet.getLong("updated_at")),
+            exerciseId)
+        .stream()
+        .findFirst()
+        .orElseThrow(() -> new IllegalStateException("Unknown tactic exercise " + exerciseId));
+  }
+
   private AnalysisTree readTree(String exerciseId) {
     List<NodeRow> rows = jdbcTemplate.query(
         "SELECT id, parent_node_id, ply_id, move_from, move_to, promotion_piece, san, capture, castle, en_passant, moving_color, move_number, resulting_fen, display_order FROM tactic_solution_nodes WHERE exercise_id = ? ORDER BY display_order",
@@ -228,4 +270,5 @@ public class SqliteTacticRepository implements TacticRepository {
   }
 
   private record NodeRow(String id, String parentId, String plyId, String from, String to, String promotion, String san, boolean capture, boolean castle, boolean enPassant, String movingColor, int moveNumber, String resultingFen, int displayOrder) {}
+  private record SuiteRow(String id, long ownerId, String title, String description, long createdAt, long updatedAt) {}
 }
