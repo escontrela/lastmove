@@ -121,6 +121,19 @@ class PlayerServiceTest {
     }
 
     @Test
+    void listsOnlySelectableApplicationPlayers() {
+        service.createPlayer(
+                new CreatePlayerCommand("human@example.com", "Human", "Player", Optional.empty()));
+        service.synchronizeLichessBot(new LichessBotAccount("knightshade", "Knightshade Arena"));
+
+        List<PlayerSummary> players = service.listSelectablePlayers();
+
+        assertEquals(1, players.size());
+        assertEquals("human@example.com", players.getFirst().email());
+        assertTrue(players.getFirst().type() == PlayerType.HUMAN);
+    }
+
+    @Test
     void reportsPersistenceAvailability() {
         assertTrue(service.isPersistenceAvailable());
         assertTrue(service.persistenceUnavailableReason().isEmpty());

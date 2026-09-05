@@ -16,6 +16,7 @@ import com.escontrela.lastmove.ui.event.OpenAnalysisSessionEvent;
 import com.escontrela.lastmove.ui.event.ResumeComputerGameEvent;
 import com.escontrela.lastmove.ui.event.UiEventBus;
 import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
+import com.escontrela.lastmove.ui.component.header.HeaderBreadcrumb;
 import com.escontrela.lastmove.ui.component.player.PlayerSelectorModal;
 import com.escontrela.lastmove.ui.component.list.ManagedListCell;
 import com.escontrela.lastmove.ui.component.search.RegexSearchControl;
@@ -82,9 +83,22 @@ public final class MyGamesScreenController implements UiScreenController {
   private void open(SavedGameSummary game) {
     Optional<ArenaGame> arenaGame = arena.gameForLocal(game.gameId());
     if (arenaGame.isPresent() && arenaGame.get().status() != ArenaGameStatus.FINISHED) { follow(game, arenaGame.get()); return; }
-    if (!game.finished()) { flow.show(UiScreenId.HUMAN_VS_COMPUTER); events.publish(new ResumeComputerGameEvent(game.gameId())); return; }
+    if (!game.finished()) {
+      flow.show(UiScreenId.HUMAN_VS_COMPUTER, gameBreadcrumbs(game));
+      events.publish(new ResumeComputerGameEvent(game.gameId()));
+      return;
+    }
     var session=analyses.createFromGame(games.findSaved(game.gameId()).orElseThrow().game().toRecord());
-    events.publish(new OpenAnalysisSessionEvent(session.sessionId(), "Opened saved game")); flow.show(UiScreenId.PGN_ANALYSIS);
+    events.publish(new OpenAnalysisSessionEvent(session.sessionId(), "Opened saved game"));
+    flow.show(UiScreenId.PGN_ANALYSIS, gameBreadcrumbs(game));
+  }
+
+  private List<HeaderBreadcrumb> gameBreadcrumbs(SavedGameSummary game) {
+    return List.of(
+        HeaderBreadcrumb.link("Home", event -> flow.show(UiScreenId.MAIN)),
+        HeaderBreadcrumb.linkWithIcon("My Games", "/images/folder_35dp_000000.png", "/images/folder_35dp_FFFFFF.png",
+            event -> flow.show(UiScreenId.MY_GAMES)),
+        HeaderBreadcrumb.current(game.whiteName() + " vs " + game.blackName()));
   }
   private void showActions(SavedGameSummary game, double x, double y) {
     Optional<ArenaGame> arenaGame = arena.gameForLocal(game.gameId());
@@ -114,7 +128,7 @@ public final class MyGamesScreenController implements UiScreenController {
               game.tournamentId().flatMap(id -> arena.tournaments().stream().filter(tournament -> tournament.lichessTournamentId().equals(id)).map(tournament -> "Lichess Tournament · " + tournament.name()).findFirst()).orElse("Lichess Arena"),
               record.whitePlayer().orElseThrow(), record.blackPlayer().orElseThrow(), record.initialPosition(), record.currentPosition(),
               record.moves().stream().map(com.escontrela.lastmove.domain.game.RecordedPly::ply).toList(), saved.game().currentClock().whiteRemaining(), saved.game().currentClock().blackRemaining(), record.result().isPresent(), record.result(), record.terminationReason(), Optional.of("Following Lichess game live")));
-      flow.show(UiScreenId.COMPUTER_VS_COMPUTER);
+      flow.show(UiScreenId.COMPUTER_VS_COMPUTER, gameBreadcrumbs(summary));
     }, () -> statusLabel.setText("The local Lichess game is no longer available."));
   }
   private void openTournament(String url) { try { Desktop.getDesktop().browse(URI.create(url)); } catch (Exception failure) { statusLabel.setText("Could not open the Lichess tournament: " + failure.getMessage()); } }

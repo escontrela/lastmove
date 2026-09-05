@@ -9,7 +9,9 @@ package com.escontrela.lastmove.ui.component.board;
 public enum BoardAppearancePreset {
   STANDARD("Standard", BoardTheme.LASTMOVE, "/chess-pieces", 0.88, false, null),
   V2("v2 Wood", BoardTheme.V2, "/chess-pieces", 0.91, true, "board-v2-wood"),
-  V2_GRAY("v2 Gray", BoardTheme.V2_GRAY, "/chess-pieces", 0.91, true, "board-v2-gray");
+  V2_GRAY("v2 Gray", BoardTheme.V2_GRAY, "/chess-pieces", 0.91, true, "board-v2-gray"),
+  V2_BLACK("v2 Black", BoardTheme.V2_BLACK, "/chess-pieces", 0.91, true, "board-v2-black"),
+  V2_TRIBAL("v2 Tribal", BoardTheme.V2_TRIBAL, "/chess-pieces", 0.91, true, "board-v2-tribal");
 
   private final String displayName;
   private final BoardTheme boardTheme;

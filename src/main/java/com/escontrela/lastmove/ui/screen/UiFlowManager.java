@@ -39,11 +39,16 @@ public class UiFlowManager {
     }
 
     public void show(UiScreenId screenId) {
+        show(screenId, null);
+    }
+
+    /** Shows a screen with a caller-provided breadcrumb trail for a selected domain item. */
+    public void show(UiScreenId screenId, List<HeaderBreadcrumb> breadcrumbs) {
         UiScreen nextScreen = screenFactory.create(screenId);
         if (currentScreen != null) {
             currentScreen.controller().onHide();
         }
-        configureHeader(nextScreen.scene().getRoot(), screenId);
+        configureHeader(nextScreen.scene().getRoot(), screenId, breadcrumbs);
         installEscapeShortcut(nextScreen.scene());
         nextScreen.show();
         currentScreen = nextScreen;
@@ -70,7 +75,7 @@ public class UiFlowManager {
         escapeHandlerInstalled = true;
     }
 
-    private void configureHeader(Parent root, UiScreenId screenId) {
+    private void configureHeader(Parent root, UiScreenId screenId, List<HeaderBreadcrumb> customBreadcrumbs) {
         ApplicationHeader header = (ApplicationHeader) root.lookup(".application-header");
         if (header == null) {
             return;
@@ -79,7 +84,7 @@ public class UiFlowManager {
         header.configure(HeaderConfiguration.builder()
                 .showBackButton(!home)
                 .onBack(event -> requestExitToHome())
-                .breadcrumbs(breadcrumbsFor(screenId))
+                .breadcrumbs(customBreadcrumbs == null ? breadcrumbsFor(screenId) : customBreadcrumbs)
                 .showStatistics(home)
                 .onStatistics(event -> show(UiScreenId.GAME_STATISTICS))
                 .showThemeToggle(home)
@@ -116,6 +121,21 @@ public class UiFlowManager {
     private List<HeaderBreadcrumb> breadcrumbsFor(UiScreenId screenId) {
         if (screenId == UiScreenId.MAIN) {
             return List.of();
+        }
+        if (screenId == UiScreenId.STUDIES) {
+            return List.of(
+                    HeaderBreadcrumb.link("Home", event -> show(UiScreenId.MAIN)),
+                    HeaderBreadcrumb.currentWithIcon("My Studies", "/images/folder_35dp_000000.png", "/images/folder_35dp_FFFFFF.png"));
+        }
+        if (screenId == UiScreenId.TACTICS) {
+            return List.of(
+                    HeaderBreadcrumb.link("Home", event -> show(UiScreenId.MAIN)),
+                    HeaderBreadcrumb.currentWithIcon("Tactic Suites", "/images/folder_35dp_000000.png", "/images/folder_35dp_FFFFFF.png"));
+        }
+        if (screenId == UiScreenId.MY_GAMES) {
+            return List.of(
+                    HeaderBreadcrumb.link("Home", event -> show(UiScreenId.MAIN)),
+                    HeaderBreadcrumb.currentWithIcon("My Games", "/images/folder_35dp_000000.png", "/images/folder_35dp_FFFFFF.png"));
         }
         return List.of(
                 HeaderBreadcrumb.link("Home", event -> show(UiScreenId.MAIN)),

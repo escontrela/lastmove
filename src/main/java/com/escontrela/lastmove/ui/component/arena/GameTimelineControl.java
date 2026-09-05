@@ -52,7 +52,10 @@ public final class GameTimelineControl extends VBox {
   }
 
   private enum Range {
+    LAST_1_HOUR("Last 1 hour", Duration.ofHours(1)),
+    LAST_12_HOURS("Last 12 hours", Duration.ofHours(12)),
     LAST_24_HOURS("Last 24 hours", Duration.ofHours(24)),
+    LAST_2_DAYS("Last 2 days", Duration.ofDays(2)),
     LAST_7_DAYS("Last 7 days", Duration.ofDays(7)),
     LAST_30_DAYS("Last 30 days", Duration.ofDays(30)),
     ALL("All activity", null);
@@ -91,7 +94,7 @@ public final class GameTimelineControl extends VBox {
     title.getStyleClass().add("sessions-section-title");
     overviewIcon.setFitWidth(24); overviewIcon.setFitHeight(24); overviewIcon.setPreserveRatio(true);
     title.setGraphic(overviewIcon); title.setGraphicTextGap(9);
-    range.setValue(Range.LAST_24_HOURS);
+    range.setValue(Range.LAST_1_HOUR);
     range.getStyleClass().add("arena-timeline-range");
     range.valueProperty().addListener((o, old, value) -> render());
     VBox heading = new VBox(2, title);

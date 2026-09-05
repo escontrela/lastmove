@@ -1453,6 +1453,53 @@
     -fx-effect: null;
 }
 
+/* v2 Black is the charcoal engraved base; v2 Tribal adds its motif overlay in the board skin. */
+.board-v2-black .board-v2-frame,
+.board-v2-tribal .board-v2-frame {
+    -fx-background-color: linear-gradient(to bottom, #343a3e 0%, #1f2529 48%, #14191d 100%);
+    -fx-background-radius: 22;
+    -fx-effect: dropshadow(gaussian, rgba(7, 10, 12, 0.60), 12, 0.22, 0, 4);
+}
+
+.board-v2-black .board-v2-inner-glow,
+.board-v2-tribal .board-v2-inner-glow {
+    -fx-border-color: rgba(235, 239, 230, 0.46), rgba(0, 0, 0, 0.72);
+    -fx-border-insets: 0, 2;
+    -fx-border-width: 1, 2;
+    -fx-border-radius: 7, 5;
+    -fx-effect: innershadow(gaussian, rgba(0, 0, 0, 0.78), 8, 0.30, 0, 0);
+}
+
+.board-v2-black .board-v2-frame-inset,
+.board-v2-tribal .board-v2-frame-inset {
+    -fx-border-color: rgba(7, 10, 12, 0.92), rgba(237, 241, 231, 0.20);
+    -fx-border-insets: 0, 2;
+    -fx-border-width: 3, 1;
+    -fx-border-radius: 6, 4;
+    -fx-effect: innershadow(gaussian, rgba(0, 0, 0, 0.75), 7, 0.24, 0, 0);
+}
+
+.board-v2-black .chess-square-light, .board-v2-tribal .chess-square-light { -fx-border-color: rgba(239, 242, 233, 0.13); -fx-border-width: 0.35; }
+.board-v2-black .chess-square-dark, .board-v2-tribal .chess-square-dark { -fx-border-color: rgba(0, 0, 0, 0.38); -fx-border-width: 0.35; }
+
+.board-v2-black .board-coordinate-label,
+.board-v2-tribal .board-coordinate-label {
+    -fx-text-fill: #e8ebe2;
+    -fx-font-weight: 800;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.88), 2, 0.5, 0, 1);
+}
+
+.board-v2-black .chess-piece, .board-v2-tribal .chess-piece { -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.82), 9, 0.40, 1.5, 4); }
+
+.board-v2-black .chess-square-selected,
+.board-v2-tribal .chess-square-selected {
+    -fx-border-color: #dcebb8;
+    -fx-border-width: 4px;
+    -fx-effect: dropshadow(gaussian, rgba(220, 235, 184, 0.68), 11, 0.28, 0, 0);
+}
+
+.board-v2-black .chess-square-hint, .board-v2-tribal .chess-square-hint { -fx-border-color: #e7c56f; }
+
 .board-coordinate-overlay { -fx-background-color: transparent; }
 
 .board-coordinate-label {

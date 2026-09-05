@@ -205,7 +205,7 @@ public class PlayersScreenController implements UiScreenController {
             playerGrid.setManaged(false);
             return;
         }
-        List<PlayerSummary> players = playerService.listPlayers();
+        List<PlayerSummary> players = playerService.listSelectablePlayers();
         boolean hasPlayers = !players.isEmpty();
         noPlayersLabel.setVisible(!hasPlayers);
         noPlayersLabel.setManaged(!hasPlayers);

@@ -87,11 +87,25 @@ public class ChessSquareControl extends StackPane {
   private void applyTheme(BoardTheme theme) {
     this.theme = theme;
     String color = isLight ? theme.getLightColor() : theme.getDarkColor();
-    String background = visualEffectsEnabled
-        ? "linear-gradient(from 0% 0% to 100% 100%, derive(" + color + ", 8%) 0%, "
-            + color + " 52%, derive(" + color + ", -12%) 100%)"
-        : color;
+    String background = (theme == BoardTheme.V2_BLACK || theme == BoardTheme.V2_TRIBAL)
+        ? tribalTexture(color, isLight)
+        : visualEffectsEnabled
+            ? "linear-gradient(from 0% 0% to 100% 100%, derive(" + color + ", 8%) 0%, "
+                + color + " 52%, derive(" + color + ", -12%) 100%)"
+            : color;
     setStyle("-fx-background-color: " + background + ";");
+  }
+
+  /** Layered, CSS-only engraving effect used by the dark tribal board material. */
+  private String tribalTexture(String color, boolean lightSquare) {
+    String grain = lightSquare ? "rgba(255, 255, 255, 0.055)" : "rgba(255, 255, 255, 0.035)";
+    String shadow = lightSquare ? "rgba(13, 17, 20, 0.105)" : "rgba(0, 0, 0, 0.16)";
+    return "linear-gradient(from 0% 0% to 100% 100%, derive(" + color + ", 7%) 0%, "
+        + color + " 48%, derive(" + color + ", -10%) 100%), "
+        + "linear-gradient(from 0% 0% to 100% 100%, transparent 0%, transparent 36%, "
+        + grain + " 48%, transparent 60%), "
+        + "linear-gradient(from 100% 0% to 0% 100%, transparent 0%, transparent 47%, "
+        + shadow + " 57%, transparent 68%)";
   }
 
   /** Toggles the presentation-only gradient while keeping the active board palette intact. */

@@ -19,6 +19,7 @@ import com.escontrela.lastmove.domain.study.StudyId;
 import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
 import com.escontrela.lastmove.ui.component.header.ApplicationHeader;
 import com.escontrela.lastmove.ui.component.header.HeaderAction;
+import com.escontrela.lastmove.ui.component.header.HeaderBreadcrumb;
 import com.escontrela.lastmove.ui.component.list.ManagedListCell;
 import com.escontrela.lastmove.ui.component.message.TextInputModal;
 import com.escontrela.lastmove.ui.component.search.RegexSearchControl;
@@ -145,7 +146,7 @@ public final class StudiesScreenController implements UiScreenController {
               .createChapter(new CreateChapterCommand(owner, study.studyId(), "Chapter 1"))
               .chapterId();
       textInputModal.hide();
-      openWorkspace(study.studyId(), chapterId);
+      openWorkspace(study.studyId(), chapterId, study.title());
     } catch (RuntimeException exception) {
       textInputModal.setValidationMessage(messageOf(exception, "Unable to create study."));
     }
@@ -240,12 +241,16 @@ public final class StudiesScreenController implements UiScreenController {
     } else {
       chapterId = details.chapters().getFirst().chapterId();
     }
-    openWorkspace(summary.studyId(), chapterId);
+    openWorkspace(summary.studyId(), chapterId, summary.title());
   }
 
-  private void openWorkspace(StudyId studyId, StudyChapterId chapterId) {
+  private void openWorkspace(StudyId studyId, StudyChapterId chapterId, String title) {
     uiEventBus.publish(new OpenStudyWorkspaceEvent(studyId, chapterId));
-    uiFlowManager.show(UiScreenId.STUDY_WORKSPACE);
+    uiFlowManager.show(UiScreenId.STUDY_WORKSPACE, List.of(
+        HeaderBreadcrumb.link("Home", event -> uiFlowManager.show(UiScreenId.MAIN)),
+        HeaderBreadcrumb.linkWithIcon("My Studies", "/images/folder_35dp_000000.png", "/images/folder_35dp_FFFFFF.png",
+            event -> uiFlowManager.show(UiScreenId.STUDIES)),
+        HeaderBreadcrumb.current(title)));
   }
 
   private void renameStudy(StudySummary summary) {
