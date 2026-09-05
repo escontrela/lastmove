@@ -9,6 +9,10 @@ public interface TacticRepository {
   TacticSuite save(TacticSuite suite);
   Optional<TacticSuite> findByIdAndOwner(TacticSuiteId suiteId, PlayerId ownerId);
   List<TacticSuite> findAllByOwner(PlayerId ownerId);
+  /** Returns exercises from every owner and suite for global training sessions. */
+  default List<TacticExerciseReference> findAllTrainableExercises() {
+    throw new UnsupportedOperationException("global tactic training is not supported");
+  }
   boolean deleteByIdAndOwner(TacticSuiteId suiteId, PlayerId ownerId);
   void deleteByOwner(PlayerId ownerId);
   boolean moveSuiteToIndex(PlayerId ownerId, TacticSuiteId suiteId, int targetIndex);

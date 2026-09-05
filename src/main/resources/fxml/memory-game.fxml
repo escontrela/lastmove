@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import com.escontrela.lastmove.ui.component.board.ChessBoardControl?>
 <?import com.escontrela.lastmove.ui.component.header.ApplicationHeader?>
+<?import com.escontrela.lastmove.ui.component.message.MessageBox?>
 <?import com.escontrela.lastmove.ui.component.training.MemoryPiecePickerControl?>
 <?import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton?>
 <?import javafx.geometry.Insets?>
@@ -44,7 +45,8 @@
         </VBox>
       </HBox>
     </center>
-    <bottom><HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="status-rail"><Label styleClass="eyebrow-label" text="Training Game" /><Label styleClass="status-text" text="Memorize each position, then rebuild the hidden pieces." /></HBox></bottom>
+    <bottom><HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="status-rail"><Label styleClass="eyebrow-label" text="Training Memory" /><Label styleClass="status-text" text="Memorize each position, then rebuild the hidden pieces." /></HBox></bottom>
   </BorderPane>
   <MemoryPiecePickerControl fx:id="piecePicker" />
+  <MessageBox fx:id="exitConfirmation" />
 </StackPane>

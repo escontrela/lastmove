@@ -84,6 +84,15 @@ public class ToolbarIconButton extends Button {
         refreshTextMode();
     }
 
+    /** Sets the icon dimensions for controls that need a more compact visual treatment. */
+    public void setIconSize(double size) {
+        if (size <= 0) {
+            throw new IllegalArgumentException("size must be positive");
+        }
+        iconView.setFitWidth(size);
+        iconView.setFitHeight(size);
+    }
+
     private void refreshTextMode() {
         boolean labeled = getText() != null && !getText().isBlank();
         setContentDisplay(labeled ? ContentDisplay.LEFT : ContentDisplay.GRAPHIC_ONLY);

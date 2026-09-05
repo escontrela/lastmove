@@ -5,6 +5,8 @@
 <?import com.escontrela.lastmove.ui.component.message.TextInputModal?>
 <?import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton?>
 <?import com.escontrela.lastmove.ui.component.search.RegexSearchControl?>
+<?import com.escontrela.lastmove.ui.component.tag.TagFilterControl?>
+<?import com.escontrela.lastmove.ui.component.toolbar.ThemeIcon?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
@@ -33,15 +35,20 @@
         <center>
             <VBox spacing="16.0" styleClass="studies-workspace">
                 <padding><Insets bottom="48.0" left="48.0" right="48.0" top="32.0" /></padding>
-                <VBox spacing="6.0">
-                    <Label styleClass="sessions-section-title" text="Your tactical collections" />
-                    <Label fx:id="suiteCountLabel" styleClass="sessions-section-copy" text="0 suites" />
-                </VBox>
-                <RegexSearchControl fx:id="regexSearch" />
-                <StackPane styleClass="library-card">
-                    <ListView fx:id="suiteList" styleClass="study-library-list" />
-                    <Label fx:id="emptyStateLabel" styleClass="session-empty-state" text="Create a suite to start your tactical collection." wrapText="true" />
-                </StackPane>
+            <HBox alignment="CENTER_LEFT" spacing="12" styleClass="my-games-header">
+                <VBox spacing="3"><Label text="My Tactics" styleClass="my-games-title"/><Label text="Create, organise and filter your tactical collections" styleClass="my-games-support"/></VBox>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label fx:id="suiteCountLabel" text="0 suites" styleClass="my-games-count"/>
+            </HBox>
+            <HBox alignment="TOP_LEFT" spacing="18" styleClass="my-games-filter-card">
+                <VBox spacing="7" HBox.hgrow="ALWAYS"><Label text="Search tactics" styleClass="my-games-filter-title"/><RegexSearchControl fx:id="regexSearch" /></VBox>
+                <VBox spacing="4" HBox.hgrow="ALWAYS"><TagFilterControl fx:id="tagFilter" /></VBox>
+            </HBox>
+            <VBox spacing="0" styleClass="arena-bots-card, my-games-list-card" VBox.vgrow="ALWAYS">
+                <HBox alignment="CENTER_LEFT" spacing="8" styleClass="arena-bots-title-row, my-games-list-title-row"><ThemeIcon lightIconResource="/images/structure_35dp_000000.png" darkIconResource="/images/structure_35dp_FFFFFF.png"/><Label text="Tactic library" styleClass="settings-field-label"/><Region HBox.hgrow="ALWAYS"/><Label fx:id="suiteLibraryCountLabel" text="0 suites" styleClass="my-games-count"/></HBox>
+                <HBox alignment="CENTER_LEFT" spacing="10" styleClass="my-games-table-header"><Label text="Tactic suite" styleClass="my-games-header-game" HBox.hgrow="ALWAYS"/><Label text="Exercises" styleClass="my-games-header-moves"/><Label text="Updated" styleClass="my-games-header-updated"/><Label text="Action" styleClass="my-games-header-action"/></HBox>
+                <StackPane VBox.vgrow="ALWAYS"><ListView fx:id="suiteList" styleClass="study-library-list, my-games-list"/><Label fx:id="emptyStateLabel" text="Create a suite to start your tactical collection." wrapText="true" styleClass="session-empty-state"/></StackPane>
+            </VBox>
             </VBox>
         </center>
         <bottom>

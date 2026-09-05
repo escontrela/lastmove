@@ -63,7 +63,8 @@ public class UiFlowManager {
             if (event.getCode() == KeyCode.ESCAPE
                     && currentScreen != null
                     && currentScreen.id() != UiScreenId.MAIN) {
-                show(UiScreenId.MAIN);
+                requestExitToHome();
+                event.consume();
             }
         });
         escapeHandlerInstalled = true;
@@ -77,7 +78,7 @@ public class UiFlowManager {
         boolean home = screenId == UiScreenId.MAIN;
         header.configure(HeaderConfiguration.builder()
                 .showBackButton(!home)
-                .onBack(event -> show(UiScreenId.MAIN))
+                .onBack(event -> requestExitToHome())
                 .breadcrumbs(breadcrumbsFor(screenId))
                 .showStatistics(home)
                 .onStatistics(event -> show(UiScreenId.GAME_STATISTICS))
@@ -107,6 +108,11 @@ public class UiFlowManager {
                 .build());
     }
 
+    private void requestExitToHome() {
+        if (currentScreen == null || currentScreen.id() == UiScreenId.MAIN) return;
+        currentScreen.controller().requestExit(() -> show(UiScreenId.MAIN));
+    }
+
     private List<HeaderBreadcrumb> breadcrumbsFor(UiScreenId screenId) {
         if (screenId == UiScreenId.MAIN) {
             return List.of();
@@ -134,6 +140,7 @@ public class UiFlowManager {
             case GAME_STATISTICS -> "Game Statistics";
             case KNIGHTSHADE_ARENA -> "Knightshade Arena";
             case MEMORY_GAME -> "Memory Training";
+            case STORM_GAME -> "Training Storm";
             case MAIN -> "Home";
         };
     }

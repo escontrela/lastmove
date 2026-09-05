@@ -21,6 +21,7 @@ import com.escontrela.lastmove.domain.game.GameResult;
 import com.escontrela.lastmove.domain.game.GameTerminationReason;
 import com.escontrela.lastmove.domain.game.MoveDescriptor;
 import com.escontrela.lastmove.domain.game.Ply;
+import com.escontrela.lastmove.domain.game.PositionSnapshot;
 import com.escontrela.lastmove.domain.game.RecordedPly;
 import com.escontrela.lastmove.domain.game.TimeControl;
 import com.escontrela.lastmove.domain.notation.Fen;
@@ -124,7 +125,13 @@ public class SqliteGameRepository implements SavedGameRepository, MemoryGamePosi
   }
   private SavedGame hydrate(java.util.Map<String,Object> row) {
     String id=(String)row.get("id"); List<Ply> plies=new ArrayList<>(); List<GameClockSnapshot> before=new ArrayList<>();
-    jdbc.queryForList("SELECT * FROM game_moves WHERE game_id=? ORDER BY ply_index",id).forEach(m -> { plies.add(toPly(m)); before.add(clock(m.get("clock_before_white_ms"),m.get("clock_before_black_ms"))); });
+    PositionSnapshot previousPosition = rulesEngine.positionFrom(Fen.of((String) row.get("initial_fen")));
+    for (java.util.Map<String, Object> move : jdbc.queryForList("SELECT * FROM game_moves WHERE game_id=? ORDER BY ply_index", id)) {
+      Ply ply = toPly(move, previousPosition);
+      plies.add(ply);
+      before.add(clock(move.get("clock_before_white_ms"), move.get("clock_before_black_ms")));
+      previousPosition = ply.resultingPosition();
+    }
     Optional<TimeControl> control=Optional.of(new TimeControl(optionalDuration(row.get("time_control_initial_ms")), Duration.ofMillis(((Number)row.get("time_control_increment_ms")).longValue())));
     ChessGame game=gameFactory.resume(new GameId(UUID.fromString(id)),rulesEngine.positionFrom(Fen.of((String)row.get("initial_fen"))),rulesEngine.positionFrom(Fen.of((String)row.get("current_fen"))),plies,before,clock(row.get("white_remaining_ms"),row.get("black_remaining_ms")),Optional.of(new GamePlayer((String)row.get("white_name"),PieceColor.WHITE,(Integer)row.get("white_elo"))),Optional.of(new GamePlayer((String)row.get("black_name"),PieceColor.BLACK,(Integer)row.get("black_elo"))),control,optionalEnum(GameResult.class,row.get("result")),optionalEnum(GameTerminationReason.class,row.get("termination_reason")));
     Optional<PlayerId> owner=Optional.ofNullable((Number)row.get("owner_player_id")).map(n->PlayerId.of(n.longValue())); GameType type=GameType.valueOf((String)row.get("game_type"));
@@ -166,7 +173,23 @@ public class SqliteGameRepository implements SavedGameRepository, MemoryGamePosi
     }
   }
 
-  private Ply toPly(java.util.Map<String,Object> r) { return new Ply(UUID.fromString((String)r.get("ply_id")),new MoveDescriptor(Square.of((String)r.get("move_from")),Square.of((String)r.get("move_to")),SanMove.of((String)r.get("san")),((Number)r.get("capture")).intValue()!=0,((Number)r.get("castle")).intValue()!=0,((Number)r.get("en_passant")).intValue()!=0,Optional.ofNullable((String)r.get("promotion")).map(PieceType::valueOf)),rulesEngine.positionFrom(Fen.of((String)r.get("resulting_fen"))),((Number)r.get("move_number")).intValue(),PieceColor.valueOf((String)r.get("moving_color"))); }
+  private Ply toPly(java.util.Map<String,Object> r, com.escontrela.lastmove.domain.game.PositionSnapshot previousPosition) {
+    Square from = Square.of((String) r.get("move_from"));
+    Square to = Square.of((String) r.get("move_to"));
+    boolean capture = ((Number) r.get("capture")).intValue() != 0;
+    boolean enPassant = ((Number) r.get("en_passant")).intValue() != 0;
+    MoveDescriptor move = new MoveDescriptor(from, to, SanMove.of((String) r.get("san")), capture,
+        ((Number) r.get("castle")).intValue() != 0, enPassant,
+        Optional.ofNullable((String) r.get("promotion")).map(PieceType::valueOf));
+    Optional<com.escontrela.lastmove.domain.game.PositionPiece> captured = capture
+        ? previousPosition.pieces().stream()
+            .filter(piece -> piece.square().equals(enPassant ? Square.of(to.getFile(), from.getRank()) : to))
+            .findFirst()
+        : Optional.empty();
+    return new Ply(UUID.fromString((String) r.get("ply_id")), move,
+        rulesEngine.positionFrom(Fen.of((String) r.get("resulting_fen"))),
+        ((Number) r.get("move_number")).intValue(), PieceColor.valueOf((String) r.get("moving_color")), captured);
+  }
   private static Optional<Duration> optionalDuration(Object value) { return Optional.ofNullable((Number)value).map(n->Duration.ofMillis(n.longValue())); }
   private static GameClockSnapshot clock(Object white,Object black){ return new GameClockSnapshot(optionalDuration(white),optionalDuration(black)); }
   private static Long millis(Optional<Duration> duration){ return duration.map(Duration::toMillis).orElse(null); }

@@ -41,6 +41,8 @@ public class ChessBoardControl extends Control {
   private final BooleanProperty visualEffectsEnabled =
       new SimpleBooleanProperty(this, "visualEffectsEnabled", true);
   private final ObjectProperty<Square> hintSquare = new SimpleObjectProperty<>(this, "hintSquare");
+  private final ObjectProperty<Square> hintTargetSquare =
+      new SimpleObjectProperty<>(this, "hintTargetSquare");
   private final ObservableList<Square> threatenedSquares = FXCollections.observableArrayList();
 
   // 1. PROPIEDAD DEL EVENTO: Permite suscribir controladores externos
@@ -161,8 +163,23 @@ public class ChessBoardControl extends Control {
     hintSquare.set(null);
   }
 
+  /** Highlights both origin and destination squares for presentation-only move guidance. */
+  public final void setHintSquares(Square source, Square target) {
+    hintSquare.set(source);
+    hintTargetSquare.set(target);
+  }
+
+  public final void clearHintSquares() {
+    hintSquare.set(null);
+    hintTargetSquare.set(null);
+  }
+
   public final ObjectProperty<Square> hintSquareProperty() {
     return hintSquare;
+  }
+
+  public final ObjectProperty<Square> hintTargetSquareProperty() {
+    return hintTargetSquare;
   }
   public final void setThreatenedSquares(Set<Square> squares) { threatenedSquares.setAll(squares); }
   public final void clearThreatenedSquares() { threatenedSquares.clear(); }
@@ -170,6 +187,10 @@ public class ChessBoardControl extends Control {
 
   public final Square getHintSquare() {
     return hintSquare.get();
+  }
+
+  public final Square getHintTargetSquare() {
+    return hintTargetSquare.get();
   }
 
   /** Replaces the visual calculation arrows without changing the rendered chess position. */

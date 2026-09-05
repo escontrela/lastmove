@@ -6,6 +6,7 @@ import com.escontrela.lastmove.application.training.memory.MemoryGameFeedback;
 import com.escontrela.lastmove.application.training.memory.MemoryGameSnapshot;
 import com.escontrela.lastmove.domain.common.Square;
 import com.escontrela.lastmove.ui.component.board.ChessBoardControl;
+import com.escontrela.lastmove.ui.component.message.MessageBox;
 import com.escontrela.lastmove.ui.component.training.MemoryPiecePickerControl;
 import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton;
 import com.escontrela.lastmove.ui.service.BoardAppearancePreferencesService;
@@ -44,6 +45,7 @@ public final class MemoryGameScreenController implements UiScreenController {
   @FXML private ToolbarIconButton resetButton;
   @FXML private ToolbarIconButton soundToggleButton;
   @FXML private Button playAgainButton;
+  @FXML private MessageBox exitConfirmation;
   private Square pendingSquare;
   private Timeline urgentClockPulse;
   private MemoryGameSnapshot previousSnapshot;
@@ -108,6 +110,20 @@ public final class MemoryGameScreenController implements UiScreenController {
     selectBackgroundSound();
     startBackgroundMusic();
     viewModel.start();
+  }
+
+  @Override public void requestExit(Runnable exitAction) {
+    exitConfirmation.setTitle("Leave Memory Training?");
+    exitConfirmation.setMessage("If you leave now, you will lose this exercise. Continue?");
+    exitConfirmation.setAcceptText("Continue");
+    exitConfirmation.setCancelText("Cancel");
+    exitConfirmation.setOnAccept(event -> {
+      exitConfirmation.hide();
+      exitAction.run();
+    });
+    exitConfirmation.setOnCancel(event -> exitConfirmation.hide());
+    exitConfirmation.setOnClose(event -> exitConfirmation.hide());
+    exitConfirmation.show();
   }
   @Override public void onHide() {
     piecePicker.hide();

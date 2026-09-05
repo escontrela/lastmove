@@ -16,7 +16,8 @@ import javafx.scene.layout.Region;
 /** Persistent application chrome with branding, navigation, actions and the active user. */
 public final class ApplicationHeader extends HBox {
 
-    private final Button backButton = new Button("‹");
+    private final ToolbarIconButton backButton = iconButton(
+            "Go home", "Home", "/images/home_35dp_000000.png", "/images/home_35dp_FFFFFF.png");
     private final HBox breadcrumbs = new HBox(8.0);
     private final HBox contextActions = new HBox(8.0);
     private final ToolbarIconButton statisticsButton = iconButton(
@@ -39,7 +40,8 @@ public final class ApplicationHeader extends HBox {
         branding.getStyleClass().add("application-header-branding");
 
         backButton.getStyleClass().add("application-header-back");
-        backButton.setAccessibleText("Go back");
+        backButton.setIconSize(16.0);
+        backButton.setAccessibleText("Go home");
         backButton.setVisible(false);
         backButton.setManaged(false);
         breadcrumbs.setAlignment(Pos.CENTER_LEFT);
