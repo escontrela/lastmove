@@ -6,6 +6,7 @@ import com.escontrela.lastmove.ui.event.UiEventBus;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
 import com.escontrela.lastmove.ui.screen.UiScreenFactory;
 import com.escontrela.lastmove.ui.service.ApplicationThemeService;
+import com.escontrela.lastmove.ui.service.FadeEffectsService;
 import javafx.stage.Stage;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -31,7 +32,8 @@ public class LastMoveUiConfiguration {
             ApplicationThemeService themeService,
             CurrentUserService currentUserService,
             GameNotificationRepository notifications,
-            UiEventBus eventBus) {
-        return new UiFlowManager(screenFactory, themeService, currentUserService, notifications, eventBus);
+            UiEventBus eventBus,
+            FadeEffectsService fadeEffects) {
+        return new UiFlowManager(screenFactory, themeService, currentUserService, notifications, eventBus, fadeEffects);
     }
 }

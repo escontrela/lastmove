@@ -3060,45 +3060,62 @@
 }
 .night-mode .board-coordinate-label { -fx-text-fill: #b8c5d3; }
 
-/* Player profile table on the players management screen. */
-.player-table {
-    -fx-background-color: #ffffff;
-    -fx-border-color: #d8dde3;
-    -fx-border-width: 1;
+/* Four-column player roster. */
+.players-scroll-pane { -fx-background-color: #f7faff; }
+.players-scroll-pane > .viewport { -fx-background-color: #f7faff; }
+.players-content { -fx-background-color: #f7faff; }
+.players-screen-title { -fx-font-size: 34px; -fx-font-weight: 800; -fx-text-fill: #0d2b59; }
+.players-screen-copy { -fx-font-size: 16px; -fx-text-fill: #697b91; -fx-text-alignment: center; }
+.player-grid { -fx-padding: 36 0 18 0; }
+.player-profile-card { -fx-padding: 8 10 14 10; -fx-cursor: hand; }
+.player-portrait-ring {
+    -fx-background-color: #dce4ed, #ffffff;
+    -fx-background-insets: 0, 5;
+    -fx-background-radius: 1000;
+    -fx-border-color: transparent;
+    -fx-border-radius: 1000;
+    -fx-border-width: 2;
 }
-
-.player-row {
-    -fx-background-color: #ffffff;
-    -fx-border-color: transparent transparent #e3e8ee transparent;
-    -fx-border-width: 0 0 1 0;
-    -fx-padding: 14 18;
-    -fx-min-height: 78px;
-    -fx-cursor: hand;
+.player-profile-card:hover .player-portrait-ring {
+    -fx-scale-x: 1.07;
+    -fx-scale-y: 1.07;
+    -fx-border-color: #69aafa;
+    -fx-effect: dropshadow(gaussian, rgba(28,105,212,0.38), 22, 0.22, 0, 2);
 }
-
-.player-row:hover { -fx-background-color: #f4f7fb; }
-
-.player-row-active {
-    -fx-background-color: #edf4fc;
-    -fx-border-color: transparent transparent #c5d9ef #1c69d4;
-    -fx-border-width: 0 0 1 4;
-    -fx-padding: 14 18 14 14;
+.player-profile-card-active .player-portrait-ring {
+    -fx-background-color: #1c69d4, #ffffff;
+    -fx-effect: dropshadow(gaussian, rgba(28,105,212,0.42), 24, 0.24, 0, 2);
 }
-
-.player-row-context-selected {
-    -fx-background-color: #e8f1ff;
-    -fx-border-color: transparent transparent #c7d9f0 transparent;
-}
-
-.player-row-status {
+.player-profile-status {
+    -fx-background-color: #0878f9;
+    -fx-background-radius: 20;
+    -fx-padding: 5 15;
     -fx-font-size: 11px;
-    -fx-font-weight: 700;
-    -fx-text-fill: #1c69d4;
+    -fx-font-weight: 800;
+    -fx-text-fill: #ffffff;
+    -fx-translate-y: -20;
 }
-
-.player-row-actions-hint {
-    -fx-font-size: 12px;
-    -fx-text-fill: #73808d;
+.player-card-initials {
+    -fx-font-size: 44px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #ffffff;
+    -fx-background-color: #415d7c;
+    -fx-background-radius: 1000;
+    -fx-alignment: center;
+    -fx-min-width: 164px; -fx-min-height: 164px;
+    -fx-max-width: 164px; -fx-max-height: 164px;
+}
+.player-action-button { -fx-background-radius: 1000; -fx-border-radius: 1000; }
+.toolbar-icon-button.players-add-button {
+    -fx-min-width: 164px;
+    -fx-pref-width: 164px;
+    -fx-max-width: 190px;
+    -fx-min-height: 44px;
+    -fx-pref-height: 44px;
+    -fx-max-height: 44px;
+    -fx-padding: 0 18px;
+    -fx-background-radius: 9px;
+    -fx-border-radius: 9px;
 }
 
 .player-editor-overlay { -fx-background-color: rgba(20, 27, 36, 0.34); }
@@ -3107,47 +3124,99 @@
     -fx-background-color: #ffffff;
     -fx-border-color: #d8dde3;
     -fx-border-width: 1;
-    -fx-background-radius: 14;
-    -fx-border-radius: 14;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.24), 28, 0.14, 0, 8);
+    -fx-background-radius: 16;
+    -fx-border-radius: 16;
+    -fx-effect: dropshadow(gaussian, rgba(20, 37, 58, 0.24), 32, 0.16, 0, 10);
+    -fx-cursor: default;
 }
 
-.player-editor-title {
-    -fx-font-size: 25px;
-    -fx-font-weight: 700;
-    -fx-text-fill: #262626;
+.player-editor-header { -fx-padding: 28 30 18 30; }
+.player-editor-body { -fx-padding: 12 30 24 30; }
+.player-editor-footer {
+    -fx-padding: 18 30 20 30;
+    -fx-border-color: #e3e9f0 transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+    -fx-background-color: #fbfcfe;
+    -fx-background-radius: 0 0 16 16;
 }
+.player-editor-title {
+    -fx-font-size: 27px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #10213a;
+}
+.player-editor-copy { -fx-font-size: 14px; -fx-text-fill: #617084; }
+.player-editor-photo-ring {
+    -fx-min-width: 154px; -fx-pref-width: 154px; -fx-max-width: 154px;
+    -fx-min-height: 154px; -fx-pref-height: 154px; -fx-max-height: 154px;
+    -fx-background-color: #d9e7f7, #ffffff;
+    -fx-background-insets: 0, 5;
+    -fx-background-radius: 1000;
+}
+.player-editor-photo-placeholder {
+    -fx-font-size: 13px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #91a1b3;
+}
+.toolbar-icon-button.player-camera-button {
+    -fx-min-width: 42px; -fx-pref-width: 42px; -fx-max-width: 42px;
+    -fx-min-height: 42px; -fx-pref-height: 42px; -fx-max-height: 42px;
+    -fx-background-color: #263b52;
+    -fx-border-color: #ffffff;
+    -fx-border-width: 3px;
+    -fx-background-radius: 1000;
+    -fx-border-radius: 1000;
+}
+.toolbar-icon-button.player-camera-button:hover { -fx-background-color: #1c69d4; -fx-border-color: #ffffff; }
+.button.player-photo-link, .button.player-photo-remove {
+    -fx-background-color: transparent;
+    -fx-padding: 2 6;
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #1c69d4;
+    -fx-cursor: hand;
+}
+.button.player-photo-link:hover, .button.player-photo-remove:hover { -fx-underline: true; }
+.button.player-photo-remove { -fx-font-size: 11px; -fx-text-fill: #6b7785; }
+.player-photo-help { -fx-font-size: 11px; -fx-text-fill: #8291a0; }
+.player-editor-field { -fx-min-height: 48px; -fx-pref-height: 48px; }
+.player-editor-footer .message-box-button { -fx-min-width: 112px; -fx-padding: 11 18; }
 
 .player-card-photo {
-    -fx-fit-height: 52px;
-    -fx-fit-width: 52px;
+    -fx-fit-height: 164px;
+    -fx-fit-width: 164px;
     -fx-preserve-ratio: true;
 }
 
 .player-card-name {
-    -fx-font-size: 15px;
+    -fx-font-size: 18px;
     -fx-font-weight: 700;
     -fx-text-fill: #1f242a;
 }
 
 .player-card-email {
-    -fx-font-size: 12px;
+    -fx-font-size: 13px;
     -fx-text-fill: #6a7683;
 }
 
-.night-mode .player-table { -fx-background-color: #1c2430; -fx-border-color: #465465; }
-.night-mode .player-row { -fx-background-color: #1c2430; -fx-border-color: transparent transparent #3b4654 transparent; }
-.night-mode .player-row:hover { -fx-background-color: #243243; }
-.night-mode .player-row-active {
-    -fx-background-color: #243243;
-    -fx-border-color: transparent transparent #465465 #6ba5f0;
+.night-mode .players-scroll-pane, .night-mode .players-scroll-pane > .viewport, .night-mode .players-content { -fx-background-color: #121923; }
+.night-mode .players-screen-title { -fx-text-fill: #f1f3f5; }
+.night-mode .players-screen-copy { -fx-text-fill: #aeb8c3; }
+.night-mode .player-portrait-ring { -fx-background-color: #465465, #1c2430; }
+.night-mode .player-profile-card-active .player-portrait-ring { -fx-background-color: #6ba5f0, #1c2430; }
+.night-mode .toolbar-icon-button.player-action-button:disabled {
+    -fx-opacity: 1;
+    -fx-background-color: #263443;
+    -fx-border-color: #78b9ff;
 }
-.night-mode .player-row-context-selected {
-    -fx-background-color: #29415f;
-    -fx-border-color: transparent transparent #496887 transparent;
+.night-mode .toolbar-icon-button.players-add-button {
+    -fx-background-color: #167443;
+    -fx-border-color: #167443;
+    -fx-text-fill: #ffffff;
 }
-.night-mode .player-row-status { -fx-text-fill: #79aeef; }
-.night-mode .player-row-actions-hint { -fx-text-fill: #aeb8c3; }
+.night-mode .toolbar-icon-button.players-add-button:hover {
+    -fx-background-color: #117240;
+    -fx-border-color: #117240;
+}
 .night-mode .study-library-cell:selected .study-library-row, .night-mode .chapter-row-active {
     -fx-background-color: #243243;
     -fx-border-color: transparent transparent #465465 #6ba5f0;
@@ -3158,7 +3227,26 @@
 }
 .night-mode .player-editor-overlay { -fx-background-color: rgba(0, 0, 0, 0.54); }
 .night-mode .player-editor-card { -fx-background-color: #1c2430; -fx-border-color: #465465; }
+.night-mode .player-editor-footer {
+    -fx-background-color: #18212b;
+    -fx-border-color: #3b4857 transparent transparent transparent;
+}
 .night-mode .player-editor-title { -fx-text-fill: #f1f3f5; }
+.night-mode .player-editor-copy { -fx-text-fill: #b8c5d3; }
+.night-mode .player-editor-photo-ring { -fx-background-color: #52647a, #202b38; }
+.night-mode .player-editor-photo-placeholder { -fx-text-fill: #8fa1b5; }
+.night-mode .toolbar-icon-button.player-camera-button { -fx-background-color: #30445b; -fx-border-color: #1c2430; }
+.night-mode .toolbar-icon-button.player-camera-button:hover { -fx-background-color: #3b6090; -fx-border-color: #1c2430; }
+.night-mode .button.player-photo-link { -fx-text-fill: #78b9ff; }
+.night-mode .button.player-photo-remove { -fx-text-fill: #b8c5d3; }
+.night-mode .player-photo-help { -fx-text-fill: #8fa1b5; }
+.night-mode .player-editor-field {
+    -fx-background-color: #151d26;
+    -fx-border-color: #5c6a79;
+    -fx-text-fill: #f1f3f5;
+    -fx-prompt-text-fill: #8e9ba8;
+}
+.night-mode .player-editor-field:focused { -fx-border-color: #6ba5f0; }
 
 .night-mode .player-card-name { -fx-text-fill: #f1f3f5; }
 .night-mode .player-card-email { -fx-text-fill: #aeb8c3; }

@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import com.escontrela.lastmove.ui.component.header.ApplicationHeader?>
 
-<?import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel?>
 <?import com.escontrela.lastmove.ui.component.message.MessageBox?>
 <?import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton?>
 <?import javafx.geometry.Insets?>
@@ -12,6 +11,7 @@
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
@@ -19,54 +19,64 @@
 <StackPane fx:id="root" styleClass="app-shell" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.escontrela.lastmove.ui.controller.PlayersScreenController">
     <BorderPane>
         <top>
-            <VBox><ApplicationHeader />
-            <HBox managed="false" visible="false" alignment="CENTER_LEFT" spacing="16.0" styleClass="workspace-header">
-                <VBox spacing="6.0">
-                    <Label styleClass="eyebrow-label" text="PLAYER PROFILES" />
-                    <Label styleClass="app-title" text="Choose who is playing" />
-                    <Label styleClass="hero-support" text="Set the active profile for your games, then create or update profiles whenever you need." wrapText="true" />
-                </VBox>
-                <Region HBox.hgrow="ALWAYS" />
-                <Button fx:id="newPlayerButton" mnemonicParsing="false" onAction="#showNewPlayerEditor" styleClass="primary-button" text="Add player" />
-                <ToolbarIconButton accessibleText="Back to chess tools" lightIconResource="/images/back_35dp_000000.png" darkIconResource="/images/back_35dp_FFFFFF.png" onAction="#backToMain" tooltipText="Back" />
-            </HBox></VBox>
+            <ApplicationHeader />
         </top>
         <center>
-            <ScrollPane fitToWidth="true" hbarPolicy="NEVER" styleClass="setup-scroll-pane">
+            <ScrollPane fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED" styleClass="setup-scroll-pane, players-scroll-pane">
                 <content>
-                    <VBox alignment="TOP_LEFT" spacing="24.0" styleClass="setup-content">
+                    <VBox alignment="TOP_CENTER" spacing="24.0" styleClass="setup-content, players-content">
                         <padding><Insets bottom="64.0" left="80.0" right="80.0" top="64.0" /></padding>
                         <Label fx:id="unavailableLabel" maxWidth="Infinity" styleClass="settings-validation-message settings-validation-error" wrapText="true" visible="false" managed="false" />
-                        <VBox maxWidth="1040.0" spacing="16.0">
+                        <VBox alignment="TOP_CENTER" maxWidth="1320.0" spacing="12.0">
                             <Label styleClass="eyebrow-label" text="YOUR ROSTER" />
-                            <Label styleClass="card-title" text="Player profiles" />
-                            <Label styleClass="card-copy" text="The highlighted row is the active player. Right-click a profile to activate, edit or delete it." wrapText="true" />
+                            <Label styleClass="players-screen-title" text="Player profiles" />
+                            <Label styleClass="players-screen-copy" text="Select a profile to edit it, or use the actions to activate, edit or delete it." wrapText="true" />
                             <Label fx:id="noPlayersLabel" styleClass="card-copy" text="No players yet. Add your first profile to start playing." wrapText="true" visible="false" managed="false" />
-                            <VBox fx:id="playerGrid" spacing="0.0" styleClass="player-table" />
+                            <GridPane fx:id="playerGrid" alignment="TOP_CENTER" hgap="28.0" vgap="34.0" styleClass="player-grid" />
+                            <ToolbarIconButton fx:id="newPlayerButton" accessibleText="Add new player profile" darkIconResource="/images/add_35dp_FFFFFF.png" lightIconResource="/images/add_35dp_FFFFFF.png" mnemonicParsing="false" onAction="#showNewPlayerEditor" styleClass="arena-action-button, arena-action-primary, players-add-button" text="Add profile" tooltipText="Add new profile" />
                         </VBox>
                     </VBox>
                 </content>
             </ScrollPane>
         </center>
     </BorderPane>
-    <StackPane fx:id="playerEditorOverlay" alignment="CENTER" styleClass="message-box-overlay player-editor-overlay" visible="false" managed="false">
-        <VBox fx:id="playerEditorCard" maxHeight="480.0" maxWidth="520.0" prefHeight="480.0" spacing="14.0" styleClass="player-editor-card">
-            <padding><Insets bottom="28.0" left="28.0" right="28.0" top="28.0" /></padding>
-            <Label fx:id="editorEyebrowLabel" styleClass="eyebrow-label" />
-            <Label fx:id="editorTitleLabel" styleClass="player-editor-title" />
-            <Label styleClass="card-copy" text="Your profile stays on this device. A photo is optional." wrapText="true" />
-            <Label styleClass="settings-field-label" text="Email" />
-            <TextField fx:id="emailField" promptText="player@example.com" styleClass="settings-text-field" />
-            <HBox spacing="16.0">
-                <VBox spacing="5.0" HBox.hgrow="ALWAYS"><Label styleClass="settings-field-label" text="First name" /><TextField fx:id="firstNameField" promptText="First name" styleClass="settings-text-field" /></VBox>
-                <VBox spacing="5.0" HBox.hgrow="ALWAYS"><Label styleClass="settings-field-label" text="Last name" /><TextField fx:id="lastNameField" promptText="Last name" styleClass="settings-text-field" /></VBox>
+    <StackPane fx:id="playerEditorOverlay" alignment="CENTER" styleClass="message-box-overlay, player-editor-overlay" visible="false" managed="false">
+        <VBox fx:id="playerEditorCard" maxHeight="510.0" maxWidth="760.0" prefHeight="510.0" prefWidth="760.0" spacing="0.0" styleClass="player-editor-card">
+            <HBox alignment="TOP_LEFT" spacing="12.0" styleClass="player-editor-header">
+                <VBox spacing="8.0" HBox.hgrow="ALWAYS">
+                    <Label fx:id="editorEyebrowLabel" styleClass="eyebrow-label" />
+                    <Label fx:id="editorTitleLabel" styleClass="player-editor-title" />
+                    <Label styleClass="player-editor-copy" text="Your profile stays on this device. A photo is optional." wrapText="true" />
+                </VBox>
+                <Button accessibleText="Close player editor" mnemonicParsing="false" onAction="#hideEditor" styleClass="message-box-close-button" text="×" />
             </HBox>
-            <Label styleClass="settings-field-label" text="Photo (optional)" />
-            <HBox alignment="CENTER_LEFT" spacing="12.0"><Button mnemonicParsing="false" onAction="#choosePhoto" styleClass="secondary-button" text="Choose photo…" /><Button fx:id="clearPhotoButton" mnemonicParsing="false" onAction="#clearPhoto" styleClass="ghost-button" text="Remove" /><ImageView fx:id="photoPreview" fitHeight="80.0" fitWidth="80.0" preserveRatio="true" /></HBox>
-            <Label fx:id="validationLabel" maxWidth="Infinity" styleClass="settings-validation-message" wrapText="true" />
-            <HBox alignment="CENTER_RIGHT" spacing="12.0"><Button mnemonicParsing="false" onAction="#hideEditor" styleClass="secondary-button" text="Cancel" /><Button fx:id="saveButton" mnemonicParsing="false" onAction="#savePlayer" styleClass="primary-button" text="Save" /></HBox>
+            <HBox alignment="CENTER_LEFT" spacing="34.0" styleClass="player-editor-body" VBox.vgrow="ALWAYS">
+                <VBox alignment="TOP_CENTER" prefWidth="178.0" spacing="8.0">
+                    <StackPane alignment="BOTTOM_RIGHT" styleClass="player-editor-photo-ring">
+                        <Label styleClass="player-editor-photo-placeholder" text="PHOTO" />
+                        <ImageView fx:id="photoPreview" fitHeight="144.0" fitWidth="144.0" preserveRatio="false" />
+                        <ToolbarIconButton accessibleText="Choose profile photo" darkIconResource="/images/photo_camera_35dp_FFFFFF.png" lightIconResource="/images/photo_camera_35dp_FFFFFF.png" onAction="#choosePhoto" styleClass="player-camera-button" tooltipText="Choose photo" />
+                    </StackPane>
+                    <Button mnemonicParsing="false" onAction="#choosePhoto" styleClass="player-photo-link" text="Change photo" />
+                    <Button fx:id="clearPhotoButton" mnemonicParsing="false" onAction="#clearPhoto" styleClass="player-photo-remove" text="Remove photo" />
+                    <Label styleClass="player-photo-help" text="PNG, JPG or WEBP\nMax 5 MB" textAlignment="CENTER" />
+                </VBox>
+                <VBox spacing="16.0" HBox.hgrow="ALWAYS">
+                    <VBox spacing="6.0"><Label styleClass="settings-field-label" text="Email" /><TextField fx:id="emailField" promptText="player@example.com" styleClass="settings-text-field, player-editor-field" /></VBox>
+                    <HBox spacing="16.0">
+                        <VBox spacing="6.0" HBox.hgrow="ALWAYS"><Label styleClass="settings-field-label" text="First name" /><TextField fx:id="firstNameField" promptText="First name" styleClass="settings-text-field, player-editor-field" /></VBox>
+                        <VBox spacing="6.0" HBox.hgrow="ALWAYS"><Label styleClass="settings-field-label" text="Last name" /><TextField fx:id="lastNameField" promptText="Last name" styleClass="settings-text-field, player-editor-field" /></VBox>
+                    </HBox>
+                    <Label fx:id="validationLabel" maxWidth="Infinity" styleClass="settings-validation-message" wrapText="true" />
+                </VBox>
+            </HBox>
+            <HBox alignment="CENTER_RIGHT" spacing="12.0" styleClass="player-editor-footer">
+                <Region HBox.hgrow="ALWAYS" />
+                <Button mnemonicParsing="false" onAction="#hideEditor" styleClass="message-box-button, message-box-cancel-button" text="Cancel" />
+                <Button fx:id="saveButton" mnemonicParsing="false" onAction="#savePlayer" styleClass="message-box-button, message-box-accept-button" text="Save" />
+            </HBox>
         </VBox>
     </StackPane>
-    <ContextualMenuPanel fx:id="playerContextMenu" />
     <MessageBox fx:id="deleteConfirmation" />
+    <MessageBox fx:id="featureBlockedConfirmation" />
 </StackPane>

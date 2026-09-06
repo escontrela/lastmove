@@ -8,12 +8,14 @@ import com.escontrela.lastmove.application.service.PlayerService;
 import com.escontrela.lastmove.domain.player.DuplicatePlayerEmailException;
 import com.escontrela.lastmove.domain.player.PlayerId;
 import com.escontrela.lastmove.infrastructure.persistence.PersistenceUnavailableException;
-import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
 import com.escontrela.lastmove.ui.component.message.MessageBox;
+import com.escontrela.lastmove.ui.component.message.MessageBoxButtonMode;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
 import com.escontrela.lastmove.ui.screen.UiScreenController;
 import com.escontrela.lastmove.ui.screen.UiScreenId;
 import com.escontrela.lastmove.ui.support.FileChooserFactory;
+import com.escontrela.lastmove.ui.service.ChessSound;
+import com.escontrela.lastmove.ui.service.ChessSoundService;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
@@ -29,8 +31,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Circle;
@@ -41,19 +42,21 @@ import org.springframework.stereotype.Component;
 @Component
 public class PlayersScreenController implements UiScreenController {
 
-    private static final double PHOTO_PREVIEW_RADIUS = 40.0;
-    private static final double CARD_PHOTO_RADIUS = 26.0;
-    private static final double EDITOR_CARD_HEIGHT = 480.0;
+    private static final double PHOTO_PREVIEW_RADIUS = 72.0;
+    private static final double CARD_PHOTO_RADIUS = 82.0;
+    private static final int PLAYERS_PER_ROW = 4;
+    private static final double EDITOR_CARD_HEIGHT = 510.0;
 
     private final UiFlowManager uiFlowManager;
     private final PlayerService playerService;
     private final CurrentUserService currentUserService;
     private final FileChooserFactory fileChooserFactory;
+    private final ChessSoundService chessSoundService;
 
     @FXML private StackPane root;
     @FXML private Label unavailableLabel;
     @FXML private Label noPlayersLabel;
-    @FXML private VBox playerGrid;
+    @FXML private GridPane playerGrid;
     @FXML private Button newPlayerButton;
     @FXML private StackPane playerEditorOverlay;
     @FXML private Label editorEyebrowLabel;
@@ -66,25 +69,26 @@ public class PlayersScreenController implements UiScreenController {
     @FXML private Button saveButton;
     @FXML private Label validationLabel;
     @FXML private VBox playerEditorCard;
-    @FXML private ContextualMenuPanel playerContextMenu;
     @FXML private MessageBox deleteConfirmation;
+    @FXML private MessageBox featureBlockedConfirmation;
 
     private Optional<byte[]> selectedPhoto = Optional.empty();
     private Optional<PlayerSummary> editedPlayer = Optional.empty();
-    /** The profile targeted by the most recent contextual action, separate from the active player. */
-    private Optional<PlayerId> contextSelectedPlayerId = Optional.empty();
 
     public PlayersScreenController(@Lazy UiFlowManager uiFlowManager, PlayerService playerService,
-            CurrentUserService currentUserService, FileChooserFactory fileChooserFactory) {
+            CurrentUserService currentUserService, FileChooserFactory fileChooserFactory,
+            ChessSoundService chessSoundService) {
         this.uiFlowManager = uiFlowManager;
         this.playerService = playerService;
         this.currentUserService = currentUserService;
         this.fileChooserFactory = fileChooserFactory;
+        this.chessSoundService = chessSoundService;
     }
 
     @FXML
     public void initialize() {
         root.getProperties().put("controller", this);
+        chessSoundService.preload();
         photoPreview.setClip(new Circle(PHOTO_PREVIEW_RADIUS, PHOTO_PREVIEW_RADIUS, PHOTO_PREVIEW_RADIUS));
         playerEditorCard.setPrefHeight(EDITOR_CARD_HEIGHT);
         playerEditorCard.setMaxHeight(EDITOR_CARD_HEIGHT);
@@ -170,7 +174,7 @@ public class PlayersScreenController implements UiScreenController {
     private void editPlayer(PlayerSummary player) {
         editedPlayer = Optional.of(player);
         editorEyebrowLabel.setText("PLAYER PROFILE");
-        editorTitleLabel.setText("Edit " + player.fullName());
+        editorTitleLabel.setText(player.fullName());
         saveButton.setText("Save changes");
         emailField.setText(player.email());
         firstNameField.setText(player.firstName());
@@ -212,64 +216,90 @@ public class PlayersScreenController implements UiScreenController {
         playerGrid.setVisible(hasPlayers);
         playerGrid.setManaged(hasPlayers);
         Optional<PlayerId> selectedId = currentUserService.selectedPlayerId();
-        for (PlayerSummary player : players) {
+        for (int index = 0; index < players.size(); index++) {
+            PlayerSummary player = players.get(index);
             boolean selected = selectedId.map(player.id()::equals).orElse(false);
-            playerGrid.getChildren().add(createPlayerRow(player, selected));
+            playerGrid.add(createPlayerCard(player, selected), index % PLAYERS_PER_ROW, index / PLAYERS_PER_ROW);
         }
     }
 
-    private HBox createPlayerRow(PlayerSummary player, boolean selected) {
-        HBox card = new HBox(14);
-        card.setAlignment(Pos.CENTER_LEFT);
-        card.setMaxWidth(Double.MAX_VALUE);
-        card.getStyleClass().add("player-row");
-        if (selected) card.getStyleClass().add("player-row-active");
-        if (contextSelectedPlayerId.map(player.id()::equals).orElse(false)) {
-            card.getStyleClass().add("player-row-context-selected");
-        }
+    private VBox createPlayerCard(PlayerSummary player, boolean selected) {
+        VBox card = new VBox(8);
+        card.setAlignment(Pos.TOP_CENTER);
+        card.setPrefWidth(250);
+        card.setMinWidth(220);
+        card.getStyleClass().add("player-profile-card");
+        if (selected) card.getStyleClass().add("player-profile-card-active");
+
+        StackPane portrait = new StackPane();
+        portrait.getStyleClass().add("player-portrait-ring");
+        portrait.setMinSize(CARD_PHOTO_RADIUS * 2 + 14, CARD_PHOTO_RADIUS * 2 + 14);
+        portrait.setPrefSize(CARD_PHOTO_RADIUS * 2 + 14, CARD_PHOTO_RADIUS * 2 + 14);
+        portrait.setMaxSize(CARD_PHOTO_RADIUS * 2 + 14, CARD_PHOTO_RADIUS * 2 + 14);
         ImageView photoView = new ImageView();
         photoView.setFitHeight(CARD_PHOTO_RADIUS * 2);
         photoView.setFitWidth(CARD_PHOTO_RADIUS * 2);
-        photoView.setPreserveRatio(true);
+        photoView.setPreserveRatio(false);
         photoView.getStyleClass().add("player-card-photo");
         photoView.setClip(new Circle(CARD_PHOTO_RADIUS, CARD_PHOTO_RADIUS, CARD_PHOTO_RADIUS));
         player.photo().ifPresent(bytes -> photoView.setImage(new Image(new ByteArrayInputStream(bytes))));
+        Label initials = new Label(playerInitials(player));
+        initials.getStyleClass().add("player-card-initials");
+        initials.setVisible(player.photo().isEmpty());
+        initials.setManaged(player.photo().isEmpty());
+        portrait.getChildren().addAll(initials, photoView);
+        photoView.setVisible(player.photo().isPresent());
+        photoView.setManaged(player.photo().isPresent());
 
-        VBox details = new VBox(4);
         Label name = new Label(player.fullName()); name.getStyleClass().add("player-card-name");
         Label email = new Label(player.email()); email.getStyleClass().add("player-card-email");
-        Label active = new Label(player.systemPlayer() ? "SYSTEM" : selected ? "ACTIVE" : "AVAILABLE"); active.getStyleClass().add("player-row-status");
+        Label active = new Label(player.systemPlayer() ? "SYSTEM" : "ACTIVE"); active.getStyleClass().add("player-profile-status");
         active.setVisible(selected || player.systemPlayer()); active.setManaged(selected || player.systemPlayer());
-        details.getChildren().addAll(name, email, active);
-        Region spacer = new Region(); HBox.setHgrow(spacer, Priority.ALWAYS);
-        Label actionsHint = new Label(player.systemPlayer() ? "Managed by Arena" : "Right-click for actions");
-        actionsHint.getStyleClass().add("player-row-actions-hint");
-        card.setOnContextMenuRequested(event -> {
-            if (!player.systemPlayer()) { selectContextRow(player); showPlayerActions(player, selected, event.getSceneX(), event.getSceneY()); }
-            event.consume();
-        });
-        card.getChildren().addAll(photoView, details, spacer, active, actionsHint);
+
+        HBox actions = new HBox(14);
+        actions.setAlignment(Pos.CENTER);
+        if (!player.systemPlayer()) {
+            actions.getChildren().addAll(
+                    actionButton("Edit profile", "/images/edit_35dp_000000.png", "/images/edit_35dp_FFFFFF.png", () -> editPlayer(player)),
+                    actionButton("Delete profile", "/images/delete_35dp_000000.png", "/images/delete_35dp_FFFFFF.png", () -> confirmDelete(player, selected)),
+                    actionButton(selected ? "Active player" : "Set as active player", "/images/play_arrow_35dp_000000.png", "/images/play_arrow_35dp_FFFFFF.png", () -> activatePlayer(player), selected));
+            portrait.setOnMouseClicked(event -> editPlayer(player));
+            name.setOnMouseClicked(event -> editPlayer(player));
+        }
+        card.getChildren().addAll(portrait, active, name, email, actions);
         return card;
     }
 
-    private void selectContextRow(PlayerSummary player) {
-        contextSelectedPlayerId = Optional.of(player.id());
-        loadPlayers();
+    private com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton actionButton(
+            String accessibleText, String lightIcon, String darkIcon, Runnable action) {
+        return actionButton(accessibleText, lightIcon, darkIcon, action, false);
     }
 
-    private void showPlayerActions(PlayerSummary player, boolean selected, double sceneX, double sceneY) {
-        playerContextMenu.clearItems();
-        if (!selected) {
-            playerContextMenu.addItem("Set as active player", "", event -> activatePlayer(player));
-        }
-        playerContextMenu.addItem("Edit profile", "", event -> editPlayer(player));
-        playerContextMenu.addSeparator();
-        playerContextMenu.addItem("Delete player…", "", event -> confirmDelete(player, selected));
-        playerContextMenu.showAtScene(sceneX, sceneY);
+    private com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton actionButton(
+            String accessibleText, String lightIcon, String darkIcon, Runnable action, boolean selected) {
+        var button = new com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton();
+        button.getStyleClass().add("player-action-button");
+        button.setAccessibleText(accessibleText);
+        button.setTooltipText(accessibleText);
+        button.setLightIconResource(lightIcon);
+        button.setDarkIconResource(darkIcon);
+        button.setSelected(selected);
+        button.setDisable(selected);
+        button.setOnAction(event -> action.run());
+        return button;
+    }
+
+    private String playerInitials(PlayerSummary player) {
+        String first = player.firstName().isBlank() ? "" : player.firstName().substring(0, 1);
+        String last = player.lastName().isBlank() ? "" : player.lastName().substring(0, 1);
+        String initials = (first + last).toUpperCase();
+        return initials.isBlank() ? "?" : initials;
     }
 
     private void activatePlayer(PlayerSummary player) {
         currentUserService.selectPlayer(player.id());
+        chessSoundService.play(ChessSound.MOVE_SELF);
+        uiFlowManager.refreshCurrentUserHeader();
         loadPlayers();
     }
 
@@ -277,12 +307,21 @@ public class PlayersScreenController implements UiScreenController {
         deleteConfirmation.setTitle("Delete player?");
         deleteConfirmation.setMessage(
                 selected
-                        ? "\"" + player.fullName() + "\" is the active player. Deleting it will clear the active profile. This cannot be undone."
-                        : "Delete \"" + player.fullName() + "\"? This cannot be undone.");
+                        ? "\"" + player.fullName() + "\" is the active player. Deleting this profile will remove all its information and clear the active player. This cannot be undone."
+                        : "Deleting \"" + player.fullName() + "\" will permanently remove all information associated with this profile. This cannot be undone.");
         deleteConfirmation.setAcceptText("Delete player");
         deleteConfirmation.setCancelText("Keep player");
-        deleteConfirmation.setOnAccept(event -> deletePlayer(player, selected));
+        deleteConfirmation.setOnAccept(event -> showDeletionBlockedMessage());
         deleteConfirmation.show();
+    }
+
+    private void showDeletionBlockedMessage() {
+        featureBlockedConfirmation.setTitle("Feature unavailable");
+        featureBlockedConfirmation.setMessage("Deleting player profiles is currently blocked. No information has been removed.");
+        featureBlockedConfirmation.setAcceptText("OK");
+        featureBlockedConfirmation.setCancelText("");
+        featureBlockedConfirmation.setButtonMode(MessageBoxButtonMode.ACCEPT);
+        featureBlockedConfirmation.show();
     }
 
     private void deletePlayer(PlayerSummary player, boolean selected) {

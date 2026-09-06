@@ -9,6 +9,7 @@ import com.escontrela.lastmove.ui.component.header.HeaderConfiguration;
 import com.escontrela.lastmove.ui.event.UiEventBus;
 import com.escontrela.lastmove.ui.event.ToggleNotificationsPanelEvent;
 import com.escontrela.lastmove.ui.service.ApplicationThemeService;
+import com.escontrela.lastmove.ui.service.FadeEffectsService;
 import java.util.List;
 import java.util.Optional;
 import javafx.scene.Parent;
@@ -24,18 +25,21 @@ public class UiFlowManager {
     private final CurrentUserService currentUserService;
     private final GameNotificationRepository notifications;
     private final UiEventBus eventBus;
+    private final FadeEffectsService fadeEffects;
     private UiScreen currentScreen;
     private boolean escapeHandlerInstalled;
 
     public UiFlowManager(
             UiScreenFactory screenFactory,
             ApplicationThemeService themeService,
-            CurrentUserService currentUserService, GameNotificationRepository notifications, UiEventBus eventBus) {
+            CurrentUserService currentUserService, GameNotificationRepository notifications, UiEventBus eventBus,
+            FadeEffectsService fadeEffects) {
         this.screenFactory = screenFactory;
         this.themeService = themeService;
         this.currentUserService = currentUserService;
         this.notifications = notifications;
         this.eventBus = eventBus;
+        this.fadeEffects = fadeEffects;
     }
 
     public void show(UiScreenId screenId) {
@@ -57,6 +61,16 @@ public class UiFlowManager {
     /** Returns the active primary-window view, if one has already been shown. */
     public Optional<UiScreen> currentScreen() {
         return Optional.ofNullable(currentScreen);
+    }
+
+    /** Refreshes only the active-player avatar on the currently visible screen. */
+    public void refreshCurrentUserHeader() {
+        if (currentScreen == null) return;
+        ApplicationHeader header = (ApplicationHeader) currentScreen.scene().getRoot().lookup(".application-header");
+        if (header != null) {
+            header.updateCurrentUser(currentUserService.currentUser().name(),
+                    currentUserService.currentUserPhoto(), fadeEffects);
+        }
     }
 
     /** Registers the ESC shortcut that returns from any secondary screen to the main window. */
@@ -110,6 +124,7 @@ public class UiFlowManager {
                         false)) : List.of())
                 .onAvatar(event -> show(UiScreenId.PLAYERS))
                 .currentUserName(currentUserService.currentUser().name())
+                .currentUserPhoto(currentUserService.currentUserPhoto())
                 .build());
     }
 
