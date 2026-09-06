@@ -79,7 +79,13 @@ public final class ComputerVsComputerGameService {
     });
   }
   private void expire(Runtime runtime) { if (runtime.game.result().isPresent() || runtime.stopped || runtime.turnStartedAt == null || !runtime.game.currentClock().timed()) return; Duration remaining = runtime.game.currentClock().remaining(runtime.game.currentTurn()).orElseThrow(); if (elapsed(runtime).compareTo(remaining) < 0) return; runtime.searchVersion++; runtime.white.cancelSearch(); runtime.black.cancelSearch(); runtime.game.timeout(runtime.game.currentTurn()); runtime.phase = ComputerGamePhase.FINISHED; runtime.turnStartedAt = null; runtime.message = Optional.of("Time expired"); }
-  private Duration permitted(Runtime r) { if (!r.game.currentClock().timed()) return r.configuration.thinkingTime(); Duration left = r.game.currentClock().remaining(r.game.currentTurn()).orElseThrow().minus(elapsed(r)); return left.isPositive() ? (left.compareTo(r.configuration.thinkingTime()) < 0 ? left : r.configuration.thinkingTime()) : Duration.ofMillis(1); }
+  private Duration permitted(Runtime r) {
+    Duration configured = r.game.currentTurn() == PieceColor.WHITE
+        ? r.configuration.whiteThinkingTime() : r.configuration.blackThinkingTime();
+    if (!r.game.currentClock().timed()) return configured;
+    Duration left = r.game.currentClock().remaining(r.game.currentTurn()).orElseThrow().minus(elapsed(r));
+    return left.isPositive() ? (left.compareTo(configured) < 0 ? left : configured) : Duration.ofMillis(1);
+  }
   private Duration elapsed(Runtime r) { Duration value = Duration.between(r.turnStartedAt, clock.instant()); return value.isNegative() ? Duration.ZERO : value; }
   private ComputerVsComputerGameState snapshot(Runtime r) { GameClockSnapshot displayed = r.game.currentClock(); if (displayed.timed() && r.game.result().isEmpty() && !r.stopped && r.turnStartedAt != null) { Duration remaining = displayed.remaining(r.game.currentTurn()).orElseThrow(); Duration current = remaining.minus(elapsed(r)); displayed = r.game.currentTurn() == PieceColor.WHITE ? new GameClockSnapshot(Optional.of(current.isNegative() ? Duration.ZERO : current), displayed.blackRemaining()) : new GameClockSnapshot(displayed.whiteRemaining(), Optional.of(current.isNegative() ? Duration.ZERO : current)); } return new ComputerVsComputerGameState(r.game.id(), r.game.whitePlayer().orElseThrow(), r.game.blackPlayer().orElseThrow(), r.whiteDescriptor, r.blackDescriptor, r.game.initialPosition(), r.game.currentPosition(), r.game.moveHistory(), displayed, r.game.timeControl(), r.phase, r.game.result(), r.game.terminationReason(), r.stopped, r.message); }
   private ComputerMoveEngineProvider provider(String id) { ComputerMoveEngineProvider value = providers.get(id); if (value == null) throw new NoSuchElementException("Unknown computer engine: " + id); return value; }
