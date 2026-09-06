@@ -28,10 +28,11 @@ import com.escontrela.lastmove.ui.service.ChessSound;
 import com.escontrela.lastmove.ui.service.ChessSoundService;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javafx.animation.FadeTransition;
+import javafx.animation.PauseTransition;
+import javafx.animation.SequentialTransition;
 import javafx.collections.ListChangeListener;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
@@ -39,10 +40,10 @@ import javafx.event.ActionEvent;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.TilePane;
 import javafx.scene.layout.VBox;
+import javafx.util.Duration;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
@@ -50,10 +51,6 @@ import org.springframework.stereotype.Component;
 @Component
 public class MainWindowController implements UiScreenController {
 
-    private static final String NIGHT_MODE_STYLE_CLASS = "night-mode";
-    private static final String LIGHT_LOGO_RESOURCE = "/images/lastmove-chess-logo.png";
-    private static final String DARK_LOGO_RESOURCE = "/images/lastmove-chess-logo-dark.png";
-    private static final Map<String, Image> IMAGE_CACHE = new ConcurrentHashMap<>();
 
     private final UiFlowManager uiFlowManager;
     private final ChessSoundService chessSoundService;
@@ -71,13 +68,13 @@ public class MainWindowController implements UiScreenController {
     @FXML
     private Label welcomeLabel;
     @FXML
-    private ImageView statusBrandLogo;
-    @FXML
     private Button studiesToolButton;
     @FXML
     private Button tacticsToolButton;
     @FXML
     private VBox recentGamesBox;
+    @FXML
+    private TilePane homeCardGrid;
     @FXML
     private MessageBox startupMessageBox;
     @FXML
@@ -85,7 +82,10 @@ public class MainWindowController implements UiScreenController {
     @FXML private NotificationsPanel notificationsPanel;
     @FXML private Label arenaStatusLabel, arenaAccountLabel, arenaActivityLabel;
 
-    private final ListChangeListener<String> themeStyleListener = change -> updateThemeAssets();
+    private final ListChangeListener<String> themeStyleListener = change -> {
+        updateThemeAssets();
+        playCardEntranceAnimation();
+    };
     private final AtomicBoolean arenaAccountRefreshInFlight = new AtomicBoolean();
     private boolean startupMessageShown;
 
@@ -133,11 +133,29 @@ public class MainWindowController implements UiScreenController {
         refreshNotifications();
         refreshArenaSummary();
         refreshArenaAccount();
+        playCardEntranceAnimation();
         if (!startupMessageShown) {
             startupMessageShown = true;
             chessSoundService.play(ChessSound.NOTIFY);
             startupMessageBox.show();
         }
+    }
+
+    private void playCardEntranceAnimation() {
+        if (homeCardGrid == null) {
+            return;
+        }
+        homeCardGrid.getChildren().forEach(card -> card.setOpacity(0));
+        Platform.runLater(() -> {
+            for (int index = 0; index < homeCardGrid.getChildren().size(); index++) {
+                var card = homeCardGrid.getChildren().get(index);
+                FadeTransition fade = new FadeTransition(Duration.millis(260), card);
+                fade.setFromValue(0);
+                fade.setToValue(1);
+                new SequentialTransition(
+                        new PauseTransition(Duration.millis(index * 35L)), fade).play();
+            }
+        });
     }
 
     /** Refreshes the cached bot profile so the Home card can show its current rating. */
@@ -346,15 +364,8 @@ public class MainWindowController implements UiScreenController {
                 setFeatureStatus("LastMove Chess — your chess study workspace."));
     }
 
-    private void updateStatusBrandLogo() {
-        String resource = isNightMode()
-                ? DARK_LOGO_RESOURCE
-                : LIGHT_LOGO_RESOURCE;
-        statusBrandLogo.setImage(loadImage(resource));
-    }
-
     private void updateThemeAssets() {
-        updateStatusBrandLogo();
+        // Home assets are supplied by CSS; no footer branding is shown.
     }
 
     /** The home dashboard has no inline status label; user feedback is presented by its overlays. */
@@ -409,13 +420,4 @@ public class MainWindowController implements UiScreenController {
         }
     }
 
-    private boolean isNightMode() {
-        return root.getStyleClass().contains(NIGHT_MODE_STYLE_CLASS);
-    }
-
-    private Image loadImage(String resource) {
-        return IMAGE_CACHE.computeIfAbsent(resource, path -> new Image(Objects.requireNonNull(
-                getClass().getResource(path),
-                () -> "Missing image resource: " + path).toExternalForm()));
-    }
 }

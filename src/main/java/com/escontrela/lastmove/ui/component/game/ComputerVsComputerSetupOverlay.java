@@ -32,7 +32,7 @@ public final class ComputerVsComputerSetupOverlay extends StackPane {
     time.setItems(FXCollections.observableArrayList(TimePreset.values())); time.getSelectionModel().select(TimePreset.TEN_MINUTES); time.setMaxWidth(Double.MAX_VALUE); time.getStyleClass().add("computer-game-setup-combo");
     moveDelay.setItems(FXCollections.observableArrayList(MoveDelayPreset.values())); moveDelay.getSelectionModel().select(MoveDelayPreset.NONE); moveDelay.setMaxWidth(Double.MAX_VALUE); moveDelay.getStyleClass().add("computer-game-setup-combo");
     validation.setWrapText(true); validation.getStyleClass().add("computer-game-setup-validation");
-    cancel.getStyleClass().add("secondary-button"); start.getStyleClass().add("primary-button"); start.setDefaultButton(true); cancel.setCancelButton(true);
+    cancel.getStyleClass().addAll("message-box-button", "message-box-cancel-button"); start.getStyleClass().addAll("message-box-button", "message-box-accept-button"); start.setDefaultButton(true); cancel.setCancelButton(true);
     Region spacer = new Region(); HBox.setHgrow(spacer, Priority.ALWAYS);
     VBox card = new VBox(12, eyebrow, title, description, field("White engine"), white, field("Black engine"), black, field("Time control"), time, field("Delay between moves"), moveDelay, validation, new HBox(10, spacer, cancel, start));
     card.setPadding(new Insets(28)); card.setMaxWidth(520); card.setMinHeight(Region.USE_PREF_SIZE); card.setMaxHeight(Region.USE_PREF_SIZE); card.getStyleClass().add("computer-game-setup-card"); getChildren().add(card); setVisible(false); setManaged(false);

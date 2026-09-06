@@ -43,7 +43,6 @@
                 <padding><Insets bottom="16.0" left="20.0" right="20.0" top="8.0" /></padding>
                 <StackPane fx:id="boardHost" alignment="CENTER" HBox.hgrow="ALWAYS">
                     <ChessBoardControl fx:id="chessBoard" />
-                    <ImageView fx:id="threatHintsIcon" fitHeight="24.0" fitWidth="24.0" managed="false" mouseTransparent="true" preserveRatio="true" visible="false" StackPane.alignment="TOP_RIGHT" />
                 </StackPane>
                 <VBox prefWidth="340.0" spacing="10.0" styleClass="board-side-panel, progressive-game-side-panel">
                     <VBox spacing="9.0" styleClass="progressive-player-zone">
@@ -85,6 +84,7 @@
         <bottom>
             <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="status-rail">
                 <Label styleClass="eyebrow-label" text="Status" />
+                <ImageView fx:id="threatHintsIcon" accessibleText="Threat hints enabled" fitHeight="22.0" fitWidth="22.0" managed="false" mouseTransparent="true" preserveRatio="true" styleClass="threat-hints-status-icon" visible="false" />
                 <TypewriterStatusLabel fx:id="statusLabel" styleClass="status-text, typewriter-status-label" text="Choose an opponent, colour and time control" />
             </HBox>
         </bottom>

@@ -180,8 +180,8 @@ public final class HumanVsComputerSetupOverlay extends StackPane {
     validationLabel.setMaxWidth(Double.MAX_VALUE);
     validationLabel.getStyleClass().add("computer-game-setup-validation");
 
-    cancelButton.getStyleClass().add("secondary-button");
-    startButton.getStyleClass().add("primary-button");
+    cancelButton.getStyleClass().addAll("message-box-button", "message-box-cancel-button");
+    startButton.getStyleClass().addAll("message-box-button", "message-box-accept-button");
     startButton.setDefaultButton(true);
     cancelButton.setCancelButton(true);
     Region actionSpacer = new Region();

@@ -79,7 +79,10 @@ public final class HumanVsComputerScreenController implements UiScreenController
   private final OpeningPracticeService openingPracticeService;
   private final ThreatenedSquaresService threatenedSquaresService;
   private Timeline clockRefresh;
-  private final ListChangeListener<String> themeStyleListener = change -> updatePlayerIcons();
+  private final ListChangeListener<String> themeStyleListener = change -> {
+    updatePlayerIcons();
+    updateThreatHintsIcon();
+  };
 
   @FXML private StackPane root;
   @FXML private StackPane boardHost;
@@ -597,8 +600,7 @@ public final class HumanVsComputerScreenController implements UiScreenController
     resignButton.setDisable(true);
     opponentThinkingIndicator.setThinking(false);
     updatePlayerIcons();
-    threatHintsIcon.setImage(loadImage(root.getStyleClass().contains(NIGHT_MODE_STYLE_CLASS) ? "/images/gpp_maybe_35dp_FFFFFF.png" : "/images/gpp_maybe_35dp_000000.png"));
-    threatHintsIcon.setVisible(threatHintsEnabled);
+    updateThreatHintsIcon();
     followingLivePosition = true;
     reviewedPlyCount = 0;
     updateReviewControls();
@@ -734,7 +736,15 @@ public final class HumanVsComputerScreenController implements UiScreenController
         && renderedState.phase() == ComputerGamePhase.WAITING_FOR_HUMAN;
     if (show) chessBoard.setThreatenedSquares(threatenedSquaresService.attackedPieces(renderedState.position(), renderedState.humanColor().opposite()));
     else chessBoard.clearThreatenedSquares();
-    if (threatHintsIcon != null) threatHintsIcon.setVisible(threatHintsEnabled);
+    updateThreatHintsIcon();
+  }
+
+  private void updateThreatHintsIcon() {
+    if (threatHintsIcon == null) return;
+    threatHintsIcon.setImage(loadImage(root.getStyleClass().contains(NIGHT_MODE_STYLE_CLASS)
+        ? "/images/gpp_maybe_35dp_FFFFFF.png" : "/images/gpp_maybe_35dp_000000.png"));
+    threatHintsIcon.setVisible(threatHintsEnabled);
+    threatHintsIcon.setManaged(threatHintsEnabled);
   }
 
   private void refreshCapturedPieces() {

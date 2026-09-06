@@ -602,31 +602,34 @@
 }
 
 .home-action-grid, .home-secondary-grid {
-    -fx-pref-tile-width: 270px;
+    -fx-pref-tile-width: 360px;
     -fx-tile-alignment: top-left;
 }
 
 .home-secondary-grid { -fx-pref-tile-width: 360px; }
 
 .home-action-card, .home-secondary-card {
-    -fx-alignment: bottom-left;
+    -fx-alignment: center-left;
     -fx-background-color: #ffffff;
     -fx-background-insets: 0, 0;
-    /* One radius for the colour layer and one for each card illustration. */
-    -fx-background-radius: 0, 0;
-    -fx-border-color: #e5eaf0;
-    -fx-border-radius: 0;
+    -fx-background-image: url("/images/card-home.png");
+    -fx-background-position: center;
+    -fx-background-repeat: no-repeat;
+    -fx-background-size: cover;
+    -fx-background-radius: 14px;
+    -fx-border-color: #b9cee8;
+    -fx-border-radius: 14px;
     -fx-border-width: 1px;
     -fx-cursor: hand;
-    -fx-padding: 24px;
+    -fx-padding: 28px;
     -fx-text-fill: #14213d;
-    -fx-effect: dropshadow(gaussian, rgba(29, 47, 70, 0.07), 18, 0.08, 0, 5);
+    -fx-effect: dropshadow(gaussian, rgba(30, 72, 119, 0.10), 16, 0.08, 0, 4);
 }
 
 .home-action-card {
-    -fx-min-height: 252px;
-    -fx-pref-height: 252px;
-    -fx-max-height: 252px;
+    -fx-min-height: 220px;
+    -fx-pref-height: 220px;
+    -fx-max-height: 220px;
 }
 
 .home-secondary-card {
@@ -647,6 +650,12 @@
     -fx-fill-width: true;
     -fx-pref-width: 1000000px;
     -fx-max-width: 1000000px;
+}
+
+.home-card-content > .region, .home-secondary-content > .region {
+    -fx-min-height: 0;
+    -fx-pref-height: 0;
+    -fx-max-height: 0;
 }
 
 .home-card-icon {
@@ -680,8 +689,10 @@
 .home-card-link {
     -fx-font-size: 14px;
     -fx-font-weight: 700;
-    -fx-text-fill: #1769d8;
-    -fx-padding: 12px 0 0 0;
+    -fx-text-fill: #ffffff;
+    -fx-background-color: #0878f9;
+    -fx-background-radius: 999px;
+    -fx-padding: 9px 18px;
 }
 
 .home-secondary-title {
@@ -751,6 +762,39 @@
     -fx-background-repeat: no-repeat;
     -fx-background-size: cover;
 }
+
+/* Shared surface from the approved home design. Feature classes remain in
+   place as semantic hooks for their existing actions and dynamic content. */
+.home-analysis-card, .home-studies-card, .home-tactics-card, .home-computer-card,
+.home-training-card, .home-position-card, .home-games-card, .home-knightshade-banner,
+.home-storm-card {
+    -fx-background-color: #ffffff;
+    -fx-background-image: url("/images/card-home.png");
+    -fx-background-position: center;
+    -fx-background-repeat: no-repeat;
+    -fx-background-size: cover;
+    -fx-border-color: #b9cee8;
+}
+
+.home-knightshade-banner .knightshade-kicker,
+.home-knightshade-banner .knightshade-arena-status { -fx-text-fill: #1769d8; }
+.home-knightshade-banner .knightshade-title { -fx-text-fill: #14213d; }
+.home-knightshade-banner .knightshade-description,
+.home-knightshade-banner .knightshade-arena-activity { -fx-text-fill: #5d6b7e; }
+.home-knightshade-banner .knightshade-link { -fx-text-fill: #ffffff; }
+
+/* Knightshade is intentionally inverted so the Arena card remains a visual
+   anchor against the otherwise uniform dashboard surfaces. */
+.home-knightshade-banner {
+    -fx-background-color: #132337;
+    -fx-background-image: url("/images/card-home-dark.png");
+    -fx-border-color: #526f8e;
+}
+.home-knightshade-banner .knightshade-kicker,
+.home-knightshade-banner .knightshade-arena-status { -fx-text-fill: #7cb4ff; }
+.home-knightshade-banner .knightshade-title { -fx-text-fill: #f4f7fb; }
+.home-knightshade-banner .knightshade-description,
+.home-knightshade-banner .knightshade-arena-activity { -fx-text-fill: #b5c2d2; }
 
 .knightshade-kicker {
     -fx-font-size: 12px;
@@ -1847,6 +1891,8 @@
     -fx-border-width: 1px 0 0 0;
 }
 
+.threat-hints-status-icon { -fx-opacity: 0.82; -fx-padding: 2px; }
+
 .settings-check-box { -fx-font-size: 15px; -fx-text-fill: #262626; }
 .settings-check-box .box { -fx-background-radius: 0; -fx-border-radius: 0; }
 .settings-check-box:selected .mark { -fx-background-color: #ffffff; }
@@ -2451,20 +2497,26 @@
 .night-mode .home-scroll-pane .scroll-bar:vertical .thumb { -fx-background-color: #536477; }
 .night-mode .home-action-card, .night-mode .home-secondary-card {
     -fx-background-color: #1a2533;
-    -fx-border-color: #34465a;
+    -fx-background-image: url("/images/card-home-dark.png");
+    -fx-background-position: center;
+    -fx-background-repeat: no-repeat;
+    -fx-background-size: cover;
+    -fx-border-color: #526f8e;
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.28), 18, 0.1, 0, 5);
 }
 .night-mode .home-action-card:hover, .night-mode .home-secondary-card:hover {
     -fx-border-color: #6aa8f5;
     -fx-effect: dropshadow(gaussian, rgba(70, 138, 230, 0.19), 22, 0.14, 0, 6);
 }
-.night-mode .home-analysis-card { -fx-background-image: url("/images/card-background-dark.png"); }
-.night-mode .home-studies-card { -fx-background-image: url("/images/studies-card-background-dark.png"); }
-.night-mode .home-tactics-card { -fx-background-image: url("/images/tactics-card-background-dark.png"); }
-.night-mode .home-computer-card { -fx-background-image: url("/images/computer-challenge-card-background-dark.png"); }
-.night-mode .home-training-card { -fx-background-color: linear-gradient(to bottom right, #223042 0%, #1a2430 62%, #24303e 100%); }
-.night-mode .home-position-card { -fx-background-image: url("/images/position-analysis-card-background-dark.png"); }
-.night-mode .home-games-card { -fx-background-image: url("/images/computer-challenge-card-background-dark.png"); }
+.night-mode .home-analysis-card, .night-mode .home-studies-card,
+.night-mode .home-tactics-card, .night-mode .home-computer-card,
+.night-mode .home-training-card, .night-mode .home-position-card,
+.night-mode .home-games-card, .night-mode .home-knightshade-banner,
+.night-mode .home-storm-card {
+    -fx-background-color: #132337;
+    -fx-background-image: url("/images/card-home-dark.png");
+    -fx-border-color: #526f8e;
+}
 .night-mode .home-analysis-icon { -fx-background-color: #173353; }
 .night-mode .home-studies-icon { -fx-background-color: #193d31; }
 .night-mode .home-tactics-icon { -fx-background-color: #432553; }
@@ -2474,8 +2526,18 @@
 .night-mode .home-card-description, .night-mode .home-secondary-description { -fx-text-fill: #b5c2d2; }
 .night-mode .home-recent-game-title { -fx-text-fill: #e5edf7; }
 .night-mode .home-recent-game-summary { -fx-text-fill: #a9b9ca; }
-.night-mode .home-card-link { -fx-text-fill: #7cb4ff; }
-.night-mode .home-knightshade-banner { -fx-background-color: #081426; -fx-border-color: #294768; }
+.night-mode .home-card-link { -fx-text-fill: #f5f9ff; -fx-background-color: transparent; -fx-border-color: #3c91ff; -fx-border-radius: 999px; -fx-border-width: 1px; }
+.night-mode .home-knightshade-banner {
+    -fx-background-color: #ffffff;
+    -fx-background-image: url("/images/card-home.png");
+    -fx-border-color: #b9cee8;
+}
+.night-mode .home-knightshade-banner .knightshade-kicker,
+.night-mode .home-knightshade-banner .knightshade-arena-status { -fx-text-fill: #1769d8; }
+.night-mode .home-knightshade-banner .knightshade-title { -fx-text-fill: #14213d; }
+.night-mode .home-knightshade-banner .knightshade-description,
+.night-mode .home-knightshade-banner .knightshade-arena-activity { -fx-text-fill: #5d6b7e; }
+.night-mode .home-knightshade-banner .knightshade-link { -fx-text-fill: #ffffff; -fx-background-color: #0878f9; -fx-border-color: transparent; }
 .night-mode .message-box-overlay { -fx-background-color: rgba(0, 0, 0, 0.38); }
 .night-mode .promotion-picker-card {
     -fx-background-color: #1c2430;
