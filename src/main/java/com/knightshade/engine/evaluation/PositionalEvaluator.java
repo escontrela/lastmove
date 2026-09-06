@@ -1,6 +1,7 @@
 package com.knightshade.engine.evaluation;
 
 import com.knightshade.engine.board.Position;
+import com.knightshade.engine.board.Board;
 import com.knightshade.engine.evaluation.term.BishopPairTerm;
 import com.knightshade.engine.evaluation.term.CenterControlTerm;
 import com.knightshade.engine.evaluation.term.DevelopmentTerm;
@@ -20,6 +21,13 @@ import java.util.List;
  */
 public final class PositionalEvaluator implements Evaluator {
 
+  // Exact static-score cache. Draw clocks/history are handled by search, not these terms.
+  // Like the search workspace, this evaluator instance belongs to one search thread.
+  private static final int CACHE_SIZE = 1 << 15;
+  private final long[] cacheKeys = new long[CACHE_SIZE];
+  private final int[] cacheScores = new int[CACHE_SIZE];
+  private final boolean[] cacheUsed = new boolean[CACHE_SIZE];
+
   private final List<PositionalTerm> terms =
       List.of(
           new MaterialTerm(),
@@ -33,6 +41,22 @@ public final class PositionalEvaluator implements Evaluator {
 
   @Override
   public int evaluate(Position position) {
+    if (position instanceof Board board) {
+      long key = board.zobristKey();
+      int slot = (int) key & (CACHE_SIZE - 1);
+      if (cacheUsed[slot] && cacheKeys[slot] == key) {
+        return cacheScores[slot];
+      }
+      int score = evaluateTerms(position);
+      cacheKeys[slot] = key;
+      cacheScores[slot] = score;
+      cacheUsed[slot] = true;
+      return score;
+    }
+    return evaluateTerms(position);
+  }
+
+  private int evaluateTerms(Position position) {
     int score = 0;
     for (PositionalTerm term : terms) {
       score += term.evaluate(position);

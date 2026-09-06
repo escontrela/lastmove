@@ -112,7 +112,7 @@ El tablero es un int[64] (mailbox), índice rank * 8 + file (a1 = 0, h8 = 63). C
            a  b  c  d  e  f  g  h
 ~~~
 
-Consultar una casilla es una lectura directa del array. No se crean objetos de pieza ni colecciones temporales por cada nodo de búsqueda. El mailbox es simple de depurar y suficientemente claro para v0–v3.
+Consultar una casilla es una lectura directa del array. Las coordenadas inmutables Square se reutilizan desde una caché de 64 casillas propia del motor. No se crean objetos de pieza ni colecciones temporales por cada nodo de búsqueda. El mailbox es simple de depurar y suficientemente claro para v0–v3.
 
 Está **oculto tras la interfaz Position**, de modo que una posible migración a bitboards en v5 no tocará search ni evaluation. Los bitboards aceleran algunos cálculos masivos de ataques, pero su coste de complejidad no es necesario para la arquitectura actual.
 
@@ -139,7 +139,7 @@ flowchart TD
     H --> A
 ~~~
 
-Antes de mutar el estado, make guarda en Undo únicamente lo que no se puede reconstruir solo mirando la jugada: pieza capturada, derechos de enroque, objetivo en passant, contadores y hash anterior. También trata capturas en passant, promoción y el movimiento de torre del enroque.
+La pila Undo reutiliza un marco mutable por profundidad activa y crece cuando hace falta, evitando crear un objeto por cada movimiento probado. Antes de mutar el estado, make guarda en Undo únicamente lo que no se puede reconstruir solo mirando la jugada: pieza capturada, derechos de enroque, objetivo en passant, contadores y hash anterior. También trata capturas en passant, promoción y el movimiento de torre del enroque.
 
 ~~~
 Estado S: peón en e2, hash H0
@@ -151,9 +151,9 @@ Copiar 64 casillas para cada hijo sería correcto pero muy caro. Guardar un Undo
 
 ### 3.4 Generación de movimientos (movegen)
 
-LegalMoveGenerator genera primero movimientos **pseudo-legales** (peón con doble paso/en passant/promoción, saltos de caballo/rey, deslizantes de alfil/torre/dama, enroques) y luego los filtra a **legales** con make/unmake: el movimiento se rechaza si deja al propio rey en jaque. El enroque verifica además que el rey no cruce ni aterrice en casilla atacada.
+LegalMoveGenerator genera primero movimientos **pseudo-legales** (peón con doble paso/en passant/promoción, saltos de caballo/rey, deslizantes de alfil/torre/dama, enroques). Si hay jaque, comprueba todas las evasiones con make/unmake. Sin jaque, calcula las piezas clavadas al rey y solo necesita make/unmake para ellas, para el rey y para capturas al paso; las demás jugadas pseudo-legales no pueden exponer al rey. El enroque verifica además que el rey no cruce ni aterrice en casilla atacada.
 
-generateCaptures devuelve solo capturas y promociones (para la quiescence).
+generateCaptures genera directamente capturas y promociones (incluidas las promociones sin captura), sin construir las jugadas tranquilas que se descartarían. hasLegalMove termina la comprobación de legalidad al encontrar la primera jugada válida. Board mantiene la casilla de cada rey de forma incremental para evitar recorrer las 64 casillas en cada comprobación de jaque.
 
 Separar los movimientos pseudo-legales de la comprobación final simplifica las reglas: una pieza primero se mueve según su geometría, y Board valida después que el rey no quedó expuesto.
 
@@ -215,7 +215,7 @@ Alfa-beta es correcto, pero solo es realmente eficaz si la mejor jugada se prueb
 
 Explora profundidad 1, 2, 3… hasta agotar el tiempo (TimeManager) o encontrar mate forzado. Garantiza que siempre haya una jugada lista y que la búsqueda pueda detenerse limpiamente entre iteraciones.
 
-La repetición inicial es útil: la iteración anterior da una variación principal, un buen primer movimiento y entradas para la tabla de transposición. Si llega StopSignal, se devuelve la última profundidad completamente terminada.
+La repetición inicial es útil: se conserva explícitamente la mejor jugada raíz de la iteración anterior para probarla primero, junto con las entradas para la tabla de transposición. Si llega StopSignal, se devuelve la última profundidad completamente terminada.
 
 ### 4.3 Principal Variation Search (PVS)
 
@@ -231,7 +231,7 @@ Si la profundidad anterior da +32 cp, la siguiente puede intentar [+7, +57]. Si 
 
 ### 4.5 Null Move Pruning
 
-Si la posición no está en jaque y hay material no-peón, se “pasa” el turno y se busca con profundidad reducida R = 2 + depth/4. Si aun así se supera beta, se poda (evita líneas en las que el oponente puede hacer algo útil). El chequeo de material evita errores en zugzwang.
+En nodos de ventana nula, con profundidad suficiente, sin jaque, con material no-peón y evaluación estática al menos beta, se “pasa” el turno y se busca con profundidad reducida R = 2 + depth/4. Se excluyen ventanas de mate y no se vuelve a aplicar esta poda dentro de una rama iniciada por un pase. Esa rama tampoco usa resultados de TT ni declara tablas a partir del historial real. Si aun así se supera beta, se poda (evita líneas en las que el oponente puede hacer algo útil). El chequeo de material excluye los finales de peones, aunque no elimina todos los posibles zugzwangs con piezas.
 
 La intuición es: si incluso regalando el turno la posición sigue siendo suficiente para que el rival rechace la variante, una jugada real probablemente también lo será. No se aplica en situaciones delicadas porque en un zugzwang pasar puede ser mucho mejor que cualquier movimiento legal.
 
@@ -248,12 +248,16 @@ En las hojas, para evitar el “efecto horizonte”, se extiende la búsqueda so
 - stand-pat: se acepta la evaluación estática si ya supera beta.
 - Capturas ordenadas por MVV-LVA, **filtrando las perdedoras con SEE** (See.ge(board, move, 0)).
 - Si el bando está en jaque, se buscan **todas** las evasiones legales (no solo capturas).
+- La entrada desde la búsqueda principal también examina jaques tranquilos durante un nivel; este permiso ya no depende de un contador global de 8000 nodos.
+- En esa entrada se reutiliza la lista legal para capturas y jaques. En las siguientes hojas se generan solo capturas/promociones y se comprueba que exista alguna jugada legal antes de aceptar stand-pat si la lista táctica está vacía.
+- Ahogado, repetición y contador de 50 movimientos se reconocen dentro de quiescencia; el mate tiene precedencia sobre el contador. El historial se restaura al salir de cada rama.
+- En la raíz, una repetición se compara con las demás alternativas como tablas: una evaluación estática favorable ya no basta para excluirla antes de buscar.
 
 Sin quiescence, una hoja justo antes de una recaptura parece artificialmente favorable. La quiescence continúa lo tácticamente ruidoso hasta que la evaluación sea más estable, sin reabrir todos los movimientos tranquilos.
 
 ### 4.8 Tabla de transposición (transposition)
 
-Cache directa por clave Zobrist (mapeo directo, siempre-reemplazo, 2¹⁶ slots) que guarda (mejorMovimiento, depth, score, tipo). Tipos: EXACT, LOWER_BOUND, UPPER_BOUND. Las puntuaciones de mate se ajustan a distancia al moverlas dentro/fuera de la tabla (Scores.toTable/fromTable). El reemplazo directo evita bucles (bug histórico de sondeo lineal corregido).
+Cache por clave Zobrist y contador de medias jugadas (2¹⁸ entradas, cubetas de cuatro vías con preferencia por profundidad y resultados exactos) que guarda (mejorMovimiento, depth, score, tipo). Tipos: EXACT, LOWER_BOUND, UPPER_BOUND. Las puntuaciones de mate se ajustan a distancia al moverlas dentro/fuera de la tabla (Scores.toTable/fromTable). Cada consulta o inserción examina como máximo cuatro entradas, sin cadenas de sondeo. La tabla se limpia al comenzar cada búsqueda porque el historial de partida puede haber cambiado; se reutiliza entre profundidades de esa búsqueda. Las hojas de quiescencia no desplazan entradas profundas y una actualización sin jugada conserva la jugada previamente almacenada para esa clave.
 
 Distintas órdenes de jugadas pueden alcanzar exactamente el mismo estado. La TT evita volver a calcular su subárbol. Además, el mejor movimiento guardado se intenta primero y ayuda a producir cortes.
 
@@ -272,7 +276,7 @@ MvvLvaMoveOrderer puntúa cada jugada por prioridad:
 3. Killers primario/secundario (por ply).
 4. Movimientos tranquilos por history heuristic.
 
-KillerMoves guarda dos refutaciones tranquilas por ply; HistoryTable es una butterfly table [64][64] bonificada por depth² en los cortes beta.
+KillerMoves guarda dos refutaciones tranquilas por ply. HistoryTable separa los colores ([2][64][64]), limita sus valores a ±16384 y aplica actualizaciones de gravedad: recompensa la jugada que provoca un corte y penaliza las jugadas tranquilas anteriores que no lo consiguieron. SEE se calcula una sola vez por jugada durante la ordenación; las capturas perdedoras se prueban después de las tranquilas.
 
 MVV-LVA favorece capturar una pieza valiosa con una pieza barata. Los killers recuerdan movimientos tranquilos que ya refutaron una variante; history acumula qué origen-destino ha producido cortes. Son prioridades, no pruebas tácticas.
 
@@ -300,9 +304,11 @@ Interfaz Evaluator (centipawns, positivo = blanco mejor). El evaluador activo es
 | Componente | Descripción |
 | --- | --- |
 | **Material** | PieceValues: P=100, N=320, B=330, R=500, Q=900 |
-| **Piece-Square Tables** | Bonos posicionales por pieza/casilla (PieceSquareTables), reflejados para negras con index ^ 56 |
+| **Piece-Square Tables** | Bonos por pieza/casilla, reflejados para negras; el rey interpola entre refugio y actividad central según material restante |
 | **Movilidad** | Nº de casillas atacadas por N/B/R/Q menos una línea base, ponderado por pieza |
-| **Seguridad del rey** | Escudo de peones delante del rey (2 filas × 3 columnas) |
+| **Seguridad del rey** | Escudo de peones delante del rey, ponderado por fase para desaparecer en finales de peones |
+
+PositionalEvaluator mantiene además una caché exacta de 32768 evaluaciones por clave Zobrist, con comprobación de la clave completa. Al visitar de nuevo una posición se evita repetir el cálculo de los ocho términos. Los contadores de tablas y el historial se resuelven en búsqueda, fuera de esta evaluación estática. La caché pertenece al mismo hilo que el evaluador.
 
 Existen además MaterialEvaluator (v0) y PieceSquareEvaluator (v1) como pasos intermedios testeados.
 
@@ -413,7 +419,8 @@ La traza muestra la jugada elegida, la puntuación, la última profundidad compl
 
 ## 9. Trabajo futuro
 
-- **v4:** desarrollo, control del centro, estructura de peones, peones pasados, pareja de alfiles, finales; opening book.
-- **v5:** bitboards, búsqueda paralela (Lazy SMP), optimización de memoria, profiling, tablebases de finales.
+- Desarrollo, centro, estructura de peones, peones pasados y pareja de alfiles ya están implementados; el rey ahora adapta su evaluación a la fase.
+- Pendientes: libro de aperturas, tablebases, bitboards y búsqueda paralela. La búsqueda actual sigue siendo de un hilo; sus tableros, heurísticas y TT no deben compartirse entre hilos sin un diseño específico de sincronización o aislamiento.
+- Medición de esta revisión y comando de benchmark sin UI: [revisión de rendimiento](knightshade-performance-2026-09-06.md).
 
 Las mejoras de v4 aumentan conocimiento ajedrecístico. Las de v5 se orientan sobre todo a procesar más nodos por segundo. Las interfaces actuales permiten evolucionar cualquiera de esos caminos sin acoplar el motor a la UI ni al dominio de LastMove.

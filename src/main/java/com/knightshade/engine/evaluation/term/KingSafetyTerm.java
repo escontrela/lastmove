@@ -3,6 +3,7 @@ package com.knightshade.engine.evaluation.term;
 import com.knightshade.engine.board.Piece;
 import com.knightshade.engine.board.Position;
 import com.knightshade.engine.evaluation.PositionalTerm;
+import com.knightshade.engine.evaluation.GamePhase;
 import com.escontrela.lastmove.domain.common.PieceColor;
 import com.escontrela.lastmove.domain.common.PieceType;
 
@@ -11,7 +12,8 @@ public final class KingSafetyTerm implements PositionalTerm {
 
   @Override
   public int evaluate(Position position) {
-    return shield(position, PieceColor.WHITE) - shield(position, PieceColor.BLACK);
+    return (shield(position, PieceColor.WHITE) - shield(position, PieceColor.BLACK))
+        * GamePhase.of(position) / GamePhase.MAX;
   }
 
   private int shield(Position position, PieceColor color) {
