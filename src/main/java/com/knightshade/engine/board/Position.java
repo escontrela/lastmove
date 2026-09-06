@@ -45,6 +45,6 @@ public interface Position {
 
   /** Converts a 0..63 mailbox index back to a square. */
   static Square squareOf(int index) {
-    return Square.of(index & 7, index >>> 3);
+    return SquareCache.at(index);
   }
 }

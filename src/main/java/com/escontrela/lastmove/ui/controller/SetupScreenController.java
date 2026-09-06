@@ -10,6 +10,7 @@ import com.escontrela.lastmove.application.service.PositionAnalysisService;
 import com.escontrela.lastmove.application.arena.KnightshadeArenaSettings;
 import com.escontrela.lastmove.ui.component.header.ApplicationHeader;
 import com.escontrela.lastmove.ui.component.header.HeaderAction;
+import com.escontrela.lastmove.ui.component.settings.SettingsNavigationControl;
 import com.escontrela.lastmove.ui.component.board.BoardAppearancePreset;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
 import com.escontrela.lastmove.ui.screen.UiScreenController;
@@ -34,6 +35,8 @@ import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.layout.VBox;
 import javafx.util.StringConverter;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -53,6 +56,10 @@ public class SetupScreenController implements UiScreenController {
 
     @FXML
     private BorderPane root;
+    @FXML private ScrollPane setupScrollPane;
+    @FXML private SettingsNavigationControl settingsNavigation;
+    @FXML private VBox setupContent, appearanceGroup, sunfishGroup, maiaGroup, knightshadeGroup,
+            arenaGroup, analysisGroup, navigationGroup;
     @FXML
     private CheckBox nightModeCheckBox;
     @FXML
@@ -177,6 +184,25 @@ public class SetupScreenController implements UiScreenController {
     @FXML
     public void initialize() {
         root.getProperties().put("controller", this);
+        settingsNavigation.addItem("appearance", "Appearance");
+        settingsNavigation.addItem("sunfish", "Sunfish");
+        settingsNavigation.addItem("maia", "Maia");
+        settingsNavigation.addItem("knightshade", "Knightshade");
+        settingsNavigation.addItem("arena", "Knightshade Arena");
+        settingsNavigation.addItem("analysis", "Analysis");
+        settingsNavigation.addItem("navigation", "Navigation");
+        settingsNavigation.setOnItemSelected(key -> {
+            switch (key) {
+                case "appearance" -> scrollToAppearance();
+                case "sunfish" -> scrollToSunfish();
+                case "maia" -> scrollToMaia();
+                case "knightshade" -> scrollToKnightshade();
+                case "arena" -> scrollToArena();
+                case "analysis" -> scrollToAnalysis();
+                case "navigation" -> scrollToNavigation();
+                default -> { }
+            }
+        });
         nightModeCheckBox.selectedProperty().addListener((ignored, oldValue, newValue) ->
                 updateApplyButtonVisibility());
         showSplashCheckBox.selectedProperty().addListener((ignored, oldValue, newValue) ->
@@ -222,6 +248,43 @@ public class SetupScreenController implements UiScreenController {
                 updateApplyButtonVisibility();
             }
         });
+        setupScrollPane.vvalueProperty().addListener((ignored, oldValue, newValue) -> updateNavigationSelection());
+        Platform.runLater(this::updateNavigationSelection);
+    }
+
+    @FXML public void scrollToAppearance() { scrollTo(appearanceGroup); }
+    @FXML public void scrollToSunfish() { scrollTo(sunfishGroup); }
+    @FXML public void scrollToMaia() { scrollTo(maiaGroup); }
+    @FXML public void scrollToKnightshade() { scrollTo(knightshadeGroup); }
+    @FXML public void scrollToArena() { scrollTo(arenaGroup); }
+    @FXML public void scrollToAnalysis() { scrollTo(analysisGroup); }
+    @FXML public void scrollToNavigation() { scrollTo(navigationGroup); }
+
+    private void scrollTo(VBox group) {
+        if (group == null || setupScrollPane == null || setupContent == null) return;
+        Platform.runLater(() -> {
+            double range = setupContent.getHeight() - setupScrollPane.getViewportBounds().getHeight();
+            if (range > 0) setupScrollPane.setVvalue(Math.max(0, Math.min(1, group.getLayoutY() / range)));
+            updateNavigationSelection(group);
+        });
+    }
+
+    private void updateNavigationSelection() {
+        if (setupScrollPane == null || setupContent == null) return;
+        double range = setupContent.getHeight() - setupScrollPane.getViewportBounds().getHeight();
+        double offset = range <= 0 ? 0 : setupScrollPane.getVvalue() * range;
+        VBox selected = appearanceGroup;
+        for (VBox group : List.of(appearanceGroup, sunfishGroup, maiaGroup, knightshadeGroup, arenaGroup, analysisGroup, navigationGroup)) {
+            if (group != null && group.getLayoutY() <= offset + 80) selected = group;
+        }
+        updateNavigationSelection(selected);
+    }
+
+    private void updateNavigationSelection(VBox selected) {
+        List<VBox> groups = List.of(appearanceGroup, sunfishGroup, maiaGroup, knightshadeGroup, arenaGroup, analysisGroup, navigationGroup);
+        int index = groups.indexOf(selected);
+        if (index >= 0) settingsNavigation.setSelectedKey(
+                List.of("appearance", "sunfish", "maia", "knightshade", "arena", "analysis", "navigation").get(index));
     }
 
     @Override

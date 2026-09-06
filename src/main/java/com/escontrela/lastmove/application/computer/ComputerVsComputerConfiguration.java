@@ -9,21 +9,31 @@ public record ComputerVsComputerConfiguration(
     String whiteEngineId,
     String blackEngineId,
     TimeControl timeControl,
-    Duration thinkingTime,
+    Duration whiteThinkingTime,
+    Duration blackThinkingTime,
     Duration moveDelay) {
   public ComputerVsComputerConfiguration {
     whiteEngineId = requireId(whiteEngineId, "whiteEngineId");
     blackEngineId = requireId(blackEngineId, "blackEngineId");
     timeControl = Objects.requireNonNull(timeControl, "timeControl must not be null");
-    thinkingTime = Objects.requireNonNull(thinkingTime, "thinkingTime must not be null");
-    if (thinkingTime.isZero() || thinkingTime.isNegative()) throw new IllegalArgumentException("thinkingTime must be positive");
+    whiteThinkingTime = requireThinkingTime(whiteThinkingTime, "whiteThinkingTime");
+    blackThinkingTime = requireThinkingTime(blackThinkingTime, "blackThinkingTime");
     moveDelay = Objects.requireNonNull(moveDelay, "moveDelay must not be null");
     if (moveDelay.isNegative()) throw new IllegalArgumentException("moveDelay must not be negative");
   }
 
   public ComputerVsComputerConfiguration(
       String whiteEngineId, String blackEngineId, TimeControl timeControl, Duration thinkingTime) {
-    this(whiteEngineId, blackEngineId, timeControl, thinkingTime, Duration.ZERO);
+    this(whiteEngineId, blackEngineId, timeControl, thinkingTime, thinkingTime, Duration.ZERO);
+  }
+  public ComputerVsComputerConfiguration(String whiteEngineId, String blackEngineId, TimeControl timeControl,
+      Duration thinkingTime, Duration moveDelay) {
+    this(whiteEngineId, blackEngineId, timeControl, thinkingTime, thinkingTime, moveDelay);
+  }
+  private static Duration requireThinkingTime(Duration value, String field) {
+    Duration required = Objects.requireNonNull(value, field + " must not be null");
+    if (required.isZero() || required.isNegative()) throw new IllegalArgumentException(field + " must be positive");
+    return required;
   }
   private static String requireId(String value, String field) {
     String id = Objects.requireNonNull(value, field + " must not be null").trim();

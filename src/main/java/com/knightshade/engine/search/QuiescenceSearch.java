@@ -9,7 +9,9 @@ import com.knightshade.engine.ordering.MoveOrderer;
 import com.knightshade.engine.see.See;
 import com.escontrela.lastmove.domain.common.PieceColor;
 import com.escontrela.lastmove.domain.common.PieceType;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -22,8 +24,6 @@ import java.util.Objects;
  * and captures of major pieces are retained because pruning them is tactically risky.
  */
 public final class QuiescenceSearch {
-
-  private static final int CHECK_EXTENSION_NODE_LIMIT = 8_000;
 
   private final MoveGenerator moveGenerator;
   private final Evaluator evaluator;
@@ -46,7 +46,7 @@ public final class QuiescenceSearch {
   }
 
   public int search(Board board, int alpha, int beta, int ply, StopSignal stop) {
-    return searchInternal(board, alpha, beta, ply, stop, false);
+    return searchInternal(board, alpha, beta, ply, stop, false, new HashMap<>());
   }
 
   /**
@@ -54,11 +54,17 @@ public final class QuiescenceSearch {
    * forcing check at the leaf is not hidden by the captures-only filter.
    */
   int searchWithQuietChecks(Board board, int alpha, int beta, int ply, StopSignal stop) {
-    return searchInternal(board, alpha, beta, ply, stop, true);
+    return searchWithQuietChecks(board, alpha, beta, ply, stop, new HashMap<>());
+  }
+
+  int searchWithQuietChecks(
+      Board board, int alpha, int beta, int ply, StopSignal stop, Map<Long, Integer> repetitions) {
+    return searchInternal(board, alpha, beta, ply, stop, true, repetitions);
   }
 
   private int searchInternal(
-      Board board, int alpha, int beta, int ply, StopSignal stop, boolean quietChecks) {
+      Board board, int alpha, int beta, int ply, StopSignal stop, boolean quietChecks,
+      Map<Long, Integer> repetitions) {
     nodes++;
     if (stop.shouldStop()) {
       return alpha;
@@ -67,15 +73,18 @@ public final class QuiescenceSearch {
       return evaluateFromSideToMove(board);
     }
 
-    if (board.inCheck(board.sideToMove())) {
+    boolean inCheck = board.inCheck(board.sideToMove());
+    if (repetitions != null && (board.halfmoveClock() >= 100
+        || repetitions.getOrDefault(board.zobristKey(), 0) >= 3)) {
+      return inCheck && !moveGenerator.hasLegalMove(board) ? -(Scores.MATE - ply) : 0;
+    }
+    if (inCheck) {
       List<Move> evasions = moveGenerator.generate(board);
       if (evasions.isEmpty()) {
         return -(Scores.MATE - ply);
       }
       for (Move move : evasions) {
-        board.make(move);
-        int score = -searchInternal(board, -beta, -alpha, ply + 1, stop, false);
-        board.unmake();
+        int score = searchChild(board, move, alpha, beta, ply, stop, repetitions);
         if (stop.shouldStop()) {
           return alpha;
         }
@@ -89,6 +98,14 @@ public final class QuiescenceSearch {
       return alpha;
     }
 
+    // Generate once at the horizon and reuse the same legal list for captures and quiet checks.
+    List<Move> legal = quietChecks ? moveGenerator.generate(board) : null;
+    List<Move> captures = quietChecks
+        ? legal.stream().filter(move -> move.isCapture() || move.isPromotion()).toList()
+        : moveGenerator.generateCaptures(board);
+    if (quietChecks ? legal.isEmpty() : captures.isEmpty() && !moveGenerator.hasLegalMove(board)) {
+      return 0;
+    }
     int standPat = evaluateFromSideToMove(board);
     if (standPat >= beta) {
       return beta;
@@ -96,13 +113,11 @@ public final class QuiescenceSearch {
     if (standPat > alpha) {
       alpha = standPat;
     }
-    List<Move> captures = moveOrderer.orderCaptures(board, moveGenerator.generateCaptures(board));
+    captures = moveOrderer.orderCaptures(board, captures);
     for (Move move : captures) {
       boolean searchCapture = shouldSearchCapture(board, move);
       if (searchCapture) {
-        board.make(move);
-        int score = -searchInternal(board, -beta, -alpha, ply + 1, stop, false);
-        board.unmake();
+        int score = searchChild(board, move, alpha, beta, ply, stop, repetitions);
         if (stop.shouldStop()) {
           return alpha;
         }
@@ -114,8 +129,8 @@ public final class QuiescenceSearch {
         }
       }
     }
-    if (quietChecks && nodes <= CHECK_EXTENSION_NODE_LIMIT) {
-      alpha = searchQuietChecks(board, alpha, beta, ply, stop);
+    if (quietChecks) {
+      alpha = searchQuietChecks(board, legal, alpha, beta, ply, stop, repetitions);
     }
     return alpha;
   }
@@ -138,8 +153,8 @@ public final class QuiescenceSearch {
     return givesCheck;
   }
 
-  private int searchQuietChecks(Board board, int alpha, int beta, int ply, StopSignal stop) {
-    List<Move> legal = moveGenerator.generate(board);
+  private int searchQuietChecks(Board board, List<Move> legal, int alpha, int beta, int ply,
+      StopSignal stop, Map<Long, Integer> repetitions) {
     for (Move move : legal) {
       if (move.isCapture() || move.isPromotion()) {
         continue;
@@ -150,8 +165,8 @@ public final class QuiescenceSearch {
         board.unmake();
         continue;
       }
-      int score = -searchInternal(board, -beta, -alpha, ply + 1, stop, false);
       board.unmake();
+      int score = searchChild(board, move, alpha, beta, ply, stop, repetitions);
       if (stop.shouldStop()) {
         return alpha;
       }
@@ -163,6 +178,23 @@ public final class QuiescenceSearch {
       }
     }
     return alpha;
+  }
+
+  private int searchChild(Board board, Move move, int alpha, int beta, int ply,
+      StopSignal stop, Map<Long, Integer> repetitions) {
+    board.make(move);
+    long key = board.zobristKey();
+    if (repetitions != null) {
+      repetitions.merge(key, 1, Integer::sum);
+    }
+    try {
+      return -searchInternal(board, -beta, -alpha, ply + 1, stop, false, repetitions);
+    } finally {
+      if (repetitions != null) {
+        repetitions.computeIfPresent(key, (ignored, count) -> count == 1 ? null : count - 1);
+      }
+      board.unmake();
+    }
   }
 
   private int evaluateFromSideToMove(Board board) {

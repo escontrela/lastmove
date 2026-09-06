@@ -76,6 +76,16 @@ public final class PieceSquareTables {
     -30, -40, -40, -50, -50, -40, -40, -30
   };
 
+  /** Smoothly trades shelter for central king activity as non-pawn material disappears. */
+  public static int kingValue(int index, boolean white, int phase) {
+    int file = index & 7;
+    int rank = index >>> 3;
+    int centerDistance = Math.max(3 - file, file - 4) + Math.max(3 - rank, rank - 4);
+    int endgame = 40 - 15 * centerDistance;
+    return (value(PieceType.KING, index, white) * phase
+        + endgame * (GamePhase.MAX - phase)) / GamePhase.MAX;
+  }
+
   private PieceSquareTables() {}
 
   /** Returns the positional bonus for a piece on the given square index. */

@@ -7,8 +7,7 @@ import com.escontrela.lastmove.domain.common.PieceColor;
 import com.escontrela.lastmove.domain.common.PieceType;
 import com.escontrela.lastmove.domain.common.Square;
 import com.escontrela.lastmove.domain.game.CastlingRights;
-import java.util.ArrayDeque;
-import java.util.Deque;
+import java.util.Arrays;
 
 /**
  * Mutable mailbox board used as the search workspace.
@@ -26,7 +25,8 @@ public final class Board implements Position {
   private static final Square BLACK_QUEEN_ROOK = Square.of(0, 7);
 
   private final int[] pieces = new int[64];
-  private final Deque<Undo> undoStack = new ArrayDeque<>();
+  private Undo[] undoStack = new Undo[128];
+  private int undoSize;
 
   private PieceColor sideToMove = PieceColor.WHITE;
   private CastlingRights castlingRights = CastlingRights.none();
@@ -34,6 +34,7 @@ public final class Board implements Position {
   private int halfmoveClock;
   private int fullmoveNumber = 1;
   private long zobristKey;
+  private final int[] kingSquares = {-1, -1};
 
   /** Creates an empty board; the FEN parser fills state through the package setters below. */
   static Board empty() {
@@ -92,7 +93,15 @@ public final class Board implements Position {
   }
 
   void setPiece(Square square, int piece) {
-    pieces[indexOf(square)] = piece;
+    int index = indexOf(square);
+    int previous = pieces[index];
+    if (previous != Piece.NONE && Piece.type(previous) == PieceType.KING) {
+      kingSquares[Piece.color(previous).ordinal()] = -1;
+    }
+    pieces[index] = piece;
+    if (piece != Piece.NONE && Piece.type(piece) == PieceType.KING) {
+      kingSquares[Piece.color(piece).ordinal()] = index;
+    }
   }
 
   void setSideToMove(PieceColor color) {
@@ -142,13 +151,14 @@ public final class Board implements Position {
             ? Square.of(from.getFile(), (from.getRank() + to.getRank()) / 2)
             : null;
 
-    undoStack.push(
-        new Undo(
-            move, capturedPiece, capturedSquare, castlingRights, enPassantTarget,
-            halfmoveClock, fullmoveNumber, zobristKey));
+    nextUndo().save(move, capturedPiece, capturedSquare, castlingRights, enPassantTarget,
+        halfmoveClock, fullmoveNumber, zobristKey);
 
     pieces[fromIndex] = Piece.NONE;
     pieces[toIndex] = placedPiece;
+    if (Piece.type(movingPiece) == PieceType.KING) {
+      kingSquares[movingColor.ordinal()] = toIndex;
+    }
     if (move.isEnPassant()) {
       pieces[indexOf(capturedSquare)] = Piece.NONE;
     }
@@ -187,7 +197,7 @@ public final class Board implements Position {
 
   /** Reverts the most recent {@link #make(Move)} call, restoring board and state exactly. */
   public void unmake() {
-    Undo undo = undoStack.pop();
+    Undo undo = undoStack[--undoSize];
     Move move = undo.move;
     Square from = move.from();
     Square to = move.to();
@@ -196,6 +206,9 @@ public final class Board implements Position {
     PieceColor color = Piece.color(placedPiece);
     PieceType restoredType = move.isPromotion() ? PieceType.PAWN : Piece.type(placedPiece);
     pieces[indexOf(from)] = Piece.of(color, restoredType);
+    if (restoredType == PieceType.KING) {
+      kingSquares[color.ordinal()] = indexOf(from);
+    }
     pieces[indexOf(to)] = undo.capturedPiece;
     if (move.isEnPassant()) {
       pieces[indexOf(to)] = Piece.NONE;
@@ -215,10 +228,8 @@ public final class Board implements Position {
 
   /** Passes the turn without moving a piece, for null-move pruning. */
   public void makeNullMove() {
-    undoStack.push(
-        new Undo(
-            null, Piece.NONE, null, castlingRights, enPassantTarget, halfmoveClock, fullmoveNumber,
-            zobristKey));
+    nextUndo().save(null, Piece.NONE, null, castlingRights, enPassantTarget,
+        halfmoveClock, fullmoveNumber, zobristKey);
 
     long key = zobristKey;
     key ^= Zobrist.sideToMove();
@@ -235,7 +246,7 @@ public final class Board implements Position {
 
   /** Reverts the most recent {@link #makeNullMove()} call. */
   public void unmakeNullMove() {
-    Undo undo = undoStack.pop();
+    Undo undo = undoStack[--undoSize];
     sideToMove = sideToMove.opposite();
     castlingRights = undo.castlingRights;
     enPassantTarget = undo.enPassantTarget;
@@ -246,12 +257,11 @@ public final class Board implements Position {
 
   /** Returns the square of the given color's king. */
   public Square kingSquare(PieceColor color) {
-    for (int index = 0; index < 64; index++) {
-      if (Piece.is(pieces[index], color, PieceType.KING)) {
-        return squareOf(index);
-      }
+    int index = kingSquares[color.ordinal()];
+    if (index < 0) {
+      throw new IllegalStateException("The position has no " + color + " king");
     }
-    throw new IllegalStateException("The position has no " + color + " king");
+    return squareOf(index);
   }
 
   /** Returns whether the given color is currently in check. */
@@ -303,6 +313,37 @@ public final class Board implements Position {
       }
     }
     return false;
+  }
+
+  /** Own pieces absolutely pinned to their king by enemy bishops, rooks or queens. */
+  public long pinnedPieces(PieceColor color) {
+    Square king = kingSquare(color);
+    long pinned = 0;
+    for (int[] direction : KING_OFFSETS) {
+      int file = king.getFile() + direction[0];
+      int rank = king.getRank() + direction[1];
+      int candidate = -1;
+      while (file >= 0 && file < 8 && rank >= 0 && rank < 8) {
+        int index = rank * 8 + file;
+        int piece = pieces[index];
+        if (piece != Piece.NONE) {
+          if (candidate < 0 && Piece.color(piece) == color) {
+            candidate = index;
+          } else {
+            boolean diagonal = direction[0] != 0 && direction[1] != 0;
+            if (candidate >= 0 && Piece.color(piece) != color
+                && (Piece.type(piece) == PieceType.QUEEN
+                    || Piece.type(piece) == (diagonal ? PieceType.BISHOP : PieceType.ROOK))) {
+              pinned |= 1L << candidate;
+            }
+            break;
+          }
+        }
+        file += direction[0];
+        rank += direction[1];
+      }
+    }
+    return pinned;
   }
 
   /** Serializes the position to FEN, primarily for round-trip tests and diagnostics. */
@@ -417,6 +458,10 @@ public final class Board implements Position {
       bq = false;
     }
 
+    if (wk == castlingRights.whiteKingSide() && wq == castlingRights.whiteQueenSide()
+        && bk == castlingRights.blackKingSide() && bq == castlingRights.blackQueenSide()) {
+      return castlingRights;
+    }
     return new CastlingRights(wk, wq, bk, bq);
   }
 
@@ -475,13 +520,41 @@ public final class Board implements Position {
     {1, 1}, {1, -1}, {-1, 1}, {-1, -1}
   };
 
-  private record Undo(
-      Move move,
-      int capturedPiece,
-      Square capturedSquare,
-      CastlingRights castlingRights,
-      Square enPassantTarget,
-      int halfmoveClock,
-      int fullmoveNumber,
-      long zobristKey) {}
+  private Undo nextUndo() {
+    if (undoSize == undoStack.length) {
+      undoStack = Arrays.copyOf(undoStack, undoSize * 2);
+    }
+    Undo undo = undoStack[undoSize];
+    if (undo == null) {
+      undo = new Undo();
+      undoStack[undoSize] = undo;
+    }
+    undoSize++;
+    return undo;
+  }
+
+  // One reusable frame per active ply, instead of allocating an object for every tested move.
+  private static final class Undo {
+    private Move move;
+    private int capturedPiece;
+    private Square capturedSquare;
+    private CastlingRights castlingRights;
+    private Square enPassantTarget;
+    private int halfmoveClock;
+    private int fullmoveNumber;
+    private long zobristKey;
+
+    private void save(Move move, int capturedPiece, Square capturedSquare,
+        CastlingRights castlingRights, Square enPassantTarget, int halfmoveClock,
+        int fullmoveNumber, long zobristKey) {
+      this.move = move;
+      this.capturedPiece = capturedPiece;
+      this.capturedSquare = capturedSquare;
+      this.castlingRights = castlingRights;
+      this.enPassantTarget = enPassantTarget;
+      this.halfmoveClock = halfmoveClock;
+      this.fullmoveNumber = fullmoveNumber;
+      this.zobristKey = zobristKey;
+    }
+  }
 }

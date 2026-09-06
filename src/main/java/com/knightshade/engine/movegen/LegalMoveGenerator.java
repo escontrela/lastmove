@@ -42,21 +42,29 @@ public final class LegalMoveGenerator implements MoveGenerator {
 
   @Override
   public List<Move> generate(Board board) {
-    return filterLegal(board, board.sideToMove(), generatePseudoLegal(board));
+    return filterLegal(board, board.sideToMove(), generatePseudoLegal(board, false));
   }
 
   @Override
   public List<Move> generateCaptures(Board board) {
-    List<Move> captures = new ArrayList<>();
-    for (Move move : generatePseudoLegal(board)) {
-      if (move.isCapture() || move.isPromotion()) {
-        captures.add(move);
-      }
-    }
-    return filterLegal(board, board.sideToMove(), captures);
+    return filterLegal(board, board.sideToMove(), generatePseudoLegal(board, true));
   }
 
-  private List<Move> generatePseudoLegal(Board board) {
+  @Override
+  public boolean hasLegalMove(Board board) {
+    PieceColor side = board.sideToMove();
+    for (Move move : generatePseudoLegal(board, false)) {
+      board.make(move);
+      boolean safe = !board.inCheck(side);
+      board.unmake();
+      if (safe) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  List<Move> generatePseudoLegal(Board board, boolean capturesOnly) {
     List<Move> pseudoLegal = new ArrayList<>();
     PieceColor side = board.sideToMove();
     for (int index = 0; index < 64; index++) {
@@ -66,25 +74,36 @@ public final class LegalMoveGenerator implements MoveGenerator {
       }
       Square from = Position.squareOf(index);
       switch (Piece.type(piece)) {
-        case PAWN -> generatePawnMoves(board, from, piece, pseudoLegal);
-        case KNIGHT -> generateLeaperMoves(board, from, piece, KNIGHT_OFFSETS, pseudoLegal);
-        case BISHOP -> generateSliderMoves(board, from, piece, BISHOP_DIRECTIONS, pseudoLegal);
-        case ROOK -> generateSliderMoves(board, from, piece, ROOK_DIRECTIONS, pseudoLegal);
+        case PAWN -> generatePawnMoves(board, from, piece, pseudoLegal, capturesOnly);
+        case KNIGHT -> generateLeaperMoves(board, from, piece, KNIGHT_OFFSETS, pseudoLegal, capturesOnly);
+        case BISHOP -> generateSliderMoves(board, from, piece, BISHOP_DIRECTIONS, pseudoLegal, capturesOnly);
+        case ROOK -> generateSliderMoves(board, from, piece, ROOK_DIRECTIONS, pseudoLegal, capturesOnly);
         case QUEEN -> {
-          generateSliderMoves(board, from, piece, BISHOP_DIRECTIONS, pseudoLegal);
-          generateSliderMoves(board, from, piece, ROOK_DIRECTIONS, pseudoLegal);
+          generateSliderMoves(board, from, piece, BISHOP_DIRECTIONS, pseudoLegal, capturesOnly);
+          generateSliderMoves(board, from, piece, ROOK_DIRECTIONS, pseudoLegal, capturesOnly);
         }
-        case KING -> generateKingMoves(board, from, piece, pseudoLegal);
+        case KING -> generateKingMoves(board, from, piece, pseudoLegal, capturesOnly);
       }
     }
     return pseudoLegal;
   }
 
   private List<Move> filterLegal(Board board, PieceColor side, List<Move> pseudoLegal) {
-    List<Move> legal = new ArrayList<>();
+    List<Move> legal = new ArrayList<>(pseudoLegal.size());
+    boolean inCheck = board.inCheck(side);
+    long pinned = inCheck ? 0 : board.pinnedPieces(side);
     for (Move move : pseudoLegal) {
+      // In a non-check position, only king moves, pinned pieces and en passant can expose
+      // our king. En passant can open a rank through two removed pawns, so always test it.
+      boolean needsTest = inCheck || move.isEnPassant()
+          || Piece.type(board.pieceAt(move.from())) == PieceType.KING
+          || (pinned & (1L << Position.indexOf(move.from()))) != 0;
+      if (!needsTest) {
+        legal.add(move);
+        continue;
+      }
       board.make(move);
-      boolean leavesKingSafe = !board.isSquareAttacked(board.kingSquare(side), side.opposite());
+      boolean leavesKingSafe = !board.inCheck(side);
       board.unmake();
       if (leavesKingSafe) {
         legal.add(move);
@@ -94,7 +113,7 @@ public final class LegalMoveGenerator implements MoveGenerator {
   }
 
   private void generatePawnMoves(
-      Board board, Square from, int piece, List<Move> moves) {
+      Board board, Square from, int piece, List<Move> moves, boolean capturesOnly) {
     PieceColor color = Piece.color(piece);
     int direction = color == PieceColor.WHITE ? 1 : -1;
     int file = from.getFile();
@@ -107,14 +126,14 @@ public final class LegalMoveGenerator implements MoveGenerator {
       return;
     }
 
-    Square oneAhead = Square.of(file, nextRank);
+    Square oneAhead = Position.squareOf(nextRank * 8 + file);
     if (board.pieceAt(oneAhead) == Piece.NONE) {
       if (nextRank == promotionRank) {
         addPromotions(from, oneAhead, null, moves);
-      } else {
+      } else if (!capturesOnly) {
         moves.add(new Move(from, oneAhead, null, MoveFlag.NORMAL, null));
         if (rank == startRank) {
-          Square twoAhead = Square.of(file, rank + 2 * direction);
+          Square twoAhead = Position.squareOf((rank + 2 * direction) * 8 + file);
           if (board.pieceAt(twoAhead) == Piece.NONE) {
             moves.add(new Move(from, twoAhead, null, MoveFlag.DOUBLE_PAWN_PUSH, null));
           }
@@ -127,7 +146,7 @@ public final class LegalMoveGenerator implements MoveGenerator {
       if (targetFile < 0 || targetFile > 7) {
         continue;
       }
-      Square target = Square.of(targetFile, nextRank);
+      Square target = Position.squareOf(nextRank * 8 + targetFile);
       int targetPiece = board.pieceAt(target);
       if (targetPiece != Piece.NONE && Piece.color(targetPiece) != color) {
         if (nextRank == promotionRank) {
@@ -151,7 +170,7 @@ public final class LegalMoveGenerator implements MoveGenerator {
   }
 
   private void generateLeaperMoves(
-      Board board, Square from, int piece, int[][] offsets, List<Move> moves) {
+      Board board, Square from, int piece, int[][] offsets, List<Move> moves, boolean capturesOnly) {
     PieceColor color = Piece.color(piece);
     for (int[] offset : offsets) {
       int targetFile = from.getFile() + offset[0];
@@ -159,10 +178,12 @@ public final class LegalMoveGenerator implements MoveGenerator {
       if (targetFile < 0 || targetFile > 7 || targetRank < 0 || targetRank > 7) {
         continue;
       }
-      Square target = Square.of(targetFile, targetRank);
+      Square target = Position.squareOf(targetRank * 8 + targetFile);
       int targetPiece = board.pieceAt(target);
       if (targetPiece == Piece.NONE) {
-        moves.add(new Move(from, target, null, MoveFlag.NORMAL, null));
+        if (!capturesOnly) {
+          moves.add(new Move(from, target, null, MoveFlag.NORMAL, null));
+        }
       } else if (Piece.color(targetPiece) != color) {
         moves.add(new Move(from, target, null, MoveFlag.NORMAL, Piece.type(targetPiece)));
       }
@@ -170,16 +191,18 @@ public final class LegalMoveGenerator implements MoveGenerator {
   }
 
   private void generateSliderMoves(
-      Board board, Square from, int piece, int[][] directions, List<Move> moves) {
+      Board board, Square from, int piece, int[][] directions, List<Move> moves, boolean capturesOnly) {
     PieceColor color = Piece.color(piece);
     for (int[] direction : directions) {
       int targetFile = from.getFile() + direction[0];
       int targetRank = from.getRank() + direction[1];
       while (targetFile >= 0 && targetFile < 8 && targetRank >= 0 && targetRank < 8) {
-        Square target = Square.of(targetFile, targetRank);
+        Square target = Position.squareOf(targetRank * 8 + targetFile);
         int targetPiece = board.pieceAt(target);
         if (targetPiece == Piece.NONE) {
-          moves.add(new Move(from, target, null, MoveFlag.NORMAL, null));
+          if (!capturesOnly) {
+            moves.add(new Move(from, target, null, MoveFlag.NORMAL, null));
+          }
         } else {
           if (Piece.color(targetPiece) != color) {
             moves.add(new Move(from, target, null, MoveFlag.NORMAL, Piece.type(targetPiece)));
@@ -192,14 +215,17 @@ public final class LegalMoveGenerator implements MoveGenerator {
     }
   }
 
-  private void generateKingMoves(Board board, Square from, int piece, List<Move> moves) {
-    generateLeaperMoves(board, from, piece, KING_OFFSETS, moves);
-    generateCastling(board, Piece.color(piece), moves);
+  private void generateKingMoves(
+      Board board, Square from, int piece, List<Move> moves, boolean capturesOnly) {
+    generateLeaperMoves(board, from, piece, KING_OFFSETS, moves, capturesOnly);
+    if (!capturesOnly) {
+      generateCastling(board, Piece.color(piece), moves);
+    }
   }
 
   private void generateCastling(Board board, PieceColor color, List<Move> moves) {
     int rank = color == PieceColor.WHITE ? 0 : 7;
-    Square kingFrom = Square.of(4, rank);
+    Square kingFrom = Position.squareOf(rank * 8 + 4);
     PieceColor enemy = color.opposite();
     CastlingRights rights = board.castlingRights();
     boolean kingSide = color == PieceColor.WHITE ? rights.whiteKingSide() : rights.blackKingSide();
@@ -207,8 +233,8 @@ public final class LegalMoveGenerator implements MoveGenerator {
         color == PieceColor.WHITE ? rights.whiteQueenSide() : rights.blackQueenSide();
 
     if (kingSide) {
-      Square rookDestination = Square.of(5, rank);
-      Square kingDestination = Square.of(6, rank);
+      Square rookDestination = Position.squareOf(rank * 8 + 5);
+      Square kingDestination = Position.squareOf(rank * 8 + 6);
       if (board.pieceAt(rookDestination) == Piece.NONE
           && board.pieceAt(kingDestination) == Piece.NONE
           && !board.isSquareAttacked(kingFrom, enemy)
@@ -218,9 +244,9 @@ public final class LegalMoveGenerator implements MoveGenerator {
       }
     }
     if (queenSide) {
-      Square rookPath = Square.of(1, rank);
-      Square kingPath = Square.of(2, rank);
-      Square rookDestination = Square.of(3, rank);
+      Square rookPath = Position.squareOf(rank * 8 + 1);
+      Square kingPath = Position.squareOf(rank * 8 + 2);
+      Square rookDestination = Position.squareOf(rank * 8 + 3);
       if (board.pieceAt(rookPath) == Piece.NONE
           && board.pieceAt(kingPath) == Piece.NONE
           && board.pieceAt(rookDestination) == Piece.NONE

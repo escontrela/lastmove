@@ -11,6 +11,8 @@ import com.knightshade.engine.board.Piece;
 import com.escontrela.lastmove.domain.common.PieceType;
 import com.escontrela.lastmove.domain.common.Square;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
@@ -81,6 +83,85 @@ class LegalMoveGeneratorTest {
     Set<String> moves = uciSet(moveGenerator.generate(FenParser.parse(fen)));
 
     assertEquals(Set.of("e1d1", "e1f1"), moves);
+  }
+
+  @Test
+  void perftPreservesBoardAndKingCachesAcrossSpecialMoves() {
+    Board start = FenParser.parse(STARTING_FEN);
+    assertEquals(8902, perft(start, 3));
+    assertEquals(STARTING_FEN, start.toFen());
+    Board castles = FenParser.parse(
+        "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1");
+    String before = castles.toFen();
+    long key = castles.zobristKey();
+    assertEquals(97862, perft(castles, 3));
+    assertEquals(before, castles.toFen());
+    assertEquals(key, castles.zobristKey());
+  }
+
+  @Test
+  void tacticalGeneratorMatchesFullGeneratorIncludingQuietPromotionsAndEnPassant() {
+    for (String fen : List.of(STARTING_FEN,
+        "r3k2r/8/8/3pP3/8/8/8/R3K2R w KQkq d6 0 1",
+        "1r5k/P7/8/8/8/8/8/7K w - - 0 1",
+        "8/8/8/8/8/5k2/6q1/7K w - - 0 1")) {
+      Board board = FenParser.parse(fen);
+      Set<String> expected = uciSet(moveGenerator.generate(board).stream()
+          .filter(move -> move.isCapture() || move.isPromotion()).toList());
+      assertEquals(expected, uciSet(moveGenerator.generateCaptures(board)), fen);
+      assertEquals(!moveGenerator.generate(board).isEmpty(), moveGenerator.hasLegalMove(board));
+      assertEquals(fen, board.toFen());
+    }
+  }
+
+  @Test
+  void optimizedLegalityMatchesFullMakeUnmakeAcrossRandomPlayouts() {
+    Random random = new Random(20260906L);
+    for (int game = 0; game < 8; game++) {
+      Board board = FenParser.parse(STARTING_FEN);
+      for (int ply = 0; ply < 100; ply++) {
+        String fen = board.toFen();
+        var side = board.sideToMove();
+        List<Move> reference = new ArrayList<>();
+        for (Move move : moveGenerator.generatePseudoLegal(board, false)) {
+          board.make(move);
+          if (!board.inCheck(side)) {
+            reference.add(move);
+          }
+          board.unmake();
+        }
+        List<Move> actual = moveGenerator.generate(board);
+        assertEquals(uciSet(reference), uciSet(actual), fen);
+        assertEquals(uciSet(reference.stream()
+                .filter(move -> move.isCapture() || move.isPromotion()).toList()),
+            uciSet(moveGenerator.generateCaptures(board)), fen);
+        assertEquals(fen, board.toFen());
+        if (actual.isEmpty()) {
+          break;
+        }
+        board.make(actual.get(random.nextInt(actual.size())));
+      }
+    }
+  }
+
+  @Test
+  void enPassantMayExposeARookThroughTwoPawnsEvenWithoutAnAbsolutePin() {
+    Board board = FenParser.parse("k7/8/8/r4pPK/8/8/8/8 w - f6 0 1");
+    assertTrue(!uciSet(moveGenerator.generate(board)).contains("g5f6"));
+    assertTrue(!uciSet(moveGenerator.generateCaptures(board)).contains("g5f6"));
+  }
+
+  private long perft(Board board, int depth) {
+    if (depth == 0) {
+      return 1;
+    }
+    long nodes = 0;
+    for (Move move : moveGenerator.generate(board)) {
+      board.make(move);
+      nodes += perft(board, depth - 1);
+      board.unmake();
+    }
+    return nodes;
   }
 
   private boolean contains(List<Move> moves, String uci, MoveFlag flag) {

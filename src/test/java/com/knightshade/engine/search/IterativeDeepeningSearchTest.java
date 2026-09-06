@@ -16,9 +16,31 @@ import com.knightshade.engine.evaluation.PieceSquareEvaluator;
 import com.knightshade.engine.movegen.LegalMoveGenerator;
 import java.time.Duration;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 class IterativeDeepeningSearchTest {
+
+  @Test
+  void cancellationRestoresTheBoardAndNeverPublishesAPartialIteration() {
+    String fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    Board board = FenParser.parse(fen);
+    long key = board.zobristKey();
+    AtomicInteger polls = new AtomicInteger();
+    var search = new IterativeDeepeningSearch(new LegalMoveGenerator(), new PieceSquareEvaluator());
+    SearchResult result = search.search(board, SearchLimits.depth(20),
+        () -> polls.incrementAndGet() > 5000);
+    assertEquals(fen, board.toFen());
+    assertEquals(key, board.zobristKey());
+    assertTrue(new LegalMoveGenerator().generate(board).contains(result.move()));
+    assertTrue(result.depth() < 20);
+    if (result.depth() > 0) {
+      var completed = new IterativeDeepeningSearch(new LegalMoveGenerator(), new PieceSquareEvaluator())
+          .search(FenParser.parse(fen), SearchLimits.depth(result.depth()), StopSignal.never());
+      assertEquals(completed.move(), result.move());
+      assertEquals(completed.score(), result.score());
+    }
+  }
 
   @Test
   void findsAMateInOne() {

@@ -12,6 +12,8 @@ import com.escontrela.lastmove.application.service.KnightshadeArenaSettingsServi
 import com.escontrela.lastmove.application.arena.*;
 import com.escontrela.lastmove.application.event.LichessArenaEvent;
 import com.escontrela.lastmove.ui.component.notification.NotificationsPanel;
+import com.escontrela.lastmove.ui.component.header.ApplicationHeader;
+import com.escontrela.lastmove.ui.component.date.DateTimeLinkControl;
 import com.escontrela.lastmove.ui.event.ToggleNotificationsPanelEvent;
 import com.escontrela.lastmove.application.event.ComputerGameFinishedEvent;
 import com.escontrela.lastmove.application.event.ComputerOpponentMovedEvent;
@@ -42,7 +44,9 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.TilePane;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -67,6 +71,10 @@ public class MainWindowController implements UiScreenController {
     private AnchorPane root;
     @FXML
     private Label welcomeLabel;
+    @FXML
+    private ApplicationHeader applicationHeader;
+    @FXML
+    private DateTimeLinkControl homeDateTimeControl;
     @FXML
     private Button studiesToolButton;
     @FXML
@@ -111,6 +119,9 @@ public class MainWindowController implements UiScreenController {
     @FXML
     public void initialize() {
         root.getProperties().put("controller", this);
+        applyHomeCardPatterns();
+        applicationHeader.setHomeSearchVisible(true, this::filterHomeCards);
+        homeDateTimeControl.setOnLink(event -> openMyGames());
         chessSoundService.preload();
         root.getStyleClass().addListener(themeStyleListener);
         updateThemeAssets();
@@ -124,6 +135,31 @@ public class MainWindowController implements UiScreenController {
                 setFeatureStatus("Welcome to LastMove Chess."));
         startupMessageBox.setOnClose(event ->
                 setFeatureStatus("Welcome to LastMove Chess."));
+    }
+
+    private void filterHomeCards(String query) {
+        String normalized = query == null ? "" : query.trim().toLowerCase();
+        for (var card : homeCardGrid.getChildren()) {
+            String text = card.getAccessibleText() == null ? "" : card.getAccessibleText().toLowerCase();
+            boolean matches = normalized.isEmpty() || text.contains(normalized);
+            card.setVisible(matches);
+            card.setManaged(matches);
+        }
+    }
+
+    private void applyHomeCardPatterns() {
+        if (homeCardGrid == null) return;
+        for (int index = 0; index < homeCardGrid.getChildren().size(); index++) {
+            Region card = (Region) homeCardGrid.getChildren().get(index);
+            card.getStyleClass().removeIf(style -> style.startsWith("home-card-pattern-"));
+            card.getStyleClass().add("home-card-pattern-" + ((index % 3) + 1));
+            Rectangle clip = new Rectangle();
+            clip.setArcWidth(28);
+            clip.setArcHeight(28);
+            clip.widthProperty().bind(card.widthProperty());
+            clip.heightProperty().bind(card.heightProperty());
+            card.setClip(clip);
+        }
     }
 
     @Override
@@ -384,7 +420,7 @@ public class MainWindowController implements UiScreenController {
                 .map(savedGames::listSummaries)
                 .orElseGet(List::of)
                 .stream()
-                .limit(2)
+                .limit(1)
                 .toList();
         List<VBox> rows = recentGames.stream()
                 .map(game -> recentGameRow(
@@ -392,8 +428,6 @@ public class MainWindowController implements UiScreenController {
                         gameOutcome(game) + " · " + game.movesCount() + " moves"))
                 .collect(java.util.stream.Collectors.toCollection(java.util.ArrayList::new));
         if (rows.isEmpty()) rows.add(recentGameRow("No games yet", "Start a game and it will appear here."));
-        long activeArena = lichessArena.activeGames().stream().filter(game -> game.status() == ArenaGameStatus.STARTED || game.status() == ArenaGameStatus.ACTIVE).count();
-        if (activeArena > 0) rows.add(recentGameRow("Knightshade Arena", activeArena + " challenge game" + (activeArena == 1 ? "" : "s") + " in progress"));
         recentGamesBox.getChildren().setAll(rows);
     }
 

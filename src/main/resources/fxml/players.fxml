@@ -33,7 +33,7 @@
                             <Label styleClass="players-screen-copy" text="Select a profile to edit it, or use the actions to activate, edit or delete it." wrapText="true" />
                             <Label fx:id="noPlayersLabel" styleClass="card-copy" text="No players yet. Add your first profile to start playing." wrapText="true" visible="false" managed="false" />
                             <GridPane fx:id="playerGrid" alignment="TOP_CENTER" hgap="28.0" vgap="34.0" styleClass="player-grid" />
-                            <ToolbarIconButton fx:id="newPlayerButton" accessibleText="Add new player profile" darkIconResource="/images/add_35dp_FFFFFF.png" lightIconResource="/images/add_35dp_FFFFFF.png" mnemonicParsing="false" onAction="#showNewPlayerEditor" styleClass="arena-action-button, arena-action-primary, players-add-button" text="Add profile" tooltipText="Add new profile" />
+                            <ToolbarIconButton fx:id="newPlayerButton" accessibleText="Add new player profile" darkIconResource="/images/add_35dp_FFFFFF.png" lightIconResource="/images/add_35dp_000000.png" mnemonicParsing="false" onAction="#showNewPlayerEditor" styleClass="arena-action-button, arena-action-primary, players-add-button" text="Add profile" tooltipText="Add new profile" />
                         </VBox>
                     </VBox>
                 </content>
