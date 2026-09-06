@@ -602,31 +602,34 @@
 }
 
 .home-action-grid, .home-secondary-grid {
-    -fx-pref-tile-width: 270px;
+    -fx-pref-tile-width: 360px;
     -fx-tile-alignment: top-left;
 }
 
 .home-secondary-grid { -fx-pref-tile-width: 360px; }
 
 .home-action-card, .home-secondary-card {
-    -fx-alignment: bottom-left;
+    -fx-alignment: center-left;
     -fx-background-color: #ffffff;
     -fx-background-insets: 0, 0;
-    /* One radius for the colour layer and one for each card illustration. */
-    -fx-background-radius: 0, 0;
-    -fx-border-color: #e5eaf0;
-    -fx-border-radius: 0;
+    -fx-background-image: url("/images/card-home.png");
+    -fx-background-position: center;
+    -fx-background-repeat: no-repeat;
+    -fx-background-size: cover;
+    -fx-background-radius: 14px;
+    -fx-border-color: #b9cee8;
+    -fx-border-radius: 14px;
     -fx-border-width: 1px;
     -fx-cursor: hand;
-    -fx-padding: 24px;
+    -fx-padding: 28px;
     -fx-text-fill: #14213d;
-    -fx-effect: dropshadow(gaussian, rgba(29, 47, 70, 0.07), 18, 0.08, 0, 5);
+    -fx-effect: dropshadow(gaussian, rgba(30, 72, 119, 0.10), 16, 0.08, 0, 4);
 }
 
 .home-action-card {
-    -fx-min-height: 252px;
-    -fx-pref-height: 252px;
-    -fx-max-height: 252px;
+    -fx-min-height: 220px;
+    -fx-pref-height: 220px;
+    -fx-max-height: 220px;
 }
 
 .home-secondary-card {
@@ -647,6 +650,12 @@
     -fx-fill-width: true;
     -fx-pref-width: 1000000px;
     -fx-max-width: 1000000px;
+}
+
+.home-card-content > .region, .home-secondary-content > .region {
+    -fx-min-height: 0;
+    -fx-pref-height: 0;
+    -fx-max-height: 0;
 }
 
 .home-card-icon {
@@ -680,8 +689,10 @@
 .home-card-link {
     -fx-font-size: 14px;
     -fx-font-weight: 700;
-    -fx-text-fill: #1769d8;
-    -fx-padding: 12px 0 0 0;
+    -fx-text-fill: #ffffff;
+    -fx-background-color: #0878f9;
+    -fx-background-radius: 999px;
+    -fx-padding: 9px 18px;
 }
 
 .home-secondary-title {
@@ -751,6 +762,39 @@
     -fx-background-repeat: no-repeat;
     -fx-background-size: cover;
 }
+
+/* Shared surface from the approved home design. Feature classes remain in
+   place as semantic hooks for their existing actions and dynamic content. */
+.home-analysis-card, .home-studies-card, .home-tactics-card, .home-computer-card,
+.home-training-card, .home-position-card, .home-games-card, .home-knightshade-banner,
+.home-storm-card {
+    -fx-background-color: #ffffff;
+    -fx-background-image: url("/images/card-home.png");
+    -fx-background-position: center;
+    -fx-background-repeat: no-repeat;
+    -fx-background-size: cover;
+    -fx-border-color: #b9cee8;
+}
+
+.home-knightshade-banner .knightshade-kicker,
+.home-knightshade-banner .knightshade-arena-status { -fx-text-fill: #1769d8; }
+.home-knightshade-banner .knightshade-title { -fx-text-fill: #14213d; }
+.home-knightshade-banner .knightshade-description,
+.home-knightshade-banner .knightshade-arena-activity { -fx-text-fill: #5d6b7e; }
+.home-knightshade-banner .knightshade-link { -fx-text-fill: #ffffff; }
+
+/* Knightshade is intentionally inverted so the Arena card remains a visual
+   anchor against the otherwise uniform dashboard surfaces. */
+.home-knightshade-banner {
+    -fx-background-color: #132337;
+    -fx-background-image: url("/images/card-home-dark.png");
+    -fx-border-color: #526f8e;
+}
+.home-knightshade-banner .knightshade-kicker,
+.home-knightshade-banner .knightshade-arena-status { -fx-text-fill: #7cb4ff; }
+.home-knightshade-banner .knightshade-title { -fx-text-fill: #f4f7fb; }
+.home-knightshade-banner .knightshade-description,
+.home-knightshade-banner .knightshade-arena-activity { -fx-text-fill: #b5c2d2; }
 
 .knightshade-kicker {
     -fx-font-size: 12px;
@@ -1453,6 +1497,53 @@
     -fx-effect: null;
 }
 
+/* v2 Black is the charcoal engraved base; v2 Tribal adds its motif overlay in the board skin. */
+.board-v2-black .board-v2-frame,
+.board-v2-tribal .board-v2-frame {
+    -fx-background-color: linear-gradient(to bottom, #343a3e 0%, #1f2529 48%, #14191d 100%);
+    -fx-background-radius: 22;
+    -fx-effect: dropshadow(gaussian, rgba(7, 10, 12, 0.60), 12, 0.22, 0, 4);
+}
+
+.board-v2-black .board-v2-inner-glow,
+.board-v2-tribal .board-v2-inner-glow {
+    -fx-border-color: rgba(235, 239, 230, 0.46), rgba(0, 0, 0, 0.72);
+    -fx-border-insets: 0, 2;
+    -fx-border-width: 1, 2;
+    -fx-border-radius: 7, 5;
+    -fx-effect: innershadow(gaussian, rgba(0, 0, 0, 0.78), 8, 0.30, 0, 0);
+}
+
+.board-v2-black .board-v2-frame-inset,
+.board-v2-tribal .board-v2-frame-inset {
+    -fx-border-color: rgba(7, 10, 12, 0.92), rgba(237, 241, 231, 0.20);
+    -fx-border-insets: 0, 2;
+    -fx-border-width: 3, 1;
+    -fx-border-radius: 6, 4;
+    -fx-effect: innershadow(gaussian, rgba(0, 0, 0, 0.75), 7, 0.24, 0, 0);
+}
+
+.board-v2-black .chess-square-light, .board-v2-tribal .chess-square-light { -fx-border-color: rgba(239, 242, 233, 0.13); -fx-border-width: 0.35; }
+.board-v2-black .chess-square-dark, .board-v2-tribal .chess-square-dark { -fx-border-color: rgba(0, 0, 0, 0.38); -fx-border-width: 0.35; }
+
+.board-v2-black .board-coordinate-label,
+.board-v2-tribal .board-coordinate-label {
+    -fx-text-fill: #e8ebe2;
+    -fx-font-weight: 800;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.88), 2, 0.5, 0, 1);
+}
+
+.board-v2-black .chess-piece, .board-v2-tribal .chess-piece { -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.82), 9, 0.40, 1.5, 4); }
+
+.board-v2-black .chess-square-selected,
+.board-v2-tribal .chess-square-selected {
+    -fx-border-color: #dcebb8;
+    -fx-border-width: 4px;
+    -fx-effect: dropshadow(gaussian, rgba(220, 235, 184, 0.68), 11, 0.28, 0, 0);
+}
+
+.board-v2-black .chess-square-hint, .board-v2-tribal .chess-square-hint { -fx-border-color: #e7c56f; }
+
 .board-coordinate-overlay { -fx-background-color: transparent; }
 
 .board-coordinate-label {
@@ -1799,6 +1890,8 @@
     -fx-border-color: #e6e6e6 transparent transparent transparent;
     -fx-border-width: 1px 0 0 0;
 }
+
+.threat-hints-status-icon { -fx-opacity: 0.82; -fx-padding: 2px; }
 
 .settings-check-box { -fx-font-size: 15px; -fx-text-fill: #262626; }
 .settings-check-box .box { -fx-background-radius: 0; -fx-border-radius: 0; }
@@ -2404,20 +2497,26 @@
 .night-mode .home-scroll-pane .scroll-bar:vertical .thumb { -fx-background-color: #536477; }
 .night-mode .home-action-card, .night-mode .home-secondary-card {
     -fx-background-color: #1a2533;
-    -fx-border-color: #34465a;
+    -fx-background-image: url("/images/card-home-dark.png");
+    -fx-background-position: center;
+    -fx-background-repeat: no-repeat;
+    -fx-background-size: cover;
+    -fx-border-color: #526f8e;
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.28), 18, 0.1, 0, 5);
 }
 .night-mode .home-action-card:hover, .night-mode .home-secondary-card:hover {
     -fx-border-color: #6aa8f5;
     -fx-effect: dropshadow(gaussian, rgba(70, 138, 230, 0.19), 22, 0.14, 0, 6);
 }
-.night-mode .home-analysis-card { -fx-background-image: url("/images/card-background-dark.png"); }
-.night-mode .home-studies-card { -fx-background-image: url("/images/studies-card-background-dark.png"); }
-.night-mode .home-tactics-card { -fx-background-image: url("/images/tactics-card-background-dark.png"); }
-.night-mode .home-computer-card { -fx-background-image: url("/images/computer-challenge-card-background-dark.png"); }
-.night-mode .home-training-card { -fx-background-color: linear-gradient(to bottom right, #223042 0%, #1a2430 62%, #24303e 100%); }
-.night-mode .home-position-card { -fx-background-image: url("/images/position-analysis-card-background-dark.png"); }
-.night-mode .home-games-card { -fx-background-image: url("/images/computer-challenge-card-background-dark.png"); }
+.night-mode .home-analysis-card, .night-mode .home-studies-card,
+.night-mode .home-tactics-card, .night-mode .home-computer-card,
+.night-mode .home-training-card, .night-mode .home-position-card,
+.night-mode .home-games-card, .night-mode .home-knightshade-banner,
+.night-mode .home-storm-card {
+    -fx-background-color: #132337;
+    -fx-background-image: url("/images/card-home-dark.png");
+    -fx-border-color: #526f8e;
+}
 .night-mode .home-analysis-icon { -fx-background-color: #173353; }
 .night-mode .home-studies-icon { -fx-background-color: #193d31; }
 .night-mode .home-tactics-icon { -fx-background-color: #432553; }
@@ -2427,8 +2526,18 @@
 .night-mode .home-card-description, .night-mode .home-secondary-description { -fx-text-fill: #b5c2d2; }
 .night-mode .home-recent-game-title { -fx-text-fill: #e5edf7; }
 .night-mode .home-recent-game-summary { -fx-text-fill: #a9b9ca; }
-.night-mode .home-card-link { -fx-text-fill: #7cb4ff; }
-.night-mode .home-knightshade-banner { -fx-background-color: #081426; -fx-border-color: #294768; }
+.night-mode .home-card-link { -fx-text-fill: #f5f9ff; -fx-background-color: transparent; -fx-border-color: #3c91ff; -fx-border-radius: 999px; -fx-border-width: 1px; }
+.night-mode .home-knightshade-banner {
+    -fx-background-color: #ffffff;
+    -fx-background-image: url("/images/card-home.png");
+    -fx-border-color: #b9cee8;
+}
+.night-mode .home-knightshade-banner .knightshade-kicker,
+.night-mode .home-knightshade-banner .knightshade-arena-status { -fx-text-fill: #1769d8; }
+.night-mode .home-knightshade-banner .knightshade-title { -fx-text-fill: #14213d; }
+.night-mode .home-knightshade-banner .knightshade-description,
+.night-mode .home-knightshade-banner .knightshade-arena-activity { -fx-text-fill: #5d6b7e; }
+.night-mode .home-knightshade-banner .knightshade-link { -fx-text-fill: #ffffff; -fx-background-color: #0878f9; -fx-border-color: transparent; }
 .night-mode .message-box-overlay { -fx-background-color: rgba(0, 0, 0, 0.38); }
 .night-mode .promotion-picker-card {
     -fx-background-color: #1c2430;
@@ -2549,12 +2658,18 @@
 .night-mode .secondary-button:hover, .night-mode .ghost-button:hover {
     -fx-background-color: #3b4654;
 }
-.game-session-selector-list { -fx-background-color: #ffffff; -fx-border-color: #d6dee8; -fx-border-radius: 10; -fx-background-radius: 10; }
-.game-session-selector-list .list-cell { -fx-background-color: transparent; -fx-text-fill: #25364a; -fx-padding: 12 14; -fx-border-color: transparent transparent #e6ebf1 transparent; }
-.game-session-selector-list .list-cell:selected { -fx-background-color: #e7f1ff; -fx-text-fill: #0b66c3; }
+.game-session-selector-list { -fx-background-color: #ffffff; -fx-border-color: #d6dee8; -fx-border-radius: 10; -fx-background-radius: 10; -fx-padding: 0; }
+.game-session-selector-list .list-cell { -fx-background-color: #ffffff; -fx-text-fill: #25364a; -fx-padding: 10 14; -fx-border-color: transparent transparent #e6ebf1 transparent; }
+.game-session-selector-list .list-cell:filled:hover { -fx-background-color: #f5f8fc; }
+.game-session-selector-list .list-cell:filled:selected { -fx-background-color: #e7f1ff; -fx-text-fill: #0b66c3; }
+.game-session-selector-title { -fx-font-size: 14px; -fx-font-weight: 700; -fx-text-fill: #25364a; }
+.game-session-selector-detail { -fx-font-size: 12px; -fx-text-fill: #617084; }
 .night-mode .game-session-selector-list { -fx-background-color: #1c2430; -fx-border-color: #465465; }
-.night-mode .game-session-selector-list .list-cell { -fx-text-fill: #dbe7f3; -fx-border-color: transparent transparent #344151 transparent; }
-.night-mode .game-session-selector-list .list-cell:selected { -fx-background-color: #29415e; -fx-text-fill: #9fc8f7; }
+.night-mode .game-session-selector-list .list-cell { -fx-background-color: #1c2430; -fx-text-fill: #dbe7f3; -fx-border-color: transparent transparent #344151 transparent; }
+.night-mode .game-session-selector-list .list-cell:filled:hover { -fx-background-color: #243243; }
+.night-mode .game-session-selector-list .list-cell:filled:selected { -fx-background-color: #29415e; -fx-text-fill: #9fc8f7; }
+.night-mode .game-session-selector-title { -fx-text-fill: #f1f3f5; }
+.night-mode .game-session-selector-detail { -fx-text-fill: #b8c5d3; }
 
 .arena-scroll-pane,
 .arena-scroll-pane > .viewport,
@@ -2612,6 +2727,9 @@
 .arena-timeline-result.arena-timeline-win { -fx-background-color: #e9f8ef; -fx-text-fill: #16874d; -fx-stroke: transparent; }
 .arena-timeline-result.arena-timeline-loss { -fx-background-color: #ffebe9; -fx-text-fill: #c43d36; -fx-stroke: transparent; }
 .arena-timeline-result.arena-timeline-neutral { -fx-background-color: #eef2f6; -fx-text-fill: #617084; -fx-stroke: transparent; }
+.arena-timeline-live { -fx-stroke: #d92d2d; }
+.arena-timeline-result.arena-timeline-live { -fx-background-color: #fff0f0; -fx-text-fill: #d92d2d; -fx-stroke: transparent; }
+.arena-timeline-live-dot { -fx-fill: #d92d2d; }
 .arena-timeline-current-label { -fx-background-color: #1c69d4; -fx-background-radius: 5px 5px 0 0; -fx-padding: 4px 8px; -fx-text-fill: white; -fx-font-size: 10px; -fx-font-weight: 800; }
 .arena-timeline-time { -fx-font-size: 12px; -fx-text-fill: #617084; }
 .arena-console { -fx-min-height: 160px; -fx-background-color: #111a24; -fx-background-radius: 8px; -fx-border-color: #2d4054; -fx-border-radius: 8px; }
@@ -2664,6 +2782,9 @@
 .night-mode .arena-timeline-detail { -fx-text-fill: #f1f3f5; }
 .night-mode .arena-timeline-result.arena-timeline-win { -fx-background-color: #203c31; -fx-text-fill: #7edca7; }
 .night-mode .arena-timeline-result.arena-timeline-loss { -fx-background-color: #432b31; -fx-text-fill: #ff9b9b; }
+.night-mode .arena-timeline-live { -fx-stroke: #ff6b6b; }
+.night-mode .arena-timeline-result.arena-timeline-live { -fx-background-color: #4a252a; -fx-text-fill: #ff8b8b; }
+.night-mode .arena-timeline-live-dot { -fx-fill: #ff6b6b; }
 .night-mode .arena-timeline-range { -fx-background-color: #1a2129; -fx-border-color: #52647a; -fx-text-fill: #f1f3f5; }
 .night-mode .arena-timeline-range:hover, .night-mode .arena-timeline-range:focused { -fx-background-color: #263750; -fx-border-color: #78b9ff; }
 .night-mode .arena-timeline-range .list-cell { -fx-background-color: #1a2129; -fx-text-fill: #f1f3f5; }
@@ -3001,45 +3122,62 @@
 }
 .night-mode .board-coordinate-label { -fx-text-fill: #b8c5d3; }
 
-/* Player profile table on the players management screen. */
-.player-table {
-    -fx-background-color: #ffffff;
-    -fx-border-color: #d8dde3;
-    -fx-border-width: 1;
+/* Four-column player roster. */
+.players-scroll-pane { -fx-background-color: #f7faff; }
+.players-scroll-pane > .viewport { -fx-background-color: #f7faff; }
+.players-content { -fx-background-color: #f7faff; }
+.players-screen-title { -fx-font-size: 34px; -fx-font-weight: 800; -fx-text-fill: #0d2b59; }
+.players-screen-copy { -fx-font-size: 16px; -fx-text-fill: #697b91; -fx-text-alignment: center; }
+.player-grid { -fx-padding: 36 0 18 0; }
+.player-profile-card { -fx-padding: 8 10 14 10; -fx-cursor: hand; }
+.player-portrait-ring {
+    -fx-background-color: #dce4ed, #ffffff;
+    -fx-background-insets: 0, 5;
+    -fx-background-radius: 1000;
+    -fx-border-color: transparent;
+    -fx-border-radius: 1000;
+    -fx-border-width: 2;
 }
-
-.player-row {
-    -fx-background-color: #ffffff;
-    -fx-border-color: transparent transparent #e3e8ee transparent;
-    -fx-border-width: 0 0 1 0;
-    -fx-padding: 14 18;
-    -fx-min-height: 78px;
-    -fx-cursor: hand;
+.player-profile-card:hover .player-portrait-ring {
+    -fx-scale-x: 1.07;
+    -fx-scale-y: 1.07;
+    -fx-border-color: #69aafa;
+    -fx-effect: dropshadow(gaussian, rgba(28,105,212,0.38), 22, 0.22, 0, 2);
 }
-
-.player-row:hover { -fx-background-color: #f4f7fb; }
-
-.player-row-active {
-    -fx-background-color: #edf4fc;
-    -fx-border-color: transparent transparent #c5d9ef #1c69d4;
-    -fx-border-width: 0 0 1 4;
-    -fx-padding: 14 18 14 14;
+.player-profile-card-active .player-portrait-ring {
+    -fx-background-color: #1c69d4, #ffffff;
+    -fx-effect: dropshadow(gaussian, rgba(28,105,212,0.42), 24, 0.24, 0, 2);
 }
-
-.player-row-context-selected {
-    -fx-background-color: #e8f1ff;
-    -fx-border-color: transparent transparent #c7d9f0 transparent;
-}
-
-.player-row-status {
+.player-profile-status {
+    -fx-background-color: #0878f9;
+    -fx-background-radius: 20;
+    -fx-padding: 5 15;
     -fx-font-size: 11px;
-    -fx-font-weight: 700;
-    -fx-text-fill: #1c69d4;
+    -fx-font-weight: 800;
+    -fx-text-fill: #ffffff;
+    -fx-translate-y: -20;
 }
-
-.player-row-actions-hint {
-    -fx-font-size: 12px;
-    -fx-text-fill: #73808d;
+.player-card-initials {
+    -fx-font-size: 44px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #ffffff;
+    -fx-background-color: #415d7c;
+    -fx-background-radius: 1000;
+    -fx-alignment: center;
+    -fx-min-width: 164px; -fx-min-height: 164px;
+    -fx-max-width: 164px; -fx-max-height: 164px;
+}
+.player-action-button { -fx-background-radius: 1000; -fx-border-radius: 1000; }
+.toolbar-icon-button.players-add-button {
+    -fx-min-width: 164px;
+    -fx-pref-width: 164px;
+    -fx-max-width: 190px;
+    -fx-min-height: 44px;
+    -fx-pref-height: 44px;
+    -fx-max-height: 44px;
+    -fx-padding: 0 18px;
+    -fx-background-radius: 9px;
+    -fx-border-radius: 9px;
 }
 
 .player-editor-overlay { -fx-background-color: rgba(20, 27, 36, 0.34); }
@@ -3048,47 +3186,99 @@
     -fx-background-color: #ffffff;
     -fx-border-color: #d8dde3;
     -fx-border-width: 1;
-    -fx-background-radius: 14;
-    -fx-border-radius: 14;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.24), 28, 0.14, 0, 8);
+    -fx-background-radius: 16;
+    -fx-border-radius: 16;
+    -fx-effect: dropshadow(gaussian, rgba(20, 37, 58, 0.24), 32, 0.16, 0, 10);
+    -fx-cursor: default;
 }
 
-.player-editor-title {
-    -fx-font-size: 25px;
-    -fx-font-weight: 700;
-    -fx-text-fill: #262626;
+.player-editor-header { -fx-padding: 28 30 18 30; }
+.player-editor-body { -fx-padding: 12 30 24 30; }
+.player-editor-footer {
+    -fx-padding: 18 30 20 30;
+    -fx-border-color: #e3e9f0 transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+    -fx-background-color: #fbfcfe;
+    -fx-background-radius: 0 0 16 16;
 }
+.player-editor-title {
+    -fx-font-size: 27px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #10213a;
+}
+.player-editor-copy { -fx-font-size: 14px; -fx-text-fill: #617084; }
+.player-editor-photo-ring {
+    -fx-min-width: 154px; -fx-pref-width: 154px; -fx-max-width: 154px;
+    -fx-min-height: 154px; -fx-pref-height: 154px; -fx-max-height: 154px;
+    -fx-background-color: #d9e7f7, #ffffff;
+    -fx-background-insets: 0, 5;
+    -fx-background-radius: 1000;
+}
+.player-editor-photo-placeholder {
+    -fx-font-size: 13px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #91a1b3;
+}
+.toolbar-icon-button.player-camera-button {
+    -fx-min-width: 42px; -fx-pref-width: 42px; -fx-max-width: 42px;
+    -fx-min-height: 42px; -fx-pref-height: 42px; -fx-max-height: 42px;
+    -fx-background-color: #263b52;
+    -fx-border-color: #ffffff;
+    -fx-border-width: 3px;
+    -fx-background-radius: 1000;
+    -fx-border-radius: 1000;
+}
+.toolbar-icon-button.player-camera-button:hover { -fx-background-color: #1c69d4; -fx-border-color: #ffffff; }
+.button.player-photo-link, .button.player-photo-remove {
+    -fx-background-color: transparent;
+    -fx-padding: 2 6;
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #1c69d4;
+    -fx-cursor: hand;
+}
+.button.player-photo-link:hover, .button.player-photo-remove:hover { -fx-underline: true; }
+.button.player-photo-remove { -fx-font-size: 11px; -fx-text-fill: #6b7785; }
+.player-photo-help { -fx-font-size: 11px; -fx-text-fill: #8291a0; }
+.player-editor-field { -fx-min-height: 48px; -fx-pref-height: 48px; }
+.player-editor-footer .message-box-button { -fx-min-width: 112px; -fx-padding: 11 18; }
 
 .player-card-photo {
-    -fx-fit-height: 52px;
-    -fx-fit-width: 52px;
+    -fx-fit-height: 164px;
+    -fx-fit-width: 164px;
     -fx-preserve-ratio: true;
 }
 
 .player-card-name {
-    -fx-font-size: 15px;
+    -fx-font-size: 18px;
     -fx-font-weight: 700;
     -fx-text-fill: #1f242a;
 }
 
 .player-card-email {
-    -fx-font-size: 12px;
+    -fx-font-size: 13px;
     -fx-text-fill: #6a7683;
 }
 
-.night-mode .player-table { -fx-background-color: #1c2430; -fx-border-color: #465465; }
-.night-mode .player-row { -fx-background-color: #1c2430; -fx-border-color: transparent transparent #3b4654 transparent; }
-.night-mode .player-row:hover { -fx-background-color: #243243; }
-.night-mode .player-row-active {
-    -fx-background-color: #243243;
-    -fx-border-color: transparent transparent #465465 #6ba5f0;
+.night-mode .players-scroll-pane, .night-mode .players-scroll-pane > .viewport, .night-mode .players-content { -fx-background-color: #121923; }
+.night-mode .players-screen-title { -fx-text-fill: #f1f3f5; }
+.night-mode .players-screen-copy { -fx-text-fill: #aeb8c3; }
+.night-mode .player-portrait-ring { -fx-background-color: #465465, #1c2430; }
+.night-mode .player-profile-card-active .player-portrait-ring { -fx-background-color: #6ba5f0, #1c2430; }
+.night-mode .toolbar-icon-button.player-action-button:disabled {
+    -fx-opacity: 1;
+    -fx-background-color: #263443;
+    -fx-border-color: #78b9ff;
 }
-.night-mode .player-row-context-selected {
-    -fx-background-color: #29415f;
-    -fx-border-color: transparent transparent #496887 transparent;
+.night-mode .toolbar-icon-button.players-add-button {
+    -fx-background-color: #167443;
+    -fx-border-color: #167443;
+    -fx-text-fill: #ffffff;
 }
-.night-mode .player-row-status { -fx-text-fill: #79aeef; }
-.night-mode .player-row-actions-hint { -fx-text-fill: #aeb8c3; }
+.night-mode .toolbar-icon-button.players-add-button:hover {
+    -fx-background-color: #117240;
+    -fx-border-color: #117240;
+}
 .night-mode .study-library-cell:selected .study-library-row, .night-mode .chapter-row-active {
     -fx-background-color: #243243;
     -fx-border-color: transparent transparent #465465 #6ba5f0;
@@ -3099,7 +3289,26 @@
 }
 .night-mode .player-editor-overlay { -fx-background-color: rgba(0, 0, 0, 0.54); }
 .night-mode .player-editor-card { -fx-background-color: #1c2430; -fx-border-color: #465465; }
+.night-mode .player-editor-footer {
+    -fx-background-color: #18212b;
+    -fx-border-color: #3b4857 transparent transparent transparent;
+}
 .night-mode .player-editor-title { -fx-text-fill: #f1f3f5; }
+.night-mode .player-editor-copy { -fx-text-fill: #b8c5d3; }
+.night-mode .player-editor-photo-ring { -fx-background-color: #52647a, #202b38; }
+.night-mode .player-editor-photo-placeholder { -fx-text-fill: #8fa1b5; }
+.night-mode .toolbar-icon-button.player-camera-button { -fx-background-color: #30445b; -fx-border-color: #1c2430; }
+.night-mode .toolbar-icon-button.player-camera-button:hover { -fx-background-color: #3b6090; -fx-border-color: #1c2430; }
+.night-mode .button.player-photo-link { -fx-text-fill: #78b9ff; }
+.night-mode .button.player-photo-remove { -fx-text-fill: #b8c5d3; }
+.night-mode .player-photo-help { -fx-text-fill: #8fa1b5; }
+.night-mode .player-editor-field {
+    -fx-background-color: #151d26;
+    -fx-border-color: #5c6a79;
+    -fx-text-fill: #f1f3f5;
+    -fx-prompt-text-fill: #8e9ba8;
+}
+.night-mode .player-editor-field:focused { -fx-border-color: #6ba5f0; }
 
 .night-mode .player-card-name { -fx-text-fill: #f1f3f5; }
 .night-mode .player-card-email { -fx-text-fill: #aeb8c3; }

@@ -8,8 +8,6 @@
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ScrollPane?>
-<?import javafx.scene.image.Image?>
-<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
@@ -33,13 +31,11 @@
                             <Label fx:id="welcomeLabel" styleClass="catalog-title" text="Welcome back" />
                             <Label styleClass="catalog-support" text="What would you like to work on today?" wrapText="true" />
                         </VBox>
-                        <TilePane hgap="18.0" prefColumns="4" prefTileHeight="252.0" prefTileWidth="270.0" styleClass="home-action-grid" vgap="18.0">
+                        <TilePane fx:id="homeCardGrid" hgap="18.0" prefColumns="3" prefTileHeight="220.0" prefTileWidth="360.0" styleClass="home-action-grid" vgap="18.0">
                             <Button accessibleText="Analyse a PGN" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" onAction="#openPgnAnalysis" styleClass="home-action-card, home-analysis-card"><graphic><VBox styleClass="home-card-content"><Region VBox.vgrow="ALWAYS" /><VBox spacing="7.0"><Label styleClass="home-card-title" text="Analyse a PGN" /><Label styleClass="home-card-description" text="Replay and analyse your games move by move." wrapText="true" /><Label styleClass="home-card-link" text="Start analysis  →" /></VBox></VBox></graphic></Button>
                             <Button fx:id="studiesToolButton" accessibleText="My studies" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" onAction="#openStudies" styleClass="home-action-card, home-studies-card"><graphic><VBox styleClass="home-card-content"><Region VBox.vgrow="ALWAYS" /><VBox spacing="7.0"><Label styleClass="home-card-title" text="My studies" /><Label styleClass="home-card-description" text="Build and revisit your chess studies." wrapText="true" /><Label styleClass="home-card-link" text="Browse studies  →" /></VBox></VBox></graphic></Button>
                             <Button fx:id="tacticsToolButton" accessibleText="Tactic suites" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" onAction="#openTactics" styleClass="home-action-card, home-tactics-card"><graphic><VBox styleClass="home-card-content"><Region VBox.vgrow="ALWAYS" /><VBox spacing="7.0"><Label styleClass="home-card-title" text="Tactic suites" /><Label styleClass="home-card-description" text="Create and solve tactical exercises." wrapText="true" /><Label styleClass="home-card-link" text="Start training  →" /></VBox></VBox></graphic></Button>
                             <Button accessibleText="Games" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" onAction="#openMyGames" styleClass="home-action-card, home-games-card"><graphic><VBox styleClass="home-card-content"><VBox spacing="3.0"><Label styleClass="home-card-title" text="Games" /><Label styleClass="home-card-description" text="Your most recently played games." /></VBox><VBox fx:id="recentGamesBox" spacing="8.0" styleClass="home-recent-games" /><Region VBox.vgrow="ALWAYS" /><Label styleClass="home-card-link" text="Open games  →" /></VBox></graphic></Button>
-                        </TilePane>
-                        <TilePane hgap="18.0" prefColumns="3" prefTileHeight="220.0" prefTileWidth="360.0" styleClass="home-secondary-grid" vgap="18.0">
                             <Button accessibleText="Play human vs computer" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" onAction="#openHumanVsComputer" styleClass="home-secondary-card, home-computer-card"><graphic><VBox styleClass="home-secondary-content"><Region VBox.vgrow="ALWAYS" /><VBox spacing="5.0"><Label styleClass="home-secondary-title" text="Play" /><Label styleClass="home-secondary-description" text="Challenge the computer at your own pace." wrapText="true" /><Label styleClass="home-card-link" text="Play now  →" /></VBox></VBox></graphic></Button>
                             <Button accessibleText="Open Knightshade Arena" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" onAction="#openKnightshadeArena" styleClass="home-secondary-card, home-knightshade-banner"><graphic><VBox styleClass="home-secondary-content"><Region VBox.vgrow="ALWAYS" /><VBox spacing="5.0" styleClass="knightshade-copy"><Label styleClass="knightshade-kicker" text="KNIGHTSHADE ARENA" /><Label styleClass="knightshade-title" text="Lichess bot" /><Label fx:id="arenaStatusLabel" styleClass="knightshade-arena-status" text="DISCONNECTED" /><Label fx:id="arenaAccountLabel" styleClass="knightshade-arena-activity" text="Knight Shade" /><Label fx:id="arenaActivityLabel" styleClass="knightshade-arena-activity" text="0 active · 0 challenges" /><Label styleClass="knightshade-description" text="Connect, accept challenges, and monitor live games." wrapText="true" /><Label styleClass="home-card-link knightshade-link" text="Open Arena  →" wrapText="true" /></VBox></VBox></graphic></Button>
                             <Button accessibleText="Computer versus computer" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" onAction="#openComputerVsComputer" styleClass="home-secondary-card, home-computer-card"><graphic><VBox styleClass="home-secondary-content"><Region VBox.vgrow="ALWAYS" /><VBox spacing="5.0"><Label styleClass="home-secondary-title" text="Computer vs Computer" /><Label styleClass="home-secondary-description" text="Create and watch a match between two chess engines." wrapText="true" /><Label styleClass="home-card-link" text="Create match  →" /></VBox></VBox></graphic></Button>
@@ -59,9 +55,6 @@
             <Label styleClass="eyebrow-label" text="Status" />
             <Label styleClass="status-text" text="Ready to choose a chess workspace" />
             <Region HBox.hgrow="ALWAYS" />
-            <ImageView fx:id="statusBrandLogo" fitHeight="20.0" fitWidth="96.0" preserveRatio="true" smooth="true" styleClass="status-brand-logo">
-                <image><Image url="@../images/lastmove-chess-logo.png" /></image>
-            </ImageView>
         </HBox>
     </bottom>
 </BorderPane>

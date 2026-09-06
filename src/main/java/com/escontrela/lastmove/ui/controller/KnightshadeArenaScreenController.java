@@ -5,6 +5,7 @@ import com.escontrela.lastmove.application.event.LichessArenaEvent;
 import com.escontrela.lastmove.application.repository.SavedGameRepository;
 import com.escontrela.lastmove.application.service.AnalysisSessionService;
 import com.escontrela.lastmove.application.service.LichessArenaService;
+import com.escontrela.lastmove.domain.game.TimeControl;
 import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
 import com.escontrela.lastmove.ui.component.arena.GameTimelineControl;
 import com.escontrela.lastmove.ui.component.arena.ArenaConsoleControl;
@@ -207,6 +208,7 @@ public final class KnightshadeArenaScreenController implements UiScreenControlle
                 record.initialPosition(), record.currentPosition(),
                 record.moves().stream().map(com.escontrela.lastmove.domain.game.RecordedPly::ply).toList(),
                 saved.game().currentClock().whiteRemaining(), saved.game().currentClock().blackRemaining(),
+                record.timeControl().flatMap(TimeControl::initialTime),
                 record.result().isPresent(), record.result(), record.terminationReason(),
                 Optional.of("Following Lichess game live")));
         flow.show(UiScreenId.COMPUTER_VS_COMPUTER);

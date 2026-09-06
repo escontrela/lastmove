@@ -3,6 +3,7 @@ package com.escontrela.lastmove.ui.component.header;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 
@@ -19,6 +20,7 @@ public final class HeaderConfiguration {
     private final EventHandler<ActionEvent> onAvatar;
     private final List<HeaderAction> contextActions;
     private final String currentUserName;
+    private final Optional<byte[]> currentUserPhoto;
 
     private HeaderConfiguration(Builder builder) {
         showBackButton = builder.showBackButton;
@@ -31,6 +33,7 @@ public final class HeaderConfiguration {
         onAvatar = builder.onAvatar;
         contextActions = List.copyOf(builder.contextActions);
         currentUserName = builder.currentUserName;
+        currentUserPhoto = builder.currentUserPhoto.map(bytes -> java.util.Arrays.copyOf(bytes, bytes.length));
         if (showBackButton && onBack == null) {
             throw new IllegalStateException("A visible back button needs an action");
         }
@@ -46,6 +49,7 @@ public final class HeaderConfiguration {
     public EventHandler<ActionEvent> onAvatar() { return onAvatar; }
     public List<HeaderAction> contextActions() { return contextActions; }
     public String currentUserName() { return currentUserName; }
+    public Optional<byte[]> currentUserPhoto() { return currentUserPhoto.map(bytes -> java.util.Arrays.copyOf(bytes, bytes.length)); }
 
     public static Builder builder() { return new Builder(); }
 
@@ -60,6 +64,7 @@ public final class HeaderConfiguration {
         private EventHandler<ActionEvent> onAvatar;
         private final List<HeaderAction> contextActions = new ArrayList<>();
         private String currentUserName = "";
+        private Optional<byte[]> currentUserPhoto = Optional.empty();
 
         public Builder showBackButton(boolean value) { showBackButton = value; return this; }
         public Builder onBack(EventHandler<ActionEvent> value) { onBack = value; return this; }
@@ -75,6 +80,11 @@ public final class HeaderConfiguration {
             contextActions.clear(); contextActions.addAll(Objects.requireNonNull(value, "contextActions must not be null")); return this;
         }
         public Builder currentUserName(String value) { currentUserName = Objects.requireNonNullElse(value, ""); return this; }
+        public Builder currentUserPhoto(Optional<byte[]> value) {
+            currentUserPhoto = Objects.requireNonNull(value, "currentUserPhoto must not be null")
+                    .map(bytes -> java.util.Arrays.copyOf(bytes, bytes.length));
+            return this;
+        }
         public HeaderConfiguration build() { return new HeaderConfiguration(this); }
     }
 }

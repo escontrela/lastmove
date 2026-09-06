@@ -3,6 +3,8 @@ package com.escontrela.lastmove.ui.component.profile;
 import java.util.Objects;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import java.io.ByteArrayInputStream;
+import java.util.Optional;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
@@ -23,6 +25,8 @@ public final class CurrentUserAvatarControl extends Button {
     private final Label initialsLabel = new Label();
     private final ImageView fallbackFace = new ImageView(new Image(Objects.requireNonNull(
             CurrentUserAvatarControl.class.getResource("/images/face_35dp_FFFFFF.png")).toExternalForm()));
+    private final ImageView profilePhoto = new ImageView();
+    private Optional<byte[]> photo = Optional.empty();
     private final StringProperty displayName = new SimpleStringProperty(this, "displayName", "");
 
     public CurrentUserAvatarControl() {
@@ -39,7 +43,12 @@ public final class CurrentUserAvatarControl extends Button {
         fallbackFace.setFitHeight(22.0);
         fallbackFace.setPreserveRatio(true);
         fallbackFace.setMouseTransparent(true);
-        avatarGraphic.getChildren().setAll(outerRing, avatarFace, fallbackFace, initialsLabel);
+        profilePhoto.setFitWidth(32.0);
+        profilePhoto.setFitHeight(32.0);
+        profilePhoto.setPreserveRatio(false);
+        profilePhoto.setClip(new Circle(16.0, 16.0, 16.0));
+        profilePhoto.setMouseTransparent(true);
+        avatarGraphic.getChildren().setAll(outerRing, avatarFace, fallbackFace, profilePhoto, initialsLabel);
         setGraphic(avatarGraphic);
 
         setMinSize(42.0, 42.0);
@@ -61,12 +70,27 @@ public final class CurrentUserAvatarControl extends Button {
         displayName.set(value == null ? "" : value);
     }
 
+    /** Sets the active player's photo; an empty value keeps the initials avatar. */
+    public void setPhoto(Optional<byte[]> value) {
+        photo = Objects.requireNonNull(value, "photo must not be null")
+                .map(bytes -> java.util.Arrays.copyOf(bytes, bytes.length));
+        refresh();
+    }
+
     private void refresh() {
         String name = getDisplayName();
         initialsLabel.setText(CurrentUserAvatarText.initialsFor(name));
-        boolean fallback = name.isBlank() || "unknown".equalsIgnoreCase(name);
+        boolean hasPhoto = photo.isPresent();
+        photo.ifPresent(bytes -> profilePhoto.setImage(new Image(new ByteArrayInputStream(bytes))));
+        boolean fallback = !hasPhoto && (name.isBlank() || "unknown".equalsIgnoreCase(name));
+        profilePhoto.setVisible(hasPhoto);
+        profilePhoto.setManaged(hasPhoto);
         fallbackFace.setVisible(fallback);
+        fallbackFace.setManaged(fallback);
         initialsLabel.setVisible(!fallback);
+        initialsLabel.setManaged(!fallback && !hasPhoto);
+        avatarFace.setVisible(!fallback && !hasPhoto);
+        avatarFace.setManaged(!fallback && !hasPhoto);
         getStyleClass().removeIf(style -> style.startsWith("current-user-avatar-tone-"));
         avatarFace.getStyleClass().removeIf(style -> style.startsWith("current-user-avatar-tone-"));
         int tone = Math.floorMod(Objects.requireNonNullElse(name, "").toLowerCase(java.util.Locale.ROOT).hashCode(), TONE_COUNT);

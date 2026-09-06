@@ -9,6 +9,7 @@ import com.escontrela.lastmove.ui.component.header.HeaderConfiguration;
 import com.escontrela.lastmove.ui.event.UiEventBus;
 import com.escontrela.lastmove.ui.event.ToggleNotificationsPanelEvent;
 import com.escontrela.lastmove.ui.service.ApplicationThemeService;
+import com.escontrela.lastmove.ui.service.FadeEffectsService;
 import java.util.List;
 import java.util.Optional;
 import javafx.scene.Parent;
@@ -24,26 +25,34 @@ public class UiFlowManager {
     private final CurrentUserService currentUserService;
     private final GameNotificationRepository notifications;
     private final UiEventBus eventBus;
+    private final FadeEffectsService fadeEffects;
     private UiScreen currentScreen;
     private boolean escapeHandlerInstalled;
 
     public UiFlowManager(
             UiScreenFactory screenFactory,
             ApplicationThemeService themeService,
-            CurrentUserService currentUserService, GameNotificationRepository notifications, UiEventBus eventBus) {
+            CurrentUserService currentUserService, GameNotificationRepository notifications, UiEventBus eventBus,
+            FadeEffectsService fadeEffects) {
         this.screenFactory = screenFactory;
         this.themeService = themeService;
         this.currentUserService = currentUserService;
         this.notifications = notifications;
         this.eventBus = eventBus;
+        this.fadeEffects = fadeEffects;
     }
 
     public void show(UiScreenId screenId) {
+        show(screenId, null);
+    }
+
+    /** Shows a screen with a caller-provided breadcrumb trail for a selected domain item. */
+    public void show(UiScreenId screenId, List<HeaderBreadcrumb> breadcrumbs) {
         UiScreen nextScreen = screenFactory.create(screenId);
         if (currentScreen != null) {
             currentScreen.controller().onHide();
         }
-        configureHeader(nextScreen.scene().getRoot(), screenId);
+        configureHeader(nextScreen.scene().getRoot(), screenId, breadcrumbs);
         installEscapeShortcut(nextScreen.scene());
         nextScreen.show();
         currentScreen = nextScreen;
@@ -52,6 +61,16 @@ public class UiFlowManager {
     /** Returns the active primary-window view, if one has already been shown. */
     public Optional<UiScreen> currentScreen() {
         return Optional.ofNullable(currentScreen);
+    }
+
+    /** Refreshes only the active-player avatar on the currently visible screen. */
+    public void refreshCurrentUserHeader() {
+        if (currentScreen == null) return;
+        ApplicationHeader header = (ApplicationHeader) currentScreen.scene().getRoot().lookup(".application-header");
+        if (header != null) {
+            header.updateCurrentUser(currentUserService.currentUser().name(),
+                    currentUserService.currentUserPhoto(), fadeEffects);
+        }
     }
 
     /** Registers the ESC shortcut that returns from any secondary screen to the main window. */
@@ -70,7 +89,7 @@ public class UiFlowManager {
         escapeHandlerInstalled = true;
     }
 
-    private void configureHeader(Parent root, UiScreenId screenId) {
+    private void configureHeader(Parent root, UiScreenId screenId, List<HeaderBreadcrumb> customBreadcrumbs) {
         ApplicationHeader header = (ApplicationHeader) root.lookup(".application-header");
         if (header == null) {
             return;
@@ -79,7 +98,7 @@ public class UiFlowManager {
         header.configure(HeaderConfiguration.builder()
                 .showBackButton(!home)
                 .onBack(event -> requestExitToHome())
-                .breadcrumbs(breadcrumbsFor(screenId))
+                .breadcrumbs(customBreadcrumbs == null ? breadcrumbsFor(screenId) : customBreadcrumbs)
                 .showStatistics(home)
                 .onStatistics(event -> show(UiScreenId.GAME_STATISTICS))
                 .showThemeToggle(home)
@@ -105,6 +124,7 @@ public class UiFlowManager {
                         false)) : List.of())
                 .onAvatar(event -> show(UiScreenId.PLAYERS))
                 .currentUserName(currentUserService.currentUser().name())
+                .currentUserPhoto(currentUserService.currentUserPhoto())
                 .build());
     }
 
@@ -116,6 +136,21 @@ public class UiFlowManager {
     private List<HeaderBreadcrumb> breadcrumbsFor(UiScreenId screenId) {
         if (screenId == UiScreenId.MAIN) {
             return List.of();
+        }
+        if (screenId == UiScreenId.STUDIES) {
+            return List.of(
+                    HeaderBreadcrumb.link("Home", event -> show(UiScreenId.MAIN)),
+                    HeaderBreadcrumb.currentWithIcon("My Studies", "/images/folder_35dp_000000.png", "/images/folder_35dp_FFFFFF.png"));
+        }
+        if (screenId == UiScreenId.TACTICS) {
+            return List.of(
+                    HeaderBreadcrumb.link("Home", event -> show(UiScreenId.MAIN)),
+                    HeaderBreadcrumb.currentWithIcon("Tactic Suites", "/images/folder_35dp_000000.png", "/images/folder_35dp_FFFFFF.png"));
+        }
+        if (screenId == UiScreenId.MY_GAMES) {
+            return List.of(
+                    HeaderBreadcrumb.link("Home", event -> show(UiScreenId.MAIN)),
+                    HeaderBreadcrumb.currentWithIcon("My Games", "/images/folder_35dp_000000.png", "/images/folder_35dp_FFFFFF.png"));
         }
         return List.of(
                 HeaderBreadcrumb.link("Home", event -> show(UiScreenId.MAIN)),

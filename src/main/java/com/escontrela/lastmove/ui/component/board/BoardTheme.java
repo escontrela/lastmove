@@ -11,7 +11,9 @@ public enum BoardTheme {
     BLUE_GREY("#dee3e6", "#8ca2ad"),
     GREEN("#ffffdd", "#86a666"),
     V2("#efd7bd", "#715f59"),
-    V2_GRAY("#e7eaed", "#aab5c2");
+    V2_GRAY("#e7eaed", "#aab5c2"),
+    V2_BLACK("#62666a", "#20262b"),
+    V2_TRIBAL("#62666a", "#20262b");
 
     private final String lightColor;
     private final String darkColor;

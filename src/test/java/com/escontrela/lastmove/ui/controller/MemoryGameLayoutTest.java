@@ -39,17 +39,18 @@ class MemoryGameLayoutTest {
   }
 
   @Test
-  void swapsGamesAndPlayCardPositionsOnTheHomeScreen() throws Exception {
+  void keepsHomeCardsInTheirExistingOrderInsideTheUnifiedGrid() throws Exception {
     try (var input = Objects.requireNonNull(getClass().getResourceAsStream("/fxml/main-window.fxml"))) {
       String home = new String(input.readAllBytes(), StandardCharsets.UTF_8);
       int actionGrid = home.indexOf("home-action-grid");
-      int secondaryGrid = home.indexOf("home-secondary-grid");
       int games = home.indexOf("accessibleText=\"Games\"", actionGrid);
-      int editor = home.indexOf("accessibleText=\"Position editor\"", secondaryGrid);
-      int play = home.indexOf("accessibleText=\"Play human vs computer\"", secondaryGrid);
-      assertTrue(games > actionGrid && games < secondaryGrid);
-      assertTrue(editor > secondaryGrid);
-      assertTrue(play > secondaryGrid && play < editor);
+      int play = home.indexOf("accessibleText=\"Play human vs computer\"", actionGrid);
+      int arena = home.indexOf("accessibleText=\"Open Knightshade Arena\"", actionGrid);
+      int editor = home.indexOf("accessibleText=\"Position editor\"", actionGrid);
+      assertTrue(actionGrid >= 0);
+      assertFalse(home.contains("home-secondary-grid"));
+      assertTrue(games > actionGrid && play > games);
+      assertTrue(arena > play && editor > arena);
     }
   }
 

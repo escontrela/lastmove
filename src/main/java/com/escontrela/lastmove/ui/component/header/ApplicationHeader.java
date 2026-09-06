@@ -2,6 +2,8 @@ package com.escontrela.lastmove.ui.component.header;
 
 import com.escontrela.lastmove.ui.component.profile.CurrentUserAvatarControl;
 import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton;
+import com.escontrela.lastmove.ui.component.toolbar.ThemeIcon;
+import com.escontrela.lastmove.ui.service.FadeEffectsService;
 import java.util.Objects;
 import javafx.collections.ListChangeListener;
 import javafx.geometry.Pos;
@@ -12,6 +14,7 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+import java.util.Optional;
 
 /** Persistent application chrome with branding, navigation, actions and the active user. */
 public final class ApplicationHeader extends HBox {
@@ -67,6 +70,7 @@ public final class ApplicationHeader extends HBox {
         configureAction(statisticsButton, configuration.showStatistics(), configuration.onStatistics());
         configureAction(themeToggleButton, configuration.showThemeToggle(), configuration.onThemeToggle());
         currentUserAvatar.setDisplayName(configuration.currentUserName());
+        currentUserAvatar.setPhoto(configuration.currentUserPhoto());
         currentUserAvatar.setOnAction(configuration.onAvatar());
     }
 
@@ -78,6 +82,14 @@ public final class ApplicationHeader extends HBox {
     /** Replaces only the back-button action, keeping its current visibility state. */
     public void setOnBack(javafx.event.EventHandler<javafx.event.ActionEvent> handler) {
         backButton.setOnAction(handler);
+    }
+
+    /** Updates the header avatar with a short cross-fade, preserving the rest of the chrome. */
+    public void updateCurrentUser(String name, Optional<byte[]> photo, FadeEffectsService effects) {
+        effects.fadeReplace(currentUserAvatar, () -> {
+            currentUserAvatar.setDisplayName(name);
+            currentUserAvatar.setPhoto(photo);
+        });
     }
 
     private ImageView logo() {
@@ -118,16 +130,29 @@ public final class ApplicationHeader extends HBox {
             if (entry.isNavigable()) {
                 Button link = new Button(entry.label());
                 link.setOnAction(entry.onAction());
+                configureBreadcrumbIcon(link, entry);
                 link.getStyleClass().add("application-header-breadcrumb-link");
                 breadcrumbs.getChildren().add(link);
             } else {
                 Label current = new Label(entry.label());
                 current.setEllipsisString("…");
                 current.setMaxWidth(300.0);
+                configureBreadcrumbIcon(current, entry);
                 current.getStyleClass().add("application-header-breadcrumb-current");
                 breadcrumbs.getChildren().add(current);
             }
         }
+    }
+
+    private void configureBreadcrumbIcon(javafx.scene.control.Labeled target, HeaderBreadcrumb entry) {
+        if (entry.lightIconResource().isBlank() && entry.darkIconResource().isBlank()) return;
+        ThemeIcon icon = new ThemeIcon();
+        icon.setFitWidth(18.0);
+        icon.setFitHeight(18.0);
+        icon.setLightIconResource(entry.lightIconResource());
+        icon.setDarkIconResource(entry.darkIconResource());
+        target.setGraphic(icon);
+        target.setGraphicTextGap(6.0);
     }
 
     private void rebuildContextActions(java.util.List<HeaderAction> actions) {

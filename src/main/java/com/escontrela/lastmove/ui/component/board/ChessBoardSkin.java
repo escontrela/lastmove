@@ -13,6 +13,8 @@ import javafx.collections.ListChangeListener;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.scene.Group;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Label;
 import javafx.scene.control.SkinBase;
 import javafx.scene.image.Image;
@@ -45,11 +47,16 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
   private static final double COORDINATE_GUTTER_RATIO = 0.035;
   private static final double MIN_COORDINATE_GUTTER = 12.0;
   private static final double MAX_COORDINATE_GUTTER = 22.0;
+  // Fixed rather than random so the tribal trim does not jump between layout passes.
+  private static final double[] TRIBAL_SPACING = {0.88, 1.13, 0.96, 1.08, 0.84, 1.17, 0.93};
+  private static final double[] TRIBAL_SCALES = {0.82, 1.00, 0.73, 0.93, 0.88, 0.68, 0.98};
+  private static final int[] TRIBAL_VARIANTS = {0, 1, 2, 1, 0, 2, 0, 1, 2};
 
   private final Region boardInnerGlow = new Region();
   private final GridPane grid = new GridPane();
   private final Region boardFrame = new Region();
   private final Region boardFrameInset = new Region();
+  private final Canvas tribalMotifs = new Canvas();
   private final Pane arrowOverlay = new Pane();
   private final Pane coordinateOverlay = new Pane();
   private final StackPane dragOverlay = new StackPane(); // Overlay para pieza flotante durante drag
@@ -134,6 +141,7 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     getChildren().add(boardFrame);
     getChildren().add(boardInnerGlow);
     getChildren().add(boardFrameInset);
+    getChildren().add(tribalMotifs);
     getChildren().add(grid);
     getChildren().add(arrowOverlay);
     getChildren().add(dragOverlay);
@@ -147,6 +155,8 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     boardFrame.getStyleClass().add("board-v2-frame");
     boardFrameInset.setMouseTransparent(true);
     boardFrameInset.getStyleClass().add("board-v2-frame-inset");
+    tribalMotifs.setMouseTransparent(true);
+    tribalMotifs.setManaged(false);
   }
 
   private void configureGrid() {
@@ -315,6 +325,7 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     boardFrame.setVisible(preset.framed());
     boardFrameInset.setVisible(preset.framed());
     boardInnerGlow.setVisible(preset.framed() && getSkinnable().isVisualEffectsEnabled());
+    tribalMotifs.setVisible(preset == BoardAppearancePreset.V2_TRIBAL);
     if (getSkinnable().getPosition() != null) {
       renderPosition(getSkinnable().getPosition());
     }
@@ -788,6 +799,7 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     applySquareSizes(squareSize);
 
     boardFrame.resizeRelocate(frameX, frameY, frameSide, frameSide);
+    layoutTribalMotifs(frameX, frameY, frameSide, frameThickness);
     double innerLip = Math.max(3.0, Math.floor(frameThickness * 0.18));
     double glowLip = innerLip + 1.0;
     boardInnerGlow.resizeRelocate(
@@ -806,6 +818,141 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     coordinateOverlay.resizeRelocate(frameX, frameY, frameSide, frameSide);
     layoutV2CoordinateLabels(frameThickness, boardSide, squareSize);
     renderArrows();
+  }
+
+  private void layoutTribalMotifs(
+      double frameX, double frameY, double frameSide, double frameThickness) {
+    if (getSkinnable().getAppearancePreset() != BoardAppearancePreset.V2_TRIBAL) {
+      tribalMotifs.setVisible(false);
+      return;
+    }
+    tribalMotifs.setVisible(true);
+    tribalMotifs.setLayoutX(frameX);
+    tribalMotifs.setLayoutY(frameY);
+    tribalMotifs.setWidth(frameSide);
+    tribalMotifs.setHeight(frameSide);
+
+    GraphicsContext graphics = tribalMotifs.getGraphicsContext2D();
+    graphics.clearRect(0, 0, frameSide, frameSide);
+    graphics.setStroke(Color.rgb(242, 244, 235, 0.92));
+    graphics.setLineWidth(Math.max(1.15, frameThickness * 0.055));
+    double stripCenter = frameThickness * 0.50;
+    double step = Math.max(20, Math.min(34, frameSide / 14.0));
+    double motifSize = Math.min(frameThickness * 0.16, step * 0.20);
+
+    int motifIndex = 0;
+    for (double offset = frameThickness + step * 0.55;
+        offset < frameSide - frameThickness - step * 0.20;
+        offset += step * TRIBAL_SPACING[motifIndex % TRIBAL_SPACING.length], motifIndex++) {
+      drawTribalMotif(
+          graphics,
+          offset,
+          stripCenter,
+          tribalSize(motifSize, motifIndex),
+          false,
+          false,
+          tribalVariant(motifIndex));
+      drawTribalMotif(
+          graphics,
+          offset,
+          frameSide - stripCenter,
+          tribalSize(motifSize, motifIndex + 3),
+          true,
+          false,
+          tribalVariant(motifIndex + 3));
+      drawTribalMotif(
+          graphics,
+          stripCenter,
+          offset,
+          tribalSize(motifSize, motifIndex + 5),
+          false,
+          true,
+          tribalVariant(motifIndex + 5));
+      drawTribalMotif(
+          graphics,
+          frameSide - stripCenter,
+          offset,
+          tribalSize(motifSize, motifIndex + 1),
+          true,
+          true,
+          tribalVariant(motifIndex + 1));
+    }
+  }
+
+  private double tribalSize(double baseSize, int index) {
+    return baseSize * TRIBAL_SCALES[index % TRIBAL_SCALES.length];
+  }
+
+  private int tribalVariant(int index) {
+    return TRIBAL_VARIANTS[index % TRIBAL_VARIANTS.length];
+  }
+
+  private void drawTribalMotif(
+      GraphicsContext graphics,
+      double x,
+      double y,
+      double size,
+      boolean inverted,
+      boolean vertical,
+      int variant) {
+    double direction = inverted ? -1 : 1;
+    if (variant == 1) {
+      drawTribalDiamond(graphics, x, y, size, vertical);
+      return;
+    }
+    if (variant == 2) {
+      drawTribalNotch(graphics, x, y, size, direction, vertical);
+      return;
+    }
+    if (vertical) {
+      graphics.strokePolyline(
+          new double[] {x - size * direction, x, x + size * direction},
+          new double[] {y - size * 0.72, y, y - size * 0.72},
+          3);
+      graphics.strokePolygon(
+          new double[] {x - size * 0.42, x, x + size * 0.42},
+          new double[] {y + size * 0.30, y + size * 0.82, y + size * 0.30},
+          3);
+      return;
+    }
+    graphics.strokePolyline(
+        new double[] {x - size, x, x - size},
+        new double[] {y - size * 0.72 * direction, y, y + size * 0.72 * direction},
+        3);
+    graphics.strokePolygon(
+        new double[] {x + size * 0.30, x + size * 0.82, x + size * 0.30},
+        new double[] {y - size * 0.42, y, y + size * 0.42},
+        3);
+  }
+
+  private void drawTribalDiamond(
+      GraphicsContext graphics, double x, double y, double size, boolean vertical) {
+    if (vertical) {
+      graphics.strokePolygon(
+          new double[] {x, x + size * 0.65, x, x - size * 0.65},
+          new double[] {y - size * 0.80, y, y + size * 0.80, y},
+          4);
+      return;
+    }
+    graphics.strokePolygon(
+        new double[] {x - size * 0.80, x, x + size * 0.80, x},
+        new double[] {y, y + size * 0.65, y, y - size * 0.65},
+        4);
+  }
+
+  private void drawTribalNotch(
+      GraphicsContext graphics, double x, double y, double size, double direction, boolean vertical) {
+    if (vertical) {
+      graphics.strokePolyline(
+          new double[] {x - size * direction, x, x + size * direction},
+          new double[] {y + size * 0.55, y - size * 0.55, y + size * 0.55},
+          3);
+      return;
+    }
+    graphics.strokePolyline(
+        new double[] {x + size * 0.55, x - size * 0.55, x + size * 0.55},
+        new double[] {y - size * direction, y, y + size * direction},
+        3);
   }
 
   private void layoutV2CoordinateLabels(

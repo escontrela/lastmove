@@ -64,4 +64,21 @@ class BoardAppearancePreferencesServiceTest {
                 BoardAppearancePreset.V2_GRAY,
                 new BoardAppearancePreferencesService(preferences).getBoardAppearancePreset());
     }
+
+    @Test
+    void persistsTheV2BlackAndV2TribalSelectionsIndependently() {
+        BoardAppearancePreferencesService service = new BoardAppearancePreferencesService(preferences);
+
+        service.setBoardAppearancePreset(BoardAppearancePreset.V2_BLACK);
+
+        assertEquals(
+                BoardAppearancePreset.V2_BLACK,
+                new BoardAppearancePreferencesService(preferences).getBoardAppearancePreset());
+
+        service.setBoardAppearancePreset(BoardAppearancePreset.V2_TRIBAL);
+
+        assertEquals(
+                BoardAppearancePreset.V2_TRIBAL,
+                new BoardAppearancePreferencesService(preferences).getBoardAppearancePreset());
+    }
 }

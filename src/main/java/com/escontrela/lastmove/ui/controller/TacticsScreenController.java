@@ -15,6 +15,7 @@ import com.escontrela.lastmove.domain.player.PlayerId;
 import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
 import com.escontrela.lastmove.ui.component.header.ApplicationHeader;
 import com.escontrela.lastmove.ui.component.header.HeaderAction;
+import com.escontrela.lastmove.ui.component.header.HeaderBreadcrumb;
 import com.escontrela.lastmove.ui.component.list.ManagedListCell;
 import com.escontrela.lastmove.ui.component.message.TextInputModal;
 import com.escontrela.lastmove.ui.component.search.RegexSearchControl;
@@ -304,7 +305,11 @@ public final class TacticsScreenController implements UiScreenController {
       pendingAnalysisSessionId = null;
     }
     uiEventBus.publish(new OpenTacticsWorkspaceEvent(suite.suiteId(), exerciseId, false));
-    uiFlowManager.show(UiScreenId.TACTICS_WORKSPACE);
+    uiFlowManager.show(UiScreenId.TACTICS_WORKSPACE, List.of(
+        HeaderBreadcrumb.link("Home", event -> uiFlowManager.show(UiScreenId.MAIN)),
+        HeaderBreadcrumb.linkWithIcon("Tactic Suites", "/images/folder_35dp_000000.png", "/images/folder_35dp_FFFFFF.png",
+            event -> uiFlowManager.show(UiScreenId.TACTICS)),
+        HeaderBreadcrumb.current(suite.title())));
   }
 
   private final class SuiteCell extends ManagedListCell<TacticSuiteSummary> {

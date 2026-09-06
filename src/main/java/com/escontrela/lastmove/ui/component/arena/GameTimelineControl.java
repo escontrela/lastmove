@@ -4,11 +4,14 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
+import javafx.animation.Animation;
+import javafx.animation.FadeTransition;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
@@ -52,7 +55,10 @@ public final class GameTimelineControl extends VBox {
   }
 
   private enum Range {
+    LAST_1_HOUR("Last 1 hour", Duration.ofHours(1)),
+    LAST_12_HOURS("Last 12 hours", Duration.ofHours(12)),
     LAST_24_HOURS("Last 24 hours", Duration.ofHours(24)),
+    LAST_2_DAYS("Last 2 days", Duration.ofDays(2)),
     LAST_7_DAYS("Last 7 days", Duration.ofDays(7)),
     LAST_30_DAYS("Last 30 days", Duration.ofDays(30)),
     ALL("All activity", null);
@@ -73,6 +79,7 @@ public final class GameTimelineControl extends VBox {
   private static final double STEP = 250;
   private static final double CARD_WIDTH = 224;
   private static final double BASELINE_Y = 32;
+  private static final double FIRST_MARKER_X = CARD_WIDTH / 2 + 24;
   private final ComboBox<Range> range =
       new ComboBox<>(FXCollections.observableArrayList(Range.values()));
   private final Pane lane = new Pane();
@@ -81,6 +88,7 @@ public final class GameTimelineControl extends VBox {
   private final ListChangeListener<String> themeListener = change -> refreshOverviewIcon();
   private Parent observedRoot;
   private List<Entry> entries = List.of();
+  private final List<Animation> liveIndicatorAnimations = new ArrayList<>();
   private double panStartX, panStartH;
   private boolean panning;
 
@@ -91,7 +99,7 @@ public final class GameTimelineControl extends VBox {
     title.getStyleClass().add("sessions-section-title");
     overviewIcon.setFitWidth(24); overviewIcon.setFitHeight(24); overviewIcon.setPreserveRatio(true);
     title.setGraphic(overviewIcon); title.setGraphicTextGap(9);
-    range.setValue(Range.LAST_24_HOURS);
+    range.setValue(Range.LAST_1_HOUR);
     range.getStyleClass().add("arena-timeline-range");
     range.valueProperty().addListener((o, old, value) -> render());
     VBox heading = new VBox(2, title);
@@ -170,6 +178,8 @@ public final class GameTimelineControl extends VBox {
 
   private void render() {
     if (lane == null || range.getValue() == null) return;
+    liveIndicatorAnimations.forEach(Animation::stop);
+    liveIndicatorAnimations.clear();
     Instant threshold =
         range.getValue().duration == null
             ? Instant.MIN
@@ -179,14 +189,14 @@ public final class GameTimelineControl extends VBox {
     lane.getChildren().clear();
     empty.setVisible(visible.isEmpty());
     empty.setManaged(visible.isEmpty());
-    double width = Math.max(680, visible.size() * STEP + 52);
+    double width = Math.max(680, FIRST_MARKER_X + Math.max(0, visible.size() - 1) * STEP + CARD_WIDTH / 2 + 24);
     lane.setMinWidth(width);
     lane.setPrefWidth(width);
     Line baseline = new Line(22, BASELINE_Y, width - 22, BASELINE_Y);
     baseline.getStyleClass().add("arena-timeline-baseline");
     lane.getChildren().add(baseline);
     for (int index = 0; index < visible.size(); index++) {
-      double x = 34 + index * STEP;
+      double x = FIRST_MARKER_X + index * STEP;
       if (index > 0) {
         Line segment = new Line(x - STEP + 18, BASELINE_Y, x - 18, BASELINE_Y);
         segment
@@ -236,10 +246,7 @@ public final class GameTimelineControl extends VBox {
     time.getStyleClass().add("arena-timeline-time");
     HBox identity = new HBox(9, botIcon, new VBox(2, detail, time));
     identity.setAlignment(Pos.CENTER_LEFT);
-    Label result = new Label(resultText(entry.outcome()));
-    result.getStyleClass().addAll("arena-timeline-result", outcomeClass);
-    result.setMaxWidth(Double.MAX_VALUE);
-    result.setAlignment(Pos.CENTER);
+    javafx.scene.Node result = resultIndicator(entry.outcome(), outcomeClass);
     card.getChildren().addAll(identity, result);
     card.relocate(x - CARD_WIDTH / 2, BASELINE_Y + 18);
     if (current) {
@@ -261,6 +268,31 @@ public final class GameTimelineControl extends VBox {
     lane.getChildren().addAll(stem, node, card);
   }
 
+  private javafx.scene.Node resultIndicator(Outcome outcome, String outcomeClass) {
+    if (outcome != Outcome.IN_PROGRESS) {
+      Label result = new Label(resultText(outcome));
+      result.getStyleClass().addAll("arena-timeline-result", outcomeClass);
+      result.setMaxWidth(Double.MAX_VALUE);
+      result.setAlignment(Pos.CENTER);
+      return result;
+    }
+    Label live = new Label("LIVE");
+    Circle dot = new Circle(4);
+    dot.getStyleClass().add("arena-timeline-live-dot");
+    FadeTransition blink = new FadeTransition(javafx.util.Duration.millis(700), dot);
+    blink.setFromValue(1.0);
+    blink.setToValue(0.25);
+    blink.setAutoReverse(true);
+    blink.setCycleCount(Animation.INDEFINITE);
+    blink.play();
+    liveIndicatorAnimations.add(blink);
+    HBox result = new HBox(6, live, dot);
+    result.setAlignment(Pos.CENTER);
+    result.setMaxWidth(Double.MAX_VALUE);
+    result.getStyleClass().addAll("arena-timeline-result", "arena-timeline-live");
+    return result;
+  }
+
   private static String outcomeClass(Entry entry) {
     return outcomeClass(entry.outcome());
   }
@@ -269,6 +301,7 @@ public final class GameTimelineControl extends VBox {
     return switch (outcome) {
       case WON -> "arena-timeline-win";
       case LOST -> "arena-timeline-loss";
+      case IN_PROGRESS -> "arena-timeline-live";
       default -> "arena-timeline-neutral";
     };
   }

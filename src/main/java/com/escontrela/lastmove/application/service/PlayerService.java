@@ -60,6 +60,13 @@ public class PlayerService {
                 .toList();
     }
 
+    /** Lists only editable application profiles that can be selected as the current player. */
+    public List<PlayerSummary> listSelectablePlayers() {
+        return listPlayers().stream()
+                .filter(player -> !player.systemPlayer())
+                .toList();
+    }
+
     /** Creates the local system-player identity for the validated Lichess bot exactly once. */
     public Player synchronizeLichessBot(LichessBotAccount account) {
         assertAvailable();
