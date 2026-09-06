@@ -7,8 +7,10 @@ import com.escontrela.lastmove.ui.service.FadeEffectsService;
 import java.util.Objects;
 import javafx.collections.ListChangeListener;
 import javafx.geometry.Pos;
+import javafx.geometry.Insets;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
@@ -28,6 +30,7 @@ public final class ApplicationHeader extends HBox {
     private final ToolbarIconButton themeToggleButton = iconButton(
             "Toggle light or night mode", "Light / night mode", "/images/dark_mode_35dp_000000.png", "/images/dark_mode_35dp_FFFFFF.png");
     private final CurrentUserAvatarControl currentUserAvatar = new CurrentUserAvatarControl();
+    private final TextField homeSearch = new TextField();
 
     public ApplicationHeader() {
         getStyleClass().add("application-header");
@@ -44,6 +47,11 @@ public final class ApplicationHeader extends HBox {
 
         backButton.getStyleClass().add("application-header-back");
         backButton.setIconSize(16.0);
+        compactHeaderButton(backButton);
+        statisticsButton.setIconSize(18.0);
+        themeToggleButton.setIconSize(18.0);
+        compactHeaderButton(statisticsButton);
+        compactHeaderButton(themeToggleButton);
         backButton.setAccessibleText("Go home");
         backButton.setVisible(false);
         backButton.setManaged(false);
@@ -52,13 +60,34 @@ public final class ApplicationHeader extends HBox {
         breadcrumbs.setMaxWidth(Double.MAX_VALUE);
         HBox.setHgrow(breadcrumbs, Priority.ALWAYS);
         contextActions.setAlignment(Pos.CENTER);
+        homeSearch.setPromptText("Search");
+        homeSearch.setVisible(false);
+        homeSearch.setManaged(false);
+        homeSearch.setPrefWidth(190.0);
+        homeSearch.getStyleClass().add("application-header-home-search");
+        HBox.setMargin(homeSearch, new Insets(0, 4, 0, 4));
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        getChildren().addAll(branding, backButton, breadcrumbs, spacer,
+        // Keep the Home search anchored beside the action icons on the right;
+        // the flexible spacer absorbs the remaining header width.
+        getChildren().addAll(branding, backButton, breadcrumbs, spacer, homeSearch,
                 statisticsButton, themeToggleButton, contextActions, currentUserAvatar);
         configure(HeaderConfiguration.builder().build());
     }
+
+    /** Shows the compact Home-only search field and forwards query changes. */
+    public void setHomeSearchVisible(boolean visible, java.util.function.Consumer<String> listener) {
+        homeSearch.setVisible(visible);
+        homeSearch.setManaged(visible);
+        homeSearch.textProperty().removeListener(homeSearchListener);
+        if (visible && listener != null) {
+            homeSearchListener = (obs, oldValue, newValue) -> listener.accept(newValue);
+            homeSearch.textProperty().addListener(homeSearchListener);
+        }
+    }
+
+    private javafx.beans.value.ChangeListener<String> homeSearchListener = (obs, oldValue, newValue) -> {};
 
     public void configure(HeaderConfiguration configuration) {
         Objects.requireNonNull(configuration, "configuration must not be null");
@@ -111,9 +140,7 @@ public final class ApplicationHeader extends HBox {
     }
 
     private Image loadLogo(boolean nightMode) {
-        String resource = nightMode
-                ? "/images/lastmove-knight-mark-dark.png"
-                : "/images/lastmove-knight-mark.png";
+        String resource = "/images/lastmove-chess-logo-v2.png";
         return new Image(Objects.requireNonNull(getClass().getResource(resource),
                 () -> "Missing header logo: " + resource).toExternalForm());
     }
@@ -159,6 +186,8 @@ public final class ApplicationHeader extends HBox {
         contextActions.getChildren().setAll(actions.stream().map(action -> {
             ToolbarIconButton button = iconButton(action.accessibleText(), action.tooltip(),
                     action.lightIconResource(), action.darkIconResource());
+            button.setIconSize(18.0);
+            compactHeaderButton(button);
             button.setOnAction(action.onAction());
             button.setDisable(action.disabled());
             return button;
@@ -179,5 +208,12 @@ public final class ApplicationHeader extends HBox {
         button.setLightIconResource(lightIcon);
         button.setDarkIconResource(darkIcon);
         return button;
+    }
+
+    private static void compactHeaderButton(ToolbarIconButton button) {
+        button.setMinSize(40.0, 40.0);
+        button.setPrefSize(40.0, 40.0);
+        button.setMaxSize(40.0, 40.0);
+        button.setPadding(new javafx.geometry.Insets(9.0));
     }
 }

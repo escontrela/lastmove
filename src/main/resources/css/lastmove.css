@@ -35,6 +35,55 @@
 
 .application-header-branding { -fx-min-width: 260px; }
 .application-header-logo { -fx-fit-width: 48px; -fx-fit-height: 48px; }
+.application-header-home-search {
+    -fx-background-color: rgba(18, 24, 32, 0.08);
+    -fx-background-radius: 999px;
+    -fx-border-color: transparent;
+    -fx-border-radius: 999px;
+    -fx-padding: 8px 14px;
+    -fx-prompt-text-fill: #718096;
+    -fx-text-fill: #1b2633;
+    -fx-font-size: 13px;
+}
+.application-header-home-search:focused {
+    -fx-border-color: rgba(212, 168, 95, 0.72);
+    -fx-background-color: rgba(18, 24, 32, 0.12);
+}
+.date-time-link-control {
+    -fx-background-color: #1d2732;
+    -fx-background-radius: 12px;
+    -fx-border-radius: 12px;
+    -fx-padding: 0 10px 0 0;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(20, 30, 42, 0.25), 12, 0.18, 0, 3);
+}
+.date-time-link-date {
+    -fx-background-color: #16202a;
+    -fx-background-radius: 12px 0 0 12px;
+    -fx-padding: 9px 14px 10px 14px;
+    -fx-min-width: 58px;
+}
+.date-time-link-month {
+    -fx-text-fill: #d6e0eb;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+}
+.date-time-link-day {
+    -fx-text-fill: #f4f7fb;
+    -fx-font-size: 24px;
+    -fx-font-weight: 800;
+}
+.date-time-link-detail { -fx-text-fill: #d6e0eb; -fx-font-size: 12px; }
+.date-time-link-detail-date { -fx-text-fill: #9eafc1; -fx-font-size: 11px; }
+.date-time-link-detail { -fx-font-weight: 800; }
+.date-time-link-arrow { -fx-background-color: transparent; -fx-text-fill: #f4f7fb; -fx-font-size: 24px; -fx-padding: 2px 4px; }
+.date-time-link-control:hover { -fx-border-color: #d4a85f; -fx-border-width: 1px; }
+.night-mode .date-time-link-control { -fx-background-color: #1d2732; }
+.night-mode .application-header-home-search {
+    -fx-background-color: rgba(255, 255, 255, 0.12);
+    -fx-prompt-text-fill: #b7c4d3;
+    -fx-text-fill: #f4f7fb;
+}
 .application-header-brand-name, .application-header-brand-edition {
     -fx-font-size: 25px;
     -fx-font-weight: 700;
@@ -42,7 +91,7 @@
 .application-header-brand-name { -fx-text-fill: #14213d; }
 .application-header-brand-edition {
     -fx-font-size: 22px;
-    -fx-text-fill: #0b63e8;
+    -fx-text-fill: #d4a85f;
 }
 .application-header-back, .application-header-breadcrumb-link {
     -fx-background-color: transparent;
@@ -77,13 +126,13 @@
 .application-header-breadcrumb-separator { -fx-text-fill: #9ba6b5; }
 
 .night-mode .application-header {
-    -fx-background-color: #172033;
+    -fx-background-color: #121820;
     -fx-border-color: transparent transparent #34445b transparent;
 }
 .night-mode .application-header-brand-name,
 .night-mode .application-header-breadcrumb-current { -fx-text-fill: #f4f7fb; }
 .night-mode .application-header-brand-edition,
-.night-mode .application-header-back { -fx-text-fill: #68a9ff; }
+.night-mode .application-header-back { -fx-text-fill: #9bb8d2; }
 .night-mode .application-header-breadcrumb-link { -fx-text-fill: #f4f7fb; }
 .night-mode .application-header-breadcrumb-separator { -fx-text-fill: #8ea1b8; }
 .night-mode .application-header-back { -fx-border-color: #41546e; }
@@ -484,6 +533,25 @@
     -fx-padding: 0;
 }
 
+.setup-layout { -fx-alignment: top-left; -fx-padding: 28px 36px 36px 36px; -fx-background-color: #f7f8fb; }
+.settings-navigation {
+    -fx-min-width: 205px; -fx-pref-width: 205px; -fx-max-height: 520px;
+    -fx-padding: 18px 12px;
+    -fx-background-color: #121820;
+    -fx-background-image: url("/images/card-background-v2-pattern-1.png");
+    -fx-background-size: cover; -fx-background-insets: 0; -fx-background-radius: 14px; -fx-border-radius: 14px;
+    -fx-border-color: #526f8e;
+    -fx-effect: dropshadow(gaussian, rgba(30, 72, 119, 0.16), 16, 0.1, 0, 4);
+}
+.settings-navigation-title { -fx-padding: 4px 12px 12px 12px; -fx-font-size: 18px; -fx-font-weight: 800; -fx-text-fill: #f4f7fb; }
+.settings-navigation-item {
+    -fx-alignment: center-left; -fx-background-color: transparent; -fx-background-radius: 9px;
+    -fx-border-color: transparent; -fx-border-radius: 9px; -fx-padding: 10px 12px;
+    -fx-text-fill: #c3d0de; -fx-font-size: 13px; -fx-font-weight: 700;
+}
+.settings-navigation-item:hover { -fx-background-color: rgba(212, 168, 95, 0.18); -fx-text-fill: #ffffff; }
+.settings-navigation-item-active { -fx-background-color: #d4a85f; -fx-text-fill: #18212b; }
+
 .tool-catalog-shell {
     -fx-background-color: #f7f7f7;
     -fx-max-width: Infinity;
@@ -603,7 +671,8 @@
 
 .home-action-grid, .home-secondary-grid {
     -fx-pref-tile-width: 360px;
-    -fx-tile-alignment: top-left;
+    -fx-tile-alignment: top-center;
+    -fx-alignment: top-center;
 }
 
 .home-secondary-grid { -fx-pref-tile-width: 360px; }
@@ -690,7 +759,7 @@
     -fx-font-size: 14px;
     -fx-font-weight: 700;
     -fx-text-fill: #ffffff;
-    -fx-background-color: #0878f9;
+    -fx-background-color: #587f9e;
     -fx-background-radius: 999px;
     -fx-padding: 9px 18px;
 }
@@ -832,7 +901,7 @@
 .knightshade-copy .knightshade-description,
 .knightshade-copy .knightshade-link { -fx-max-width: 160px; }
 
-.home-recent-games { -fx-padding: 2px 0 0 0; }
+.home-recent-games { -fx-padding: 8px 0 0 0; }
 
 .home-recent-game-title {
     -fx-font-size: 13px;
@@ -1022,19 +1091,19 @@
 }
 
 .message-box-accept-button {
-    -fx-background-color: #1c69d4;
-    -fx-border-color: #1c69d4;
-    -fx-text-fill: #ffffff;
+    -fx-background-color: #d4a85f;
+    -fx-border-color: #d4a85f;
+    -fx-text-fill: #18212b;
 }
 
 .message-box-accept-button:hover {
-    -fx-background-color: #0653b6;
-    -fx-border-color: #0653b6;
+    -fx-background-color: #e2b86d;
+    -fx-border-color: #e2b86d;
 }
 
 .message-box-accept-button:pressed {
-    -fx-background-color: #004a9f;
-    -fx-border-color: #004a9f;
+    -fx-background-color: #bd9148;
+    -fx-border-color: #bd9148;
 }
 
 .message-box-cancel-button,
@@ -2468,6 +2537,38 @@
 .night-mode .setup-scroll-pane .scroll-bar:vertical .track { -fx-background-color: #1c2430; }
 .night-mode .setup-scroll-pane .scroll-bar:vertical .thumb { -fx-background-color: #465465; }
 .night-mode .setup-scroll-pane .scroll-bar:vertical .thumb:hover { -fx-background-color: #5c6a79; }
+.night-mode .setup-layout { -fx-background-color: #0f1822; }
+.night-mode .settings-navigation { -fx-background-color: #121820; -fx-border-color: #526f8e; }
+.night-mode .settings-navigation-item { -fx-text-fill: #c3d0de; }
+.night-mode .settings-navigation-item:hover { -fx-background-color: rgba(212, 168, 95, 0.22); -fx-text-fill: #ffffff; }
+.night-mode .settings-navigation-item-active { -fx-background-color: #d4a85f; -fx-text-fill: #18212b; }
+
+/* Buttons inherit a square radius from the global .button rule; these final
+   overrides keep the settings rail's hover/selection surfaces pill-shaped. */
+.settings-navigation-item,
+.settings-navigation-item:hover,
+.settings-navigation-item-active {
+    -fx-background-insets: 0;
+    -fx-background-radius: 10px;
+    -fx-border-radius: 10px;
+    -fx-border-width: 1px;
+}
+.settings-navigation-item-active {
+    -fx-background-color: rgba(212, 168, 95, 0.78);
+    -fx-border-color: rgba(212, 168, 95, 0.95);
+}
+.settings-navigation-item:hover {
+    -fx-background-color: rgba(212, 168, 95, 0.22);
+    -fx-border-color: rgba(212, 168, 95, 0.62);
+}
+.night-mode .settings-navigation-item-active {
+    -fx-background-color: rgba(212, 168, 95, 0.78);
+    -fx-border-color: rgba(212, 168, 95, 0.95);
+}
+.night-mode .settings-navigation-item:hover {
+    -fx-background-color: rgba(212, 168, 95, 0.24);
+    -fx-border-color: rgba(212, 168, 95, 0.68);
+}
 .night-mode .tool-catalog-shell { -fx-background-color: #121820; }
 .night-mode .catalog-title, .night-mode .catalog-section-title { -fx-text-fill: #f1f3f5; }
 .night-mode .catalog-support, .night-mode .tool-catalog-status { -fx-text-fill: #a8b4c1; }
@@ -2508,6 +2609,24 @@
     -fx-border-color: #6aa8f5;
     -fx-effect: dropshadow(gaussian, rgba(70, 138, 230, 0.19), 22, 0.14, 0, 6);
 }
+
+/* Shared warm accent for dashboard and player-management interactions. */
+.home-action-card:hover, .home-secondary-card:hover,
+.player-profile-card:hover .player-portrait-ring {
+    -fx-border-color: #d4a85f;
+    -fx-effect: innershadow(gaussian, rgba(212, 168, 95, 0.9), 16, 0.62, 0, 0);
+}
+.player-action-button:hover,
+.toolbar-icon-button.players-add-button:hover {
+    -fx-background-color: #d4a85f;
+    -fx-border-color: #d4a85f;
+    -fx-effect: dropshadow(gaussian, rgba(212, 168, 95, 0.55), 16, 0.28, 0, 2);
+}
+.toolbar-icon-button.players-add-button {
+    -fx-background-color: #d4a85f;
+    -fx-border-color: #d4a85f;
+    -fx-text-fill: #18212b;
+}
 .night-mode .home-analysis-card, .night-mode .home-studies-card,
 .night-mode .home-tactics-card, .night-mode .home-computer-card,
 .night-mode .home-training-card, .night-mode .home-position-card,
@@ -2526,7 +2645,7 @@
 .night-mode .home-card-description, .night-mode .home-secondary-description { -fx-text-fill: #b5c2d2; }
 .night-mode .home-recent-game-title { -fx-text-fill: #e5edf7; }
 .night-mode .home-recent-game-summary { -fx-text-fill: #a9b9ca; }
-.night-mode .home-card-link { -fx-text-fill: #f5f9ff; -fx-background-color: transparent; -fx-border-color: #3c91ff; -fx-border-radius: 999px; -fx-border-width: 1px; }
+.night-mode .home-card-link { -fx-text-fill: #f5f9ff; -fx-background-color: transparent; -fx-border-color: #86a9c9; -fx-border-radius: 999px; -fx-border-width: 1px; }
 .night-mode .home-knightshade-banner {
     -fx-background-color: #ffffff;
     -fx-background-image: url("/images/card-home.png");
@@ -2537,7 +2656,84 @@
 .night-mode .home-knightshade-banner .knightshade-title { -fx-text-fill: #14213d; }
 .night-mode .home-knightshade-banner .knightshade-description,
 .night-mode .home-knightshade-banner .knightshade-arena-activity { -fx-text-fill: #5d6b7e; }
-.night-mode .home-knightshade-banner .knightshade-link { -fx-text-fill: #ffffff; -fx-background-color: #0878f9; -fx-border-color: transparent; }
+.night-mode .home-knightshade-banner .knightshade-link { -fx-text-fill: #ffffff; -fx-background-color: #587f9e; -fx-border-color: transparent; }
+
+/* Home artwork cycles through the three supplied compositions in DOM order,
+   then repeats for every subsequent card. The same cycle is used in both
+   themes so the dashboard rhythm stays consistent when switching modes. */
+.home-action-grid > .home-card-pattern-1 {
+    -fx-background-color: #121820;
+    -fx-background-image: url("/images/card-background-v2-pattern-1.png");
+    -fx-border-color: #526f8e;
+}
+.home-action-grid > .home-card-pattern-2 {
+    -fx-background-color: #121820;
+    -fx-background-image: url("/images/card-background-v2-pattern-2.png");
+    -fx-border-color: #526f8e;
+}
+.home-action-grid > .home-card-pattern-3 {
+    -fx-background-color: #121820;
+    -fx-background-image: url("/images/card-background-v3-pattern-3.png");
+    -fx-border-color: #526f8e;
+}
+.home-action-grid > .home-card-pattern-1 .home-card-title,
+.home-action-grid > .home-card-pattern-2 .home-card-title,
+.home-action-grid > .home-card-pattern-3 .home-card-title,
+.home-action-grid > .home-card-pattern-1 .home-secondary-title,
+.home-action-grid > .home-card-pattern-2 .home-secondary-title,
+.home-action-grid > .home-card-pattern-3 .home-secondary-title { -fx-text-fill: #f4f7fb; }
+.home-action-grid > .home-card-pattern-1 .home-card-description,
+.home-action-grid > .home-card-pattern-2 .home-card-description,
+.home-action-grid > .home-card-pattern-3 .home-card-description,
+.home-action-grid > .home-card-pattern-1 .home-secondary-description,
+.home-action-grid > .home-card-pattern-2 .home-secondary-description,
+.home-action-grid > .home-card-pattern-3 .home-secondary-description { -fx-text-fill: #b5c2d2; }
+
+/* Arena has its own permanent composition and is intentionally excluded from
+   the rotating home-card pattern sequence. */
+.home-action-grid > .home-knightshade-banner {
+    -fx-background-color: #121820;
+    -fx-background-image: url("/images/card-background-v2-pattern-arena.png");
+    -fx-border-color: #526f8e;
+}
+.home-action-grid > .home-knightshade-banner .knightshade-kicker,
+.home-action-grid > .home-knightshade-banner .knightshade-arena-status { -fx-text-fill: #7cb4ff; }
+.home-action-grid > .home-knightshade-banner .knightshade-title { -fx-text-fill: #f4f7fb; }
+.home-action-grid > .home-knightshade-banner .knightshade-description,
+.home-action-grid > .home-knightshade-banner .knightshade-arena-activity { -fx-text-fill: #b5c2d2; }
+.home-action-grid > .home-knightshade-banner .knightshade-link { -fx-text-fill: #ffffff; -fx-background-color: #587f9e; -fx-border-color: transparent; }
+
+.home-action-card:hover, .home-secondary-card:hover {
+    -fx-border-color: #d4a85f;
+    -fx-effect: innershadow(gaussian, rgba(212, 168, 95, 0.9), 16, 0.62, 0, 0);
+}
+.home-games-card .home-card-link {
+    -fx-background-color: #d4a85f;
+    -fx-text-fill: #18212b;
+}
+.home-action-grid .home-card-link {
+    -fx-background-color: #d4a85f;
+    -fx-text-fill: #18212b;
+}
+.home-action-grid .home-knightshade-banner .knightshade-link {
+    -fx-background-color: #d4a85f;
+    -fx-text-fill: #18212b;
+}
+.home-games-card .home-recent-game-title { -fx-text-fill: #dce8f3; }
+.home-games-card .home-recent-game-summary { -fx-text-fill: #b5c2d2; }
+
+/* The cards clip their artwork to rounded corners, so keep the hover glow
+   visible inside that clip with a luminous border and inner highlight. */
+.home-action-card:hover, .home-secondary-card:hover {
+    -fx-border-color: #d4a85f;
+    -fx-border-width: 2px;
+    -fx-effect: innershadow(gaussian, rgba(212, 168, 95, 0.9), 16, 0.62, 0, 0);
+}
+.night-mode .home-action-card:hover, .night-mode .home-secondary-card:hover {
+    -fx-border-color: #d4a85f;
+    -fx-border-width: 2px;
+    -fx-effect: innershadow(gaussian, rgba(212, 168, 95, 0.9), 16, 0.62, 0, 0);
+}
 .night-mode .message-box-overlay { -fx-background-color: rgba(0, 0, 0, 0.38); }
 .night-mode .promotion-picker-card {
     -fx-background-color: #1c2430;
@@ -2604,7 +2800,7 @@
 .night-mode .app-title, .night-mode .card-title { -fx-text-fill: #ffffff; }
 .night-mode .app-brand-name { -fx-text-fill: #ffffff; }
 .night-mode .app-brand-edition { -fx-text-fill: #a8b4c1; }
-.night-mode .current-user-avatar-ring { -fx-stroke: #9fb2c6; }
+.night-mode .current-user-avatar-ring { -fx-stroke: #d4a85f; -fx-stroke-width: 2px; }
 .night-mode .current-user-avatar-face.current-user-avatar-tone-0 { -fx-fill: #2e8cf0; }
 .night-mode .current-user-avatar-face.current-user-avatar-tone-1 { -fx-fill: #4a9bf3; }
 .night-mode .current-user-avatar-face.current-user-avatar-tone-2 { -fx-fill: #6389ca; }
@@ -3145,8 +3341,9 @@
     -fx-effect: dropshadow(gaussian, rgba(28,105,212,0.38), 22, 0.22, 0, 2);
 }
 .player-profile-card-active .player-portrait-ring {
-    -fx-background-color: #1c69d4, #ffffff;
-    -fx-effect: dropshadow(gaussian, rgba(28,105,212,0.42), 24, 0.24, 0, 2);
+    -fx-background-color: #d4a85f, #ffffff;
+    -fx-border-color: #d4a85f;
+    -fx-effect: dropshadow(gaussian, rgba(212,168,95,0.58), 24, 0.24, 0, 2);
 }
 .player-profile-status {
     -fx-background-color: #0878f9;
@@ -3615,4 +3812,306 @@
 .night-mode .toolbar-icon-button.arena-action-button.memory-sound-action-button:hover {
     -fx-background-color: #475569;
     -fx-border-color: #cbd5e1;
+}
+
+/* Keep the active player selection on the same warm accent as home cards. */
+.night-mode .player-profile-card-active .player-portrait-ring {
+    -fx-background-color: #d4a85f, #1c2430;
+    -fx-border-color: #d4a85f;
+    -fx-effect: dropshadow(gaussian, rgba(212,168,95,0.58), 24, 0.24, 0, 2);
+}
+
+/* Final theme-independent accent override for player selection hover/active. */
+.player-profile-card:hover .player-portrait-ring,
+.player-profile-card-active .player-portrait-ring {
+    -fx-border-color: #d4a85f;
+    -fx-effect: dropshadow(gaussian, rgba(212, 168, 95, 0.62), 22, 0.24, 0, 2);
+}
+.player-profile-card-active .player-portrait-ring {
+    -fx-background-color: #d4a85f, #ffffff;
+}
+.night-mode .player-profile-card-active .player-portrait-ring {
+    -fx-background-color: #d4a85f, #1c2430;
+}
+
+/* Arena identity uses the same warm accent as the dashboard actions. */
+.home-action-grid > .home-knightshade-banner .knightshade-kicker,
+.home-action-grid > .home-knightshade-banner .knightshade-arena-status,
+.home-action-grid > .home-knightshade-banner .knightshade-arena-status-connected {
+    -fx-text-fill: #d4a85f;
+}
+.home-action-grid > .home-knightshade-banner .knightshade-link {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-text-fill: #d4a85f;
+    -fx-font-weight: 800;
+    -fx-padding: 9px 0;
+}
+.night-mode .application-header-brand-edition { -fx-text-fill: #d4a85f; }
+
+/* Play has a dedicated composition, shared across themes like the Arena card. */
+.home-action-grid > .home-play-card {
+    -fx-background-color: #121820;
+    -fx-background-image: url("/images/card-background-v3-pattern-play.png");
+    -fx-background-position: center;
+    -fx-background-repeat: no-repeat;
+    -fx-background-size: cover;
+    -fx-border-color: #526f8e;
+}
+.night-mode .home-action-grid > .home-play-card {
+    -fx-background-color: #121820;
+    -fx-background-image: url("/images/card-background-v3-pattern-play.png");
+    -fx-border-color: #526f8e;
+}
+
+/* Games also uses a dedicated composition in both themes. */
+.home-action-grid > .home-games-card {
+    -fx-background-color: #121820;
+    -fx-background-image: url("/images/card-background-v3-pattern-games.png");
+    -fx-background-position: center;
+    -fx-background-repeat: no-repeat;
+    -fx-background-size: cover;
+    -fx-border-color: #526f8e;
+}
+.night-mode .home-action-grid > .home-games-card {
+    -fx-background-color: #121820;
+    -fx-background-image: url("/images/card-background-v3-pattern-games.png");
+    -fx-border-color: #526f8e;
+}
+
+/* Compact, softly rounded settings navigation states. Keep the hit area
+   comfortable while avoiding the tall rectangular blocks shown previously. */
+.settings-navigation {
+    -fx-min-width: 235px;
+    -fx-pref-width: 235px;
+    -fx-max-width: 235px;
+    -fx-spacing: 4px;
+    -fx-effect: dropshadow(gaussian, rgba(23, 34, 46, 0.28), 20px, 0.18, 0, 6px);
+}
+.settings-navigation-title {
+    -fx-padding: 2px 12px 8px 12px;
+}
+.settings-navigation-search {
+    -fx-background-color: rgba(255, 255, 255, 0.13);
+    -fx-background-radius: 999px;
+    -fx-border-color: transparent;
+    -fx-border-radius: 999px;
+    -fx-prompt-text-fill: rgba(232, 239, 247, 0.68);
+    -fx-text-fill: #f4f7fb;
+    -fx-padding: 7px 12px;
+    -fx-font-size: 13px;
+}
+.settings-navigation-search:focused {
+    -fx-border-color: rgba(212, 168, 95, 0.68);
+    -fx-background-color: rgba(255, 255, 255, 0.17);
+}
+.settings-navigation-scroll {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+    -fx-fit-to-width: true;
+    -fx-max-height: Infinity;
+}
+.settings-navigation-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+.settings-navigation-scroll .scroll-bar:vertical {
+    -fx-background-color: transparent;
+    -fx-padding: 2px 0 2px 3px;
+}
+.settings-navigation-scroll .scroll-bar:vertical .track {
+    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-background-radius: 4px;
+}
+.settings-navigation-scroll .scroll-bar:vertical .thumb {
+    -fx-background-color: rgba(212, 168, 95, 0.70);
+    -fx-background-radius: 4px;
+}
+.settings-navigation-scroll .scroll-bar:vertical .increment-button,
+.settings-navigation-scroll .scroll-bar:vertical .decrement-button {
+    -fx-padding: 0;
+}
+.settings-navigation-item,
+.settings-navigation-item:hover,
+.settings-navigation-item-active {
+    -fx-min-height: 30px;
+    -fx-pref-height: 34px;
+    -fx-max-height: 34px;
+    -fx-padding: 5px 12px;
+    -fx-background-insets: 0;
+    -fx-background-radius: 10px;
+    -fx-border-radius: 10px;
+    -fx-border-width: 1px;
+}
+.settings-navigation-item-active {
+    -fx-background-color: rgba(212, 168, 95, 0.58);
+    -fx-border-color: rgba(212, 168, 95, 0.78);
+    -fx-text-fill: #18212b;
+}
+.settings-navigation-item:hover {
+    -fx-background-color: rgba(212, 168, 95, 0.18);
+    -fx-border-color: rgba(212, 168, 95, 0.55);
+    -fx-text-fill: #ffffff;
+}
+.night-mode .settings-navigation-item-active {
+    -fx-background-color: rgba(212, 168, 95, 0.58);
+    -fx-border-color: rgba(212, 168, 95, 0.82);
+    -fx-text-fill: #18212b;
+}
+.night-mode .settings-navigation-item:hover {
+    -fx-background-color: rgba(212, 168, 95, 0.20);
+    -fx-border-color: rgba(212, 168, 95, 0.60);
+    -fx-text-fill: #ffffff;
+}
+.night-mode .settings-navigation {
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.42), 22px, 0.2, 0, 7px);
+}
+
+/* Warm inset keyline shared by both themes, echoing the Chess brand accent. */
+.settings-navigation {
+    -fx-border-color: rgba(212, 168, 95, 0.62);
+    -fx-border-width: 1px;
+    -fx-border-insets: 2px;
+    -fx-border-radius: 12px;
+}
+.night-mode .settings-navigation {
+    -fx-border-color: rgba(212, 168, 95, 0.62);
+}
+
+/* Icon buttons share the Home action accent on hover in every workspace. */
+.toolbar-icon-button:hover,
+.prominent-toolbar-icon-button:hover {
+    -fx-background-color: #d4a85f;
+    -fx-border-color: #d4a85f;
+    -fx-text-fill: #18212b;
+    -fx-effect: dropshadow(gaussian, rgba(212, 168, 95, 0.48), 14, 0.24, 0, 2);
+}
+.night-mode .toolbar-icon-button:hover,
+.night-mode .prominent-toolbar-icon-button:hover {
+    -fx-background-color: #d4a85f;
+    -fx-border-color: #d4a85f;
+    -fx-text-fill: #18212b;
+}
+
+/* Compact header chrome: match the scale of the breadcrumb Home control. */
+.application-header > .toolbar-icon-button {
+    -fx-min-width: 36px;
+    -fx-pref-width: 36px;
+    -fx-max-width: 36px;
+    -fx-min-height: 36px;
+    -fx-pref-height: 36px;
+    -fx-max-height: 36px;
+    -fx-padding: 7px;
+    -fx-background-radius: 10px;
+    -fx-border-radius: 10px;
+}
+.application-header > .toolbar-icon-button .image-view {
+    -fx-fit-width: 16px;
+    -fx-fit-height: 16px;
+}
+.application-header-back.toolbar-icon-button {
+    -fx-min-width: 32px;
+    -fx-pref-width: 32px;
+    -fx-max-width: 32px;
+    -fx-min-height: 32px;
+    -fx-pref-height: 32px;
+    -fx-max-height: 32px;
+    -fx-padding: 6px;
+}
+
+/* Header actions use the same rounded-square treatment as the breadcrumb Home button. */
+.application-header > .toolbar-icon-button {
+    -fx-min-width: 40px;
+    -fx-pref-width: 40px;
+    -fx-max-width: 40px;
+    -fx-min-height: 40px;
+    -fx-pref-height: 40px;
+    -fx-max-height: 40px;
+    -fx-background-radius: 12px;
+    -fx-border-radius: 12px;
+    -fx-padding: 9px;
+}
+
+/* Statistics uses the warm dashboard accent for its primary series and controls. */
+.statistics-engine-button:hover,
+.statistics-chart-toggle {
+    -fx-border-color: #d4a85f;
+    -fx-text-fill: #b18436;
+}
+.statistics-chart-toggle:hover {
+    -fx-border-color: #d4a85f;
+    -fx-background-color: rgba(212, 168, 95, 0.10);
+}
+.statistics-result-lost { -fx-border-color: #e6e6e6 #e6e6e6 #e6e6e6 #d4a85f; }
+.statistics-result-won { -fx-border-color: #e6e6e6 #e6e6e6 #e6e6e6 #78a96b; }
+.night-mode .statistics-chart-toggle,
+.night-mode .statistics-engine-button:hover { -fx-border-color: #d4a85f; -fx-text-fill: #d4a85f; }
+.night-mode .statistics-chart-toggle:hover { -fx-background-color: rgba(212, 168, 95, 0.14); }
+.night-mode .statistics-result-lost { -fx-border-color: #3c3c3c #3c3c3c #3c3c3c #d4a85f; }
+.night-mode .statistics-result-won { -fx-border-color: #3c3c3c #3c3c3c #3c3c3c #78a96b; }
+
+/* Studies has a dedicated composition shared by light and dark themes. */
+.home-action-grid > .home-studies-card {
+    -fx-background-color: #121820;
+    -fx-background-image: url("/images/card-background-parttern-v2-studies.png");
+    -fx-background-position: center;
+    -fx-background-repeat: no-repeat;
+    -fx-background-size: cover;
+    -fx-border-color: #526f8e;
+}
+.night-mode .home-action-grid > .home-studies-card {
+    -fx-background-color: #121820;
+    -fx-background-image: url("/images/card-background-parttern-v2-studies.png");
+    -fx-border-color: #526f8e;
+}
+
+/* Dedicated artwork for analysis and tactic suites. */
+.home-action-grid > .home-analysis-card,
+.home-action-grid > .home-tactics-card {
+    -fx-background-color: #121820;
+    -fx-background-position: center;
+    -fx-background-repeat: no-repeat;
+    -fx-background-size: cover;
+    -fx-border-color: #526f8e;
+}
+.home-action-grid > .home-analysis-card {
+    -fx-background-image: url("/images/card-background-pattern-v3-analysis.png");
+}
+.home-action-grid > .home-tactics-card {
+    -fx-background-image: url("/images/card-background-pattern-v2-tactics.png");
+}
+.night-mode .home-action-grid > .home-analysis-card,
+.night-mode .home-action-grid > .home-tactics-card {
+    -fx-background-color: #121820;
+    -fx-border-color: #526f8e;
+}
+
+/* Dedicated composition for Computer vs Computer. */
+.home-action-grid > .home-vs-computer-card {
+    -fx-background-color: #121820;
+    -fx-background-image: url("/images/card-background-template-vs-ok-computer.png");
+    -fx-background-position: center;
+    -fx-background-repeat: no-repeat;
+    -fx-background-size: cover;
+    -fx-border-color: #526f8e;
+}
+.night-mode .home-action-grid > .home-vs-computer-card {
+    -fx-background-color: #121820;
+    -fx-background-image: url("/images/card-background-template-vs-ok-computer.png");
+    -fx-border-color: #526f8e;
+}
+
+/* Dedicated composition for the Position editor card. */
+.home-action-grid > .home-position-card {
+    -fx-background-color: #121820;
+    -fx-background-image: url("/images/card-backgroud-template-v2-editor.png");
+    -fx-background-position: center;
+    -fx-background-repeat: no-repeat;
+    -fx-background-size: cover;
+    -fx-border-color: #526f8e;
+}
+.night-mode .home-action-grid > .home-position-card {
+    -fx-background-color: #121820;
+    -fx-background-image: url("/images/card-backgroud-template-v2-editor.png");
+    -fx-border-color: #526f8e;
 }

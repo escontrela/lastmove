@@ -19,8 +19,9 @@ public final class GameStatisticsChartControl extends Region {
   private static final double LEFT = 42, RIGHT = 18, TOP = 18, BOTTOM = 34, OUTCOME_BOTTOM = 58;
   // Semantic chart colours from DESIGN.md. They remain stable across themes so that
   // a result never changes its meaning when the application theme is switched.
-  private static final Color PRIMARY = Color.web("#1c69d4");
-  private static final Color SUCCESS = Color.web("#22c55e");
+  private static final Color PRIMARY = Color.web("#d4a85f");
+  // A muted sage complements the warm brand accent without competing with it.
+  private static final Color SUCCESS = Color.web("#78a96b");
   private static final Color DAY_GRID = Color.web("#e6e6e6");
   private static final Color DAY_TEXT = Color.web("#6b6b6b");
   private static final Color NIGHT_GRID = Color.web("#3c3c3c");

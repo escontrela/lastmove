@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import com.escontrela.lastmove.ui.component.header.ApplicationHeader?>
+<?import com.escontrela.lastmove.ui.component.settings.SettingsNavigationControl?>
 
 <?import javafx.geometry.Insets?>
 <?import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton?>
@@ -32,11 +33,13 @@
         </HBox></VBox>
     </top>
     <center>
-        <ScrollPane fitToWidth="true" hbarPolicy="NEVER" styleClass="setup-scroll-pane">
+        <HBox spacing="24.0" styleClass="setup-layout">
+        <SettingsNavigationControl fx:id="settingsNavigation" maxHeight="520.0" />
+        <ScrollPane fx:id="setupScrollPane" fitToWidth="true" hbarPolicy="NEVER" styleClass="setup-scroll-pane" HBox.hgrow="ALWAYS">
             <content>
-                <VBox alignment="TOP_LEFT" spacing="24.0" styleClass="setup-content">
+                <VBox fx:id="setupContent" alignment="TOP_LEFT" spacing="24.0" styleClass="setup-content">
                     <padding><Insets bottom="64.0" left="80.0" right="80.0" top="64.0" /></padding>
-                    <VBox maxWidth="680.0" spacing="16.0" styleClass="setup-card">
+                    <VBox fx:id="appearanceGroup" maxWidth="680.0" spacing="16.0" styleClass="setup-card">
                         <padding><Insets bottom="32.0" left="32.0" right="32.0" top="32.0" /></padding>
                         <Label styleClass="eyebrow-label" text="Appearance" />
                         <Label styleClass="card-title" text="Night mode" />
@@ -52,7 +55,7 @@
                         <Label styleClass="card-copy" text="Show the LastMove welcome screen when the application starts. This preference is saved for your next session." wrapText="true" />
                         <CheckBox fx:id="showSplashCheckBox" mnemonicParsing="false" styleClass="settings-check-box" text="Show splash screen on startup" />
                     </VBox>
-                    <VBox maxWidth="680.0" spacing="12.0" styleClass="setup-card">
+                    <VBox fx:id="sunfishGroup" maxWidth="680.0" spacing="12.0" styleClass="setup-card">
                         <padding><Insets bottom="32.0" left="32.0" right="32.0" top="32.0" /></padding>
                         <Label styleClass="eyebrow-label" text="Computer opponents" />
                         <Label styleClass="card-title" text="Sunfish UCI" />
@@ -64,7 +67,7 @@
                         </HBox>
                         <Label fx:id="sunfishValidationLabel" maxWidth="Infinity" styleClass="settings-validation-message" wrapText="true" />
                     </VBox>
-                    <VBox maxWidth="680.0" spacing="12.0" styleClass="setup-card">
+                    <VBox fx:id="maiaGroup" maxWidth="680.0" spacing="12.0" styleClass="setup-card">
                         <padding><Insets bottom="32.0" left="32.0" right="32.0" top="32.0" /></padding>
                         <Label styleClass="eyebrow-label" text="Computer opponents" />
                         <Label styleClass="card-title" text="Maia (Leela Chess Zero)" />
@@ -78,7 +81,7 @@
                         </HBox>
                         <Label fx:id="maiaValidationLabel" maxWidth="Infinity" styleClass="settings-validation-message" wrapText="true" />
                     </VBox>
-                    <VBox maxWidth="680.0" spacing="12.0" styleClass="setup-card">
+                    <VBox fx:id="knightshadeGroup" maxWidth="680.0" spacing="12.0" styleClass="setup-card">
                         <padding><Insets bottom="32.0" left="32.0" right="32.0" top="32.0" /></padding>
                         <Label styleClass="eyebrow-label" text="Computer opponents" />
                         <Label styleClass="card-title" text="Knightshade" />
@@ -86,7 +89,7 @@
                         <Label styleClass="settings-field-label" text="Thinking time per move" />
                         <ComboBox fx:id="knightshadeThinkingTimeCombo" maxWidth="Infinity" />
                     </VBox>
-                    <VBox maxWidth="680.0" spacing="12.0" styleClass="setup-card">
+                    <VBox fx:id="arenaGroup" maxWidth="680.0" spacing="12.0" styleClass="setup-card">
                         <padding><Insets bottom="32.0" left="32.0" right="32.0" top="32.0" /></padding>
                         <Label styleClass="eyebrow-label" text="Knightshade Arena" />
                         <Label styleClass="card-title" text="Lichess bot account" />
@@ -103,7 +106,7 @@
                             <Label fx:id="lichessValidationLabel" maxWidth="Infinity" styleClass="settings-validation-message" wrapText="true" HBox.hgrow="ALWAYS" />
                         </HBox>
                     </VBox>
-                    <VBox maxWidth="680.0" spacing="12.0" styleClass="setup-card">
+                    <VBox fx:id="analysisGroup" maxWidth="680.0" spacing="12.0" styleClass="setup-card">
                         <padding><Insets bottom="32.0" left="32.0" right="32.0" top="32.0" /></padding>
                         <Label styleClass="eyebrow-label" text="Analysis" />
                         <Label styleClass="card-title" text="Default analysis engine" />
@@ -112,7 +115,7 @@
                         <ComboBox fx:id="analysisEngineCombo" maxWidth="Infinity" />
                         <CheckBox fx:id="analysisEngineDefaultCheckBox" mnemonicParsing="false" styleClass="settings-check-box" text="Use as default analysis engine" />
                     </VBox>
-                    <VBox maxWidth="680.0" spacing="12.0" styleClass="setup-card">
+                    <VBox fx:id="navigationGroup" maxWidth="680.0" spacing="12.0" styleClass="setup-card">
                         <padding><Insets bottom="32.0" left="32.0" right="32.0" top="32.0" /></padding>
                         <Label styleClass="eyebrow-label" text="Navigation" />
                         <Label styleClass="card-title" text="Keyboard shortcuts" />
@@ -145,5 +148,6 @@
                 </VBox>
             </content>
         </ScrollPane>
+        </HBox>
     </center>
 </BorderPane>

@@ -36,6 +36,27 @@ Spring Boot is used only as a dependency-injection container and lifecycle manag
 
 ## Features
 
+### Current application UI
+
+* Redesigned Home dashboard with responsive, rounded cards, subtle entrance transitions, themed
+  light/dark artwork, dedicated compositions for analysis, studies, tactics, Games, Play,
+  Computer vs Computer, Position editor, and Knightshade Arena, plus searchable card filtering.
+* Compact reusable header with Home navigation, theme controls, user avatar, contextual actions,
+  and a Home-only search field aligned with the header actions.
+* Reusable date/time link control on Home, with short and long display modes and configurable
+  navigation (Home links to Games).
+* Reusable searchable Settings navigation control with rounded styling, theme-aware artwork,
+  scroll-to-group navigation, and active-item synchronization while scrolling.
+* Consistent warm-gold interaction accent across card hover states, icon-button hovers, player
+  selection, message-box actions, and statistics controls.
+* Game statistics chart with gold primary series and a complementary sage-green Won series.
+
+Screenshots of the current application:
+
+![LastMove Home dashboard](docs/home-capture.png)
+
+![Computer versus Computer workspace](docs/computer-vs-computer-capture.png)
+
 ### Implemented foundation
 
 * Import a PGN file.
@@ -64,7 +85,6 @@ Spring Boot is used only as a dependency-injection container and lifecycle manag
 
 ### Planned
 
-* Studies and chapters UI: library screen and chapter workspace reusing the board and notation controls.
 * PGN editing and export.
 * Training exercises and puzzles.
 * UCI engine analysis.
