@@ -7,10 +7,9 @@ import com.knightshade.engine.api.StopSignal;
 import com.knightshade.engine.board.Board;
 import com.knightshade.engine.board.FenParser;
 import com.knightshade.engine.evaluation.Evaluator;
-import com.knightshade.engine.evaluation.PositionalEvaluator;
-import com.knightshade.engine.movegen.LegalMoveGenerator;
 import com.knightshade.engine.movegen.MoveGenerator;
 import com.knightshade.engine.search.IterativeDeepeningSearch;
+import com.knightshade.engine.search.ParallelRootSearch;
 import com.knightshade.engine.search.Search;
 import java.util.HashMap;
 import java.util.List;
@@ -20,8 +19,8 @@ import java.util.Objects;
 /**
  * Default, dependency-free Knightshade engine assembly.
  *
- * <p>This class wires the v2 components together (legal move generation, piece-square evaluation
- * and iterative-deepening principal variation search) behind the public {@link Engine} contract. It
+ * <p>This class wires legal move generation, positional evaluation and parallel root PVS behind the
+ * public {@link Engine} contract. Each request owns its workers and joins them before returning. It
  * depends only on the shared value-object kernel from LastMove's domain and on the JDK.
  */
 public final class KnightshadeEngine implements Engine {
@@ -29,7 +28,14 @@ public final class KnightshadeEngine implements Engine {
   private final Search search;
 
   public KnightshadeEngine() {
-    this(new LegalMoveGenerator(), new PositionalEvaluator());
+    this(
+        Integer.getInteger(
+            "knightshade.threads", Math.min(4, Runtime.getRuntime().availableProcessors())));
+  }
+
+  /** Total search participants, including the calling thread. One preserves sequential search. */
+  public KnightshadeEngine(int threads) {
+    this.search = new ParallelRootSearch(threads);
   }
 
   KnightshadeEngine(MoveGenerator moveGenerator, Evaluator evaluator) {

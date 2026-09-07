@@ -41,6 +41,20 @@ public final class Board implements Position {
     return new Board();
   }
 
+  /** Independent search workspace for this position, with an empty undo history. */
+  public Board copy() {
+    Board copy = new Board();
+    System.arraycopy(pieces, 0, copy.pieces, 0, pieces.length);
+    System.arraycopy(kingSquares, 0, copy.kingSquares, 0, kingSquares.length);
+    copy.sideToMove = sideToMove;
+    copy.castlingRights = castlingRights;
+    copy.enPassantTarget = enPassantTarget;
+    copy.halfmoveClock = halfmoveClock;
+    copy.fullmoveNumber = fullmoveNumber;
+    copy.zobristKey = zobristKey;
+    return copy;
+  }
+
   /** Returns the current incremental Zobrist key. */
   public long zobristKey() {
     return zobristKey;
