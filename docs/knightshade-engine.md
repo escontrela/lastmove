@@ -425,7 +425,7 @@ La traza muestra la jugada elegida, la puntuación, la última profundidad compl
 ## 9. Trabajo futuro
 
 - Desarrollo, centro, estructura de peones, peones pasados y pareja de alfiles ya están implementados; el rey ahora adapta su evaluación a la fase.
-- Pendientes: libro de aperturas, tablebases, bitboards y estudio de una TT compartida. La búsqueda de variantes raíz ya es paralela, con tableros, heurísticas y TT privados por trabajador.
+- Pendientes: libro de aperturas, tablebases, bitboards y búsqueda paralela. La búsqueda actual sigue siendo de un hilo; sus tableros, heurísticas y TT no deben compartirse entre hilos sin un diseño específico de sincronización o aislamiento.
 - Medición de esta revisión y comando de benchmark sin UI: [revisión de rendimiento](knightshade-performance-2026-09-06.md).
 
 Las mejoras de v4 aumentan conocimiento ajedrecístico. Las de v5 se orientan sobre todo a procesar más nodos por segundo. Las interfaces actuales permiten evolucionar cualquiera de esos caminos sin acoplar el motor a la UI ni al dominio de LastMove.
