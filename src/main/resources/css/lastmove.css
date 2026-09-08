@@ -79,6 +79,59 @@
 .date-time-link-arrow { -fx-background-color: transparent; -fx-text-fill: #f4f7fb; -fx-font-size: 24px; -fx-padding: 2px 4px; }
 .date-time-link-control:hover { -fx-border-color: #d4a85f; -fx-border-width: 1px; }
 .night-mode .date-time-link-control { -fx-background-color: #1d2732; }
+.home-live-arena-card {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+    -fx-border-color: transparent;
+    -fx-border-radius: 12px;
+    -fx-border-width: 0;
+    -fx-border-insets: 0;
+    -fx-padding: 0;
+    -fx-pref-width: 282px;
+    -fx-min-width: 282px;
+    -fx-max-width: 282px;
+    -fx-pref-height: 64px;
+    -fx-min-height: 64px;
+    -fx-max-height: 64px;
+    -fx-cursor: hand;
+    -fx-effect: none;
+}
+.home-live-arena-content {
+    -fx-background-color: #1d2732;
+    -fx-pref-width: 282px;
+    -fx-min-width: 282px;
+    -fx-max-width: 282px;
+    -fx-pref-height: 64px;
+    -fx-min-height: 64px;
+    -fx-max-height: 64px;
+    -fx-background-radius: 12px;
+    -fx-effect: dropshadow(gaussian, rgba(20, 30, 42, 0.25), 12, 0.18, 0, 3);
+}
+.home-live-arena-status-box {
+    -fx-background-color: #16202a;
+    -fx-background-radius: 12px 0 0 12px;
+    -fx-pref-width: 78px;
+    -fx-min-width: 78px;
+    -fx-max-width: 78px;
+    -fx-pref-height: 64px;
+}
+.home-live-arena-detail {
+    -fx-padding: 0 16px;
+    -fx-pref-width: 204px;
+    -fx-max-width: 204px;
+}
+.home-live-arena-card:hover .home-live-arena-content { -fx-background-color: #243442; }
+.home-live-arena-dot { -fx-fill: #ef5350; }
+.home-live-arena-kicker { -fx-text-fill: #ff6b6b; -fx-font-size: 12px; -fx-font-weight: 800; }
+.home-live-arena-game {
+    -fx-text-fill: #f4f7fb;
+    -fx-font-size: 13px;
+    -fx-font-weight: 800;
+    -fx-line-spacing: 1px;
+    -fx-text-alignment: left;
+}
+.night-mode .home-live-arena-card:hover .home-live-arena-content { -fx-background-color: #243442; }
 .night-mode .application-header-home-search {
     -fx-background-color: rgba(255, 255, 255, 0.12);
     -fx-prompt-text-fill: #b7c4d3;
@@ -2127,6 +2180,10 @@
 .settings-validation-message.settings-validation-error { -fx-text-fill: #a72e3e; }
 .settings-validation-message.settings-validation-success { -fx-text-fill: #167443; }
 .player-selector-modal-card { -fx-min-width: 420px; -fx-max-width: 720px; }
+.player-selector-options-scroll { -fx-background-color: transparent; -fx-background-insets: 0; -fx-padding: 0; }
+.player-selector-options-scroll > .viewport { -fx-background-color: transparent; }
+.player-selector-options-scroll .scroll-bar:vertical { -fx-pref-width: 10px; -fx-background-color: transparent; }
+.player-selector-options-scroll .scroll-bar:vertical .thumb { -fx-background-color: #b8c7d8; -fx-background-radius: 8px; }
 .player-selector-tile { -fx-min-width: 144px; -fx-pref-width: 144px; -fx-min-height: 144px; -fx-background-color: #f8fbff; -fx-border-color: #d5dfeb; -fx-border-width: 1px; -fx-background-radius: 8px; -fx-border-radius: 8px; -fx-cursor: hand; }
 .player-selector-tile:hover, .player-selector-tile.selected { -fx-border-color: #1c69d4; -fx-background-color: #edf5ff; }
 .player-selector-avatar { -fx-background-color: #e6eef8; }
@@ -4049,6 +4106,52 @@
 .night-mode .statistics-chart-toggle:hover { -fx-background-color: rgba(212, 168, 95, 0.14); }
 .night-mode .statistics-result-lost { -fx-border-color: #3c3c3c #3c3c3c #3c3c3c #d4a85f; }
 .night-mode .statistics-result-won { -fx-border-color: #3c3c3c #3c3c3c #3c3c3c #78a96b; }
+
+.game-start-players-overlay {
+    -fx-background-color: transparent;
+}
+.game-start-players-card {
+    -fx-min-width: 560px;
+    -fx-pref-width: 560px;
+    -fx-padding: 32px 48px 28px;
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 18px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.35), 28, 0.24, 0, 10);
+}
+.game-start-players-overlay .player-avatar-ring {
+    -fx-stroke: #9aaabb;
+    -fx-stroke-width: 2px;
+}
+.game-start-players-overlay .player-avatar-face { -fx-stroke: #ffffff; -fx-stroke-width: 2px; }
+.game-start-players-overlay .player-avatar-initials { -fx-font-size: 36px; }
+.game-start-players-overlay .game-start-player-avatar-featured .player-avatar-ring {
+    -fx-stroke: #d4a85f;
+    -fx-stroke-width: 4px;
+    -fx-effect: dropshadow(gaussian, rgba(212, 168, 95, 0.38), 14, 0.2, 0, 1);
+}
+.game-start-title { -fx-text-fill: #14213d; -fx-font-size: 30px; -fx-font-weight: 800; }
+.game-start-introduction, .game-start-after-game {
+    -fx-text-fill: #7b8da3;
+    -fx-font-size: 15px;
+}
+.game-start-cancel-hint { -fx-text-fill: #9aa8b9; -fx-font-size: 12px; -fx-font-weight: 700; }
+.game-start-countdown { -fx-text-fill: #9aa8b9; -fx-font-size: 12px; }
+.game-start-player-name { -fx-text-fill: #14213d; -fx-font-size: 16px; -fx-font-weight: 700; }
+.game-start-versus { -fx-text-fill: #d4a85f; -fx-font-size: 22px; -fx-font-weight: 800; }
+.game-start-continue-button {
+    -fx-min-width: 230px;
+    -fx-background-color: #d4a85f;
+    -fx-border-color: #d4a85f;
+    -fx-background-radius: 999px;
+    -fx-border-radius: 999px;
+    -fx-padding: 12px 24px;
+    -fx-text-fill: #18212b;
+    -fx-font-size: 14px;
+    -fx-font-weight: 800;
+    -fx-cursor: hand;
+}
+.game-start-continue-button:hover { -fx-background-color: #e2b664; -fx-border-color: #e2b664; }
+.night-mode .game-start-players-card { -fx-background-color: #ffffff; }
 
 /* Studies has a dedicated composition shared by light and dark themes. */
 .home-action-grid > .home-studies-card {

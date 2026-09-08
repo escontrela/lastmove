@@ -46,7 +46,11 @@ import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.TilePane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.scene.layout.HBox;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.shape.Circle;
+import javafx.animation.Timeline;
+import javafx.animation.KeyFrame;
 import javafx.util.Duration;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -89,6 +93,10 @@ public class MainWindowController implements UiScreenController {
     private ContextualMenuPanel contextualMenuPanel;
     @FXML private NotificationsPanel notificationsPanel;
     @FXML private Label arenaStatusLabel, arenaAccountLabel, arenaActivityLabel;
+    @FXML private Button liveArenaCard;
+    @FXML private Label liveArenaGameLabel;
+    @FXML private Circle liveArenaDot;
+    @FXML private HBox liveArenaContent;
 
     private final ListChangeListener<String> themeStyleListener = change -> {
         updateThemeAssets();
@@ -96,6 +104,9 @@ public class MainWindowController implements UiScreenController {
     };
     private final AtomicBoolean arenaAccountRefreshInFlight = new AtomicBoolean();
     private boolean startupMessageShown;
+    private final Timeline liveArenaPulse = new Timeline(
+            new KeyFrame(Duration.ZERO, event -> liveArenaDot.setOpacity(1.0)),
+            new KeyFrame(Duration.millis(700), event -> liveArenaDot.setOpacity(0.35)));
 
     public MainWindowController(
             @Lazy UiFlowManager uiFlowManager,
@@ -135,6 +146,16 @@ public class MainWindowController implements UiScreenController {
                 setFeatureStatus("Welcome to LastMove Chess."));
         startupMessageBox.setOnClose(event ->
                 setFeatureStatus("Welcome to LastMove Chess."));
+        liveArenaPulse.setAutoReverse(true);
+        liveArenaPulse.setCycleCount(Timeline.INDEFINITE);
+        liveArenaPulse.play();
+        Rectangle liveClip = new Rectangle();
+        liveClip.setArcWidth(24);
+        liveClip.setArcHeight(24);
+        liveClip.widthProperty().bind(liveArenaContent.widthProperty());
+        liveClip.heightProperty().bind(liveArenaContent.heightProperty());
+        liveArenaContent.setClip(liveClip);
+        refreshLiveArenaGame();
     }
 
     private void filterHomeCards(String query) {
@@ -168,6 +189,7 @@ public class MainWindowController implements UiScreenController {
         updateStudiesAvailability();
         refreshNotifications();
         refreshArenaSummary();
+        refreshLiveArenaGame();
         refreshArenaAccount();
         playCardEntranceAnimation();
         if (!startupMessageShown) {
@@ -293,10 +315,59 @@ public class MainWindowController implements UiScreenController {
     @org.springframework.context.event.EventListener
     public void lichessArenaChanged(LichessArenaEvent event) {
         try {
-            Platform.runLater(() -> { refreshArenaSummary(); updateWelcomeAndRecentGames(); });
+            Platform.runLater(() -> { refreshArenaSummary(); refreshLiveArenaGame(); updateWelcomeAndRecentGames(); });
         } catch (IllegalStateException ignored) {
             // The durable Arena state will be rendered when JavaFX creates the main view.
         }
+    }
+    @FXML
+    public void openLiveArenaGame() {
+        ArenaGame game = lichessArena.activeGames().stream()
+                .filter(candidate -> candidate.status() == ArenaGameStatus.STARTED || candidate.status() == ArenaGameStatus.ACTIVE)
+                .max(java.util.Comparator.comparing(ArenaGame::startedAt))
+                .orElse(null);
+        if (game == null) {
+            setFeatureStatus("There is no Knight Shade game in progress.");
+            refreshLiveArenaGame();
+            return;
+        }
+        if (game.localGameId().isEmpty()) {
+            setFeatureStatus("The live game is still being synchronized; try again shortly.");
+            return;
+        }
+        uiFlowManager.show(UiScreenId.COMPUTER_VS_COMPUTER);
+        uiFlowManager.currentScreen()
+                .map(screen -> screen.controller())
+                .filter(ComputerVsComputerScreenController.class::isInstance)
+                .map(ComputerVsComputerScreenController.class::cast)
+                .ifPresent(controller -> controller.openLichessGame(game));
+    }
+
+    private void refreshLiveArenaGame() {
+        if (liveArenaCard == null || liveArenaGameLabel == null) return;
+        List<ArenaGame> activeGames = lichessArena.activeGames().stream()
+                .filter(game -> game.status() == ArenaGameStatus.STARTED || game.status() == ArenaGameStatus.ACTIVE)
+                .sorted(java.util.Comparator.comparing(ArenaGame::startedAt).reversed())
+                .toList();
+        if (activeGames.isEmpty()) {
+            liveArenaCard.setVisible(false);
+            liveArenaCard.setManaged(false);
+            return;
+        }
+        ArenaGame latest = activeGames.getFirst();
+        String players = latest.localGameId()
+                .flatMap(savedGames::findSaved)
+                .map(saved -> {
+                    var record = saved.game().toRecord();
+                    String white = record.whitePlayer().map(player -> player.getName()).orElse("White");
+                    String black = record.blackPlayer().map(player -> player.getName()).orElse("Black");
+                    return white + "\nVS\n" + black;
+                })
+                .orElseGet(() -> latest.whiteLichessId().orElse("White") + "\nVS\n"
+                        + latest.blackLichessId().orElse("Black"));
+        liveArenaGameLabel.setText(players);
+        liveArenaCard.setVisible(true);
+        liveArenaCard.setManaged(true);
     }
     private void refreshArenaSummary() {
         if (arenaStatusLabel == null || arenaAccountLabel == null || arenaActivityLabel == null) {

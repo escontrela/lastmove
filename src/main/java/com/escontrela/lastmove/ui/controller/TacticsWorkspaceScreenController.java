@@ -34,6 +34,7 @@ import com.escontrela.lastmove.ui.component.board.ChessBoardControl;
 import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
 import com.escontrela.lastmove.ui.component.message.TextInputModal;
 import com.escontrela.lastmove.ui.component.promotion.PromotionPickerControl;
+import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton;
 import com.escontrela.lastmove.ui.event.OpenTacticsWorkspaceEvent;
 import com.escontrela.lastmove.ui.event.OpenTacticPositionEditorEvent;
 import com.escontrela.lastmove.ui.event.OpenStudyChapterTacticEvent;
@@ -92,6 +93,7 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
   @FXML private Button nextExerciseButton;
   @FXML private Button backToStudyButton;
   @FXML private VBox exerciseRail;
+  @FXML private ToolbarIconButton authoringToggleButton;
 
   private final TacticService tacticService;
   private final StudyService studyService;
@@ -114,6 +116,11 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
   private StudyChapterId temporaryChapterId;
   private AnalysisSessionId temporaryAnalysisSessionId;
   private TacticWorkspace temporaryWorkspace;
+  /** Exercise whose initial orientation has been applied to the currently displayed board. */
+  private TacticExerciseId orientedExerciseId;
+  /** True after the user explicitly rotates the current exercise's board. */
+  private boolean boardOrientationUserChanged;
+  private boolean defaultBoardFlipped;
 
   public TacticsWorkspaceScreenController(
       TacticService tacticService,
@@ -165,6 +172,7 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
           }
         });
     promotionPicker.setOnCancel(event -> pendingPromotionMove = null);
+    updateAuthoringToggleButton();
   }
 
   @EventListener
@@ -173,7 +181,9 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
     activeSuiteId = event.suiteId();
     activeExerciseId = event.exerciseId().orElse(null);
     authoring = event.authoring();
+    updateAuthoringToggleButton();
     authorParentNodeId = Optional.empty();
+    resetBoardOrientationForExercise();
   }
 
   @EventListener
@@ -190,7 +200,9 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
     activeSuiteId = null;
     activeExerciseId = null;
     authoring = false;
+    updateAuthoringToggleButton();
     authorParentNodeId = Optional.empty();
+    resetBoardOrientationForExercise();
   }
 
   @EventListener
@@ -204,7 +216,9 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
     activeSuiteId = null;
     activeExerciseId = null;
     authoring = false;
+    updateAuthoringToggleButton();
     authorParentNodeId = Optional.empty();
+    resetBoardOrientationForExercise();
   }
 
   @Override
@@ -284,7 +298,9 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
                   owner.orElseThrow(), activeSuiteId, gameLoadService.importPgn(request)));
       activeExerciseId = exercise.exerciseId();
       authoring = false;
+      updateAuthoringToggleButton();
       authorParentNodeId = Optional.empty();
+      resetBoardOrientationForExercise();
       refreshSuite();
       statusLabel.setText("Táctica importada desde PGN. Sigue la línea SAN en el tablero.");
     } catch (RuntimeException exception) {
@@ -313,9 +329,28 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
     if (isTemporaryExercise()) return;
     if (activeExerciseId == null) return;
     authoring = !authoring;
+    updateAuthoringToggleButton();
     authorParentNodeId = Optional.empty();
     render(tacticService.startExercise(activeOwner().orElseThrow(), activeSuiteId, activeExerciseId));
     statusLabel.setText(authoring ? "Authoring solution: add the accepted line from this position." : "Training mode ready.");
+  }
+
+  /** Keeps the authoring action's icon and accessible label aligned with the mode it will enter. */
+  private void updateAuthoringToggleButton() {
+    if (authoringToggleButton == null) {
+      return;
+    }
+    if (authoring) {
+      authoringToggleButton.setLightIconResource("/images/play_arrow_35dp_000000.png");
+      authoringToggleButton.setDarkIconResource("/images/play_arrow_35dp_FFFFFF.png");
+      authoringToggleButton.setAccessibleText("Run tactic");
+      authoringToggleButton.setTooltipText("Run tactic");
+    } else {
+      authoringToggleButton.setLightIconResource("/images/edit_35dp_000000.png");
+      authoringToggleButton.setDarkIconResource("/images/edit_35dp_FFFFFF.png");
+      authoringToggleButton.setAccessibleText("Edit tactic solution");
+      authoringToggleButton.setTooltipText("Edit tactic solution");
+    }
   }
 
   @FXML
@@ -366,6 +401,7 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
   @FXML
   public void onRotateBoard() {
     chessBoard.toggleOrientation();
+    boardOrientationUserChanged = true;
   }
 
   private void createFromFen(String rawFen) {
@@ -377,7 +413,9 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
       textInputModal.hide();
       activeExerciseId = exercise.exerciseId();
       authoring = true;
+      updateAuthoringToggleButton();
       authorParentNodeId = Optional.empty();
+      resetBoardOrientationForExercise();
       refreshSuite();
       statusLabel.setText("Tactic created. Add its solution moves on the board.");
     } catch (RuntimeException exception) {
@@ -391,7 +429,10 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
     suiteTitleLabel.setText(details.suite().title());
     List<TacticExerciseSummary> exercises = details.exercises();
     exerciseList.getItems().setAll(exercises);
-    if (activeExerciseId == null && !exercises.isEmpty()) activeExerciseId = exercises.getFirst().exerciseId();
+    if (activeExerciseId == null && !exercises.isEmpty()) {
+      activeExerciseId = exercises.getFirst().exerciseId();
+      resetBoardOrientationForExercise();
+    }
     if (activeExerciseId == null) {
       exerciseTitleLabel.setText("No tactic selected");
       modeLabel.setText("Add a FEN position to begin");
@@ -406,7 +447,9 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
   private void activate(TacticExerciseSummary exercise) {
     activeExerciseId = exercise.exerciseId();
     authoring = false;
+    updateAuthoringToggleButton();
     authorParentNodeId = Optional.empty();
+    resetBoardOrientationForExercise();
     chessBoard.clearHintSquare();
     render(tacticService.startExercise(activeOwner().orElseThrow(), activeSuiteId, activeExerciseId));
     exerciseList.refresh();
@@ -452,7 +495,9 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
     if (exercise.exerciseId().equals(activeExerciseId)) {
       activeExerciseId = null;
       authoring = false;
+      updateAuthoringToggleButton();
       authorParentNodeId = Optional.empty();
+      resetBoardOrientationForExercise();
     }
     refreshSuite();
     statusLabel.setText("Deleted tactic: " + exercise.title());
@@ -507,7 +552,7 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
                 : "Solution needed");
     chessBoard.setDisable(!authoring && !workspace.readyToSolve());
     hintButton.setDisable(authoring || !workspace.readyToSolve() || workspace.solved());
-    chessBoard.setFlipped(!authoring && workspace.solverColor() == PieceColor.BLACK);
+    applyInitialBoardOrientation(workspace);
     chessBoard.renderPosition(workspace.position());
     statusLabel.setText(workspace.status());
     renderResult(workspace);
@@ -534,6 +579,7 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
     temporaryChapterId = null;
     temporaryAnalysisSessionId = null;
     temporaryWorkspace = null;
+    resetBoardOrientationForExercise();
     if (exerciseRail != null) {
       exerciseRail.setManaged(true);
       exerciseRail.setVisible(true);
@@ -586,6 +632,48 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
 
   private Optional<PlayerId> activeOwner() {
     return currentUserService.activePlayerState().playerId();
+  }
+
+  /**
+   * Starts Black exercises from Black's side. Once shown, any manual rotation remains in force
+   * while the user is authoring or solving that exercise.
+   */
+  private void applyInitialBoardOrientation(TacticWorkspace workspace) {
+    if (!workspace.exerciseId().equals(orientedExerciseId)) {
+      orientedExerciseId = workspace.exerciseId();
+      boardOrientationUserChanged = false;
+      defaultBoardFlipped = orientSolverPiecesAtBottom(workspace);
+    }
+    if (!boardOrientationUserChanged) {
+      // solverColor is derived from the exercise's initial side to move.
+      chessBoard.setFlipped(defaultBoardFlipped);
+    }
+  }
+
+  private void resetBoardOrientationForExercise() {
+    orientedExerciseId = null;
+    boardOrientationUserChanged = false;
+  }
+
+  /**
+   * Chooses the board side that places the solving colour nearest the player.
+   *
+   * <p>Most chess positions naturally put White toward rank one and Black toward rank eight, but
+   * tactic FENs may be composed with their material on the opposite half of the board. Looking at
+   * the solving side's actual piece placement keeps that side visually at the bottom in either
+   * case.
+   */
+  private boolean orientSolverPiecesAtBottom(TacticWorkspace workspace) {
+    List<com.escontrela.lastmove.domain.game.PositionPiece> solverPieces =
+        workspace.position().pieces().stream()
+            .filter(piece -> piece.color() == workspace.solverColor())
+            .toList();
+    if (solverPieces.isEmpty()) {
+      return workspace.solverColor() == PieceColor.BLACK;
+    }
+    double averageRank =
+        solverPieces.stream().mapToInt(piece -> piece.square().getRank()).average().orElse(3.5);
+    return averageRank >= 3.5;
   }
 
   private String colorName(PieceColor color) {

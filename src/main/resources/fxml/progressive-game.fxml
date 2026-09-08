@@ -3,6 +3,7 @@
 <?import com.escontrela.lastmove.ui.component.board.ChessBoardControl?>
 <?import com.escontrela.lastmove.ui.component.header.ApplicationHeader?>
 <?import com.escontrela.lastmove.ui.component.game.HumanVsComputerSetupOverlay?>
+<?import com.escontrela.lastmove.ui.component.game.GameStartPlayersOverlay?>
 <?import com.escontrela.lastmove.ui.component.game.CapturedPiecesControl?>
 <?import com.escontrela.lastmove.ui.component.game.GameClockControl?>
 <?import com.escontrela.lastmove.ui.component.game.ThinkingIndicatorControl?>
@@ -92,4 +93,5 @@
     <PromotionPickerControl fx:id="promotionPicker" />
     <MessageBox fx:id="resultMessageBox" additionalButtonText="Change engine" additionalButtonVisible="true" autoHide="false" buttonMode="ACCEPT_CANCEL" closeButtonVisible="true" dragEnabled="true" onAdditionalAction="#resetModel" />
     <HumanVsComputerSetupOverlay fx:id="setupOverlay" />
+    <GameStartPlayersOverlay fx:id="gameStartPlayersOverlay" />
 </StackPane>

@@ -6,13 +6,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.random.RandomGenerator;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Autowired;
 
-/** Selects a shuffled global exercise pool without immediate repeats across pool cycles. */
+/** Selects a shuffled, difficulty-aware exercise deck without immediate repeats between cycles. */
 @Component
 public final class StormGameExerciseSelector {
   private final StormGameExerciseSource source;
@@ -21,7 +19,6 @@ public final class StormGameExerciseSelector {
   private String lastExerciseId;
   private int presentedPuzzles;
   private StormDifficulty remainingDifficulty;
-  private final Set<String> presentedExerciseIds = new HashSet<>();
 
   public StormGameExerciseSelector(StormGameExerciseSource source, RandomGenerator random) {
     this.source = Objects.requireNonNull(source, "source must not be null");
@@ -37,13 +34,10 @@ public final class StormGameExerciseSelector {
   public Optional<StormGameChallenge> next() {
     StormDifficulty difficulty = StormDifficulty.forPresentedPuzzles(presentedPuzzles);
     if (remainingDifficulty != difficulty) remaining = List.of();
-    discardPresentedExercisesFromPool();
     if (remaining.isEmpty()) refill();
-    discardPresentedExercisesFromPool();
     if (remaining.isEmpty()) return Optional.empty();
     TacticExerciseReference reference = remaining.removeFirst();
     lastExerciseId = reference.exercise().id().value().toString();
-    presentedExerciseIds.add(lastExerciseId);
     presentedPuzzles++;
     return Optional.of(toChallenge(reference, difficulty));
   }
@@ -53,14 +47,12 @@ public final class StormGameExerciseSelector {
     lastExerciseId = null;
     presentedPuzzles = 0;
     remainingDifficulty = null;
-    presentedExerciseIds.clear();
   }
 
   private void refill() {
     List<TacticExerciseReference> eligible = source.findAllTrainableExercises().stream()
         .filter(Objects::nonNull)
         .filter(reference -> reference.exercise().hasSolution())
-        .filter(reference -> !presentedExerciseIds.contains(reference.exercise().id().value().toString()))
         .toList();
     if (eligible.isEmpty()) {
       remaining = List.of();
@@ -77,12 +69,6 @@ public final class StormGameExerciseSelector {
     }
     remaining = shuffled;
     remainingDifficulty = difficulty;
-  }
-
-  private void discardPresentedExercisesFromPool() {
-    remaining = new ArrayList<>(remaining.stream()
-        .filter(reference -> !presentedExerciseIds.contains(reference.exercise().id().value().toString()))
-        .toList());
   }
 
   private StormGameChallenge toChallenge(TacticExerciseReference reference, StormDifficulty difficulty) {

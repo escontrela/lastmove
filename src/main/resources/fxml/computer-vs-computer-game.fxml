@@ -2,6 +2,7 @@
 <?import com.escontrela.lastmove.ui.component.board.ChessBoardControl?>
 <?import com.escontrela.lastmove.ui.component.header.ApplicationHeader?>
 <?import com.escontrela.lastmove.ui.component.game.ComputerVsComputerSetupOverlay?>
+<?import com.escontrela.lastmove.ui.component.game.GameStartPlayersOverlay?>
 <?import com.escontrela.lastmove.ui.component.game.GameSessionSelectorOverlay?>
 <?import com.escontrela.lastmove.ui.component.game.CapturedPiecesControl?>
 <?import com.escontrela.lastmove.ui.component.game.GameClockControl?>
@@ -37,4 +38,5 @@
   <MessageBox fx:id="resultMessageBox" additionalButtonText="Change engines" additionalButtonVisible="true" autoHide="false" buttonMode="ACCEPT_CANCEL" closeButtonVisible="true" dragEnabled="true" onAdditionalAction="#resetModel" />
   <ComputerVsComputerSetupOverlay fx:id="setupOverlay" />
   <GameSessionSelectorOverlay fx:id="sessionSelectorOverlay" />
+  <GameStartPlayersOverlay fx:id="gameStartPlayersOverlay" />
 </StackPane>

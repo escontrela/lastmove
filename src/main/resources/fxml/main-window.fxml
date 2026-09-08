@@ -16,6 +16,7 @@
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.TilePane?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.Circle?>
 
 <AnchorPane fx:id="root" onContextMenuRequested="#showContextMenu" styleClass="app-shell" stylesheets="@../css/lastmove.css" xmlns="http://javafx.com/javafx/22.0.2" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.escontrela.lastmove.ui.controller.MainWindowController">
 <BorderPane styleClass="app-shell" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
@@ -28,12 +29,27 @@
                 <content>
                     <VBox alignment="TOP_LEFT" spacing="24.0" styleClass="tool-catalog-shell">
                         <padding><Insets bottom="40.0" left="48.0" right="48.0" top="38.0" /></padding>
-                        <HBox alignment="CENTER_LEFT" spacing="18.0">
+                        <HBox alignment="CENTER_LEFT" fillHeight="false" spacing="18.0">
                         <VBox spacing="6.0" HBox.hgrow="ALWAYS">
                             <Label fx:id="welcomeLabel" styleClass="catalog-title" text="Welcome back" />
                             <Label styleClass="catalog-support" text="What would you like to work on today?" wrapText="true" />
                         </VBox>
-                        <DateTimeLinkControl fx:id="homeDateTimeControl" />
+                        <HBox alignment="CENTER_RIGHT" fillHeight="false" spacing="10.0">
+                            <Button fx:id="liveArenaCard" accessibleText="Open live Knight Shade game" contentDisplay="GRAPHIC_ONLY" managed="false" onAction="#openLiveArenaGame" styleClass="home-live-arena-card" visible="false">
+                                <graphic>
+                                    <HBox fx:id="liveArenaContent" alignment="CENTER_LEFT" styleClass="home-live-arena-content">
+                                        <VBox alignment="CENTER" spacing="5.0" styleClass="home-live-arena-status-box">
+                                            <Label styleClass="home-live-arena-kicker" text="LIVE" />
+                                            <Circle fx:id="liveArenaDot" radius="5.0" styleClass="home-live-arena-dot" />
+                                        </VBox>
+                                        <VBox alignment="CENTER_LEFT" spacing="4.0" styleClass="home-live-arena-detail">
+                                            <Label fx:id="liveArenaGameLabel" styleClass="home-live-arena-game" text="Knight Shade" wrapText="true" />
+                                        </VBox>
+                                    </HBox>
+                                </graphic>
+                            </Button>
+                            <DateTimeLinkControl fx:id="homeDateTimeControl" />
+                        </HBox>
                         </HBox>
                         <TilePane fx:id="homeCardGrid" hgap="18.0" prefColumns="3" prefTileHeight="220.0" prefTileWidth="360.0" styleClass="home-action-grid" vgap="18.0">
                             <Button accessibleText="Analyse a PGN" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" onAction="#openPgnAnalysis" styleClass="home-action-card, home-analysis-card"><graphic><VBox styleClass="home-card-content"><Region VBox.vgrow="ALWAYS" /><VBox spacing="12.0"><Label styleClass="home-card-title" text="Analyse a PGN" /><Label styleClass="home-card-description" text="Replay and analyse your games move by move." wrapText="true" /><Label styleClass="home-card-link" text="Start analysis  →" /></VBox></VBox></graphic></Button>

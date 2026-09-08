@@ -35,14 +35,14 @@ class StormGameExerciseSelectorTest {
         .map(challenge -> challenge.ownerId()).distinct().count());
   }
 
-  @Test void neverRepeatsAnExerciseDuringOneSessionEvenAfterThePoolIsExhausted() {
+  @Test void reshufflesAfterTheDifficultyPoolIsExhausted() {
     TacticExercise exercise = exercise("Only once");
     StormGameExerciseSelector selector = new StormGameExerciseSelector(
         () -> List.of(new TacticExerciseReference(PlayerId.of(1L), TacticSuiteId.random(), exercise)),
         new Random(4));
 
     assertTrue(selector.next().isPresent());
-    assertTrue(selector.next().isEmpty());
+    assertTrue(selector.next().isPresent());
   }
 
   private static TacticExercise exercise(String title) {

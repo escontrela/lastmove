@@ -17,20 +17,34 @@ public final class PlayerAvatarControl extends StackPane {
   private final Circle face = new Circle(11.5);
   private final Label initials = new Label();
   private final ImageView image = new ImageView();
+  private double avatarSize = 28;
 
   public PlayerAvatarControl() {
     getStyleClass().add("player-avatar");
     outerRing.getStyleClass().add("player-avatar-ring");
     face.getStyleClass().add("player-avatar-face");
     initials.getStyleClass().add("player-avatar-initials");
-    image.setFitWidth(28);
-    image.setFitHeight(28);
     image.setPreserveRatio(true);
-    image.setClip(new Circle(14, 14, 14));
-    setMinSize(28, 28);
-    setPrefSize(28, 28);
-    setMaxSize(28, 28);
+    setAvatarSize(28);
     getChildren().setAll(outerRing, face, initials);
+  }
+
+  /** Resizes the portrait while preserving its circular ring and clipped photo. */
+  public void setAvatarSize(double value) {
+    if (value <= 0) {
+      throw new IllegalArgumentException("Avatar size must be positive");
+    }
+    avatarSize = value;
+    double outerRadius = value / 2.0;
+    double faceRadius = Math.max(1, outerRadius - Math.max(2, value * 0.075));
+    outerRing.setRadius(outerRadius);
+    face.setRadius(faceRadius);
+    image.setFitWidth(faceRadius * 2);
+    image.setFitHeight(faceRadius * 2);
+    image.setClip(new Circle(faceRadius, faceRadius, faceRadius));
+    setMinSize(value, value);
+    setPrefSize(value, value);
+    setMaxSize(value, value);
   }
 
   public void showInitials(String name) {
@@ -45,7 +59,8 @@ public final class PlayerAvatarControl extends StackPane {
   public void showPhoto(byte[] photo, String name) {
     Objects.requireNonNull(photo, "photo must not be null");
     image.setImage(new Image(new ByteArrayInputStream(photo)));
-    image.setClip(new Circle(14, 14, 14));
+    double faceRadius = Math.max(1, avatarSize / 2.0 - Math.max(2, avatarSize * 0.075));
+    image.setClip(new Circle(faceRadius, faceRadius, faceRadius));
     getChildren().setAll(outerRing, image);
     installTooltip(Objects.requireNonNullElse(name, "Player"));
   }
