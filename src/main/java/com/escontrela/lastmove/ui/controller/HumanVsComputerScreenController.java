@@ -21,6 +21,7 @@ import com.escontrela.lastmove.ui.component.game.HumanVsComputerSetupOverlay;
 import com.escontrela.lastmove.ui.component.game.GameClockControl;
 import com.escontrela.lastmove.ui.component.game.ThinkingIndicatorControl;
 import com.escontrela.lastmove.ui.component.game.TypewriterStatusLabel;
+import com.escontrela.lastmove.ui.component.game.GameStartPlayersOverlay;
 import com.escontrela.lastmove.ui.component.message.MessageBox;
 import com.escontrela.lastmove.ui.component.notation.MoveNotationControl;
 import com.escontrela.lastmove.ui.component.notation.MoveNotationEntry;
@@ -39,6 +40,7 @@ import com.escontrela.lastmove.domain.service.ThreatenedSquaresService;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletionStage;
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
@@ -90,6 +92,7 @@ public final class HumanVsComputerScreenController implements UiScreenController
   @FXML private MoveNotationControl moveNotation;
   @FXML private PromotionPickerControl promotionPicker;
   @FXML private HumanVsComputerSetupOverlay setupOverlay;
+  @FXML private GameStartPlayersOverlay gameStartPlayersOverlay;
   @FXML private MessageBox resultMessageBox;
   @FXML private Label opponentPlayerLabel;
   @FXML private Label humanPlayerLabel;
@@ -328,7 +331,7 @@ public final class HumanVsComputerScreenController implements UiScreenController
                             state.message().orElse("Unable to restart the engine")));
                     return;
                   }
-                  activateGame(state);
+                  showGameStartOverlay(state);
                 }));
   }
 
@@ -377,7 +380,7 @@ public final class HumanVsComputerScreenController implements UiScreenController
                     return;
                   }
                   setupOverlay.hide();
-                  activateGame(state);
+                  showGameStartOverlay(state);
                 }));
   }
 
@@ -648,6 +651,33 @@ public final class HumanVsComputerScreenController implements UiScreenController
     chessBoard.setFlipped(state.humanColor() == PieceColor.BLACK);
     applyState(state);
     clockRefresh.play();
+  }
+
+  private void showGameStartOverlay(ComputerGameState state) {
+    boolean humanIsWhite = state.humanColor() == PieceColor.WHITE;
+    boolean knightshadeOpponent = ComputerEngineIds.KNIGHTSHADE.equals(state.engine().id());
+    gameStartPlayersOverlay.show(
+        new GameStartPlayersOverlay.PlayerPresentation(
+            state.whitePlayer().getName(),
+            humanIsWhite ? currentUserService.currentUserPhoto() : Optional.empty(),
+            !humanIsWhite && knightshadeOpponent,
+            humanIsWhite),
+        new GameStartPlayersOverlay.PlayerPresentation(
+            state.blackPlayer().getName(),
+            humanIsWhite ? Optional.empty() : currentUserService.currentUserPhoto(),
+            humanIsWhite && knightshadeOpponent,
+            !humanIsWhite),
+        () -> activateGame(state),
+        () -> cancelPendingGame(state));
+  }
+
+  private void cancelPendingGame(ComputerGameState state) {
+    computerGameService.closeGame(state.gameId());
+    showEmptyWorkspace();
+    setupOverlay.show(
+        computerGameService.availableEngines(),
+        currentUserService.currentUser().name(),
+        computerEngineSettingsService::thinkingTime);
   }
 
   private boolean restoreGameInMemory() {

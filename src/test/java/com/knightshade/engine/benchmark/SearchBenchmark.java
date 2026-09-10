@@ -16,15 +16,17 @@ public final class SearchBenchmark {
   public static void main(String[] args) {
     int depth = args.length == 0 ? 4 : Integer.parseInt(args[0]);
     SearchLimits limits = args.length > 1
+        && Long.parseLong(args[1]) > 0
         ? new SearchLimits(Long.parseLong(args[1]), 0) : SearchLimits.depth(depth);
+    int threads = args.length > 2 ? Integer.parseInt(args[2]) : 1;
     for (String fen : POSITIONS) {
-      new KnightshadeEngine().search(fen, SearchLimits.depth(3), StopSignal.never());
+      new KnightshadeEngine(threads).search(fen, SearchLimits.depth(3), StopSignal.never());
     }
-    System.out.println("position,depth,move,score,nodes,millis");
+    System.out.println("threads,position,depth,move,score,nodes,millis");
     for (int i = 0; i < POSITIONS.length; i++) {
-      var result = new KnightshadeEngine().search(
+      var result = new KnightshadeEngine(threads).search(
           POSITIONS[i], limits, StopSignal.never());
-      System.out.printf("%d,%d,%s,%d,%d,%d%n", i + 1, result.depth(),
+      System.out.printf("%d,%d,%d,%s,%d,%d,%d%n", threads, i + 1, result.depth(),
           result.move().toUci(), result.score(), result.nodes(), result.elapsedMillis());
     }
   }

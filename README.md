@@ -83,6 +83,13 @@ Screenshots of the current application:
   player profile.
 * Draw calculation arrows by dragging with the secondary mouse button; double-click it to clear.
 
+Knightshade searches root alternatives in parallel with up to four participants by default
+(including the coordinating thread, capped by the processors available to Java). Set the JVM
+option `-Dknightshade.threads=1` to use the sequential reference search, or a value from 2 to 32
+to choose the parallel participant count. The thinking-time limit is shared by all participants.
+Each request joins its workers before returning. See [parallel search](docs/knightshade-parallel-search.md)
+for synchronization details and headless benchmark commands.
+
 ### Planned
 
 * PGN editing and export.

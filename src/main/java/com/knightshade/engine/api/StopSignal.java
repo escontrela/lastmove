@@ -4,7 +4,8 @@ package com.knightshade.engine.api;
  * A cooperative stop signal consulted by the search between nodes.
  *
  * <p>The adapter implements this from a cancellation flag so {@code cancelSearch()} can interrupt
- * a long search without exposing threads to the engine.
+ * a long search without exposing threads to the engine. Implementations used with parallel
+ * search must support concurrent polling (for example, {@code AtomicBoolean::get}).
  */
 @FunctionalInterface
 public interface StopSignal {

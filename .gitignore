@@ -1,5 +1,7 @@
 target/
 lastmove.db
+lastmove.db-shm
+lastmove.db-wal
 *.class
 *.jar
 *.war

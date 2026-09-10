@@ -54,12 +54,15 @@ classDiagram
     class Board
     class LegalMoveGenerator
     class PositionalEvaluator
+    class ParallelRootSearch
     class IterativeDeepeningSearch
     class QuiescenceSearch
     class TranspositionTable
     class Zobrist
     KnightshadeEngine --> Engine : implements
-    KnightshadeEngine --> IterativeDeepeningSearch
+    KnightshadeEngine --> ParallelRootSearch
+    ParallelRootSearch --> Search : implements
+    ParallelRootSearch --> IterativeDeepeningSearch : trabajadores aislados
     IterativeDeepeningSearch --> Search : implements
     IterativeDeepeningSearch --> MoveGenerator
     IterativeDeepeningSearch --> Evaluator
@@ -177,7 +180,7 @@ Aplicar dos veces el mismo XOR lo cancela, una propiedad ideal para deshacer. La
 
 ## 4. Búsqueda (search)
 
-El motor activo es IterativeDeepeningSearch (v2+v3). El motor explora un árbol: cada nodo es un estado Board y cada arista una jugada legal. Al llegar a una hoja estima la posición y propaga ese resultado de vuelta hacia la raíz.
+El motor activo es ParallelRootSearch, que coordina trabajadores con el núcleo recursivo de IterativeDeepeningSearch. Con `knightshade.threads=1` se usa la búsqueda secuencial original. El motor explora un árbol: cada nodo es un estado Board y cada arista una jugada legal. Al llegar a una hoja estima la posición y propaga ese resultado de vuelta hacia la raíz.
 
 ~~~mermaid
 flowchart TD
@@ -222,6 +225,8 @@ La repetición inicial es útil: se conserva explícitamente la mejor jugada ra�
 Negamax con poda alfa-beta: el primer hijo se busca con ventana completa; los demás con ventana nula (-alpha-1, -alpha), re-buscando con ventana completa solo si supera alpha.
 
 PVS pregunta a los hijos tardíos: “¿puedes ser mejor que lo que ya tengo?”. Si no pueden, el coste es pequeño. Si uno parece mejorar alpha, se confirma con una ventana completa para obtener el valor exacto.
+
+Desde profundidad 3, ParallelRootSearch busca primero la mejor jugada de la iteración anterior y reparte las alternativas restantes entre el coordinador y hasta N−1 hilos de plataforma. Cada trabajador conserva su propio Board, mapa de repeticiones, TT, evaluador, killers e historial durante esa solicitud. Se comparten alpha, el índice de la siguiente variante, el resultado raíz y las señales de parada mediante operaciones atómicas y publicación sincronizada. Cada intento espera a todos los trabajadores antes de reutilizar su estado. Cancelación, interrupción o fallo detienen toda la solicitud; solo una profundidad completada puede convertirse en el resultado final. Véase [búsqueda paralela](knightshade-parallel-search.md).
 
 ### 4.4 Aspiration Windows
 
@@ -351,7 +356,7 @@ sequenceDiagram
     participant SVC as ComputerGameService
     participant AD as KnightshadeMoveEngine
     participant ENG as KnightshadeEngine
-    participant SRCH as IterativeDeepeningSearch
+    participant SRCH as ParallelRootSearch
     SVC->>AD: chooseMove(ComputerMoveRequest)
     AD->>AD: FEN desde PositionSnapshot
     AD->>ENG: search(FEN, SearchLimits, StopSignal)
@@ -383,7 +388,7 @@ El adaptador (infrastructure/engine/knightshade) es infraestructura de LastMove 
 - **Entrada:** PositionSnapshot → FEN (vía FenService.fromSnapshot) → Board (vía FenParser).
 - **Salida:** Move del motor → MoveCommand del dominio (from, to, promotion como Optional).
 
-KnightshadeMoveEngine implementa ComputerMoveEngine, ejecuta la búsqueda en un hilo virtual (CompletableFuture.supplyAsync) y traduce cancelSearch() a StopSignal (AtomicBoolean), que la búsqueda consulta entre nodos.
+KnightshadeMoveEngine implementa ComputerMoveEngine, ejecuta el coordinador de búsqueda en un hilo virtual (CompletableFuture.supplyAsync) y traduce cancelSearch() a StopSignal (AtomicBoolean), que todos los trabajadores consultan entre nodos. ParallelRootSearch crea y cierra sus propios hilos de plataforma por solicitud; el executor del adaptador sigue serializando sus solicitudes.
 
 ### 6.3 Registro automático en la UI
 

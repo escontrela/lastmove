@@ -252,6 +252,31 @@ public final class IterativeDeepeningSearch implements Search {
     return best;
   }
 
+  /** Searches one root alternative using this worker's private search state. */
+  int searchRootMove(
+      Board board, Move move, int depth, int alpha, int beta, boolean scout,
+      KillerMoves killers, HistoryTable history, Map<Long, Integer> repetitions, StopSignal stop) {
+    board.make(move);
+    long key = board.zobristKey();
+    recordPosition(repetitions, key);
+    try {
+      int score = -pvSearch(board, depth - 1, scout ? -alpha - 1 : -beta, -alpha,
+          1, 0, killers, history, repetitions, false, stop);
+      if (scout && score > alpha && score < beta && !stop.shouldStop()) {
+        score = -pvSearch(board, depth - 1, -beta, -alpha,
+            1, 0, killers, history, repetitions, false, stop);
+      }
+      return score;
+    } finally {
+      forgetPosition(repetitions, key);
+      board.unmake();
+    }
+  }
+
+  long nodesVisited() {
+    return totalNodes();
+  }
+
   private int pvSearch(
       Board board,
       int depth,

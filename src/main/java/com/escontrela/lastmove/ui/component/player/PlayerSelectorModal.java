@@ -13,6 +13,7 @@ import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
@@ -31,6 +32,7 @@ public final class PlayerSelectorModal extends StackPane {
   private final Label message = new Label("Select the player whose data you want to view.");
   private final CheckBox onlyApplicationUsers = new CheckBox("Only app users");
   private final FlowPane options = new FlowPane(10, 10);
+  private final ScrollPane optionsScroll = new ScrollPane(options);
   private final VBox card = new VBox(14);
   private EventHandler<ActionEvent> onCancel;
   private EventHandler<PlayerSelectionEvent> onPlayerSelected;
@@ -44,13 +46,19 @@ public final class PlayerSelectorModal extends StackPane {
     title.getStyleClass().add("message-box-title"); message.getStyleClass().add("message-box-message");
     onlyApplicationUsers.getStyleClass().add("player-selector-filter");
     onlyApplicationUsers.setSelected(true); onlyApplicationUsers.setOnAction(event -> renderOptions());
+    optionsScroll.getStyleClass().add("player-selector-options-scroll");
+    optionsScroll.setFitToWidth(true);
+    optionsScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+    optionsScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+    optionsScroll.setMaxHeight(460);
+    optionsScroll.setPannable(true);
     Button close = new Button("×"); close.getStyleClass().add("message-box-close-button"); close.setOnAction(this::cancel);
     Region spacer = new Region(); HBox.setHgrow(spacer, Priority.ALWAYS);
     HBox header = new HBox(12, title, spacer, close); header.setAlignment(Pos.CENTER_LEFT);
     Button cancel = new Button("Cancel"); cancel.getStyleClass().addAll("message-box-button", "message-box-cancel-button"); cancel.setCancelButton(true); cancel.setOnAction(this::cancel);
     HBox actions = new HBox(cancel); actions.setAlignment(Pos.CENTER_RIGHT); actions.getStyleClass().add("message-box-actions");
-    card.getChildren().addAll(header, message, onlyApplicationUsers, options, actions); card.getStyleClass().addAll("message-box-card", "player-selector-modal-card"); card.setPadding(new Insets(18));
-    card.setMinHeight(Region.USE_PREF_SIZE); card.setMaxHeight(Region.USE_PREF_SIZE);
+    card.getChildren().addAll(header, message, onlyApplicationUsers, optionsScroll, actions); card.getStyleClass().addAll("message-box-card", "player-selector-modal-card"); card.setPadding(new Insets(18));
+    card.setMinHeight(Region.USE_PREF_SIZE); card.setMaxHeight(760);
     card.setMinWidth(Region.USE_PREF_SIZE); card.setMaxWidth(720);
     getChildren().add(card); setVisible(false); setManaged(false);
   }
