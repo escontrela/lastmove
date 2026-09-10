@@ -58,11 +58,6 @@ jobs:
             -DincludeScope=runtime \
             -DoutputDirectory=target/app-input
 
-      - name: Set up WiX for the MSI package
-        if: matrix.type == 'msi'
-        shell: pwsh
-        run: choco install wixtoolset --version=3.14.1 --yes --no-progress
-
       - name: Build installer
         shell: bash
         run: |
