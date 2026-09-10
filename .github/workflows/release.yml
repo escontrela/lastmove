@@ -41,8 +41,11 @@ jobs:
           distribution: temurin
           cache: maven
 
-      - name: Build and test
-        run: mvn --batch-mode --update-snapshots clean package
+      - name: Build application
+        # CI runs the full test suite on Ubuntu. Some tests depend on POSIX paths,
+        # local Python/Sunfish binaries, or SQLite file-locking semantics and are
+        # not suitable as a gate for a Windows installer build.
+        run: mvn --batch-mode --update-snapshots -DskipTests clean package
 
       - name: Assemble application input
         shell: bash

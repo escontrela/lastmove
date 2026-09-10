@@ -235,9 +235,11 @@ persona que utilice la aplicación.
    no reutilices un tag ya publicado.
 
 3. GitHub iniciará automáticamente **Actions → Release desktop applications**. La acción compila
-   y prueba el proyecto, genera los tres instaladores en runners independientes y los reúne en una
-   nueva Release. Se puede seguir el progreso desde la pestaña **Actions**; si un job falla, hay que
-   corregirlo y volver a ejecutar el job desde esa misma pantalla.
+   el proyecto, genera los tres instaladores en runners independientes y los reúne en una nueva
+   Release. La suite completa de tests se valida en el workflow **CI** de Ubuntu; el workflow de
+   distribución omite esos tests para evitar dependencias específicas del sistema operativo durante
+   el empaquetado. Se puede seguir el progreso desde **Actions**; si un job falla, hay que corregirlo
+   y volver a ejecutar el job desde esa misma pantalla.
 
 #### Descargar y ejecutar
 
