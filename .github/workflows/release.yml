@@ -1,0 +1,99 @@
+name: Release desktop applications
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    name: Package (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux
+            os: ubuntu-24.04
+            type: deb
+            icon: src/main/resources/images/last-move-logo.png
+          - name: Windows
+            os: windows-2025
+            type: msi
+            icon: src/main/resources/images/LastMove.ico
+          - name: macOS
+            os: macos-13
+            type: dmg
+            icon: src/main/resources/images/LastMove.icns
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 22
+        uses: actions/setup-java@v4
+        with:
+          java-version: '22'
+          distribution: temurin
+          cache: maven
+
+      - name: Build and test
+        run: mvn --batch-mode --update-snapshots clean package
+
+      - name: Assemble application input
+        shell: bash
+        run: |
+          mkdir -p target/app-input
+          main_jar=$(find target -maxdepth 1 -type f -name 'lastmove-*.jar' ! -name '*-exec.jar' | head -n 1)
+          test -n "$main_jar"
+          cp "$main_jar" target/app-input/LastMove.jar
+          mvn --batch-mode dependency:copy-dependencies \
+            -DincludeScope=runtime \
+            -DoutputDirectory=target/app-input
+
+      - name: Build installer
+        shell: bash
+        run: |
+          mkdir -p target/dist
+          package_version="${GITHUB_REF_NAME#v}"
+          # macOS requires the first version component to be greater than zero.
+          if [[ "$package_version" == 0.* ]]; then
+            package_version="1.${package_version#0.}"
+          fi
+          jpackage \
+            --type "${{ matrix.type }}" \
+            --name LastMove \
+            --app-version "$package_version" \
+            --input target/app-input \
+            --main-jar LastMove.jar \
+            --main-class com.escontrela.lastmove.bootstrap.LastMoveLauncher \
+            --dest target/dist \
+            --icon "${{ matrix.icon }}" \
+            --vendor "LastMove" \
+            --description "Desktop chess suite"
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: LastMove-${{ matrix.name }}
+          path: target/dist/*
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub Release
+    needs: package
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download installers
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Create release and attach installers
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --generate-notes --verify-tag

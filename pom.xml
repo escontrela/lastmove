@@ -123,6 +123,11 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <!-- Keep the normal jar thin so jpackage can place its dependencies
+                         beside it. The executable fat jar remains available as *-exec.jar. -->
+                    <classifier>exec</classifier>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.openjfx</groupId>

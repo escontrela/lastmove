@@ -212,6 +212,50 @@ For a distributable application, use the platform-native asset during packaging:
 for a macOS `.app` and `LastMove.ico` for a Windows `.exe`/MSI. Do not use the other platform's
 icon format.
 
+### Releases e instaladores
+
+El workflow `.github/workflows/release.yml` genera instaladores nativos con `jpackage`, incluyendo
+un runtime de Java 22 y JavaFX. No hace falta instalar Java, Maven ni JavaFX en el ordenador de la
+persona que utilice la aplicación.
+
+#### Publicar una release
+
+1. Comprueba que los cambios que quieres distribuir están en `main` y que el árbol de trabajo está
+   limpio.
+2. Crea un tag con una versión numérica de tres componentes y envíalo a GitHub:
+
+   ```bash
+   git checkout main
+   git pull origin main
+   git tag -a v0.1.0 -m "Release v0.1.0"
+   git push origin v0.1.0
+   ```
+
+   El prefijo `v` es obligatorio. Para la siguiente versión usa, por ejemplo, `v0.2.0` o `v0.1.1`;
+   no reutilices un tag ya publicado.
+
+3. GitHub iniciará automáticamente **Actions → Release desktop applications**. La acción compila
+   y prueba el proyecto, genera los tres instaladores en runners independientes y los reúne en una
+   nueva Release. Se puede seguir el progreso desde la pestaña **Actions**; si un job falla, hay que
+   corregirlo y volver a ejecutar el job desde esa misma pantalla.
+
+#### Descargar y ejecutar
+
+Cuando la acción termine, abre **Releases** en GitHub y descarga el archivo correspondiente a tu
+plataforma:
+
+| Plataforma | Archivo | Operación |
+| --- | --- | --- |
+| Linux (Ubuntu/Debian) | `LastMove_*.deb` | Instalar con el gestor de paquetes o `sudo apt install ./LastMove_*.deb` |
+| Windows | `LastMove-*.msi` | Abrir el instalador y seguir el asistente |
+| macOS | `LastMove-*.dmg` | Abrir el DMG y arrastrar LastMove a Applications |
+
+Los paquetes son específicos de la arquitectura del runner utilizado (la versión actual de macOS
+es para Intel). Los instaladores todavía no están firmados: Windows puede mostrar **Más información
+→ Ejecutar de todas formas** y macOS puede requerir abrir la aplicación desde Finder con Ctrl-clic
+→ **Abrir** la primera vez. La base de datos y la configuración se crean al ejecutar la aplicación;
+no se debe modificar ni borrar el contenido interno del instalador.
+
 ## Analysis Workspace
 
 The PGN analysis screen contains three working areas:
