@@ -21,7 +21,8 @@ jobs:
             type: deb
             icon: src/main/resources/images/last-move-logo.png
           - name: Windows
-            os: windows-2025
+            # windows-2022 is the stable hosted image and has the best jpackage support.
+            os: windows-2022
             type: msi
             icon: src/main/resources/images/LastMove.ico
           - name: macOS
@@ -53,6 +54,12 @@ jobs:
           mvn --batch-mode dependency:copy-dependencies \
             -DincludeScope=runtime \
             -DoutputDirectory=target/app-input
+
+      - name: Set up WiX for the MSI package
+        if: matrix.type == 'msi'
+        uses: ilammy/setup-wix@v1
+        with:
+          version: '3.14.1'
 
       - name: Build installer
         shell: bash
