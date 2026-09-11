@@ -92,7 +92,9 @@ public class ChessSquareControl extends StackPane {
   private void applyTheme(BoardTheme theme) {
     this.theme = theme;
     String color = isLight ? theme.getLightColor() : theme.getDarkColor();
-    String background = (theme == BoardTheme.V2_BLACK || theme == BoardTheme.V2_TRIBAL)
+    String background = (theme == BoardTheme.V2_BLACK
+        || theme == BoardTheme.V2_TRIBAL
+        || theme == BoardTheme.V2_LASTMOVE)
         ? tribalTexture(color, isLight)
         : visualEffectsEnabled
             ? "linear-gradient(from 0% 0% to 100% 100%, derive(" + color + ", 8%) 0%, "

@@ -98,7 +98,8 @@ public final class TacticService {
     assertAvailable();
     TacticSuite suite = ownedSuite(ownerId, suiteId);
     return new TacticSuiteDetails(
-        summary(suite), suite.exercises().stream().map(this::summary).toList());
+        summary(suite),
+        suite.exercises().stream().map(exercise -> summary(ownerId, suite, exercise)).toList());
   }
 
   /** Renames one owned tactic suite. */
@@ -242,9 +243,23 @@ public final class TacticService {
     assertAvailable();
     TacticSuite suite = ownedSuite(ownerId, suiteId);
     TacticExercise exercise = exercise(suite, exerciseId);
-    Attempt attempt = Attempt.start(suite, exercise);
-    attempts.put(new AttemptKey(ownerId, suiteId, exerciseId), attempt);
+    AttemptKey key = new AttemptKey(ownerId, suiteId, exerciseId);
+    Attempt attempt = attempts.computeIfAbsent(key, ignored -> Attempt.start(suite, exercise));
     return attempt.workspace();
+  }
+
+  /** Discards the in-progress result for an exercise when its solution is edited. */
+  public void resetExerciseAttempt(
+      PlayerId ownerId, TacticSuiteId suiteId, TacticExerciseId exerciseId) {
+    attempts.remove(new AttemptKey(ownerId, suiteId, exerciseId));
+  }
+
+  /** Discards every in-progress or solved attempt in one suite so it can be replayed from zero. */
+  public void resetSuiteAttempts(PlayerId ownerId, TacticSuiteId suiteId) {
+    attempts
+        .keySet()
+        .removeIf(
+            key -> key.ownerId().equals(ownerId) && key.suiteId().equals(suiteId));
   }
 
   /** Starts an independent, in-memory attempt from an existing analysis tree. */
@@ -438,6 +453,17 @@ public final class TacticService {
   private TacticExerciseSummary summary(TacticExercise exercise) {
     return new TacticExerciseSummary(
         exercise.id(), exercise.title(), exercise.solverColor(), exercise.hasSolution());
+  }
+
+  private TacticExerciseSummary summary(
+      PlayerId ownerId, TacticSuite suite, TacticExercise exercise) {
+    Attempt attempt = attempts.get(new AttemptKey(ownerId, suite.id(), exercise.id()));
+    return new TacticExerciseSummary(
+        exercise.id(),
+        exercise.title(),
+        exercise.solverColor(),
+        exercise.hasSolution(),
+        attempt != null && attempt.solved);
   }
 
   private TacticWorkspace workspace(

@@ -74,6 +74,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.text.Text;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -930,18 +931,16 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
 
     private final HBox row = new HBox(8);
     private final VBox details = new VBox(3);
-    private final Label activeMarker = new Label("✓");
-    private final Label title = new Label();
+    private final Label number = new Label();
+    private final Text title = new Text();
     private final Label summary = new Label();
     private final ToolbarIconButton commentButton = new ToolbarIconButton();
 
     private ChapterCell() {
       row.getStyleClass().add("chapter-row");
       row.setAlignment(Pos.CENTER_LEFT);
-      activeMarker.getStyleClass().add("session-active-marker");
+      number.getStyleClass().add("workspace-list-number");
       title.getStyleClass().add("chapter-title");
-      title.setWrapText(true);
-      title.setMaxWidth(Double.MAX_VALUE);
       summary.getStyleClass().add("chapter-summary");
       commentButton.getStyleClass().add("chapter-comment-button");
       commentButton.setAccessibleText("Chapter comments");
@@ -952,9 +951,10 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
       details.setMinWidth(0);
       details.setMaxWidth(Double.MAX_VALUE);
       HBox.setHgrow(details, Priority.ALWAYS);
-      row.getChildren().addAll(activeMarker, details, commentButton);
+      row.getChildren().addAll(number, details, commentButton);
       row.setMaxWidth(Double.MAX_VALUE);
       row.prefWidthProperty().bind(widthProperty().subtract(2));
+      title.wrappingWidthProperty().bind(row.widthProperty().subtract(88));
       row.setOnMouseClicked(
           event -> {
             if (event.getButton() == MouseButton.PRIMARY && getItem() != null) {
@@ -982,8 +982,7 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
       if (active) {
         row.getStyleClass().add("chapter-row-active");
       }
-      activeMarker.setVisible(active);
-      activeMarker.setManaged(active);
+      number.setText(Integer.toString(getIndex() + 1));
       title.setText(item.title());
       summary.setText(item.origin().name().replace('_', ' ') + " · " + item.moveCount() + " moves");
       boolean hasComment =

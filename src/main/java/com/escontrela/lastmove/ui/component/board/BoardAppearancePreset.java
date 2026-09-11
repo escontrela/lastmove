@@ -11,7 +11,8 @@ public enum BoardAppearancePreset {
   V2("v2 Wood", BoardTheme.V2, "/chess-pieces", 0.91, true, "board-v2-wood"),
   V2_GRAY("v2 Gray", BoardTheme.V2_GRAY, "/chess-pieces", 0.91, true, "board-v2-gray"),
   V2_BLACK("v2 Black", BoardTheme.V2_BLACK, "/chess-pieces", 0.91, true, "board-v2-black"),
-  V2_TRIBAL("v2 Tribal", BoardTheme.V2_TRIBAL, "/chess-pieces", 0.91, true, "board-v2-tribal");
+  V2_TRIBAL("v2 Tribal", BoardTheme.V2_TRIBAL, "/chess-pieces", 0.91, true, "board-v2-tribal"),
+  V2_LASTMOVE("v2 LastMove", BoardTheme.V2_LASTMOVE, "/chess-pieces", 0.91, true, "board-v2-lastmove");
 
   private final String displayName;
   private final BoardTheme boardTheme;

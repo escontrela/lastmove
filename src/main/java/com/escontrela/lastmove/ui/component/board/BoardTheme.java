@@ -13,7 +13,8 @@ public enum BoardTheme {
     V2("#efd7bd", "#715f59"),
     V2_GRAY("#e7eaed", "#aab5c2"),
     V2_BLACK("#62666a", "#20262b"),
-    V2_TRIBAL("#62666a", "#20262b");
+    V2_TRIBAL("#62666a", "#20262b"),
+    V2_LASTMOVE("#f7f9fc", "#0b3f78");
 
     private final String lightColor;
     private final String darkColor;
