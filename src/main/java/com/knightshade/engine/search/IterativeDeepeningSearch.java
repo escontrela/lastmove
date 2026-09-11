@@ -341,9 +341,6 @@ public final class IterativeDeepeningSearch implements Search {
     if (legal.isEmpty()) {
       return inCheck ? -(Scores.MATE - ply) : 0;
     }
-    legal = moveOrderer.order(
-        board, legal, new OrderingContext(ply, killers, history, ttMove));
-
     if (!nullBranch
         && !inCheck
         && !Scores.isMate(beta)
@@ -378,6 +375,10 @@ public final class IterativeDeepeningSearch implements Search {
         return score;
       }
     }
+
+    // A successful null-move cutoff needs no move scoring or SEE calculations.
+    legal = moveOrderer.order(
+        board, legal, new OrderingContext(ply, killers, history, ttMove));
 
     int alphaOriginal = alpha;
     int best = -Scores.INF;

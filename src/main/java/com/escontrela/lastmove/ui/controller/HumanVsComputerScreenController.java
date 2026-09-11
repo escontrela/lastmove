@@ -498,7 +498,7 @@ public final class HumanVsComputerScreenController implements UiScreenController
     } else {
       reviewedPlyCount = Math.min(reviewedPlyCount, state.moves().size());
     }
-    chessBoard.renderPosition(reviewedPosition());
+    renderBoard(reviewedPosition());
     refreshThreatHints();
     refreshCapturedPieces();
     boolean humanIsWhite = state.humanColor() == PieceColor.WHITE;
@@ -747,7 +747,7 @@ public final class HumanVsComputerScreenController implements UiScreenController
   }
 
   private void renderReviewedPosition() {
-    chessBoard.renderPosition(reviewedPosition());
+    renderBoard(reviewedPosition());
     refreshThreatHints();
     refreshCapturedPieces();
     refreshNotation(renderedState.moves());
@@ -802,5 +802,10 @@ public final class HumanVsComputerScreenController implements UiScreenController
     previousMoveButton.setDisable(unavailable || reviewedPlyCount == 0);
     nextMoveButton.setDisable(unavailable || reviewedPlyCount >= moveCount);
     lastMoveButton.setDisable(unavailable || followingLivePosition);
+  }
+
+  private void renderBoard(com.escontrela.lastmove.domain.game.PositionSnapshot snapshot) {
+    chessBoard.setKingInCheck(snapshot.check() ? snapshot.activeColor() : null);
+    chessBoard.renderPosition(snapshot);
   }
 }

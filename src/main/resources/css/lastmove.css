@@ -1693,6 +1693,10 @@
     -fx-background-color: radial-gradient(center 50% 50%, radius 65%, rgba(210, 58, 69, 0.0) 42%, rgba(210, 58, 69, 0.28) 72%, rgba(210, 58, 69, 0.62) 100%);
     -fx-effect: dropshadow(gaussian, rgba(210, 58, 69, 0.35), 8, 0.35, 0, 0);
 }
+.chess-square-king-in-check-glow {
+    -fx-background-color: radial-gradient(center 50% 50%, radius 68%, rgba(190, 26, 38, 0.03) 28%, rgba(190, 26, 38, 0.22) 61%, rgba(190, 26, 38, 0.58) 100%);
+    -fx-effect: dropshadow(gaussian, rgba(190, 26, 38, 0.58), 12, 0.42, 0, 0);
+}
 
 .tactic-result-card {
     -fx-background-color: #f5f8fb;

@@ -1,6 +1,8 @@
 package com.escontrela.lastmove.ui.component.board;
 
 import com.escontrela.lastmove.domain.common.ChessConstants;
+import com.escontrela.lastmove.domain.common.PieceColor;
+import com.escontrela.lastmove.domain.common.PieceType;
 import com.escontrela.lastmove.domain.common.Square;
 import com.escontrela.lastmove.domain.game.PositionPiece;
 import com.escontrela.lastmove.domain.game.PositionSnapshot;
@@ -99,6 +101,8 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
       (observable, oldValue, preset) -> applyAppearancePreset(preset);
   private final ChangeListener<Square> hintSquareListener =
       (observable, oldSquare, newSquare) -> updateHintSquares();
+  private final ChangeListener<PieceColor> kingInCheckListener =
+      (observable, oldColor, newColor) -> updateKingInCheck();
   private final ListChangeListener<Square> threatenedSquaresListener = change -> updateThreatenedSquares();
 
   public ChessBoardSkin(ChessBoardControl control) {
@@ -114,6 +118,7 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     control.appearancePresetProperty().addListener(appearancePresetListener);
     control.hintSquareProperty().addListener(hintSquareListener);
     control.hintTargetSquareProperty().addListener(hintSquareListener);
+    control.kingInCheckColorProperty().addListener(kingInCheckListener);
     control.observableThreatenedSquares().addListener(threatenedSquaresListener);
     control.observableArrows().addListener(arrowsListener);
     control.addEventFilter(ContextMenuEvent.CONTEXT_MENU_REQUESTED, contextMenuFilter);
@@ -121,6 +126,7 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
       renderPosition(control.getPosition());
     }
     updateHintSquares();
+    updateKingInCheck();
     updateThreatenedSquares();
     applyAppearancePreset(control.getAppearancePreset());
 
@@ -631,6 +637,25 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
       squares[piece.square().getFile()][piece.square().getRank()]
           .setPieceAccessibility(piece.type(), piece.color());
     }
+    updateKingInCheck();
+  }
+
+  private void updateKingInCheck() {
+    PieceColor checkedColor = getSkinnable().getKingInCheckColor();
+    PositionSnapshot snapshot = getSkinnable().getPosition();
+    for (int file = 0; file < ChessConstants.FILES; file++) {
+      for (int rank = 0; rank < ChessConstants.RANKS; rank++) {
+        squares[file][rank].setKingInCheck(false);
+      }
+    }
+    if (checkedColor == null || snapshot == null) {
+      return;
+    }
+    snapshot.pieces().stream()
+        .filter(piece -> piece.type() == PieceType.KING && piece.color() == checkedColor)
+        .findFirst()
+        .ifPresent(piece -> squares[piece.square().getFile()][piece.square().getRank()]
+            .setKingInCheck(true));
   }
 
   void showFeedback(java.util.Set<Square> correct, java.util.Set<Square> incorrect) {
@@ -741,6 +766,7 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     getSkinnable().appearancePresetProperty().removeListener(appearancePresetListener);
     getSkinnable().hintSquareProperty().removeListener(hintSquareListener);
     getSkinnable().hintTargetSquareProperty().removeListener(hintSquareListener);
+    getSkinnable().kingInCheckColorProperty().removeListener(kingInCheckListener);
     getSkinnable().observableThreatenedSquares().removeListener(threatenedSquaresListener);
     getSkinnable().observableArrows().removeListener(arrowsListener);
     getSkinnable().removeEventFilter(ContextMenuEvent.CONTEXT_MENU_REQUESTED, contextMenuFilter);

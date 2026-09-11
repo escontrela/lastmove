@@ -318,25 +318,25 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
 
   @FXML
   public void onFirstMove() {
-    withOwner(owner -> chessBoard.renderPosition(studyService.first(owner, activeStudyId, activeChapterId)));
+    withOwner(owner -> renderBoard(studyService.first(owner, activeStudyId, activeChapterId)));
     refreshMoveList();
   }
 
   @FXML
   public void onPreviousMove() {
-    withOwner(owner -> chessBoard.renderPosition(studyService.previous(owner, activeStudyId, activeChapterId)));
+    withOwner(owner -> renderBoard(studyService.previous(owner, activeStudyId, activeChapterId)));
     refreshMoveList();
   }
 
   @FXML
   public void onNextMove() {
-    withOwner(owner -> chessBoard.renderPosition(studyService.next(owner, activeStudyId, activeChapterId)));
+    withOwner(owner -> renderBoard(studyService.next(owner, activeStudyId, activeChapterId)));
     refreshMoveList();
   }
 
   @FXML
   public void onLastMove() {
-    withOwner(owner -> chessBoard.renderPosition(studyService.last(owner, activeStudyId, activeChapterId)));
+    withOwner(owner -> renderBoard(studyService.last(owner, activeStudyId, activeChapterId)));
     refreshMoveList();
   }
 
@@ -526,7 +526,7 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
                   new MoveCommand(
                       moveInput.fromSquare(), moveInput.toSquare(), moveInput.promotionPiece()));
           if (result.accepted()) {
-            chessBoard.renderPosition(result.newSnapshot());
+            renderBoard(result.newSnapshot());
             refreshMoveList();
           } else {
             statusLabel.setText(result.rejectionReason().orElse("Move is not legal."));
@@ -555,7 +555,7 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
         event -> {
           activeOwner().ifPresent(
               owner -> {
-                chessBoard.renderPosition(
+                renderBoard(
                     studyService.select(
                         owner,
                         activeStudyId,
@@ -574,7 +574,7 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
                 .ifPresent(
                     owner -> {
                       AnalysisNodeId nodeId = new AnalysisNodeId(event.getNote().nodeId());
-                      chessBoard.renderPosition(
+                      renderBoard(
                           studyService.select(owner, activeStudyId, activeChapterId, nodeId));
                       refreshMoveList();
                       statusLabel.setText("Selected " + event.getNote().moveReference());
@@ -587,7 +587,7 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
             activeOwner()
                 .ifPresent(
                     owner -> {
-                      chessBoard.renderPosition(
+                      renderBoard(
                           studyService.select(
                               owner,
                               activeStudyId,
@@ -646,7 +646,7 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
                       boolean refreshOpenNotes = speakerNotesPanel.isVisible();
                       studyService.deleteBranch(
                           owner, activeStudyId, activeChapterId, new AnalysisNodeId(entry.nodeId()));
-                      chessBoard.renderPosition(
+                      renderBoard(
                           studyService.currentPosition(owner, activeStudyId, activeChapterId));
                       commentPanel.hide();
                       refreshMoveList();
@@ -710,7 +710,7 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
     studyTitleLabel.setText(study.study().title());
     studySourceTitleLabel.setText(study.study().title());
     chapterTitleLabel.setText(workspace.title());
-    chessBoard.renderPosition(workspace.currentPosition());
+    renderBoard(workspace.currentPosition());
     refreshMoveList();
     chapterList.refresh();
     refreshCommentIcons();
@@ -994,5 +994,10 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
       setCommentIcon(commentButton, hasComment);
       setGraphic(row);
     }
+  }
+
+  private void renderBoard(com.escontrela.lastmove.domain.game.PositionSnapshot snapshot) {
+    chessBoard.setKingInCheck(snapshot.check() ? snapshot.activeColor() : null);
+    chessBoard.renderPosition(snapshot);
   }
 }

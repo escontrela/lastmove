@@ -553,7 +553,7 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
     chessBoard.setDisable(!authoring && !workspace.readyToSolve());
     hintButton.setDisable(authoring || !workspace.readyToSolve() || workspace.solved());
     applyInitialBoardOrientation(workspace);
-    chessBoard.renderPosition(workspace.position());
+    renderBoard(workspace.position());
     statusLabel.setText(workspace.status());
     renderResult(workspace);
   }
@@ -721,5 +721,10 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
               + colorName(item.solverColor()));
       setGraphic(row);
     }
+  }
+
+  private void renderBoard(com.escontrela.lastmove.domain.game.PositionSnapshot snapshot) {
+    chessBoard.setKingInCheck(snapshot.check() ? snapshot.activeColor() : null);
+    chessBoard.renderPosition(snapshot);
   }
 }

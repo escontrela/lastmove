@@ -174,7 +174,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
     if (activeAnalysisSessionId == null) {
       activeAnalysisSessionId = analysisSessionService.createInitialSession().sessionId();
     }
-    chessBoard.renderPosition(analysisSessionService.currentPosition(activeAnalysisSessionId));
+    renderBoard(analysisSessionService.currentPosition(activeAnalysisSessionId));
     configureSessionPicker();
     configureMoveNotation();
     configureMoveTreeOverlay();
@@ -201,7 +201,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
                         moveInput.fromSquare(), moveInput.toSquare(), moveInput.promotionPiece()));
 
             if (moveResult.accepted()) {
-              chessBoard.renderPosition(moveResult.newSnapshot());
+              renderBoard(moveResult.newSnapshot());
               refreshMoveList();
             } else {
               // A dedicated status/message component can render this later without changing flow.
@@ -384,20 +384,20 @@ public class PgnAnalysisScreenController implements UiScreenController {
 
   @FXML
   public void onNextMove() {
-    chessBoard.renderPosition(analysisSessionService.next(activeAnalysisSessionId));
+    renderBoard(analysisSessionService.next(activeAnalysisSessionId));
     refreshMoveList();
   }
 
   @FXML
   public void onPreviousMove() {
-    chessBoard.renderPosition(analysisSessionService.previous(activeAnalysisSessionId));
+    renderBoard(analysisSessionService.previous(activeAnalysisSessionId));
     refreshMoveList();
   }
 
   /** Returns to the initial position preceding the first move of the visible line. */
   @FXML
   public void onFirstMove() {
-    chessBoard.renderPosition(analysisSessionService.first(activeAnalysisSessionId));
+    renderBoard(analysisSessionService.first(activeAnalysisSessionId));
     refreshMoveList();
     statusLabel.setText("Moved to the initial position");
   }
@@ -405,7 +405,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
   /** Advances to the final move of the current preferred continuation. */
   @FXML
   public void onLastMove() {
-    chessBoard.renderPosition(analysisSessionService.last(activeAnalysisSessionId));
+    renderBoard(analysisSessionService.last(activeAnalysisSessionId));
     refreshMoveList();
     statusLabel.setText("Moved to the last move");
   }
@@ -560,7 +560,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
     }
     AnalysisSessionSummary selected = visibleSessions.get(sessionIndex);
     activeAnalysisSessionId = selected.sessionId();
-    chessBoard.renderPosition(analysisSessionService.currentPosition(activeAnalysisSessionId));
+    renderBoard(analysisSessionService.currentPosition(activeAnalysisSessionId));
     refreshMoveList();
     refreshSessionList();
     statusLabel.setText("Switched to " + selected.title());
@@ -606,7 +606,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
     moveTreeOverlay.setOnNodeConfirmed(
         event -> {
           AnalysisNodeId nodeId = new AnalysisNodeId(event.getNode().nodeId());
-          chessBoard.renderPosition(analysisSessionService.select(activeAnalysisSessionId, nodeId));
+          renderBoard(analysisSessionService.select(activeAnalysisSessionId, nodeId));
           moveTreeOverlay.hide();
           refreshMoveList();
           statusLabel.setText("Selected " + event.getNode().moveReference());
@@ -639,7 +639,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
           remaining.isEmpty()
               ? analysisSessionService.createInitialSession().sessionId()
               : remaining.getFirst().sessionId();
-      chessBoard.renderPosition(analysisSessionService.currentPosition(activeAnalysisSessionId));
+      renderBoard(analysisSessionService.currentPosition(activeAnalysisSessionId));
       refreshMoveList();
     }
     refreshSessionList();
@@ -712,7 +712,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
           var selectedNodeId =
               new com.escontrela.lastmove.domain.analysis.AnalysisNodeId(
                   event.getEntry().nodeId());
-          chessBoard.renderPosition(
+          renderBoard(
               analysisSessionService.select(activeAnalysisSessionId, selectedNodeId));
           refreshMoveList();
           statusLabel.setText("Selected " + event.getEntry().san());
@@ -749,7 +749,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
         ignored -> {
           analysisSessionService.deleteBranch(
               activeAnalysisSessionId, new AnalysisNodeId(entry.nodeId()));
-          chessBoard.renderPosition(
+          renderBoard(
               analysisSessionService.currentPosition(activeAnalysisSessionId));
           commentPanel.hide();
           refreshMoveList();
@@ -777,7 +777,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
   }
 
   private void refreshWorkspace() {
-    chessBoard.renderPosition(analysisSessionService.currentPosition(activeAnalysisSessionId));
+    renderBoard(analysisSessionService.currentPosition(activeAnalysisSessionId));
     refreshSessionList();
     refreshMoveList();
     statusLabel.setText(
@@ -900,6 +900,11 @@ public class PgnAnalysisScreenController implements UiScreenController {
           if (newPosition != null) {
             engineEvaluationService.analyze(newPosition);
           }
-        });
+    });
+  }
+
+  private void renderBoard(com.escontrela.lastmove.domain.game.PositionSnapshot snapshot) {
+    chessBoard.setKingInCheck(snapshot.check() ? snapshot.activeColor() : null);
+    chessBoard.renderPosition(snapshot);
   }
 }

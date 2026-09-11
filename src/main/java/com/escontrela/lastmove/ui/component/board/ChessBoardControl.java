@@ -36,6 +36,8 @@ public class ChessBoardControl extends Control {
   private ChessSoundService soundService;
   private final ObjectProperty<PositionSnapshot> position =
       new SimpleObjectProperty<>(this, "position");
+  private final ObjectProperty<PieceColor> kingInCheckColor =
+      new SimpleObjectProperty<>(this, "kingInCheckColor");
   private final ObservableList<BoardArrow> arrows = FXCollections.observableArrayList();
   private final BooleanProperty flipped = new SimpleBooleanProperty(this, "flipped", false);
   private final BooleanProperty visualEffectsEnabled =
@@ -119,6 +121,22 @@ public class ChessBoardControl extends Control {
 
   public final PositionSnapshot getPosition() {
     return position.get();
+  }
+
+  /**
+   * Tells the board which king is currently in check. The board owns locating that king and
+   * rendering its visual feedback; callers only provide the semantic state.
+   */
+  public final void setKingInCheck(PieceColor color) {
+    kingInCheckColor.set(color);
+  }
+
+  public final ObjectProperty<PieceColor> kingInCheckColorProperty() {
+    return kingInCheckColor;
+  }
+
+  public final PieceColor getKingInCheckColor() {
+    return kingInCheckColor.get();
   }
 
   /** Presentation-only orientation flag; {@code false} keeps White at the bottom. */

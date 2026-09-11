@@ -292,7 +292,7 @@ public final class PositionEditorScreenController implements UiScreenController 
     flow.show(UiScreenId.TACTICS_WORKSPACE);
   }
   private void select(PieceType type, PieceColor color) { selectedType = type; selectedColor = color; selectedPieceLabel.setText("Selected: " + color.name().toLowerCase() + " " + type.name().toLowerCase() + ". Click a square to place it; drag board pieces to move."); }
-  private void refresh() { PositionEditorState state = state(); chessBoard.renderPosition(state.position()); whiteToMove.setSelected(state.position().activeColor() == PieceColor.WHITE); blackToMove.setSelected(state.position().activeColor() == PieceColor.BLACK); CastlingRights r = state.position().castlingRights(); whiteKingSide.setSelected(r.whiteKingSide()); whiteQueenSide.setSelected(r.whiteQueenSide()); blackKingSide.setSelected(r.blackKingSide()); blackQueenSide.setSelected(r.blackQueenSide()); refreshEnPassantChoices(); String currentTarget = state.position().enPassantTarget().map(Square::toAlgebraic).orElse("-"); enPassantCombo.setValue(enPassantCombo.getItems().contains(currentTarget) ? currentTarget : "-"); halfmoveSpinner.getValueFactory().setValue(state.position().halfmoveClock()); fullmoveSpinner.getValueFactory().setValue(state.position().fullmoveNumber()); if (!state.valid()) statusLabel.setText(state.validationMessage().orElseThrow()); }
+  private void refresh() { PositionEditorState state = state(); renderBoard(state.position()); whiteToMove.setSelected(state.position().activeColor() == PieceColor.WHITE); blackToMove.setSelected(state.position().activeColor() == PieceColor.BLACK); CastlingRights r = state.position().castlingRights(); whiteKingSide.setSelected(r.whiteKingSide()); whiteQueenSide.setSelected(r.whiteQueenSide()); blackKingSide.setSelected(r.blackKingSide()); blackQueenSide.setSelected(r.blackQueenSide()); refreshEnPassantChoices(); String currentTarget = state.position().enPassantTarget().map(Square::toAlgebraic).orElse("-"); enPassantCombo.setValue(enPassantCombo.getItems().contains(currentTarget) ? currentTarget : "-"); halfmoveSpinner.getValueFactory().setValue(state.position().halfmoveClock()); fullmoveSpinner.getValueFactory().setValue(state.position().fullmoveNumber()); if (!state.valid()) statusLabel.setText(state.validationMessage().orElseThrow()); }
   private PositionEditorState state() { return editor.state(); }
   private CastlingRights rights() { return new CastlingRights(whiteKingSide.isSelected(), whiteQueenSide.isSelected(), blackKingSide.isSelected(), blackQueenSide.isSelected()); }
   private Optional<Square> target() { return "-".equals(enPassantCombo.getValue()) ? Optional.empty() : Optional.of(Square.of(enPassantCombo.getValue())); }
@@ -334,5 +334,10 @@ public final class PositionEditorScreenController implements UiScreenController 
         + "-"
         + type.name().toLowerCase()
         + ".png";
+  }
+
+  private void renderBoard(com.escontrela.lastmove.domain.game.PositionSnapshot snapshot) {
+    chessBoard.setKingInCheck(snapshot.check() ? snapshot.activeColor() : null);
+    chessBoard.renderPosition(snapshot);
   }
 }

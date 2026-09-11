@@ -162,7 +162,7 @@ public final class StormGameScreenController implements UiScreenController {
   private void refresh(StormGameSnapshot snapshot) {
     currentSnapshot = snapshot;
     handleSoundEffects(snapshot);
-    viewModel.boardPosition().ifPresent(chessBoard::renderPosition);
+    viewModel.boardPosition().ifPresent(this::renderBoard);
     chessBoard.setHintSquares(
         snapshot.feedback().flatMap(StormGameFeedback::hintSquare).orElse(null),
         snapshot.feedback().flatMap(StormGameFeedback::hintTargetSquare).orElse(null));
@@ -241,6 +241,11 @@ public final class StormGameScreenController implements UiScreenController {
         && snapshot.state() == com.escontrela.lastmove.domain.training.storm.StormGameState.RUNNING
         && snapshot.challenge().isPresent()
         && snapshot.workspace().map(workspace -> !workspace.solved()).orElse(true);
+  }
+
+  private void renderBoard(com.escontrela.lastmove.domain.game.PositionSnapshot position) {
+    chessBoard.setKingInCheck(position.check() ? position.activeColor() : null);
+    chessBoard.renderPosition(position);
   }
 
   private void handleSoundEffects(StormGameSnapshot next) {

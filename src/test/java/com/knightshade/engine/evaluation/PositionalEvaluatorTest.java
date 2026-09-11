@@ -13,6 +13,7 @@ import com.knightshade.engine.evaluation.term.CenterControlTerm;
 import com.knightshade.engine.evaluation.term.PawnStructureTerm;
 import com.knightshade.engine.evaluation.term.PassedPawnTerm;
 import com.knightshade.engine.evaluation.term.BishopPairTerm;
+import com.knightshade.engine.evaluation.term.RookActivityTerm;
 import java.util.List;
 import java.util.Random;
 import org.junit.jupiter.api.Test;
@@ -25,7 +26,7 @@ class PositionalEvaluatorTest {
   void cachedScoresMatchUncachedTermsAcrossMovesUndoAndDifferentBoards() {
     List<PositionalTerm> terms = List.of(new MaterialTerm(), new MobilityTerm(),
         new KingSafetyTerm(), new DevelopmentTerm(), new CenterControlTerm(),
-        new PawnStructureTerm(), new PassedPawnTerm(), new BishopPairTerm());
+        new PawnStructureTerm(), new PassedPawnTerm(), new BishopPairTerm(), new RookActivityTerm());
     Random random = new Random(73);
     var generator = new LegalMoveGenerator();
     for (String fen : List.of(

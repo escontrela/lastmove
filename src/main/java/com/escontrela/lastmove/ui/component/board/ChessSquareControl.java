@@ -51,6 +51,7 @@ public class ChessSquareControl extends StackPane {
   private final ImageView pieceImageView =
       new ImageView(); // Cambiado el nombre de la variable para evitar colisión con el tipo Image
   private final Region threatenedOverlay = new Region();
+  private final Region kingInCheckGlow = new Region();
   private final Region correctAnswerGlow = new Region();
   private Timeline answerFeedbackBlink;
   private Boolean answerFeedback;
@@ -75,6 +76,9 @@ public class ChessSquareControl extends StackPane {
     threatenedOverlay.setMouseTransparent(true);
     threatenedOverlay.getStyleClass().add("chess-square-threatened-glow");
     threatenedOverlay.setVisible(false);
+    kingInCheckGlow.setMouseTransparent(true);
+    kingInCheckGlow.getStyleClass().add("chess-square-king-in-check-glow");
+    kingInCheckGlow.setVisible(false);
     correctAnswerGlow.setMouseTransparent(true);
     correctAnswerGlow.getStyleClass().add("chess-square-answer-glow");
     correctAnswerGlow.setVisible(false);
@@ -82,6 +86,7 @@ public class ChessSquareControl extends StackPane {
     getChildren().add(correctAnswerGlow);
     getChildren().add(pieceImageView);
     getChildren().add(threatenedOverlay);
+    getChildren().add(kingInCheckGlow);
   }
 
   private void applyTheme(BoardTheme theme) {
@@ -148,6 +153,11 @@ public class ChessSquareControl extends StackPane {
   }
   public void setThreatened(boolean threatened) {
     threatenedOverlay.setVisible(threatened);
+  }
+
+  /** Shows the subtle red halo used to identify the king currently in check. */
+  public void setKingInCheck(boolean inCheck) {
+    kingInCheckGlow.setVisible(inCheck);
   }
 
   /**

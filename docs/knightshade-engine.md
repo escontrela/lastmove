@@ -5,7 +5,11 @@ Motor de ajedrez clásico embebido en LastMove. No usa redes neuronales ni apren
 - **Paquete raíz:** com.knightshade.engine
 - **Adaptador en LastMove:** com.escontrela.lastmove.infrastructure.engine.knightshade
 - **Versión actual:** v3 (descriptor Knightshade v3)
-- **Fuerza estimada:** ~1200 ELO
+- **Fuerza:** pendiente de medir mediante partidas controladas; no hay una estimación de ELO validada para la implementación actual.
+
+La [revisión de evaluación del 11 de septiembre de 2026](knightshade-evaluation-2026-09-11.md)
+añade movilidad fuera del control de peones rivales, presión coordinada sobre el rey y actividad
+de torres. Los mapas de ataques se calculan una vez por evaluación y se reutilizan entre términos.
 
 Esta versión conserva la descripción de arquitectura original y explica la intuición que hay detrás. Knightshade no crea un tablero nuevo por cada variante: mantiene un estado compacto, prueba una jugada, explora su respuesta, deshace exactamente el cambio y continúa. Su fuerza procede de recorrer ese árbol de variantes de la forma más selectiva posible.
 
