@@ -10,13 +10,14 @@ import com.knightshade.engine.evaluation.term.MaterialTerm;
 import com.knightshade.engine.evaluation.term.MobilityTerm;
 import com.knightshade.engine.evaluation.term.PassedPawnTerm;
 import com.knightshade.engine.evaluation.term.PawnStructureTerm;
+import com.knightshade.engine.evaluation.term.RookActivityTerm;
 import java.util.List;
 
 /**
- * v3.5 evaluator: a composition of positional terms, White minus Black.
+ * Positional evaluator: a composition of positional terms, White minus Black.
  *
  * <p>Material + piece-square tables form the base; mobility, king safety, development, center
- * control, pawn structure, passed pawns and the bishop pair are added on top. Each term is an
+ * control, pawn structure, passed pawns, the bishop pair and rook activity are added on top. Each term is an
  * independent {@link PositionalTerm} so features can be tested and tuned in isolation.
  */
 public final class PositionalEvaluator implements Evaluator {
@@ -27,6 +28,7 @@ public final class PositionalEvaluator implements Evaluator {
   private final long[] cacheKeys = new long[CACHE_SIZE];
   private final int[] cacheScores = new int[CACHE_SIZE];
   private final boolean[] cacheUsed = new boolean[CACHE_SIZE];
+  private final EvaluationAttacks attacks = new EvaluationAttacks();
 
   private final List<PositionalTerm> terms =
       List.of(
@@ -37,7 +39,8 @@ public final class PositionalEvaluator implements Evaluator {
           new CenterControlTerm(),
           new PawnStructureTerm(),
           new PassedPawnTerm(),
-          new BishopPairTerm());
+          new BishopPairTerm(),
+          new RookActivityTerm());
 
   @Override
   public int evaluate(Position position) {
@@ -57,9 +60,14 @@ public final class PositionalEvaluator implements Evaluator {
   }
 
   private int evaluateTerms(Position position) {
+    attacks.update(position);
     int score = 0;
     for (PositionalTerm term : terms) {
-      score += term.evaluate(position);
+      score += switch (term) {
+        case MobilityTerm mobility -> mobility.evaluate(position, attacks);
+        case KingSafetyTerm safety -> safety.evaluate(position, attacks);
+        default -> term.evaluate(position);
+      };
     }
     return score;
   }

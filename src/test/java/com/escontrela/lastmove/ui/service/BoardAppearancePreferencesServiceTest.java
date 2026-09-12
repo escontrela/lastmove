@@ -81,4 +81,16 @@ class BoardAppearancePreferencesServiceTest {
                 BoardAppearancePreset.V2_TRIBAL,
                 new BoardAppearancePreferencesService(preferences).getBoardAppearancePreset());
     }
+
+    @Test
+    void showsTheStrengthBarByDefaultAndPersistsShortcutToggles() {
+        BoardAppearancePreferencesService service = new BoardAppearancePreferencesService(preferences);
+
+        assertTrue(service.isEngineStrengthBarVisible());
+
+        service.toggleEngineStrengthBarVisible();
+
+        assertFalse(service.isEngineStrengthBarVisible());
+        assertFalse(new BoardAppearancePreferencesService(preferences).isEngineStrengthBarVisible());
+    }
 }

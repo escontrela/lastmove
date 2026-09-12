@@ -16,6 +16,7 @@ import com.escontrela.lastmove.domain.game.MoveExecutionResult;
 import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
 import com.escontrela.lastmove.ui.component.comment.CommentPanel;
 import com.escontrela.lastmove.ui.component.evaluation.EngineEvaluationControl;
+import com.escontrela.lastmove.ui.component.evaluation.EngineStrengthBarControl;
 import com.escontrela.lastmove.ui.component.evaluation.EngineSelectorModal;
 import com.escontrela.lastmove.ui.component.message.TextInputModal;
 import com.escontrela.lastmove.ui.component.message.MultilineTextInputModal;
@@ -50,12 +51,9 @@ import java.util.Objects;
 import java.util.Optional;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
-import javafx.collections.ListChangeListener;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextInputControl;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -73,9 +71,6 @@ import org.springframework.stereotype.Component;
 @Component
 public class PgnAnalysisScreenController implements UiScreenController {
 
-  private static final String NIGHT_MODE_STYLE_CLASS = "night-mode";
-  private static final String LIGHT_LOGO_RESOURCE = "/images/lastmove-chess-logo.png";
-  private static final String DARK_LOGO_RESOURCE = "/images/lastmove-chess-logo-dark.png";
   private static final String EMPTY_COMMENT_LIGHT_ICON = "/images/mode_comment_35dp_000000.png";
   private static final String EMPTY_COMMENT_DARK_ICON = "/images/mode_comment_35dp_FFFFFF.png";
   private static final String COMMENT_LIGHT_ICON = "/images/comment_35dp_000000.png";
@@ -85,7 +80,6 @@ public class PgnAnalysisScreenController implements UiScreenController {
 
   @FXML private StackPane root;
   @FXML private StackPane boardHost;
-  @FXML private ImageView statusBrandLogo;
   @FXML private ContextualMenuPanel contextualMenuPanel;
   @FXML private TextInputModal textInputModal;
   @FXML private PromotionPickerControl promotionPicker;
@@ -95,6 +89,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
   @FXML private ToolbarIconButton saveSessionAsStudyButton;
   @FXML private com.escontrela.lastmove.ui.component.board.ChessBoardControl chessBoard;
   @FXML private EngineEvaluationControl engineEvaluation;
+  @FXML private EngineStrengthBarControl engineStrengthBar;
   @FXML private EngineSelectorModal engineSelectorModal;
   @FXML private CommentPanel commentPanel;
   @FXML private MultilineTextInputModal commentEditor;
@@ -115,7 +110,6 @@ public class PgnAnalysisScreenController implements UiScreenController {
   private final BoardAppearancePreferencesService boardAppearancePreferencesService;
   private final EngineEvaluationService engineEvaluationService;
   private Runnable removeEvaluationSubscription = () -> {};
-  private final ListChangeListener<String> themeStyleListener = change -> updateStatusBrandLogo();
 
   /** Identity of the session currently rendered by this screen. */
   private AnalysisSessionId activeAnalysisSessionId;
@@ -158,23 +152,24 @@ public class PgnAnalysisScreenController implements UiScreenController {
     root.getProperties().put("controller", this);
     root.addEventFilter(KeyEvent.KEY_PRESSED, this::handleNavigationShortcut);
     chessSoundService.preload();
-    root.getStyleClass().addListener(themeStyleListener);
-    updateStatusBrandLogo();
     configureContextMenu();
     chessBoard.setSoundService(chessSoundService);
     chessBoard.visualEffectsEnabledProperty().bind(
         boardAppearancePreferencesService.boardVisualEffectsEnabledProperty());
     chessBoard.appearancePresetProperty().bind(
         boardAppearancePreferencesService.boardAppearancePresetProperty());
+    engineStrengthBar.visibleProperty().bind(
+        boardAppearancePreferencesService.engineStrengthBarVisibleProperty());
     moveTreeOverlay.bindBoardAppearance(
         boardAppearancePreferencesService.boardAppearancePresetProperty());
     configurePromotionPicker();
     configureEngineAnalysis();
+    configureEngineEvaluationFeature();
     refreshStudyPersistenceAvailability();
     if (activeAnalysisSessionId == null) {
       activeAnalysisSessionId = analysisSessionService.createInitialSession().sessionId();
     }
-    chessBoard.renderPosition(analysisSessionService.currentPosition(activeAnalysisSessionId));
+    renderBoard(analysisSessionService.currentPosition(activeAnalysisSessionId));
     configureSessionPicker();
     configureMoveNotation();
     configureMoveTreeOverlay();
@@ -201,7 +196,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
                         moveInput.fromSquare(), moveInput.toSquare(), moveInput.promotionPiece()));
 
             if (moveResult.accepted()) {
-              chessBoard.renderPosition(moveResult.newSnapshot());
+              renderBoard(moveResult.newSnapshot());
               refreshMoveList();
             } else {
               // A dedicated status/message component can render this later without changing flow.
@@ -248,6 +243,10 @@ public class PgnAnalysisScreenController implements UiScreenController {
     ChangeListener<Number> recompute = (observable, oldValue, newValue) -> updateBoardSize();
     boardHost.widthProperty().addListener(recompute);
     boardHost.heightProperty().addListener(recompute);
+    chessBoard.renderedBoardBoundsProperty().addListener(
+        (observable, oldBounds, newBounds) -> Platform.runLater(this::positionStrengthBar));
+    chessBoard.boundsInParentProperty().addListener(
+        (observable, oldBounds, newBounds) -> Platform.runLater(this::positionStrengthBar));
     updateBoardSize();
   }
 
@@ -261,6 +260,21 @@ public class PgnAnalysisScreenController implements UiScreenController {
     double side = Math.min(available, BOARD_MAX_SIZE);
     chessBoard.setPrefWidth(side);
     chessBoard.setPrefHeight(side);
+    positionStrengthBar();
+  }
+
+  private void positionStrengthBar() {
+    var localBoardBounds = chessBoard.getRenderedBoardBounds();
+    var boardBounds = chessBoard.localToParent(localBoardBounds);
+    if (boardBounds.getWidth() <= 0) return;
+    double barWidth = Math.max(engineStrengthBar.getWidth(), engineStrengthBar.prefWidth(-1));
+    engineStrengthBar.setPrefHeight(boardBounds.getHeight());
+    engineStrengthBar.setMaxHeight(boardBounds.getHeight());
+    double desiredLeft = boardBounds.getMinX() - barWidth - 6;
+    double desiredTop = boardBounds.getMinY();
+    engineStrengthBar.setTranslateX(0);
+    engineStrengthBar.setTranslateY(0);
+    engineStrengthBar.resizeRelocate(desiredLeft, desiredTop, barWidth, boardBounds.getHeight());
   }
 
   @FXML
@@ -384,20 +398,20 @@ public class PgnAnalysisScreenController implements UiScreenController {
 
   @FXML
   public void onNextMove() {
-    chessBoard.renderPosition(analysisSessionService.next(activeAnalysisSessionId));
+    renderBoard(analysisSessionService.next(activeAnalysisSessionId));
     refreshMoveList();
   }
 
   @FXML
   public void onPreviousMove() {
-    chessBoard.renderPosition(analysisSessionService.previous(activeAnalysisSessionId));
+    renderBoard(analysisSessionService.previous(activeAnalysisSessionId));
     refreshMoveList();
   }
 
   /** Returns to the initial position preceding the first move of the visible line. */
   @FXML
   public void onFirstMove() {
-    chessBoard.renderPosition(analysisSessionService.first(activeAnalysisSessionId));
+    renderBoard(analysisSessionService.first(activeAnalysisSessionId));
     refreshMoveList();
     statusLabel.setText("Moved to the initial position");
   }
@@ -405,7 +419,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
   /** Advances to the final move of the current preferred continuation. */
   @FXML
   public void onLastMove() {
-    chessBoard.renderPosition(analysisSessionService.last(activeAnalysisSessionId));
+    renderBoard(analysisSessionService.last(activeAnalysisSessionId));
     refreshMoveList();
     statusLabel.setText("Moved to the last move");
   }
@@ -418,6 +432,15 @@ public class PgnAnalysisScreenController implements UiScreenController {
         || contextualMenuPanel.isVisible()
         || root.getScene() == null
         || root.getScene().getFocusOwner() instanceof TextInputControl) {
+      return;
+    }
+
+    if (event.getCode() == KeyCode.E
+        && event.isShiftDown()
+        && !event.isShortcutDown()
+        && !event.isAltDown()) {
+      boardAppearancePreferencesService.toggleEngineStrengthBarVisible();
+      event.consume();
       return;
     }
 
@@ -560,7 +583,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
     }
     AnalysisSessionSummary selected = visibleSessions.get(sessionIndex);
     activeAnalysisSessionId = selected.sessionId();
-    chessBoard.renderPosition(analysisSessionService.currentPosition(activeAnalysisSessionId));
+    renderBoard(analysisSessionService.currentPosition(activeAnalysisSessionId));
     refreshMoveList();
     refreshSessionList();
     statusLabel.setText("Switched to " + selected.title());
@@ -606,7 +629,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
     moveTreeOverlay.setOnNodeConfirmed(
         event -> {
           AnalysisNodeId nodeId = new AnalysisNodeId(event.getNode().nodeId());
-          chessBoard.renderPosition(analysisSessionService.select(activeAnalysisSessionId, nodeId));
+          renderBoard(analysisSessionService.select(activeAnalysisSessionId, nodeId));
           moveTreeOverlay.hide();
           refreshMoveList();
           statusLabel.setText("Selected " + event.getNode().moveReference());
@@ -639,7 +662,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
           remaining.isEmpty()
               ? analysisSessionService.createInitialSession().sessionId()
               : remaining.getFirst().sessionId();
-      chessBoard.renderPosition(analysisSessionService.currentPosition(activeAnalysisSessionId));
+      renderBoard(analysisSessionService.currentPosition(activeAnalysisSessionId));
       refreshMoveList();
     }
     refreshSessionList();
@@ -712,7 +735,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
           var selectedNodeId =
               new com.escontrela.lastmove.domain.analysis.AnalysisNodeId(
                   event.getEntry().nodeId());
-          chessBoard.renderPosition(
+          renderBoard(
               analysisSessionService.select(activeAnalysisSessionId, selectedNodeId));
           refreshMoveList();
           statusLabel.setText("Selected " + event.getEntry().san());
@@ -749,7 +772,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
         ignored -> {
           analysisSessionService.deleteBranch(
               activeAnalysisSessionId, new AnalysisNodeId(entry.nodeId()));
-          chessBoard.renderPosition(
+          renderBoard(
               analysisSessionService.currentPosition(activeAnalysisSessionId));
           commentPanel.hide();
           refreshMoveList();
@@ -777,7 +800,7 @@ public class PgnAnalysisScreenController implements UiScreenController {
   }
 
   private void refreshWorkspace() {
-    chessBoard.renderPosition(analysisSessionService.currentPosition(activeAnalysisSessionId));
+    renderBoard(analysisSessionService.currentPosition(activeAnalysisSessionId));
     refreshSessionList();
     refreshMoveList();
     statusLabel.setText(
@@ -868,19 +891,6 @@ public class PgnAnalysisScreenController implements UiScreenController {
         hasComment ? COMMENT_DARK_ICON : EMPTY_COMMENT_DARK_ICON);
   }
 
-  private void updateStatusBrandLogo() {
-    String resource =
-        root.getStyleClass().contains(NIGHT_MODE_STYLE_CLASS)
-            ? DARK_LOGO_RESOURCE
-            : LIGHT_LOGO_RESOURCE;
-    statusBrandLogo.setImage(
-        new Image(
-            Objects.requireNonNull(
-                    getClass().getResource(resource),
-                    () -> "Missing status logo resource: " + resource)
-                .toExternalForm()));
-  }
-
   @Override
   public void onHide() {
     removeEvaluationSubscription.run();
@@ -889,7 +899,10 @@ public class PgnAnalysisScreenController implements UiScreenController {
 
   private void configureEngineAnalysis() {
     removeEvaluationSubscription = engineEvaluationService.subscribe(
-        state -> Platform.runLater(() -> engineEvaluation.render(state)));
+        state -> Platform.runLater(() -> {
+          engineEvaluation.render(state);
+          engineStrengthBar.render(state);
+        }));
     engineEvaluation.setOnChangeEngine(
         event -> engineSelectorModal.show(
             engineEvaluationService.availableEngines(), engineEvaluationService.state().engine().id()));
@@ -898,8 +911,31 @@ public class PgnAnalysisScreenController implements UiScreenController {
     chessBoard.positionProperty().addListener(
         (observable, oldPosition, newPosition) -> {
           if (newPosition != null) {
-            engineEvaluationService.analyze(newPosition);
+            if (boardAppearancePreferencesService.isEngineStrengthBarVisible()) {
+              engineEvaluationService.analyze(newPosition);
+            }
           }
-        });
+    });
+  }
+
+  private void configureEngineEvaluationFeature() {
+    boardAppearancePreferencesService
+        .engineStrengthBarVisibleProperty()
+        .addListener((observable, wasVisible, visible) -> updateEngineEvaluationFeature(visible));
+    updateEngineEvaluationFeature(boardAppearancePreferencesService.isEngineStrengthBarVisible());
+  }
+
+  private void updateEngineEvaluationFeature(boolean enabled) {
+    engineEvaluation.setFeatureEnabled(enabled);
+    if (!enabled) {
+      engineEvaluationService.cancel();
+    } else if (chessBoard.getPosition() != null) {
+      engineEvaluationService.analyze(chessBoard.getPosition());
+    }
+  }
+
+  private void renderBoard(com.escontrela.lastmove.domain.game.PositionSnapshot snapshot) {
+    chessBoard.setKingInCheck(snapshot.check() ? snapshot.activeColor() : null);
+    chessBoard.renderPosition(snapshot);
   }
 }

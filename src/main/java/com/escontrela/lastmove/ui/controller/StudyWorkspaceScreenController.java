@@ -30,6 +30,7 @@ import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
 import com.escontrela.lastmove.ui.component.comment.CommentPanel;
 import com.escontrela.lastmove.ui.component.comment.SpeakerNotesPanel;
 import com.escontrela.lastmove.ui.component.evaluation.EngineEvaluationControl;
+import com.escontrela.lastmove.ui.component.evaluation.EngineStrengthBarControl;
 import com.escontrela.lastmove.ui.component.evaluation.EngineSelectorModal;
 import com.escontrela.lastmove.ui.component.message.TextInputModal;
 import com.escontrela.lastmove.ui.component.message.MultilineTextInputModal;
@@ -74,6 +75,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.text.Text;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -101,6 +103,7 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
   @FXML private Label statusLabel;
   @FXML private ContextualMenuPanel contextualMenuPanel;
   @FXML private EngineEvaluationControl engineEvaluation;
+  @FXML private EngineStrengthBarControl engineStrengthBar;
   @FXML private EngineSelectorModal engineSelectorModal;
   @FXML private CommentPanel commentPanel;
   @FXML private SpeakerNotesPanel speakerNotesPanel;
@@ -166,6 +169,8 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
         boardAppearancePreferencesService.boardVisualEffectsEnabledProperty());
     chessBoard.appearancePresetProperty().bind(
         boardAppearancePreferencesService.boardAppearancePresetProperty());
+    engineStrengthBar.visibleProperty().bind(
+        boardAppearancePreferencesService.engineStrengthBarVisibleProperty());
     moveTreeOverlay.bindBoardAppearance(
         boardAppearancePreferencesService.boardAppearancePresetProperty());
     chapterList.setCellFactory(ignored -> new ChapterCell());
@@ -174,6 +179,7 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
     configureSpeakerNotes();
     configureMoveTreeOverlay();
     configureEngineAnalysis();
+    configureEngineEvaluationFeature();
     chessBoard.setOnPromotionRequested(
         event -> {
           pendingPromotionMove = event.getMoveInput();
@@ -318,25 +324,25 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
 
   @FXML
   public void onFirstMove() {
-    withOwner(owner -> chessBoard.renderPosition(studyService.first(owner, activeStudyId, activeChapterId)));
+    withOwner(owner -> renderBoard(studyService.first(owner, activeStudyId, activeChapterId)));
     refreshMoveList();
   }
 
   @FXML
   public void onPreviousMove() {
-    withOwner(owner -> chessBoard.renderPosition(studyService.previous(owner, activeStudyId, activeChapterId)));
+    withOwner(owner -> renderBoard(studyService.previous(owner, activeStudyId, activeChapterId)));
     refreshMoveList();
   }
 
   @FXML
   public void onNextMove() {
-    withOwner(owner -> chessBoard.renderPosition(studyService.next(owner, activeStudyId, activeChapterId)));
+    withOwner(owner -> renderBoard(studyService.next(owner, activeStudyId, activeChapterId)));
     refreshMoveList();
   }
 
   @FXML
   public void onLastMove() {
-    withOwner(owner -> chessBoard.renderPosition(studyService.last(owner, activeStudyId, activeChapterId)));
+    withOwner(owner -> renderBoard(studyService.last(owner, activeStudyId, activeChapterId)));
     refreshMoveList();
   }
 
@@ -526,7 +532,7 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
                   new MoveCommand(
                       moveInput.fromSquare(), moveInput.toSquare(), moveInput.promotionPiece()));
           if (result.accepted()) {
-            chessBoard.renderPosition(result.newSnapshot());
+            renderBoard(result.newSnapshot());
             refreshMoveList();
           } else {
             statusLabel.setText(result.rejectionReason().orElse("Move is not legal."));
@@ -555,7 +561,7 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
         event -> {
           activeOwner().ifPresent(
               owner -> {
-                chessBoard.renderPosition(
+                renderBoard(
                     studyService.select(
                         owner,
                         activeStudyId,
@@ -574,7 +580,7 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
                 .ifPresent(
                     owner -> {
                       AnalysisNodeId nodeId = new AnalysisNodeId(event.getNote().nodeId());
-                      chessBoard.renderPosition(
+                      renderBoard(
                           studyService.select(owner, activeStudyId, activeChapterId, nodeId));
                       refreshMoveList();
                       statusLabel.setText("Selected " + event.getNote().moveReference());
@@ -587,7 +593,7 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
             activeOwner()
                 .ifPresent(
                     owner -> {
-                      chessBoard.renderPosition(
+                      renderBoard(
                           studyService.select(
                               owner,
                               activeStudyId,
@@ -646,7 +652,7 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
                       boolean refreshOpenNotes = speakerNotesPanel.isVisible();
                       studyService.deleteBranch(
                           owner, activeStudyId, activeChapterId, new AnalysisNodeId(entry.nodeId()));
-                      chessBoard.renderPosition(
+                      renderBoard(
                           studyService.currentPosition(owner, activeStudyId, activeChapterId));
                       commentPanel.hide();
                       refreshMoveList();
@@ -678,7 +684,10 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
 
   private void configureEngineAnalysis() {
     removeEvaluationSubscription = engineEvaluationService.subscribe(
-        state -> Platform.runLater(() -> engineEvaluation.render(state)));
+        state -> Platform.runLater(() -> {
+          engineEvaluation.render(state);
+          engineStrengthBar.render(state);
+        }));
     engineEvaluation.setOnChangeEngine(
         event -> engineSelectorModal.show(
             engineEvaluationService.availableEngines(), engineEvaluationService.state().engine().id()));
@@ -689,10 +698,28 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
         .addListener(
             (observable, oldPosition, newPosition) -> {
               if (newPosition != null) {
-                engineEvaluationService.analyze(newPosition);
+                if (boardAppearancePreferencesService.isEngineStrengthBarVisible()) {
+                  engineEvaluationService.analyze(newPosition);
+                }
               }
             });
 
+  }
+
+  private void configureEngineEvaluationFeature() {
+    boardAppearancePreferencesService
+        .engineStrengthBarVisibleProperty()
+        .addListener((observable, wasVisible, visible) -> updateEngineEvaluationFeature(visible));
+    updateEngineEvaluationFeature(boardAppearancePreferencesService.isEngineStrengthBarVisible());
+  }
+
+  private void updateEngineEvaluationFeature(boolean enabled) {
+    engineEvaluation.setFeatureEnabled(enabled);
+    if (!enabled) {
+      engineEvaluationService.cancel();
+    } else if (chessBoard.getPosition() != null) {
+      engineEvaluationService.analyze(chessBoard.getPosition());
+    }
   }
 
   private void refreshWorkspace() {
@@ -710,7 +737,7 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
     studyTitleLabel.setText(study.study().title());
     studySourceTitleLabel.setText(study.study().title());
     chapterTitleLabel.setText(workspace.title());
-    chessBoard.renderPosition(workspace.currentPosition());
+    renderBoard(workspace.currentPosition());
     refreshMoveList();
     chapterList.refresh();
     refreshCommentIcons();
@@ -854,6 +881,14 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
         || root.getScene().getFocusOwner() instanceof TextInputControl) {
       return;
     }
+    if (event.getCode() == KeyCode.E
+        && event.isShiftDown()
+        && !event.isShortcutDown()
+        && !event.isAltDown()) {
+      boardAppearancePreferencesService.toggleEngineStrengthBarVisible();
+      event.consume();
+      return;
+    }
     switch (event.getCode()) {
       case UP -> onFirstMove();
       case DOWN -> onLastMove();
@@ -870,6 +905,10 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
     ChangeListener<Number> listener = (ignored, oldValue, newValue) -> updateBoardSize();
     boardHost.widthProperty().addListener(listener);
     boardHost.heightProperty().addListener(listener);
+    chessBoard.renderedBoardBoundsProperty().addListener(
+        (observable, oldBounds, newBounds) -> Platform.runLater(this::positionStrengthBar));
+    chessBoard.boundsInParentProperty().addListener(
+        (observable, oldBounds, newBounds) -> Platform.runLater(this::positionStrengthBar));
     updateBoardSize();
   }
 
@@ -878,7 +917,23 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
     if (available > 0) {
       double side = Math.min(available, BOARD_MAX_SIZE);
       chessBoard.setPrefSize(side, side);
+      positionStrengthBar();
     }
+  }
+
+  private void positionStrengthBar() {
+    var boardBounds = chessBoard.localToParent(chessBoard.getRenderedBoardBounds());
+    if (boardBounds.getWidth() <= 0) return;
+    double barWidth = Math.max(engineStrengthBar.getWidth(), engineStrengthBar.prefWidth(-1));
+    engineStrengthBar.setPrefHeight(boardBounds.getHeight());
+    engineStrengthBar.setMaxHeight(boardBounds.getHeight());
+    engineStrengthBar.setTranslateX(0);
+    engineStrengthBar.setTranslateY(0);
+    engineStrengthBar.resizeRelocate(
+        boardBounds.getMinX() - barWidth - 6,
+        boardBounds.getMinY(),
+        barWidth,
+        boardBounds.getHeight());
   }
 
   private static String messageOf(RuntimeException exception, String fallback) {
@@ -930,18 +985,16 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
 
     private final HBox row = new HBox(8);
     private final VBox details = new VBox(3);
-    private final Label activeMarker = new Label("✓");
-    private final Label title = new Label();
+    private final Label number = new Label();
+    private final Text title = new Text();
     private final Label summary = new Label();
     private final ToolbarIconButton commentButton = new ToolbarIconButton();
 
     private ChapterCell() {
       row.getStyleClass().add("chapter-row");
       row.setAlignment(Pos.CENTER_LEFT);
-      activeMarker.getStyleClass().add("session-active-marker");
+      number.getStyleClass().add("workspace-list-number");
       title.getStyleClass().add("chapter-title");
-      title.setWrapText(true);
-      title.setMaxWidth(Double.MAX_VALUE);
       summary.getStyleClass().add("chapter-summary");
       commentButton.getStyleClass().add("chapter-comment-button");
       commentButton.setAccessibleText("Chapter comments");
@@ -952,9 +1005,10 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
       details.setMinWidth(0);
       details.setMaxWidth(Double.MAX_VALUE);
       HBox.setHgrow(details, Priority.ALWAYS);
-      row.getChildren().addAll(activeMarker, details, commentButton);
+      row.getChildren().addAll(number, details, commentButton);
       row.setMaxWidth(Double.MAX_VALUE);
       row.prefWidthProperty().bind(widthProperty().subtract(2));
+      title.wrappingWidthProperty().bind(row.widthProperty().subtract(88));
       row.setOnMouseClicked(
           event -> {
             if (event.getButton() == MouseButton.PRIMARY && getItem() != null) {
@@ -982,8 +1036,7 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
       if (active) {
         row.getStyleClass().add("chapter-row-active");
       }
-      activeMarker.setVisible(active);
-      activeMarker.setManaged(active);
+      number.setText(Integer.toString(getIndex() + 1));
       title.setText(item.title());
       summary.setText(item.origin().name().replace('_', ' ') + " · " + item.moveCount() + " moves");
       boolean hasComment =
@@ -994,5 +1047,10 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
       setCommentIcon(commentButton, hasComment);
       setGraphic(row);
     }
+  }
+
+  private void renderBoard(com.escontrela.lastmove.domain.game.PositionSnapshot snapshot) {
+    chessBoard.setKingInCheck(snapshot.check() ? snapshot.activeColor() : null);
+    chessBoard.renderPosition(snapshot);
   }
 }

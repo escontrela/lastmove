@@ -13,6 +13,8 @@ import java.util.Optional;
 import java.util.Set;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
@@ -20,6 +22,8 @@ import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.scene.control.Control;
 import javafx.scene.control.Skin;
+import javafx.geometry.Bounds;
+import javafx.geometry.BoundingBox;
 
 /**
  * A reusable JavaFX control that renders a chess board.
@@ -36,6 +40,8 @@ public class ChessBoardControl extends Control {
   private ChessSoundService soundService;
   private final ObjectProperty<PositionSnapshot> position =
       new SimpleObjectProperty<>(this, "position");
+  private final ObjectProperty<PieceColor> kingInCheckColor =
+      new SimpleObjectProperty<>(this, "kingInCheckColor");
   private final ObservableList<BoardArrow> arrows = FXCollections.observableArrayList();
   private final BooleanProperty flipped = new SimpleBooleanProperty(this, "flipped", false);
   private final BooleanProperty visualEffectsEnabled =
@@ -44,6 +50,8 @@ public class ChessBoardControl extends Control {
   private final ObjectProperty<Square> hintTargetSquare =
       new SimpleObjectProperty<>(this, "hintTargetSquare");
   private final ObservableList<Square> threatenedSquares = FXCollections.observableArrayList();
+  private final ReadOnlyObjectWrapper<Bounds> renderedBoardBounds =
+      new ReadOnlyObjectWrapper<>(this, "renderedBoardBounds", new BoundingBox(0, 0, 0, 0));
 
   // 1. PROPIEDAD DEL EVENTO: Permite suscribir controladores externos
   private final ObjectProperty<EventHandler<BoardMoveEvent>> onMoveRequested =
@@ -119,6 +127,35 @@ public class ChessBoardControl extends Control {
 
   public final PositionSnapshot getPosition() {
     return position.get();
+  }
+
+  /** Exact bounds occupied by the board artwork inside this control. */
+  public final ReadOnlyObjectProperty<Bounds> renderedBoardBoundsProperty() {
+    return renderedBoardBounds.getReadOnlyProperty();
+  }
+
+  public final Bounds getRenderedBoardBounds() {
+    return renderedBoardBounds.get();
+  }
+
+  void setRenderedBoardBounds(Bounds bounds) {
+    renderedBoardBounds.set(Objects.requireNonNull(bounds, "bounds must not be null"));
+  }
+
+  /**
+   * Tells the board which king is currently in check. The board owns locating that king and
+   * rendering its visual feedback; callers only provide the semantic state.
+   */
+  public final void setKingInCheck(PieceColor color) {
+    kingInCheckColor.set(color);
+  }
+
+  public final ObjectProperty<PieceColor> kingInCheckColorProperty() {
+    return kingInCheckColor;
+  }
+
+  public final PieceColor getKingInCheckColor() {
+    return kingInCheckColor.get();
   }
 
   /** Presentation-only orientation flag; {@code false} keeps White at the bottom. */

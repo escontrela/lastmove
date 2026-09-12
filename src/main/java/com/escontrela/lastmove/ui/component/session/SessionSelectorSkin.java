@@ -12,6 +12,8 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.SkinBase;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.VBox;
+import javafx.scene.text.Text;
 
 /** Default virtualized skin for {@link SessionSelectorControl}. */
 public final class SessionSelectorSkin extends SkinBase<SessionSelectorControl> {
@@ -57,27 +59,30 @@ public final class SessionSelectorSkin extends SkinBase<SessionSelectorControl> 
 
     private final SessionSelectorControl control;
     private final Button rowButton = new Button();
-    private final HBox content = new HBox(10);
-    private final Label marker = new Label("✓");
-    private final Label title = new Label();
+    private final HBox content = new HBox(8);
+    private final VBox details = new VBox(3);
+    private final Label number = new Label();
+    private final Text title = new Text();
+    private final Label summary = new Label();
 
     private SessionCell(SessionSelectorControl control) {
       this.control = control;
       getStyleClass().add("session-selector-cell");
       getStyleClass().add("study-library-cell");
-      marker.getStyleClass().add("session-active-marker");
+      number.getStyleClass().add("workspace-list-number");
       title.getStyleClass().add("session-title");
-      title.setWrapText(true);
-      title.setMinWidth(0);
-      title.setMaxWidth(Double.MAX_VALUE);
-      HBox.setHgrow(title, Priority.ALWAYS);
+      summary.getStyleClass().add("session-summary");
+      details.getChildren().setAll(title, summary);
+      details.setMinWidth(0);
+      HBox.setHgrow(details, Priority.ALWAYS);
       content.setAlignment(Pos.CENTER_LEFT);
-      content.getChildren().setAll(marker, title);
+      content.getChildren().setAll(number, details);
       rowButton.getStyleClass().add("session-selector-row");
       rowButton.getStyleClass().add("study-library-row");
       rowButton.setGraphic(content);
       rowButton.setMaxWidth(Double.MAX_VALUE);
       rowButton.prefWidthProperty().bind(widthProperty().subtract(2));
+      title.wrappingWidthProperty().bind(rowButton.widthProperty().subtract(58));
       rowButton.setMnemonicParsing(false);
       rowButton.setOnAction(event -> {
         SessionSelectorEntry entry = getItem();
@@ -103,8 +108,9 @@ public final class SessionSelectorSkin extends SkinBase<SessionSelectorControl> 
         return;
       }
       boolean current = item.sessionIndex() == control.getSelectedSessionIndex();
+      number.setText(Integer.toString(item.sessionIndex() + 1));
       title.setText(item.title());
-      marker.setVisible(current);
+      summary.setText(current ? "Current session" : "Session " + (item.sessionIndex() + 1));
       rowButton.pseudoClassStateChanged(CURRENT, current);
       rowButton.setAccessibleText((current ? "Current session, " : "Session, ") + item.title());
       setGraphic(rowButton);

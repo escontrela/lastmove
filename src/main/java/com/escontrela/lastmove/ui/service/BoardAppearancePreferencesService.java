@@ -15,10 +15,12 @@ public class BoardAppearancePreferencesService {
 
     private static final String BOARD_VISUAL_EFFECTS_PREFERENCE = "board-visual-effects-enabled";
     private static final String BOARD_APPEARANCE_PRESET_PREFERENCE = "board-appearance-preset";
+    private static final String ENGINE_STRENGTH_BAR_VISIBLE_PREFERENCE = "engine-strength-bar-visible";
 
     private final Preferences preferences;
     private final BooleanProperty boardVisualEffectsEnabled;
     private final ObjectProperty<BoardAppearancePreset> boardAppearancePreset;
+    private final BooleanProperty engineStrengthBarVisible;
 
     public BoardAppearancePreferencesService() {
         this(Preferences.userNodeForPackage(BoardAppearancePreferencesService.class));
@@ -34,6 +36,10 @@ public class BoardAppearancePreferencesService {
                 this,
                 "boardAppearancePreset",
                 readAppearancePreset(preferences.get(BOARD_APPEARANCE_PRESET_PREFERENCE, null)));
+        this.engineStrengthBarVisible = new SimpleBooleanProperty(
+                this,
+                "engineStrengthBarVisible",
+                preferences.getBoolean(ENGINE_STRENGTH_BAR_VISIBLE_PREFERENCE, true));
     }
 
     public boolean isBoardVisualEffectsEnabled() {
@@ -61,6 +67,23 @@ public class BoardAppearancePreferencesService {
         BoardAppearancePreset requiredPreset = Objects.requireNonNull(preset, "preset must not be null");
         preferences.put(BOARD_APPEARANCE_PRESET_PREFERENCE, requiredPreset.name());
         boardAppearancePreset.set(requiredPreset);
+    }
+
+    public boolean isEngineStrengthBarVisible() {
+        return engineStrengthBarVisible.get();
+    }
+
+    public BooleanProperty engineStrengthBarVisibleProperty() {
+        return engineStrengthBarVisible;
+    }
+
+    public void setEngineStrengthBarVisible(boolean visible) {
+        preferences.putBoolean(ENGINE_STRENGTH_BAR_VISIBLE_PREFERENCE, visible);
+        engineStrengthBarVisible.set(visible);
+    }
+
+    public void toggleEngineStrengthBarVisible() {
+        setEngineStrengthBarVisible(!isEngineStrengthBarVisible());
     }
 
     private static BoardAppearancePreset readAppearancePreset(String value) {
