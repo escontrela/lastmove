@@ -14,6 +14,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
+import javafx.geometry.BoundingBox;
 import javafx.scene.Group;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -804,6 +805,7 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     arrowOverlay.resizeRelocate(x, y, boardSide, boardSide);
     dragOverlay.resizeRelocate(x, y, boardSide, boardSide);
     coordinateOverlay.resizeRelocate(x, y, usedSide, usedSide);
+    getSkinnable().setRenderedBoardBounds(new BoundingBox(x, y, usedSide, usedSide));
     layoutCoordinateLabels(boardSide, gutter, squareSize);
     renderArrows();
   }
@@ -842,6 +844,8 @@ public class ChessBoardSkin extends SkinBase<ChessBoardControl> {
     arrowOverlay.resizeRelocate(boardX, boardY, boardSide, boardSide);
     dragOverlay.resizeRelocate(boardX, boardY, boardSide, boardSide);
     coordinateOverlay.resizeRelocate(frameX, frameY, frameSide, frameSide);
+    getSkinnable()
+        .setRenderedBoardBounds(new BoundingBox(frameX, frameY, frameSide, frameSide));
     layoutV2CoordinateLabels(frameThickness, boardSide, squareSize);
     renderArrows();
   }

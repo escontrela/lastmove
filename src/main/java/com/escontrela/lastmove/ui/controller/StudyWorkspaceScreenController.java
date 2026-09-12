@@ -30,6 +30,7 @@ import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
 import com.escontrela.lastmove.ui.component.comment.CommentPanel;
 import com.escontrela.lastmove.ui.component.comment.SpeakerNotesPanel;
 import com.escontrela.lastmove.ui.component.evaluation.EngineEvaluationControl;
+import com.escontrela.lastmove.ui.component.evaluation.EngineStrengthBarControl;
 import com.escontrela.lastmove.ui.component.evaluation.EngineSelectorModal;
 import com.escontrela.lastmove.ui.component.message.TextInputModal;
 import com.escontrela.lastmove.ui.component.message.MultilineTextInputModal;
@@ -102,6 +103,7 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
   @FXML private Label statusLabel;
   @FXML private ContextualMenuPanel contextualMenuPanel;
   @FXML private EngineEvaluationControl engineEvaluation;
+  @FXML private EngineStrengthBarControl engineStrengthBar;
   @FXML private EngineSelectorModal engineSelectorModal;
   @FXML private CommentPanel commentPanel;
   @FXML private SpeakerNotesPanel speakerNotesPanel;
@@ -167,6 +169,8 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
         boardAppearancePreferencesService.boardVisualEffectsEnabledProperty());
     chessBoard.appearancePresetProperty().bind(
         boardAppearancePreferencesService.boardAppearancePresetProperty());
+    engineStrengthBar.visibleProperty().bind(
+        boardAppearancePreferencesService.engineStrengthBarVisibleProperty());
     moveTreeOverlay.bindBoardAppearance(
         boardAppearancePreferencesService.boardAppearancePresetProperty());
     chapterList.setCellFactory(ignored -> new ChapterCell());
@@ -175,6 +179,7 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
     configureSpeakerNotes();
     configureMoveTreeOverlay();
     configureEngineAnalysis();
+    configureEngineEvaluationFeature();
     chessBoard.setOnPromotionRequested(
         event -> {
           pendingPromotionMove = event.getMoveInput();
@@ -679,7 +684,10 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
 
   private void configureEngineAnalysis() {
     removeEvaluationSubscription = engineEvaluationService.subscribe(
-        state -> Platform.runLater(() -> engineEvaluation.render(state)));
+        state -> Platform.runLater(() -> {
+          engineEvaluation.render(state);
+          engineStrengthBar.render(state);
+        }));
     engineEvaluation.setOnChangeEngine(
         event -> engineSelectorModal.show(
             engineEvaluationService.availableEngines(), engineEvaluationService.state().engine().id()));
@@ -690,10 +698,28 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
         .addListener(
             (observable, oldPosition, newPosition) -> {
               if (newPosition != null) {
-                engineEvaluationService.analyze(newPosition);
+                if (boardAppearancePreferencesService.isEngineStrengthBarVisible()) {
+                  engineEvaluationService.analyze(newPosition);
+                }
               }
             });
 
+  }
+
+  private void configureEngineEvaluationFeature() {
+    boardAppearancePreferencesService
+        .engineStrengthBarVisibleProperty()
+        .addListener((observable, wasVisible, visible) -> updateEngineEvaluationFeature(visible));
+    updateEngineEvaluationFeature(boardAppearancePreferencesService.isEngineStrengthBarVisible());
+  }
+
+  private void updateEngineEvaluationFeature(boolean enabled) {
+    engineEvaluation.setFeatureEnabled(enabled);
+    if (!enabled) {
+      engineEvaluationService.cancel();
+    } else if (chessBoard.getPosition() != null) {
+      engineEvaluationService.analyze(chessBoard.getPosition());
+    }
   }
 
   private void refreshWorkspace() {
@@ -855,6 +881,14 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
         || root.getScene().getFocusOwner() instanceof TextInputControl) {
       return;
     }
+    if (event.getCode() == KeyCode.E
+        && event.isShiftDown()
+        && !event.isShortcutDown()
+        && !event.isAltDown()) {
+      boardAppearancePreferencesService.toggleEngineStrengthBarVisible();
+      event.consume();
+      return;
+    }
     switch (event.getCode()) {
       case UP -> onFirstMove();
       case DOWN -> onLastMove();
@@ -871,6 +905,10 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
     ChangeListener<Number> listener = (ignored, oldValue, newValue) -> updateBoardSize();
     boardHost.widthProperty().addListener(listener);
     boardHost.heightProperty().addListener(listener);
+    chessBoard.renderedBoardBoundsProperty().addListener(
+        (observable, oldBounds, newBounds) -> Platform.runLater(this::positionStrengthBar));
+    chessBoard.boundsInParentProperty().addListener(
+        (observable, oldBounds, newBounds) -> Platform.runLater(this::positionStrengthBar));
     updateBoardSize();
   }
 
@@ -879,7 +917,23 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
     if (available > 0) {
       double side = Math.min(available, BOARD_MAX_SIZE);
       chessBoard.setPrefSize(side, side);
+      positionStrengthBar();
     }
+  }
+
+  private void positionStrengthBar() {
+    var boardBounds = chessBoard.localToParent(chessBoard.getRenderedBoardBounds());
+    if (boardBounds.getWidth() <= 0) return;
+    double barWidth = Math.max(engineStrengthBar.getWidth(), engineStrengthBar.prefWidth(-1));
+    engineStrengthBar.setPrefHeight(boardBounds.getHeight());
+    engineStrengthBar.setMaxHeight(boardBounds.getHeight());
+    engineStrengthBar.setTranslateX(0);
+    engineStrengthBar.setTranslateY(0);
+    engineStrengthBar.resizeRelocate(
+        boardBounds.getMinX() - barWidth - 6,
+        boardBounds.getMinY(),
+        barWidth,
+        boardBounds.getHeight());
   }
 
   private static String messageOf(RuntimeException exception, String fallback) {

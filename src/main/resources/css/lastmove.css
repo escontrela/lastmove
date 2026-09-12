@@ -1423,12 +1423,23 @@
 .splash-shell {
     -fx-alignment: center;
     -fx-background-color: #ffffff;
-    -fx-padding: 48;
+    -fx-padding: 0;
+}
+
+.splash-brand {
+    -fx-alignment: top-left;
+}
+
+.splash-product-name {
+    -fx-font-family: "SF Pro Display", "Inter", sans-serif;
+    -fx-font-size: 28px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #062e5e;
 }
 
 .splash-tagline {
-    -fx-font-size: 15px;
-    -fx-text-fill: #6a7683;
+    -fx-font-size: 13px;
+    -fx-text-fill: #58718c;
 }
 
 .splash-loader-cell {
@@ -1444,21 +1455,25 @@
 
 .splash-loading-status {
     -fx-font-family: "SF Mono", "Cascadia Code", monospace;
-    -fx-font-size: 13px;
-    -fx-text-fill: #5f6c79;
+    -fx-font-size: 11px;
+    -fx-text-fill: #52708c;
 }
 
 .status-brand-logo { -fx-opacity: 0.82; }
 
 .night-mode.splash-shell {
-    -fx-background-color: #171717;
+    -fx-background-color: #071829;
+}
+
+.night-mode .splash-product-name {
+    -fx-text-fill: #f5f9ff;
 }
 
 .night-mode .splash-tagline {
-    -fx-text-fill: #a8b4c1;
+    -fx-text-fill: #aec7e4;
 }
 
-.night-mode .splash-loading-status { -fx-text-fill: #b8c5d3; }
+.night-mode .splash-loading-status { -fx-text-fill: #a9c8e9; }
 .night-mode .splash-loader-cell { -fx-background-color: #6ba5f0; }
 .night-mode .status-brand-logo { -fx-opacity: 0.9; }
 
@@ -1528,11 +1543,19 @@
 .engine-evaluation-activity.engine-evaluation-activity-idle { -fx-background-color: #cbd5df; }
 .engine-evaluation-host-minimized { -fx-padding: 0; }
 .engine-evaluation-control:empty { -fx-padding: 0; }
+.engine-evaluation-closed { -fx-min-height: 34px; -fx-pref-height: 34px; }
+.engine-evaluation-shortcut-hint { -fx-font-size: 11px; -fx-font-weight: 700; -fx-text-fill: #65717e; }
 .engine-evaluation-compact-content { -fx-padding: 9 12; -fx-background-color: #fff8e8; -fx-border-color: #e9bd67; -fx-border-width: 1; }
 .engine-evaluation-compact-name, .engine-evaluation-compact-best-move { -fx-font-weight: 800; -fx-text-fill: #262626; }
 .engine-evaluation-compact-label { -fx-font-size: 11px; -fx-text-fill: #65717e; }
 .engine-evaluation-minimize { -fx-min-width: 28px; -fx-min-height: 26px; -fx-padding: 0 7; -fx-background-color: transparent; -fx-border-color: #dce5ef; -fx-border-radius: 4; -fx-font-size: 15px; -fx-font-weight: 700; }
 .engine-evaluation-minimize:hover { -fx-background-color: #fff0ce; -fx-border-color: #e5a12c; }
+.engine-strength-bar { -fx-spacing: 4px; -fx-padding: 2px; -fx-min-width: 45px; -fx-pref-width: 45px; -fx-max-width: 45px; -fx-min-height: 112px; }
+.engine-strength-score-host { -fx-min-width: 27px; -fx-pref-width: 27px; -fx-max-width: 27px; }
+.engine-strength-score { -fx-font-size: 11px; -fx-font-weight: 800; -fx-text-fill: #263648; }
+.engine-strength-track { -fx-min-width: 12px; -fx-pref-width: 12px; -fx-max-width: 12px; -fx-min-height: 112px; -fx-pref-height: 100%; -fx-background-color: #1f2933; -fx-border-color: #65717e; -fx-border-width: 1px; -fx-background-radius: 3px; -fx-border-radius: 3px; }
+.engine-strength-black { -fx-background-color: #20262d; -fx-background-radius: 2px; }
+.engine-strength-white { -fx-background-color: #ffffff; -fx-background-radius: 0 0 2px 2px; }
 .engine-selector-modal-card { -fx-min-width: 360px; -fx-max-width: 420px; }
 .engine-selector-tile { -fx-min-width: 92px; -fx-min-height: 78px; -fx-background-color: #ffffff; -fx-border-color: #dce5ef; -fx-border-width: 1; -fx-alignment: center; }
 .engine-selector-knightshade-mark { -fx-opacity: 0.2; }
