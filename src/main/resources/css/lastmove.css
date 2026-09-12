@@ -3944,13 +3944,14 @@
 .storm-hint-button:pressed { -fx-background-color: #10478f; -fx-border-color: #10478f; }
 .storm-solver-chip { -fx-background-color: #dceafa; -fx-text-fill: #1d4f91; }
 .storm-solver-color-text { -fx-text-fill: #1d4f91; -fx-font-size: 11px; -fx-font-weight: 700; }
-.storm-result-card { -fx-background-color: #ffffff; -fx-border-color: #c7d8e8; -fx-border-radius: 10; -fx-background-radius: 10; -fx-padding: 16; }
+.storm-result-card { -fx-background-color: #fff8e8; -fx-border-color: #e9bd67; -fx-border-radius: 10; -fx-background-radius: 10; -fx-padding: 16; }
 .storm-result-score { -fx-font-size: 30px; -fx-font-weight: 800; }
 .storm-result-score.storm-ok, .storm-result-verdict.storm-ok { -fx-text-fill: #167443; }
 .storm-result-score.storm-ko, .storm-result-verdict.storm-ko { -fx-text-fill: #b3261e; }
 .storm-result-verdict { -fx-font-weight: 700; }
 .night-mode .storm-game-shell { -fx-background-color: #141b24; }
-.night-mode .storm-game-status-card, .night-mode .storm-result-card { -fx-background-color: #1c2430; -fx-border-color: #465465; }
+.night-mode .storm-game-status-card { -fx-background-color: #1c2430; -fx-border-color: #465465; }
+.night-mode .storm-result-card { -fx-background-color: #332b1d; -fx-border-color: #b98a3e; }
 .night-mode .storm-global-clock, .night-mode .storm-score-value { -fx-text-fill: #f1f3f5; }
 .night-mode .storm-puzzle-chip { -fx-background-color: #2c3a49; -fx-text-fill: #c7d5e4; }
 .night-mode .storm-difficulty-chip { -fx-background-color: #244a35; -fx-text-fill: #bce8c9; }
