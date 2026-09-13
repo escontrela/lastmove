@@ -53,10 +53,14 @@ import com.escontrela.lastmove.ui.support.FileChooserFactory;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.animation.FadeTransition;
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
 import javafx.animation.ScaleTransition;
 import javafx.animation.ParallelTransition;
+import javafx.animation.Timeline;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -65,8 +69,12 @@ import javafx.scene.control.ListView;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
+import javafx.scene.text.Text;
 import javafx.util.Duration;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.context.event.EventListener;
@@ -91,9 +99,14 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
   @FXML private Label resultDetailLabel;
   @FXML private Button hintButton;
   @FXML private Button nextExerciseButton;
+  @FXML private HBox resultActions;
   @FXML private Button backToStudyButton;
   @FXML private VBox exerciseRail;
   @FXML private ToolbarIconButton authoringToggleButton;
+  @FXML private Label progressLabel;
+  @FXML private StackPane suiteProgressTrack;
+  @FXML private Region suiteProgressFill;
+  @FXML private Circle turnIndicator;
 
   private final TacticService tacticService;
   private final StudyService studyService;
@@ -121,6 +134,9 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
   /** True after the user explicitly rotates the current exercise's board. */
   private boolean boardOrientationUserChanged;
   private boolean defaultBoardFlipped;
+  private final javafx.beans.property.DoubleProperty suiteProgress =
+      new javafx.beans.property.SimpleDoubleProperty();
+  private Timeline suiteProgressTransition;
 
   public TacticsWorkspaceScreenController(
       TacticService tacticService,
@@ -156,7 +172,11 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
         boardAppearancePreferencesService.boardVisualEffectsEnabledProperty());
     chessBoard.appearancePresetProperty().bind(
         boardAppearancePreferencesService.boardAppearancePresetProperty());
+    chessBoard.pieceSetProperty().bind(boardAppearancePreferencesService.chessPieceSetProperty());
+    promotionPicker.pieceSetProperty().bind(boardAppearancePreferencesService.chessPieceSetProperty());
     exerciseList.setCellFactory(ignored -> new ExerciseCell());
+    suiteProgressFill.prefWidthProperty().bind(suiteProgressTrack.widthProperty().multiply(suiteProgress));
+    suiteProgressFill.setMaxWidth(Region.USE_PREF_SIZE);
     chessBoard.setOnMoveRequested(event -> submitMove(event.getMoveInput()));
     chessBoard.setOnPromotionRequested(
         event -> {
@@ -329,6 +349,10 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
     if (isTemporaryExercise()) return;
     if (activeExerciseId == null) return;
     authoring = !authoring;
+    if (authoring) {
+      tacticService.resetExerciseAttempt(
+          activeOwner().orElseThrow(), activeSuiteId, activeExerciseId);
+    }
     updateAuthoringToggleButton();
     authorParentNodeId = Optional.empty();
     render(tacticService.startExercise(activeOwner().orElseThrow(), activeSuiteId, activeExerciseId));
@@ -364,6 +388,8 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
     if (activeExerciseId != null) {
       authorParentNodeId = Optional.empty();
       chessBoard.clearHintSquare();
+      tacticService.resetExerciseAttempt(
+          activeOwner().orElseThrow(), activeSuiteId, activeExerciseId);
       render(tacticService.startExercise(activeOwner().orElseThrow(), activeSuiteId, activeExerciseId));
     }
   }
@@ -395,7 +421,22 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
             .orElse(-1);
     if (currentIndex >= 0 && currentIndex + 1 < exerciseList.getItems().size()) {
       activate(exerciseList.getItems().get(currentIndex + 1));
+    } else if (currentIndex >= 0) {
+      restartSuite();
     }
+  }
+
+  private void restartSuite() {
+    PlayerId owner = activeOwner().orElseThrow();
+    tacticService.resetSuiteAttempts(owner, activeSuiteId);
+    authoring = false;
+    updateAuthoringToggleButton();
+    authorParentNodeId = Optional.empty();
+    activeExerciseId = exerciseList.getItems().isEmpty() ? null : exerciseList.getItems().getFirst().exerciseId();
+    resetBoardOrientationForExercise();
+    chessBoard.clearHintSquare();
+    refreshSuite();
+    statusLabel.setText("Suite restarted from the first exercise.");
   }
 
   @FXML
@@ -429,6 +470,9 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
     suiteTitleLabel.setText(details.suite().title());
     List<TacticExerciseSummary> exercises = details.exercises();
     exerciseList.getItems().setAll(exercises);
+    int solved = (int) exercises.stream().filter(TacticExerciseSummary::solved).count();
+    progressLabel.setText(solved + "/" + exercises.size() + " completed");
+    updateSuiteProgress(exercises.isEmpty() ? 0 : solved / (double) exercises.size());
     if (activeExerciseId == null && !exercises.isEmpty()) {
       activeExerciseId = exercises.getFirst().exerciseId();
       resetBoardOrientationForExercise();
@@ -442,6 +486,7 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
     }
     render(tacticService.startExercise(activeOwner().orElseThrow(), activeSuiteId, activeExerciseId));
     exerciseList.refresh();
+    revealActiveExercise();
   }
 
   private void activate(TacticExerciseSummary exercise) {
@@ -453,6 +498,20 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
     chessBoard.clearHintSquare();
     render(tacticService.startExercise(activeOwner().orElseThrow(), activeSuiteId, activeExerciseId));
     exerciseList.refresh();
+    revealActiveExercise();
+  }
+
+  /** Keeps the active exercise visible when training advances or the suite is restarted. */
+  private void revealActiveExercise() {
+    if (activeExerciseId == null) return;
+    int index =
+        java.util.stream.IntStream.range(0, exerciseList.getItems().size())
+            .filter(candidate -> exerciseList.getItems().get(candidate).exerciseId().equals(activeExerciseId))
+            .findFirst()
+            .orElse(-1);
+    if (index < 0) return;
+    exerciseList.getSelectionModel().select(index);
+    Platform.runLater(() -> exerciseList.scrollTo(index));
   }
 
   private void renameExercise(TacticExerciseSummary exercise) {
@@ -540,6 +599,9 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
     TacticMoveOutcome outcome =
         tacticService.attemptMove(activeOwner().orElseThrow(), activeSuiteId, activeExerciseId, move);
     render(outcome.workspace());
+    if (outcome.workspace().solved()) {
+      refreshSuite();
+    }
   }
 
   private void render(TacticWorkspace workspace) {
@@ -553,7 +615,12 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
     chessBoard.setDisable(!authoring && !workspace.readyToSolve());
     hintButton.setDisable(authoring || !workspace.readyToSolve() || workspace.solved());
     applyInitialBoardOrientation(workspace);
-    chessBoard.renderPosition(workspace.position());
+    renderBoard(workspace.position());
+    boolean solving = !authoring && workspace.readyToSolve() && !workspace.solved();
+    turnIndicator.setVisible(solving);
+    turnIndicator.setManaged(solving);
+    turnIndicator.setFill(
+        workspace.position().activeColor() == PieceColor.WHITE ? Color.WHITE : Color.BLACK);
     statusLabel.setText(workspace.status());
     renderResult(workspace);
   }
@@ -594,6 +661,8 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
     boolean showResult = !authoring && workspace.solved();
     resultPanel.setManaged(showResult);
     resultPanel.setVisible(showResult);
+    resultActions.setManaged(showResult);
+    resultActions.setVisible(showResult);
     if (!showResult) return;
 
     int score = workspace.accuracyPercentage();
@@ -614,8 +683,20 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
                 index ->
                     exerciseList.getItems().get(index).exerciseId().equals(activeExerciseId)
                         && index + 1 < exerciseList.getItems().size());
-    nextExerciseButton.setDisable(!hasNext);
+    nextExerciseButton.setText(hasNext ? "Next" : "Restart");
+    nextExerciseButton.setDisable(false);
     playResultAnimation();
+  }
+
+  private void updateSuiteProgress(double targetProgress) {
+    if (suiteProgressTransition != null) {
+      suiteProgressTransition.stop();
+    }
+    suiteProgressTransition =
+        new Timeline(
+            new KeyFrame(Duration.ZERO, new KeyValue(suiteProgress, suiteProgress.get())),
+            new KeyFrame(Duration.millis(280), new KeyValue(suiteProgress, targetProgress)));
+    suiteProgressTransition.play();
   }
 
   private void playResultAnimation() {
@@ -683,17 +764,27 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
   private final class ExerciseCell extends ListCell<TacticExerciseSummary> {
     private final HBox row = new HBox(12);
     private final VBox details = new VBox(4);
-    private final Label title = new Label();
+    private final Label number = new Label();
+    private final Text title = new Text();
     private final Label summary = new Label();
+    private final Label solvedMark = new Label("✓");
 
     private ExerciseCell() {
       row.getStyleClass().add("chapter-row");
       row.setAlignment(Pos.CENTER_LEFT);
+      number.getStyleClass().add("tactic-exercise-number");
       title.getStyleClass().add("chapter-title");
       summary.getStyleClass().add("chapter-summary");
+      solvedMark.getStyleClass().add("tactic-exercise-solved-mark");
+      solvedMark.setVisible(false);
+      solvedMark.setManaged(false);
       details.getChildren().addAll(title, summary);
+      summary.setMinWidth(0);
+      details.setMinWidth(0);
+      details.setMaxWidth(Double.MAX_VALUE);
       HBox.setHgrow(details, Priority.ALWAYS);
-      row.getChildren().add(details);
+      title.wrappingWidthProperty().bind(row.widthProperty().subtract(88));
+      row.getChildren().addAll(number, solvedMark, details);
       row.setOnMouseClicked(
           event -> {
             if (event.getButton() == MouseButton.PRIMARY && getItem() != null) activate(getItem());
@@ -714,12 +805,23 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
         setGraphic(null);
         return;
       }
+      number.setText(String.valueOf(getIndex() + 1));
       title.setText(item.title());
       summary.setText(
-          (item.readyToSolve() ? "Ready" : "Needs solution")
+          (item.solved() ? "Solved" : item.readyToSolve() ? "Ready" : "Needs solution")
               + " · solve as "
               + colorName(item.solverColor()));
+      solvedMark.setVisible(item.solved());
+      solvedMark.setManaged(item.solved());
+      row.pseudoClassStateChanged(
+          javafx.css.PseudoClass.getPseudoClass("active"),
+          item.exerciseId().equals(activeExerciseId));
       setGraphic(row);
     }
+  }
+
+  private void renderBoard(com.escontrela.lastmove.domain.game.PositionSnapshot snapshot) {
+    chessBoard.setKingInCheck(snapshot.check() ? snapshot.activeColor() : null);
+    chessBoard.renderPosition(snapshot);
   }
 }

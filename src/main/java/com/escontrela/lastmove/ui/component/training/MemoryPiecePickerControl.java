@@ -2,6 +2,8 @@ package com.escontrela.lastmove.ui.component.training;
 
 import com.escontrela.lastmove.domain.common.PieceColor;
 import com.escontrela.lastmove.domain.common.PieceType;
+import com.escontrela.lastmove.ui.component.board.ChessPieceImageResolver;
+import com.escontrela.lastmove.ui.component.board.ChessPieceSet;
 import java.net.URL;
 import java.util.List;
 import java.util.Locale;
@@ -36,6 +38,9 @@ public final class MemoryPiecePickerControl extends StackPane {
       new SimpleObjectProperty<>(this, "onPieceSelected");
   private final ObjectProperty<EventHandler<ActionEvent>> onCancel =
       new SimpleObjectProperty<>(this, "onCancel");
+  private final ObjectProperty<ChessPieceSet> pieceSet =
+      new SimpleObjectProperty<>(this, "pieceSet", ChessPieceSet.STD);
+  private final VBox rows = new VBox(8);
   private Button firstChoice;
 
   public MemoryPiecePickerControl() {
@@ -55,7 +60,7 @@ public final class MemoryPiecePickerControl extends StackPane {
     HBox heading = new HBox(10, title, spacer, close);
     heading.setAlignment(Pos.CENTER_LEFT);
 
-    VBox rows = new VBox(8, createRow(PieceColor.WHITE), createRow(PieceColor.BLACK));
+    rows.getChildren().setAll(createRow(PieceColor.WHITE), createRow(PieceColor.BLACK));
     VBox card = new VBox(14, heading, rows);
     card.setPadding(new Insets(18));
     card.setMinSize(Region.USE_PREF_SIZE, Region.USE_PREF_SIZE);
@@ -64,6 +69,7 @@ public final class MemoryPiecePickerControl extends StackPane {
     getChildren().add(card);
 
     visibleProperty().addListener((ignored, oldValue, visible) -> setManaged(visible));
+    pieceSet.addListener((ignored, oldValue, newValue) -> rebuildPieceGraphics());
     addEventFilter(MouseEvent.MOUSE_CLICKED, event -> {
       if (event.getTarget() == this) { cancel(); event.consume(); }
     });
@@ -82,7 +88,7 @@ public final class MemoryPiecePickerControl extends StackPane {
       choice.setAccessibleText("Choose " + color.name().toLowerCase(Locale.ROOT) + " " + type.name().toLowerCase(Locale.ROOT));
       choice.setFocusTraversable(true);
       choice.getStyleClass().add("promotion-picker-choice");
-      ImageView image = new ImageView(pieceImage(type, color));
+      ImageView image = new ImageView(ChessPieceImageResolver.image(getPieceSet(), color, type));
       image.setFitWidth(IMAGE_SIZE);
       image.setFitHeight(IMAGE_SIZE);
       image.setPreserveRatio(true);
@@ -95,12 +101,13 @@ public final class MemoryPiecePickerControl extends StackPane {
     return row;
   }
 
-  private Image pieceImage(PieceType type, PieceColor color) {
-    String path = "/chess-pieces/" + color.name().toLowerCase(Locale.ROOT) + "-" + type.name().toLowerCase(Locale.ROOT) + ".png";
-    URL resource = MemoryPiecePickerControl.class.getResource(path);
-    if (resource == null) throw new IllegalStateException("Missing memory piece resource " + path);
-    return new Image(resource.toExternalForm());
+  private void rebuildPieceGraphics() {
+    firstChoice = null;
+    rows.getChildren().setAll(createRow(PieceColor.WHITE), createRow(PieceColor.BLACK));
   }
+  public ObjectProperty<ChessPieceSet> pieceSetProperty() { return pieceSet; }
+  public ChessPieceSet getPieceSet() { return pieceSet.get(); }
+  public void setPieceSet(ChessPieceSet value) { pieceSet.set(Objects.requireNonNull(value)); }
 
   public void showPicker() {
     setManaged(true);

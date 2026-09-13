@@ -18,6 +18,7 @@ import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
@@ -31,11 +32,12 @@ public class SplashScreenService {
 
   private static final Duration MINIMUM_DISPLAY_TIME = Duration.seconds(5);
 
-  private static final double SPLASH_WIDTH = 680;
-  private static final double SPLASH_HEIGHT = 460;
+  private static final double SPLASH_WIDTH = 560;
+  private static final double SPLASH_HEIGHT = 360;
 
-  private static final String LIGHT_BACKGROUND_RESOURCE = "/images/splash-light.png";
-  private static final String DARK_BACKGROUND_RESOURCE = "/images/splash-dark.png";
+  private static final String LIGHT_BACKGROUND_RESOURCE = "/images/splash-light-v2.png";
+  private static final String DARK_BACKGROUND_RESOURCE = "/images/splash-dark-v2.png";
+  private static final String LOGO_RESOURCE = "/images/logo/modern-logo-1024.png";
 
   /*
    * ============================================================
@@ -44,14 +46,14 @@ public class SplashScreenService {
    *
    * These values control ONLY the 3x3 animated indicator.
    *
-   * Increase RIGHT_MARGIN -> moves the indicator to the LEFT.
-   * Decrease RIGHT_MARGIN -> moves the indicator to the RIGHT.
+   * Increase LEFT_MARGIN -> moves the indicator to the RIGHT.
+   * Decrease LEFT_MARGIN -> moves the indicator to the LEFT.
    *
    * Increase TOP_MARGIN -> moves the indicator DOWN.
    * Decrease TOP_MARGIN -> moves the indicator UP.
    */
-  private static final double SQUARES_RIGHT_MARGIN = 20;
-  private static final double SQUARES_TOP_MARGIN = 120;
+  private static final double SQUARES_LEFT_MARGIN = 48;
+  private static final double SQUARES_TOP_MARGIN = 278;
 
   /*
    * ============================================================
@@ -60,20 +62,20 @@ public class SplashScreenService {
    *
    * These values control ONLY "Starting workspace...".
    *
-   * Increase RIGHT_MARGIN -> moves the text to the LEFT.
-   * Decrease RIGHT_MARGIN -> moves the text to the RIGHT.
+   * Increase LEFT_MARGIN -> moves the text to the RIGHT.
+   * Decrease LEFT_MARGIN -> moves the text to the LEFT.
    *
    * Increase BOTTOM_MARGIN -> moves the text UP.
    * Decrease BOTTOM_MARGIN -> moves the text DOWN.
    */
-  private static final double STATUS_RIGHT_MARGIN = 20;
-  private static final double STATUS_BOTTOM_MARGIN = 0;
+  private static final double STATUS_LEFT_MARGIN = 48;
+  private static final double STATUS_BOTTOM_MARGIN = 24;
 
   /*
    * Loading indicator appearance.
    */
-  private static final double LOADING_SQUARE_SIZE = 7;
-  private static final double LOADING_SQUARE_GAP = 4;
+  private static final double LOADING_SQUARE_SIZE = 6;
+  private static final double LOADING_SQUARE_GAP = 3;
 
   private static final String LOADING_MESSAGE = "Starting workspace...";
 
@@ -153,6 +155,8 @@ public class SplashScreenService {
     backgroundView.setSmooth(true);
     backgroundView.setMouseTransparent(true);
 
+    VBox brand = createBrand();
+
     /*
      * ------------------------------------------------------------
      * Animated squares
@@ -206,7 +210,10 @@ public class SplashScreenService {
     overlay.setMouseTransparent(true);
     overlay.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
 
-    overlay.getChildren().addAll(loadingSquaresGrid, loadingStatus);
+    overlay.getChildren().addAll(brand, loadingSquaresGrid, loadingStatus);
+
+    AnchorPane.setLeftAnchor(brand, 48.0);
+    AnchorPane.setTopAnchor(brand, 68.0);
 
     /*
      * ------------------------------------------------------------
@@ -214,9 +221,9 @@ public class SplashScreenService {
      * ------------------------------------------------------------
      *
      * Intended location:
-     * upper-right area, below the "Chess" word.
+     * the lower-right loading band, aligned above the status message.
      */
-    AnchorPane.setRightAnchor(loadingSquaresGrid, SQUARES_RIGHT_MARGIN);
+    AnchorPane.setLeftAnchor(loadingSquaresGrid, SQUARES_LEFT_MARGIN);
 
     AnchorPane.setTopAnchor(loadingSquaresGrid, SQUARES_TOP_MARGIN);
 
@@ -226,9 +233,9 @@ public class SplashScreenService {
      * ------------------------------------------------------------
      *
      * Intended location:
-     * bottom-right corner.
+     * the lower-right loading band, below the indicator.
      */
-    AnchorPane.setRightAnchor(loadingStatus, STATUS_RIGHT_MARGIN);
+    AnchorPane.setLeftAnchor(loadingStatus, STATUS_LEFT_MARGIN);
 
     AnchorPane.setBottomAnchor(loadingStatus, STATUS_BOTTOM_MARGIN);
 
@@ -246,6 +253,32 @@ public class SplashScreenService {
     startLoadingTextAnimation(loadingStatus);
 
     return root;
+  }
+
+  private VBox createBrand() {
+
+    ImageView logo =
+        new ImageView(
+            new Image(
+                Objects.requireNonNull(
+                        getClass().getResource(LOGO_RESOURCE),
+                        () -> "Missing splash logo resource: " + LOGO_RESOURCE)
+                    .toExternalForm()));
+    logo.setFitWidth(112);
+    logo.setFitHeight(112);
+    logo.setPreserveRatio(true);
+    logo.setSmooth(true);
+
+    Label productName = new Label("LastMove");
+    productName.getStyleClass().add("splash-product-name");
+
+    Label tagline = new Label("Chess, engineered for the next move.");
+    tagline.getStyleClass().add("splash-tagline");
+
+    VBox brand = new VBox(10, logo, productName, tagline);
+    brand.getStyleClass().add("splash-brand");
+    brand.setMouseTransparent(true);
+    return brand;
   }
 
   /**

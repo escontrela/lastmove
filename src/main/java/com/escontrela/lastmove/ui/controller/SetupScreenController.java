@@ -12,6 +12,10 @@ import com.escontrela.lastmove.ui.component.header.ApplicationHeader;
 import com.escontrela.lastmove.ui.component.header.HeaderAction;
 import com.escontrela.lastmove.ui.component.settings.SettingsNavigationControl;
 import com.escontrela.lastmove.ui.component.board.BoardAppearancePreset;
+import com.escontrela.lastmove.ui.component.board.ChessPieceSet;
+import com.escontrela.lastmove.ui.component.board.ChessPieceImageResolver;
+import com.escontrela.lastmove.domain.common.PieceColor;
+import com.escontrela.lastmove.domain.common.PieceType;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
 import com.escontrela.lastmove.ui.screen.UiScreenController;
 import com.escontrela.lastmove.ui.screen.UiScreenId;
@@ -20,6 +24,8 @@ import com.escontrela.lastmove.ui.service.BoardAppearancePreferencesService;
 import com.escontrela.lastmove.ui.service.StartupPreferencesService;
 import java.time.Duration;
 import java.util.List;
+import java.util.EnumMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -34,7 +40,12 @@ import javafx.scene.control.PasswordField;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory;
 import javafx.scene.control.TextField;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.VBox;
 import javafx.util.StringConverter;
@@ -60,6 +71,8 @@ public class SetupScreenController implements UiScreenController {
     @FXML private SettingsNavigationControl settingsNavigation;
     @FXML private VBox setupContent, appearanceGroup, sunfishGroup, maiaGroup, knightshadeGroup,
             arenaGroup, analysisGroup, navigationGroup;
+    @FXML private FlowPane boardAppearanceChoices;
+    @FXML private FlowPane chessPieceSetChoices;
     @FXML
     private CheckBox nightModeCheckBox;
     @FXML
@@ -68,6 +81,8 @@ public class SetupScreenController implements UiScreenController {
     private CheckBox boardVisualEffectsCheckBox;
     @FXML
     private ComboBox<BoardAppearancePreset> boardAppearancePresetCombo;
+    @FXML
+    private ComboBox<ChessPieceSet> chessPieceSetCombo;
     @FXML
     private ApplicationHeader applicationHeader;
     @FXML
@@ -153,6 +168,7 @@ public class SetupScreenController implements UiScreenController {
     private boolean savedSplashScreen;
     private boolean savedBoardVisualEffects;
     private BoardAppearancePreset savedBoardAppearancePreset;
+    private ChessPieceSet savedChessPieceSet;
     private String savedSunfishExecutablePath;
     private String savedMaiaExecutablePath;
     private String savedMaiaWeightsPath;
@@ -161,6 +177,8 @@ public class SetupScreenController implements UiScreenController {
     private KnightshadeArenaSettings savedArenaSettings;
     private boolean arenaTokenChanged;
     private boolean loadingArenaToken;
+    private final Map<BoardAppearancePreset, Button> boardChoiceButtons = new EnumMap<>(BoardAppearancePreset.class);
+    private final Map<ChessPieceSet, Button> pieceSetChoiceButtons = new EnumMap<>(ChessPieceSet.class);
 
     public SetupScreenController(
             @Lazy UiFlowManager uiFlowManager,
@@ -211,7 +229,11 @@ public class SetupScreenController implements UiScreenController {
                 updateApplyButtonVisibility());
         boardAppearancePresetCombo.setItems(FXCollections.observableArrayList(BoardAppearancePreset.values()));
         boardAppearancePresetCombo.valueProperty().addListener((ignored, oldValue, newValue) ->
-                updateApplyButtonVisibility());
+                { refreshAppearanceChoices(); updateApplyButtonVisibility(); });
+        chessPieceSetCombo.setItems(FXCollections.observableArrayList(ChessPieceSet.values()));
+        chessPieceSetCombo.valueProperty().addListener((ignored, oldValue, newValue) ->
+                { refreshAppearanceChoices(); updateApplyButtonVisibility(); });
+        buildAppearanceChoices();
         sunfishExecutablePathField.textProperty().addListener((ignored, oldValue, newValue) -> {
             clearSunfishValidation();
             updateApplyButtonVisibility();
@@ -250,6 +272,85 @@ public class SetupScreenController implements UiScreenController {
         });
         setupScrollPane.vvalueProperty().addListener((ignored, oldValue, newValue) -> updateNavigationSelection());
         Platform.runLater(this::updateNavigationSelection);
+    }
+
+    private void buildAppearanceChoices() {
+        for (BoardAppearancePreset preset : BoardAppearancePreset.values()) {
+            Button choice = new Button();
+            choice.setAccessibleText("Select board style " + preset.displayName());
+            choice.getStyleClass().add("appearance-choice-card");
+            choice.setGraphic(boardPreview(preset));
+            choice.setOnAction(event -> boardAppearancePresetCombo.setValue(preset));
+            boardChoiceButtons.put(preset, choice);
+        }
+        boardAppearanceChoices.getChildren().setAll(boardChoiceButtons.values());
+
+        for (ChessPieceSet pieceSet : ChessPieceSet.values()) {
+            Button choice = new Button();
+            choice.setAccessibleText("Select chess set " + pieceSet.displayName());
+            choice.getStyleClass().add("appearance-choice-card");
+            choice.setGraphic(pieceSetPreview(pieceSet));
+            choice.setOnAction(event -> chessPieceSetCombo.setValue(pieceSet));
+            pieceSetChoiceButtons.put(pieceSet, choice);
+        }
+        chessPieceSetChoices.getChildren().setAll(pieceSetChoiceButtons.values());
+        refreshAppearanceChoices();
+    }
+
+    private VBox boardPreview(BoardAppearancePreset preset) {
+        GridPane board = new GridPane();
+        board.getStyleClass().add("appearance-board-thumbnail");
+        for (int rank = 0; rank < 8; rank++) {
+            for (int file = 0; file < 8; file++) {
+                Region square = new Region();
+                square.getStyleClass().add("appearance-board-square");
+                square.setStyle("-fx-background-color: " + (((file + rank) % 2 == 0)
+                        ? preset.boardTheme().getLightColor() : preset.boardTheme().getDarkColor()) + ";");
+                board.add(square, file, rank);
+            }
+        }
+        Label name = new Label(preset.displayName());
+        name.getStyleClass().add("appearance-choice-name");
+        VBox content = new VBox(8, board, name);
+        content.getStyleClass().add("appearance-choice-content");
+        return content;
+    }
+
+    private VBox pieceSetPreview(ChessPieceSet pieceSet) {
+        HBox whitePieces = pieceRow(pieceSet, PieceColor.WHITE);
+        HBox blackPieces = pieceRow(pieceSet, PieceColor.BLACK);
+        Label name = new Label(pieceSet.displayName());
+        name.getStyleClass().add("appearance-choice-name");
+        VBox content = new VBox(5, name, whitePieces, blackPieces);
+        content.getStyleClass().add("appearance-choice-content");
+        return content;
+    }
+
+    private HBox pieceRow(ChessPieceSet pieceSet, PieceColor color) {
+        HBox row = new HBox(2);
+        row.getStyleClass().add("appearance-piece-row");
+        for (PieceType type : List.of(PieceType.KING, PieceType.QUEEN, PieceType.ROOK,
+                PieceType.BISHOP, PieceType.KNIGHT, PieceType.PAWN)) {
+            ImageView piece = new ImageView(ChessPieceImageResolver.image(pieceSet, color, type));
+            piece.setFitWidth(26);
+            piece.setFitHeight(26);
+            piece.setPreserveRatio(true);
+            piece.setMouseTransparent(true);
+            row.getChildren().add(piece);
+        }
+        return row;
+    }
+
+    private void refreshAppearanceChoices() {
+        BoardAppearancePreset selectedBoard = boardAppearancePresetCombo.getValue();
+        boardChoiceButtons.forEach((preset, choice) -> updateChoiceSelection(choice, preset == selectedBoard));
+        ChessPieceSet selectedSet = chessPieceSetCombo.getValue();
+        pieceSetChoiceButtons.forEach((pieceSet, choice) -> updateChoiceSelection(choice, pieceSet == selectedSet));
+    }
+
+    private void updateChoiceSelection(Button choice, boolean selected) {
+        choice.getStyleClass().remove("appearance-choice-card-selected");
+        if (selected) choice.getStyleClass().add("appearance-choice-card-selected");
     }
 
     @FXML public void scrollToAppearance() { scrollTo(appearanceGroup); }
@@ -293,6 +394,7 @@ public class SetupScreenController implements UiScreenController {
         savedSplashScreen = startupPreferencesService.isSplashScreenEnabled();
         savedBoardVisualEffects = boardAppearancePreferencesService.isBoardVisualEffectsEnabled();
         savedBoardAppearancePreset = boardAppearancePreferencesService.getBoardAppearancePreset();
+        savedChessPieceSet = boardAppearancePreferencesService.getChessPieceSet();
         savedSunfishExecutablePath = computerEngineSettingsService
                 .sunfishSettings()
                 .executablePath()
@@ -310,6 +412,7 @@ public class SetupScreenController implements UiScreenController {
         showSplashCheckBox.setSelected(savedSplashScreen);
         boardVisualEffectsCheckBox.setSelected(savedBoardVisualEffects);
         boardAppearancePresetCombo.setValue(savedBoardAppearancePreset);
+        chessPieceSetCombo.setValue(savedChessPieceSet);
         sunfishExecutablePathField.setText(savedSunfishExecutablePath);
         maiaExecutablePathField.setText(savedMaiaExecutablePath);
         maiaWeightsPathField.setText(savedMaiaWeightsPath);
@@ -361,10 +464,12 @@ public class SetupScreenController implements UiScreenController {
         startupPreferencesService.setSplashScreenEnabled(showSplashCheckBox.isSelected());
         boardAppearancePreferencesService.setBoardVisualEffectsEnabled(boardVisualEffectsCheckBox.isSelected());
         boardAppearancePreferencesService.setBoardAppearancePreset(boardAppearancePresetCombo.getValue());
+        boardAppearancePreferencesService.setChessPieceSet(chessPieceSetCombo.getValue());
         savedNightMode = nightModeCheckBox.isSelected();
         savedSplashScreen = showSplashCheckBox.isSelected();
         savedBoardVisualEffects = boardVisualEffectsCheckBox.isSelected();
         savedBoardAppearancePreset = boardAppearancePresetCombo.getValue();
+        savedChessPieceSet = chessPieceSetCombo.getValue();
         updateApplyButtonVisibility();
     }
 
@@ -484,6 +589,7 @@ public class SetupScreenController implements UiScreenController {
                 || showSplashCheckBox.isSelected() != savedSplashScreen
                 || boardVisualEffectsCheckBox.isSelected() != savedBoardVisualEffects
                 || boardAppearancePresetCombo.getValue() != savedBoardAppearancePreset
+                || chessPieceSetCombo.getValue() != savedChessPieceSet
                 || !sunfishExecutablePathField.getText().trim().equals(savedSunfishExecutablePath)
                 || !trimmed(maiaExecutablePathField.getText()).equals(savedMaiaExecutablePath)
                 || !trimmed(maiaWeightsPathField.getText()).equals(savedMaiaWeightsPath)

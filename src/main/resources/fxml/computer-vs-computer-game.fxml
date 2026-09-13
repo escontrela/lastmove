@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import com.escontrela.lastmove.ui.component.board.ChessBoardControl?>
+<?import com.escontrela.lastmove.ui.component.evaluation.EngineStrengthBarControl?>
 <?import com.escontrela.lastmove.ui.component.header.ApplicationHeader?>
 <?import com.escontrela.lastmove.ui.component.game.ComputerVsComputerSetupOverlay?>
 <?import com.escontrela.lastmove.ui.component.game.GameStartPlayersOverlay?>
@@ -24,7 +25,7 @@
     <top><ApplicationHeader /></top>
     <center>
       <HBox spacing="16.0" styleClass="analysis-workspace progressive-game-workspace"><padding><Insets bottom="16.0" left="20.0" right="20.0" top="8.0" /></padding>
-        <StackPane fx:id="boardHost" alignment="CENTER" HBox.hgrow="ALWAYS"><ChessBoardControl fx:id="chessBoard" /></StackPane>
+        <StackPane fx:id="boardHost" alignment="CENTER" HBox.hgrow="ALWAYS"><ChessBoardControl fx:id="chessBoard" /><EngineStrengthBarControl fx:id="engineStrengthBar" StackPane.alignment="CENTER" /></StackPane>
         <VBox prefWidth="340.0" spacing="10.0" styleClass="board-side-panel, progressive-game-side-panel">
           <VBox spacing="9.0" styleClass="progressive-player-zone"><HBox alignment="CENTER_LEFT" spacing="10.0" styleClass="progressive-player-identity"><PlayerAvatarControl fx:id="opponentPlayerIcon" /><Label fx:id="opponentPlayerLabel" styleClass="progressive-player-name" text="Black engine" /><Circle fill="#1b1f26" radius="6.0" stroke="#69727d" strokeWidth="1.0" /><ThinkingIndicatorControl fx:id="opponentThinkingIndicator" /></HBox><GameClockControl fx:id="opponentClock" /><CapturedPiecesControl fx:id="opponentCapturedPieces" /></VBox>
           <VBox spacing="8.0" styleClass="progressive-moves-card" VBox.vgrow="ALWAYS"><MoveNotationControl fx:id="moveNotation" VBox.vgrow="ALWAYS" /><HBox alignment="CENTER" spacing="10.0" styleClass="progressive-navigation-row"><ToolbarIconButton fx:id="firstMoveButton" accessibleText="First move" darkIconResource="/images/first_page_35dp_FFFFFF.png" lightIconResource="/images/first_page_35dp_000000.png" maxWidth="Infinity" minWidth="66.0" onAction="#reviewFirstMove" prefWidth="66.0" tooltipText="First move" HBox.hgrow="ALWAYS" /><ToolbarIconButton fx:id="previousMoveButton" accessibleText="Previous move" darkIconResource="/images/arrow_left_alt_35dp_FFFFFF.png" lightIconResource="/images/arrow_left_alt_35dp_000000.png" maxWidth="Infinity" minWidth="66.0" onAction="#reviewPreviousMove" prefWidth="66.0" tooltipText="Previous move" HBox.hgrow="ALWAYS" /><ToolbarIconButton fx:id="nextMoveButton" accessibleText="Next move" darkIconResource="/images/arrow_right_alt_35dp_FFFFFF.png" lightIconResource="/images/arrow_right_alt_35dp_000000.png" maxWidth="Infinity" minWidth="66.0" onAction="#reviewNextMove" prefWidth="66.0" tooltipText="Next move" HBox.hgrow="ALWAYS" /><ToolbarIconButton fx:id="lastMoveButton" accessibleText="Live position" darkIconResource="/images/last_page_35dp_FFFFFF.png" lightIconResource="/images/last_page_35dp_000000.png" maxWidth="Infinity" minWidth="66.0" onAction="#reviewLastMove" prefWidth="66.0" tooltipText="Live position" HBox.hgrow="ALWAYS" /></HBox></VBox>

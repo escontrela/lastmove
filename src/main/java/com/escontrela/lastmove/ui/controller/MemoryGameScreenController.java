@@ -89,6 +89,8 @@ public final class MemoryGameScreenController implements UiScreenController {
         boardAppearancePreferencesService.boardVisualEffectsEnabledProperty());
     chessBoard.appearancePresetProperty().bind(
         boardAppearancePreferencesService.boardAppearancePresetProperty());
+    chessBoard.pieceSetProperty().bind(boardAppearancePreferencesService.chessPieceSetProperty());
+    piecePicker.pieceSetProperty().bind(boardAppearancePreferencesService.chessPieceSetProperty());
     chessBoard.setEditorMode(false);
     chessBoard.setOnEditorSquareRequested(event -> requestPieceFor(event.getSquare()));
     chessBoard.setOnEditorSecondarySquareRequested(event -> requestPieceFor(event.getSquare()));

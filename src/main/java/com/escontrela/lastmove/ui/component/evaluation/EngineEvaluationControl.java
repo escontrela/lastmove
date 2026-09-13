@@ -34,10 +34,14 @@ public final class EngineEvaluationControl extends VBox {
   private final FadeTransition activityPulse;
   private final VBox expandedContent;
   private final HBox compactContent;
+  private final Label disabledShortcutHint = new Label("Shift+E to enable evaluation");
+  private final VBox disabledContent = new VBox(disabledShortcutHint);
   private EventHandler<ActionEvent> onChangeEngine;
   private VBox host;
   private Insets expandedHostPadding;
   private boolean minimized;
+  private boolean featureEnabled = true;
+  private EngineEvaluationState currentState;
 
   public EngineEvaluationControl() {
     getStyleClass().add("engine-evaluation-control");
@@ -97,6 +101,9 @@ public final class EngineEvaluationControl extends VBox {
         new HBox(8, new Label("♞"), compactEngineName, compactSpacer, compactLabel, compactBestMove, maximize);
     compactContent.getStyleClass().add("engine-evaluation-compact-content");
     compactContent.setAlignment(Pos.CENTER_LEFT);
+    disabledContent.getStyleClass().add("engine-evaluation-closed");
+    disabledContent.setAlignment(Pos.CENTER);
+    disabledShortcutHint.getStyleClass().add("engine-evaluation-shortcut-hint");
 
     getChildren().add(expandedContent);
     parentProperty().addListener((observable, oldParent, newParent) -> captureHost(newParent));
@@ -109,6 +116,8 @@ public final class EngineEvaluationControl extends VBox {
 
   public void render(EngineEvaluationState state) {
     EngineEvaluationState required = Objects.requireNonNull(state, "state");
+    currentState = required;
+    if (!featureEnabled) return;
     engineName.setText(required.engine().displayName());
     compactEngineName.setText(required.engine().displayName());
     engineVersion.setText(required.engine().version());
@@ -134,6 +143,7 @@ public final class EngineEvaluationControl extends VBox {
   public void setMinimized(boolean value) {
     if (minimized == value) return;
     minimized = value;
+    if (!featureEnabled) return;
     getChildren().setAll(value ? compactContent : expandedContent);
     setSpacing(value ? 0 : 14);
     setMinHeight(USE_PREF_SIZE);
@@ -144,6 +154,29 @@ public final class EngineEvaluationControl extends VBox {
 
   public boolean isMinimized() {
     return minimized;
+  }
+
+  /** Closes the card without removing its reserved panel from the surrounding layout. */
+  public void setFeatureEnabled(boolean enabled) {
+    if (featureEnabled == enabled) return;
+    featureEnabled = enabled;
+    activityPulse.stop();
+    if (!enabled) {
+      getChildren().setAll(disabledContent);
+      setSpacing(0);
+      setMinHeight(USE_PREF_SIZE);
+      setPrefHeight(USE_COMPUTED_SIZE);
+      setMaxHeight(USE_PREF_SIZE);
+      applyHostLayout();
+      return;
+    }
+    getChildren().setAll(minimized ? compactContent : expandedContent);
+    setSpacing(minimized ? 0 : 14);
+    setMinHeight(USE_PREF_SIZE);
+    setPrefHeight(USE_COMPUTED_SIZE);
+    setMaxHeight(USE_PREF_SIZE);
+    applyHostLayout();
+    if (currentState != null) render(currentState);
   }
 
   private void captureHost(javafx.scene.Parent parent) {
@@ -159,7 +192,7 @@ public final class EngineEvaluationControl extends VBox {
 
   private void applyHostLayout() {
     if (host == null) return;
-    if (minimized) {
+    if (minimized && featureEnabled) {
       if (!host.getStyleClass().contains("engine-evaluation-host-minimized")) {
         host.getStyleClass().add("engine-evaluation-host-minimized");
       }

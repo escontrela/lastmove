@@ -391,6 +391,8 @@ public final class MoveTreeOverlay extends StackPane {
     commentTitle.setText(node.comment().isBlank() ? "No comment · " + node.moveReference() : node.moveReference());
     commentBody.setText(
         node.comment().isBlank() ? "This move has no saved comment." : node.comment());
+    previewBoard.setKingInCheck(
+        node.position().check() ? node.position().activeColor() : null);
     previewBoard.renderPosition(node.position());
   }
 

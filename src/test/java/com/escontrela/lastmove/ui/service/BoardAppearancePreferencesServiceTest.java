@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.escontrela.lastmove.ui.component.board.BoardAppearancePreset;
+import com.escontrela.lastmove.ui.component.board.ChessPieceSet;
 import java.util.UUID;
 import java.util.prefs.Preferences;
 import org.junit.jupiter.api.AfterEach;
@@ -80,5 +81,32 @@ class BoardAppearancePreferencesServiceTest {
         assertEquals(
                 BoardAppearancePreset.V2_TRIBAL,
                 new BoardAppearancePreferencesService(preferences).getBoardAppearancePreset());
+    }
+
+    @Test
+    void persistsTheLastMoveChessSetSelectionIndependentlyFromBoardStyle() {
+        BoardAppearancePreferencesService service = new BoardAppearancePreferencesService(preferences);
+
+        service.setBoardAppearancePreset(BoardAppearancePreset.V2_GRAY);
+        service.setChessPieceSet(ChessPieceSet.LASTMOVE);
+
+        assertEquals(
+                BoardAppearancePreset.V2_GRAY,
+                new BoardAppearancePreferencesService(preferences).getBoardAppearancePreset());
+        assertEquals(
+                ChessPieceSet.LASTMOVE,
+                new BoardAppearancePreferencesService(preferences).getChessPieceSet());
+    }
+
+    @Test
+    void showsTheStrengthBarByDefaultAndPersistsShortcutToggles() {
+        BoardAppearancePreferencesService service = new BoardAppearancePreferencesService(preferences);
+
+        assertTrue(service.isEngineStrengthBarVisible());
+
+        service.toggleEngineStrengthBarVisible();
+
+        assertFalse(service.isEngineStrengthBarVisible());
+        assertFalse(new BoardAppearancePreferencesService(preferences).isEngineStrengthBarVisible());
     }
 }
