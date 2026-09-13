@@ -18,6 +18,7 @@ import com.escontrela.lastmove.domain.game.CastlingRights;
 import com.escontrela.lastmove.domain.notation.Fen;
 import com.escontrela.lastmove.domain.tactics.TacticExerciseId;
 import com.escontrela.lastmove.ui.component.board.ChessBoardControl;
+import com.escontrela.lastmove.ui.component.board.ChessPieceImageResolver;
 import com.escontrela.lastmove.ui.component.board.BoardPieceDragPayload;
 import com.escontrela.lastmove.ui.component.message.MessageBox;
 import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton;
@@ -41,6 +42,7 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.TextArea;
+import javafx.scene.image.ImageView;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.image.Image;
 import javafx.scene.control.RadioButton;
@@ -99,6 +101,10 @@ public final class PositionEditorScreenController implements UiScreenController 
         boardAppearancePreferencesService.boardVisualEffectsEnabledProperty());
     chessBoard.appearancePresetProperty().bind(
         boardAppearancePreferencesService.boardAppearancePresetProperty());
+    chessBoard.pieceSetProperty().bind(boardAppearancePreferencesService.chessPieceSetProperty());
+    refreshPalette(boardAppearancePreferencesService.getChessPieceSet());
+    boardAppearancePreferencesService.chessPieceSetProperty().addListener(
+        (ignored, oldValue, newValue) -> refreshPalette(newValue));
     chessBoard.setEditorMode(true);
     chessBoard.setOnMoveRequested(event -> { editor.move(event.getMoveInput().fromSquare(), event.getMoveInput().toSquare()); refresh(); });
     chessBoard.setOnPieceRemovalRequested(event -> { editor.remove(event.getSquare()); refresh(); });
@@ -315,25 +321,25 @@ public final class PositionEditorScreenController implements UiScreenController 
     dragboard.setContent(content);
     // Avoid JavaFX's default white snapshot of the palette label. Use the same artwork as the
     // board and size the drag proxy to a normal board square.
-    Image dragImage =
-        new Image(
-            getClass()
-                .getResource(pieceResource(color, type))
-                .toExternalForm(),
-            72,
-            72,
-            true,
-            true);
+    Image dragImage = new Image(
+        getClass().getResource(ChessPieceImageResolver.resourcePath(
+            boardAppearancePreferencesService.getChessPieceSet(), color, type)).toExternalForm(),
+        72, 72, true, true);
     dragboard.setDragView(dragImage, 36, 36);
     event.consume();
   }
 
-  private static String pieceResource(PieceColor color, PieceType type) {
-    return "/chess-pieces/"
-        + color.name().toLowerCase()
-        + "-"
-        + type.name().toLowerCase()
-        + ".png";
+  private void refreshPalette(com.escontrela.lastmove.ui.component.board.ChessPieceSet pieceSet) {
+    root.lookupAll(".piece-palette-item").forEach(node -> {
+      if (!(node instanceof Label label) || label.getAccessibleText() == null) return;
+      String[] words = label.getAccessibleText().split(" ");
+      if (words.length != 2) return;
+      PieceColor color = PieceColor.valueOf(words[0].toUpperCase());
+      PieceType type = PieceType.valueOf(words[1].toUpperCase());
+      ImageView image = new ImageView(ChessPieceImageResolver.image(pieceSet, color, type));
+      image.setFitWidth(34); image.setFitHeight(34); image.setPreserveRatio(true);
+      label.setGraphic(image);
+    });
   }
 
   private void renderBoard(com.escontrela.lastmove.domain.game.PositionSnapshot snapshot) {

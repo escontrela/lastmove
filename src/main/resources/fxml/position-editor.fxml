@@ -40,11 +40,15 @@
     </HBox></VBox>
   </top>
   <center>
-    <HBox alignment="TOP_CENTER" spacing="16" styleClass="workspace-content">
-      <padding><Insets bottom="16" left="28" right="28" top="8" /></padding>
-      <VBox prefWidth="230" spacing="12" styleClass="utility-rail editor-settings-panel">
-        <padding><Insets bottom="18" left="18" right="18" top="18" /></padding>
-        <Label styleClass="eyebrow-label" text="POSITION" />
+    <HBox alignment="TOP_CENTER" spacing="20" styleClass="workspace-content position-editor-workspace">
+      <padding><Insets bottom="18" left="28" right="28" top="18" /></padding>
+      <VBox prefWidth="248" spacing="14" styleClass="utility-rail editor-settings-panel editor-panel-card">
+        <padding><Insets bottom="20" left="20" right="20" top="20" /></padding>
+        <VBox spacing="3" styleClass="editor-panel-heading">
+          <Label styleClass="eyebrow-label editor-kicker" text="POSITION SETUP" />
+          <Label styleClass="card-title editor-panel-title" text="Position details" />
+          <Label styleClass="card-copy editor-panel-copy" text="Define the state that accompanies the board." wrapText="true" />
+        </VBox>
             <HBox alignment="CENTER_LEFT" spacing="8.0">
                <children>
                   <ToolbarIconButton fx:id="openAnalysisButton" accessibleText="Save session as chapter" darkIconResource="/images/graph_2_35dp_FFFFFF.png" lightIconResource="/images/graph_2_35dp_000000.png" onAction="#onOpenAnalysis" tooltipText="Open in analysis" />
@@ -71,17 +75,20 @@
           <Spinner fx:id="halfmoveSpinner" styleClass="editor-field"><valueFactory><SpinnerValueFactory.IntegerSpinnerValueFactory initialValue="0" max="999" min="0" /></valueFactory></Spinner>
           <Spinner fx:id="fullmoveSpinner" styleClass="editor-field"><valueFactory><SpinnerValueFactory.IntegerSpinnerValueFactory initialValue="1" max="999" min="1" /></valueFactory></Spinner>
         </HBox>
-        <Button mnemonicParsing="false" onAction="#onApplyMetadata" styleClass="secondary-button" text="Apply metadata" />
+        <Button maxWidth="Infinity" mnemonicParsing="false" onAction="#onApplyMetadata" styleClass="secondary-button editor-apply-button" text="Apply metadata" />
       </VBox>
-      <VBox alignment="TOP_CENTER" spacing="12">
+      <VBox alignment="TOP_CENTER" spacing="12" styleClass="editor-board-stage">
         <ChessBoardControl fx:id="chessBoard" prefHeight="620" prefWidth="620" />
         <Label fx:id="statusLabel" maxWidth="620" styleClass="tool-catalog-status" wrapText="true" />
       </VBox>
-      <VBox prefWidth="270" spacing="12" styleClass="board-side-card piece-palette-card">
-        <padding><Insets bottom="18" left="18" right="18" top="18" /></padding>
-        <Label styleClass="eyebrow-label" text="PIECE PALETTE" />
-        <Label fx:id="selectedPieceLabel" styleClass="card-copy" text="Click or drag a piece onto the board. Right-click removes it." wrapText="true" />
-        <Label styleClass="eyebrow-label" text="WHITE" />
+      <VBox prefWidth="286" spacing="14" styleClass="board-side-card piece-palette-card editor-panel-card">
+        <padding><Insets bottom="20" left="20" right="20" top="20" /></padding>
+        <VBox spacing="3" styleClass="editor-panel-heading">
+          <Label styleClass="eyebrow-label editor-kicker" text="PIECE LIBRARY" />
+          <Label styleClass="card-title editor-panel-title" text="Compose the board" />
+          <Label fx:id="selectedPieceLabel" styleClass="card-copy editor-panel-copy" text="Choose a piece, then click or drag it onto a square. Right-click removes it." wrapText="true" />
+        </VBox>
+        <Label styleClass="eyebrow-label palette-color-label" text="WHITE PIECES" />
         <GridPane hgap="8" styleClass="piece-palette" vgap="6">
           <Label accessibleText="White pawn" onDragDetected="#dragWhitePawn" onMouseClicked="#selectWhitePawn" styleClass="piece-palette-item" GridPane.columnIndex="0" GridPane.rowIndex="0"><graphic><ImageView fitHeight="34" fitWidth="34" preserveRatio="true"><image><Image url="@../chess-pieces/white-pawn.png" /></image></ImageView></graphic></Label>
           <Label accessibleText="White knight" onDragDetected="#dragWhiteKnight" onMouseClicked="#selectWhiteKnight" styleClass="piece-palette-item" GridPane.columnIndex="1" GridPane.rowIndex="0"><graphic><ImageView fitHeight="34" fitWidth="34" preserveRatio="true"><image><Image url="@../chess-pieces/white-knight.png" /></image></ImageView></graphic></Label>
@@ -100,7 +107,7 @@
                   <RowConstraints />
                </rowConstraints>
         </GridPane>
-        <Label styleClass="eyebrow-label" text="BLACK" />
+        <Label styleClass="eyebrow-label palette-color-label" text="BLACK PIECES" />
         <GridPane hgap="8" styleClass="piece-palette" vgap="6">
           <Label accessibleText="Black pawn" onDragDetected="#dragBlackPawn" onMouseClicked="#selectBlackPawn" styleClass="piece-palette-item" GridPane.columnIndex="0" GridPane.rowIndex="0"><graphic><ImageView fitHeight="34" fitWidth="34" preserveRatio="true"><image><Image url="@../chess-pieces/black-pawn.png" /></image></ImageView></graphic></Label>
           <Label accessibleText="Black knight" onDragDetected="#dragBlackKnight" onMouseClicked="#selectBlackKnight" styleClass="piece-palette-item" GridPane.columnIndex="1" GridPane.rowIndex="0"><graphic><ImageView fitHeight="34" fitWidth="34" preserveRatio="true"><image><Image url="@../chess-pieces/black-knight.png" /></image></ImageView></graphic></Label>
@@ -120,12 +127,15 @@
                </rowConstraints>
         </GridPane>
         <Separator styleClass="editor-separator" />
-        <Label styleClass="card-title editor-section-title" text="FEN" />
+        <VBox spacing="2">
+          <Label styleClass="eyebrow-label editor-kicker" text="POSITION CODE" />
+          <Label styleClass="card-title editor-section-title editor-fen-title" text="FEN" />
+        </VBox>
         <TextArea fx:id="fenText" prefRowCount="3" styleClass="editor-text-area" wrapText="true" />
         <HBox spacing="8">
-          <Button mnemonicParsing="false" onAction="#onGenerateFen" styleClass="primary-button" text="Generate" />
+          <Button mnemonicParsing="false" onAction="#onGenerateFen" styleClass="primary-button editor-generate-button" text="Generate FEN" />
         </HBox>
-            <HBox alignment="CENTER_LEFT" spacing="8.0">
+            <HBox alignment="CENTER_LEFT" spacing="8.0" styleClass="editor-fen-actions">
                <children>
                   <ToolbarIconButton accessibleText="Export current session as PGN" darkIconResource="/images/upload_35dp_FFFFFF.png" lightIconResource="/images/upload_35dp_000000.png" onAction="#onImportFen" tooltipText="Import" />
                   <ToolbarIconButton accessibleText="Copy position as FEN" darkIconResource="/images/copy_35dp_FFFFFF.png" lightIconResource="/images/copy_35dp_000000.png" onAction="#onCopyFen" tooltipText="Copy position as FEN" />

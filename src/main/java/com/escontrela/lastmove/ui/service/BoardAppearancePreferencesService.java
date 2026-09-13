@@ -1,6 +1,7 @@
 package com.escontrela.lastmove.ui.service;
 
 import com.escontrela.lastmove.ui.component.board.BoardAppearancePreset;
+import com.escontrela.lastmove.ui.component.board.ChessPieceSet;
 import java.util.Objects;
 import java.util.prefs.Preferences;
 import javafx.beans.property.BooleanProperty;
@@ -15,11 +16,13 @@ public class BoardAppearancePreferencesService {
 
     private static final String BOARD_VISUAL_EFFECTS_PREFERENCE = "board-visual-effects-enabled";
     private static final String BOARD_APPEARANCE_PRESET_PREFERENCE = "board-appearance-preset";
+    private static final String CHESS_PIECE_SET_PREFERENCE = "chess-piece-set";
     private static final String ENGINE_STRENGTH_BAR_VISIBLE_PREFERENCE = "engine-strength-bar-visible";
 
     private final Preferences preferences;
     private final BooleanProperty boardVisualEffectsEnabled;
     private final ObjectProperty<BoardAppearancePreset> boardAppearancePreset;
+    private final ObjectProperty<ChessPieceSet> chessPieceSet;
     private final BooleanProperty engineStrengthBarVisible;
 
     public BoardAppearancePreferencesService() {
@@ -32,10 +35,15 @@ public class BoardAppearancePreferencesService {
                 this,
                 "boardVisualEffectsEnabled",
                 preferences.getBoolean(BOARD_VISUAL_EFFECTS_PREFERENCE, true));
+        String storedAppearance = preferences.get(BOARD_APPEARANCE_PRESET_PREFERENCE, null);
         this.boardAppearancePreset = new SimpleObjectProperty<>(
                 this,
                 "boardAppearancePreset",
-                readAppearancePreset(preferences.get(BOARD_APPEARANCE_PRESET_PREFERENCE, null)));
+                readAppearancePreset(storedAppearance));
+        this.chessPieceSet = new SimpleObjectProperty<>(
+                this,
+                "chessPieceSet",
+                readPieceSet(preferences.get(CHESS_PIECE_SET_PREFERENCE, null), storedAppearance));
         this.engineStrengthBarVisible = new SimpleBooleanProperty(
                 this,
                 "engineStrengthBarVisible",
@@ -69,6 +77,16 @@ public class BoardAppearancePreferencesService {
         boardAppearancePreset.set(requiredPreset);
     }
 
+    public ChessPieceSet getChessPieceSet() { return chessPieceSet.get(); }
+
+    public ObjectProperty<ChessPieceSet> chessPieceSetProperty() { return chessPieceSet; }
+
+    public void setChessPieceSet(ChessPieceSet pieceSet) {
+        ChessPieceSet requiredPieceSet = Objects.requireNonNull(pieceSet, "pieceSet must not be null");
+        preferences.put(CHESS_PIECE_SET_PREFERENCE, requiredPieceSet.name());
+        chessPieceSet.set(requiredPieceSet);
+    }
+
     public boolean isEngineStrengthBarVisible() {
         return engineStrengthBarVisible.get();
     }
@@ -94,6 +112,18 @@ public class BoardAppearancePreferencesService {
             return BoardAppearancePreset.valueOf(value);
         } catch (IllegalArgumentException exception) {
             return BoardAppearancePreset.STANDARD;
+        }
+    }
+
+    private static ChessPieceSet readPieceSet(String value, String legacyAppearanceValue) {
+        if ((value == null || value.isBlank()) && "LASTMOVE_CHESS_SET".equals(legacyAppearanceValue)) {
+            return ChessPieceSet.LASTMOVE;
+        }
+        if (value == null || value.isBlank()) return ChessPieceSet.STD;
+        try {
+            return ChessPieceSet.valueOf(value);
+        } catch (IllegalArgumentException exception) {
+            return ChessPieceSet.STD;
         }
     }
 }

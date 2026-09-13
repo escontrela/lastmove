@@ -2,6 +2,8 @@ package com.escontrela.lastmove.ui.component.promotion;
 
 import com.escontrela.lastmove.domain.common.PieceColor;
 import com.escontrela.lastmove.domain.common.PieceType;
+import com.escontrela.lastmove.ui.component.board.ChessPieceImageResolver;
+import com.escontrela.lastmove.ui.component.board.ChessPieceSet;
 import java.net.URL;
 import java.util.EnumMap;
 import java.util.List;
@@ -44,6 +46,8 @@ public final class PromotionPickerControl extends StackPane {
 
   private final ObjectProperty<PieceColor> promotingColor =
       new SimpleObjectProperty<>(this, "promotingColor", PieceColor.WHITE);
+  private final ObjectProperty<ChessPieceSet> pieceSet =
+      new SimpleObjectProperty<>(this, "pieceSet", ChessPieceSet.STD);
   private final ObjectProperty<EventHandler<PromotionSelectedEvent>> onPromotionSelected =
       new SimpleObjectProperty<>(this, "onPromotionSelected");
   private final ObjectProperty<EventHandler<ActionEvent>> onCancel =
@@ -105,6 +109,8 @@ public final class PromotionPickerControl extends StackPane {
         (ignored, oldColor, newColor) ->
             choiceButtons.forEach((pieceType, choice) -> updateChoiceGraphic(choice, pieceType, newColor)));
     visibleProperty().addListener((ignored, oldValue, visible) -> setManaged(visible));
+    pieceSet.addListener((ignored, oldValue, newValue) ->
+        choiceButtons.forEach((pieceType, choice) -> updateChoiceGraphic(choice, pieceType, getPromotingColor())));
     addEventFilter(
         MouseEvent.MOUSE_CLICKED,
         event -> {
@@ -123,7 +129,7 @@ public final class PromotionPickerControl extends StackPane {
   }
 
   private void updateChoiceGraphic(Button choice, PieceType pieceType, PieceColor color) {
-    ImageView graphic = new ImageView(pieceImage(pieceType, color));
+    ImageView graphic = new ImageView(ChessPieceImageResolver.image(getPieceSet(), color, pieceType));
     graphic.setFitWidth(PIECE_IMAGE_SIZE);
     graphic.setFitHeight(PIECE_IMAGE_SIZE);
     graphic.setPreserveRatio(true);
@@ -131,19 +137,9 @@ public final class PromotionPickerControl extends StackPane {
     choice.setGraphic(graphic);
   }
 
-  private Image pieceImage(PieceType pieceType, PieceColor color) {
-    String resourcePath =
-        "/chess-pieces/"
-            + color.name().toLowerCase(Locale.ROOT)
-            + "-"
-            + pieceType.name().toLowerCase(Locale.ROOT)
-            + ".png";
-    URL resource = PromotionPickerControl.class.getResource(resourcePath);
-    if (resource == null) {
-      throw new IllegalStateException("Missing promotion piece resource " + resourcePath);
-    }
-    return new Image(resource.toExternalForm());
-  }
+  public ObjectProperty<ChessPieceSet> pieceSetProperty() { return pieceSet; }
+  public ChessPieceSet getPieceSet() { return pieceSet.get(); }
+  public void setPieceSet(ChessPieceSet value) { pieceSet.set(Objects.requireNonNull(value)); }
 
   private void select(PieceType pieceType) {
     hide();

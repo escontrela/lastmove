@@ -160,17 +160,15 @@ public final class HumanVsComputerScreenController implements UiScreenController
         boardAppearancePreferencesService.boardVisualEffectsEnabledProperty());
     chessBoard.appearancePresetProperty().bind(
         boardAppearancePreferencesService.boardAppearancePresetProperty());
+    chessBoard.pieceSetProperty().bind(boardAppearancePreferencesService.chessPieceSetProperty());
+    promotionPicker.pieceSetProperty().bind(boardAppearancePreferencesService.chessPieceSetProperty());
+    opponentCapturedPieces.pieceSetProperty().bind(boardAppearancePreferencesService.chessPieceSetProperty());
+    humanCapturedPieces.pieceSetProperty().bind(boardAppearancePreferencesService.chessPieceSetProperty());
     configureBoardInput();
     configurePromotionPicker();
     configureSetupOverlay();
     configureResultMessage();
-    root.addEventFilter(javafx.scene.input.KeyEvent.KEY_PRESSED, event -> {
-      if (event.getCode() == javafx.scene.input.KeyCode.H && event.isShortcutDown() && event.isShiftDown()) {
-        threatHintsEnabled = !threatHintsEnabled;
-        refreshThreatHints();
-        event.consume();
-      }
-    });
+    root.addEventFilter(javafx.scene.input.KeyEvent.KEY_PRESSED, this::handleKeyboardShortcut);
     bindResponsiveBoardSize();
     showEmptyWorkspace();
   }
@@ -459,6 +457,34 @@ public final class HumanVsComputerScreenController implements UiScreenController
           restart();
         });
     resultMessageBox.setOnClose(event -> backToMain());
+  }
+
+  /** Navigates the reviewed game without taking arrow input away from editable controls. */
+  private void handleKeyboardShortcut(javafx.scene.input.KeyEvent event) {
+    if (event.isConsumed()
+        || promotionPicker.isVisible()
+        || root.getScene() == null
+        || root.getScene().getFocusOwner() instanceof javafx.scene.control.TextInputControl) {
+      return;
+    }
+    if (event.getCode() == javafx.scene.input.KeyCode.H
+        && event.isShortcutDown()
+        && event.isShiftDown()) {
+      threatHintsEnabled = !threatHintsEnabled;
+      refreshThreatHints();
+      event.consume();
+      return;
+    }
+    switch (event.getCode()) {
+      case UP -> reviewFirstMove();
+      case DOWN -> reviewLastMove();
+      case LEFT -> reviewPreviousMove();
+      case RIGHT -> reviewNextMove();
+      default -> {
+        return;
+      }
+    }
+    event.consume();
   }
 
   private void analyzeFinishedGame() {

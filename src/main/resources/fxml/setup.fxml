@@ -13,6 +13,7 @@
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.layout.VBox?>
@@ -39,7 +40,7 @@
             <content>
                 <VBox fx:id="setupContent" alignment="TOP_LEFT" spacing="24.0" styleClass="setup-content">
                     <padding><Insets bottom="64.0" left="80.0" right="80.0" top="64.0" /></padding>
-                    <VBox fx:id="appearanceGroup" maxWidth="680.0" spacing="16.0" styleClass="setup-card">
+                    <VBox fx:id="appearanceGroup" maxWidth="940.0" spacing="16.0" styleClass="setup-card">
                         <padding><Insets bottom="32.0" left="32.0" right="32.0" top="32.0" /></padding>
                         <Label styleClass="eyebrow-label" text="Appearance" />
                         <Label styleClass="card-title" text="Night mode" />
@@ -48,9 +49,20 @@
                         <Label styleClass="card-title" text="Board visual effects" />
                         <Label styleClass="card-copy" text="Add a soft halo around chess boards and a subtle gradient to their squares. Works in day and night mode." wrapText="true" />
                         <CheckBox fx:id="boardVisualEffectsCheckBox" mnemonicParsing="false" styleClass="settings-check-box" text="Enable board glow and square gradients" />
-                        <Label styleClass="card-title" text="Board style" />
-                        <Label styleClass="card-copy" text="Choose the standard board or the v2 physical-board finish. This preference applies to every chess board and is saved for your next session." wrapText="true" />
-                        <ComboBox fx:id="boardAppearancePresetCombo" maxWidth="Infinity" styleClass="settings-text-field" />
+                        <HBox spacing="24.0" styleClass="appearance-selector-columns">
+                            <VBox spacing="8.0" HBox.hgrow="ALWAYS">
+                                <Label styleClass="card-title" text="Board style" />
+                                <Label styleClass="card-copy" text="Choose a board finish." wrapText="true" />
+                                <FlowPane fx:id="boardAppearanceChoices" hgap="10.0" prefWrapLength="410.0" vgap="10.0" styleClass="appearance-choice-grid" />
+                            </VBox>
+                            <VBox spacing="8.0" HBox.hgrow="ALWAYS">
+                                <Label styleClass="card-title" text="Chess set" />
+                                <Label styleClass="card-copy" text="Choose the pieces independently of the board." wrapText="true" />
+                                <FlowPane fx:id="chessPieceSetChoices" hgap="10.0" prefWrapLength="410.0" vgap="10.0" styleClass="appearance-choice-grid" />
+                            </VBox>
+                        </HBox>
+                        <ComboBox fx:id="boardAppearancePresetCombo" managed="false" visible="false" />
+                        <ComboBox fx:id="chessPieceSetCombo" managed="false" visible="false" />
                         <Label styleClass="card-title" text="Startup" />
                         <Label styleClass="card-copy" text="Show the LastMove welcome screen when the application starts. This preference is saved for your next session." wrapText="true" />
                         <CheckBox fx:id="showSplashCheckBox" mnemonicParsing="false" styleClass="settings-check-box" text="Show splash screen on startup" />

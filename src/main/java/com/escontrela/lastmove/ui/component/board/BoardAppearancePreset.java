@@ -40,7 +40,7 @@ public enum BoardAppearancePreset {
     return displayName;
   }
 
-  BoardTheme boardTheme() {
+  public BoardTheme boardTheme() {
     return boardTheme;
   }
 

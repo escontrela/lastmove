@@ -158,6 +158,8 @@ public class PgnAnalysisScreenController implements UiScreenController {
         boardAppearancePreferencesService.boardVisualEffectsEnabledProperty());
     chessBoard.appearancePresetProperty().bind(
         boardAppearancePreferencesService.boardAppearancePresetProperty());
+    chessBoard.pieceSetProperty().bind(boardAppearancePreferencesService.chessPieceSetProperty());
+    promotionPicker.pieceSetProperty().bind(boardAppearancePreferencesService.chessPieceSetProperty());
     engineStrengthBar.visibleProperty().bind(
         boardAppearancePreferencesService.engineStrengthBarVisibleProperty());
     moveTreeOverlay.bindBoardAppearance(

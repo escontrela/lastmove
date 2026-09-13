@@ -37,6 +37,8 @@ public class ChessBoardControl extends Control {
 
   private final ObjectProperty<BoardAppearancePreset> appearancePreset =
       new SimpleObjectProperty<>(this, "appearancePreset", BoardAppearancePreset.STANDARD);
+  private final ObjectProperty<ChessPieceSet> pieceSet =
+      new SimpleObjectProperty<>(this, "pieceSet", ChessPieceSet.STD);
   private ChessSoundService soundService;
   private final ObjectProperty<PositionSnapshot> position =
       new SimpleObjectProperty<>(this, "position");
@@ -105,6 +107,15 @@ public class ChessBoardControl extends Control {
   /** Applies a complete presentation preset without changing chess state or interaction handlers. */
   public final void setAppearancePreset(BoardAppearancePreset preset) {
     appearancePreset.set(Objects.requireNonNull(preset, "preset must not be null"));
+  }
+
+  public final ObjectProperty<ChessPieceSet> pieceSetProperty() { return pieceSet; }
+
+  public final ChessPieceSet getPieceSet() { return pieceSet.get(); }
+
+  /** Changes the piece artwork without changing the board's colours, frame or layout. */
+  public final void setPieceSet(ChessPieceSet pieceSet) {
+    this.pieceSet.set(Objects.requireNonNull(pieceSet, "pieceSet must not be null"));
   }
 
   /** Updates the complete board state that the skin must render. */

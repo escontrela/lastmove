@@ -73,6 +73,8 @@ public final class StormGameScreenController implements UiScreenController {
     chessBoard.setEditorMode(false);
     chessBoard.visualEffectsEnabledProperty().bind(appearance.boardVisualEffectsEnabledProperty());
     chessBoard.appearancePresetProperty().bind(appearance.boardAppearancePresetProperty());
+    chessBoard.pieceSetProperty().bind(appearance.chessPieceSetProperty());
+    promotionPicker.pieceSetProperty().bind(appearance.chessPieceSetProperty());
     chessBoard.setOnMoveRequested(event -> submit(event.getMoveInput()));
     chessBoard.setOnPromotionRequested(
         event -> {

@@ -3,6 +3,8 @@ package com.escontrela.lastmove.ui.component.game;
 import com.escontrela.lastmove.domain.game.PositionPiece;
 import com.escontrela.lastmove.domain.common.PieceColor;
 import com.escontrela.lastmove.domain.common.PieceType;
+import com.escontrela.lastmove.ui.component.board.ChessPieceImageResolver;
+import com.escontrela.lastmove.ui.component.board.ChessPieceSet;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -11,6 +13,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import javafx.geometry.Pos;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.AccessibleRole;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -24,6 +28,9 @@ public final class CapturedPiecesControl extends FlowPane {
   private static final double OVERLAP_OFFSET = 8.0;
   private static final List<PieceType> DISPLAY_ORDER =
       List.of(PieceType.QUEEN, PieceType.ROOK, PieceType.BISHOP, PieceType.KNIGHT, PieceType.PAWN);
+  private final ObjectProperty<ChessPieceSet> pieceSet =
+      new SimpleObjectProperty<>(this, "pieceSet", ChessPieceSet.STD);
+  private List<PositionPiece> renderedPieces = List.of();
 
   public CapturedPiecesControl() {
     getStyleClass().add("captured-pieces");
@@ -32,11 +39,13 @@ public final class CapturedPiecesControl extends FlowPane {
     setVgap(2.0);
     setPrefWrapLength(250.0);
     setAccessibleRole(AccessibleRole.PARENT);
+    pieceSet.addListener((ignored, oldValue, newValue) -> render(renderedPieces));
   }
 
   /** Rebuilds the visuals from the supplied authoritative game-history projection. */
   public void render(List<PositionPiece> pieces) {
     Objects.requireNonNull(pieces, "pieces must not be null");
+    renderedPieces = List.copyOf(pieces);
     List<CapturedPieceGroup> groups = groups(pieces);
     getChildren().setAll(groups.stream().map(this::groupView).toList());
     setAccessibleText(
@@ -75,17 +84,8 @@ public final class CapturedPiecesControl extends FlowPane {
   }
 
   private ImageView pieceView(PieceColor color, PieceType type) {
-    String key =
-        color.name().toLowerCase(Locale.ROOT)
-            + "-"
-            + type.name().toLowerCase(Locale.ROOT);
-    String path = "/chess-pieces/" + key + ".png";
-    ImageView view =
-        new ImageView(
-            new Image(
-                Objects.requireNonNull(
-                        getClass().getResource(path), () -> "Missing captured-piece resource " + path)
-                    .toExternalForm()));
+    String key = color.name().toLowerCase(Locale.ROOT) + "-" + type.name().toLowerCase(Locale.ROOT);
+    ImageView view = new ImageView(ChessPieceImageResolver.image(getPieceSet(), color, type));
     view.setFitWidth(PIECE_SIZE);
     view.setFitHeight(PIECE_SIZE);
     view.setPreserveRatio(true);
@@ -94,6 +94,10 @@ public final class CapturedPiecesControl extends FlowPane {
     view.setAccessibleText(key.replace('-', ' '));
     return view;
   }
+
+  public ObjectProperty<ChessPieceSet> pieceSetProperty() { return pieceSet; }
+  public ChessPieceSet getPieceSet() { return pieceSet.get(); }
+  public void setPieceSet(ChessPieceSet value) { pieceSet.set(Objects.requireNonNull(value)); }
 
   private record GroupKey(PieceColor color, PieceType type) {}
 

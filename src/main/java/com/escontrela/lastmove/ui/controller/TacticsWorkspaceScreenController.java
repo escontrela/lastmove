@@ -53,6 +53,7 @@ import com.escontrela.lastmove.ui.support.FileChooserFactory;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.animation.FadeTransition;
 import javafx.animation.KeyFrame;
@@ -171,6 +172,8 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
         boardAppearancePreferencesService.boardVisualEffectsEnabledProperty());
     chessBoard.appearancePresetProperty().bind(
         boardAppearancePreferencesService.boardAppearancePresetProperty());
+    chessBoard.pieceSetProperty().bind(boardAppearancePreferencesService.chessPieceSetProperty());
+    promotionPicker.pieceSetProperty().bind(boardAppearancePreferencesService.chessPieceSetProperty());
     exerciseList.setCellFactory(ignored -> new ExerciseCell());
     suiteProgressFill.prefWidthProperty().bind(suiteProgressTrack.widthProperty().multiply(suiteProgress));
     suiteProgressFill.setMaxWidth(Region.USE_PREF_SIZE);
@@ -483,6 +486,7 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
     }
     render(tacticService.startExercise(activeOwner().orElseThrow(), activeSuiteId, activeExerciseId));
     exerciseList.refresh();
+    revealActiveExercise();
   }
 
   private void activate(TacticExerciseSummary exercise) {
@@ -494,6 +498,20 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
     chessBoard.clearHintSquare();
     render(tacticService.startExercise(activeOwner().orElseThrow(), activeSuiteId, activeExerciseId));
     exerciseList.refresh();
+    revealActiveExercise();
+  }
+
+  /** Keeps the active exercise visible when training advances or the suite is restarted. */
+  private void revealActiveExercise() {
+    if (activeExerciseId == null) return;
+    int index =
+        java.util.stream.IntStream.range(0, exerciseList.getItems().size())
+            .filter(candidate -> exerciseList.getItems().get(candidate).exerciseId().equals(activeExerciseId))
+            .findFirst()
+            .orElse(-1);
+    if (index < 0) return;
+    exerciseList.getSelectionModel().select(index);
+    Platform.runLater(() -> exerciseList.scrollTo(index));
   }
 
   private void renameExercise(TacticExerciseSummary exercise) {
