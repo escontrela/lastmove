@@ -37,6 +37,12 @@ import java.util.Optional;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
+import javafx.animation.FadeTransition;
+import javafx.animation.ParallelTransition;
+import javafx.animation.PauseTransition;
+import javafx.animation.SequentialTransition;
+import javafx.application.Platform;
+import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContentDisplay;
@@ -73,11 +79,26 @@ public final class MyGamesScreenController implements UiScreenController {
   @Override public void onShow() { synchronizeConfiguredBot(); if (selectedPlayer.isEmpty()) selectedPlayer=currentUser.selectedPlayerId().flatMap(players::playerSummary); updatePlayerButton(); refresh(); }
   private void updatePlayerButton() { playerLabel.setText(selectedPlayer.map(PlayerSummary::fullName).orElse("Choose player")); }
   @FXML public void backToHome() { flow.show(UiScreenId.MAIN); }
+  @FXML public void onCreateGame() { flow.show(UiScreenId.HUMAN_VS_COMPUTER); }
   @FXML public void choosePlayer() { if (!players.isPersistenceAvailable()) { statusLabel.setText("Player persistence is unavailable."); return; } if (arenaSettings.configuredBotAccount().isEmpty() && arenaSettings.hasBotToken()) { statusLabel.setText("Validating the configured Knightshade Lichess account…"); java.util.concurrent.CompletableFuture.supplyAsync(arenaSettings::validateConfiguredBotAccount).whenComplete((account,failure)->javafx.application.Platform.runLater(()->{ if (failure!=null) { statusLabel.setText("Could not validate Knightshade. Open Settings to check the Lichess token."); return; } players.synchronizeLichessBot(account); showPlayerSelector(); })); return; } showPlayerSelector(); }
   private void showPlayerSelector() { List<PlayerSummary> options=players.listPlayers(); if (options.isEmpty()) { statusLabel.setText("Create or validate a player profile before viewing games."); return; } playerSelector.show(options, selectedPlayer.map(summary->summary.id().value()).orElse(null), "Choose player", "View saved games for an app player or Knightshade. Uncheck to include Lichess participants.", arenaSettings.configuredBotAccount().map(com.escontrela.lastmove.application.arena.LichessBotAccount::id)); }
   private void synchronizeConfiguredBot() { if (players.isPersistenceAvailable()) arenaSettings.configuredBotAccount().ifPresent(players::synchronizeLichessBot); }
   private void refresh() { allGames=selectedPlayer.map(player->games.listSummaries(player.id())).orElse(List.of()); tagsByGame=tagService.tagsForGames(allGames.stream().map(SavedGameSummary::gameId).toList()); availableTags=tagService.availableTags(); tagFilter.setAvailableTags(availableTags); showGames(); }
-  private void showGames() { Set<Long> selectedTags=tagFilter.selectedTagIds(); List<SavedGameSummary> rows=allGames.stream().filter(game -> RegexSearchFilter.matches(searchPattern, game.whiteName(), game.blackName(), game.gameType().name(), game.finished() ? "finished" : "in progress", game.result().map(Enum::name).orElse(""))).filter(game -> tagsByGame.getOrDefault(game.gameId(), List.of()).stream().map(Tag::id).collect(java.util.stream.Collectors.toSet()).containsAll(selectedTags)).toList(); gamesList.getItems().setAll(rows); gameCountLabel.setText(rows.size() + (rows.size() == 1 ? " game" : " games")); emptyLabel.setText(allGames.isEmpty() ? "Play a game to find it here." : "No games match this search or tag filter."); emptyLabel.setVisible(rows.isEmpty()); emptyLabel.setManaged(rows.isEmpty()); statusLabel.setText(rows.isEmpty() ? (allGames.isEmpty() ? "Ready to start your first game" : "No games match the current filters") : "Open a game to resume, review or label it"); }
+  private void showGames() { Set<Long> selectedTags=tagFilter.selectedTagIds(); List<SavedGameSummary> rows=allGames.stream().filter(game -> RegexSearchFilter.matches(searchPattern, game.whiteName(), game.blackName(), game.gameType().name(), game.finished() ? "finished" : "in progress", game.result().map(Enum::name).orElse(""))).filter(game -> tagsByGame.getOrDefault(game.gameId(), List.of()).stream().map(Tag::id).collect(java.util.stream.Collectors.toSet()).containsAll(selectedTags)).toList(); gamesList.getItems().setAll(rows); animateGameRows(); gameCountLabel.setText(rows.size() + (rows.size() == 1 ? " game" : " games")); emptyLabel.setText(allGames.isEmpty() ? "Play a game to find it here." : "No games match this search or tag filter."); emptyLabel.setVisible(rows.isEmpty()); emptyLabel.setManaged(rows.isEmpty()); statusLabel.setText(rows.isEmpty() ? (allGames.isEmpty() ? "Ready to start your first game" : "No games match the current filters") : "Open a game to resume, review or label it"); }
+
+  private void animateGameRows() {
+    Platform.runLater(() -> gamesList.lookupAll(".my-games-cell").stream().filter(Node::isVisible)
+        .sorted(java.util.Comparator.comparingDouble(Node::getLayoutY))
+        .forEachOrdered(new java.util.function.Consumer<>() {
+          private int index;
+          @Override public void accept(Node row) {
+            row.setOpacity(0); row.setTranslateY(8);
+            FadeTransition fade = new FadeTransition(javafx.util.Duration.millis(180), row); fade.setToValue(1);
+            javafx.animation.TranslateTransition lift = new javafx.animation.TranslateTransition(javafx.util.Duration.millis(180), row); lift.setToY(0);
+            new SequentialTransition(new PauseTransition(javafx.util.Duration.millis(index++ * 48L)), new ParallelTransition(fade, lift)).play();
+          }
+        }));
+  }
   private void assignTag(SavedGameSummary game, String name) { try { Tag tag=tagService.assignToGame(game.gameId(), name); tagsByGame=new java.util.HashMap<>(tagsByGame); tagsByGame.put(game.gameId(), tagService.tagsFor(TagService.gameTarget(game.gameId()))); availableTags=tagService.availableTags(); tagFilter.setAvailableTags(availableTags); showGames(); statusLabel.setText("Added tag '"+tag.name()+"' to "+game.whiteName()+" vs "+game.blackName()); } catch (IllegalArgumentException failure) { statusLabel.setText(failure.getMessage()); } }
   private void removeTag(SavedGameSummary game, Tag tag) { tagService.removeFromGame(game.gameId(), tag.id()); tagsByGame=new java.util.HashMap<>(tagsByGame); tagsByGame.put(game.gameId(), tagService.tagsFor(TagService.gameTarget(game.gameId()))); showGames(); statusLabel.setText("Removed tag '"+tag.name()+"'"); }
   private void open(SavedGameSummary game) {

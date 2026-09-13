@@ -475,6 +475,9 @@
     -fx-background-color: #fff8e8;
     -fx-border-color: transparent transparent #e9bd67 #f2b544;
 }
+.tactics-library-card .my-games-cell:filled:hover { -fx-background-color: #fff8e8; }
+.tactics-library-card .my-games-cell:selected,
+.tactics-library-card .my-games-cell:filled:selected { -fx-background-color: #fff3d7; }
 .tactics-filter-panel {
     -fx-min-width: 278px;
     -fx-pref-width: 302px;
@@ -570,6 +573,9 @@
 .night-mode .tactics-library-card .study-library-row { -fx-background-color: #202a36; }
 .night-mode .tactics-library-card .study-library-row:hover { -fx-background-color: #263443; -fx-border-color: transparent transparent #465465 #f2b544; }
 .night-mode .tactics-library-card .study-library-cell:selected .study-library-row { -fx-background-color: #3a3224; -fx-border-color: transparent transparent #80662f #f2b544; }
+.night-mode .tactics-library-card .my-games-cell:filled:hover { -fx-background-color: #2b3743; }
+.night-mode .tactics-library-card .my-games-cell:selected,
+.night-mode .tactics-library-card .my-games-cell:filled:selected { -fx-background-color: #3a3224; }
 .night-mode .tactics-create-suite-button { -fx-background-color: #ffffff; -fx-border-color: #c3cfdb; -fx-background-radius: 999px; -fx-border-radius: 999px; -fx-text-fill: #13213a; }
 .night-mode .tactics-create-suite-button:hover { -fx-background-color: #f2b544; -fx-border-color: #f2b544; }
 .night-mode .tactic-suite-marker-tone-0 { -fx-background-color: #234f40; -fx-border-color: #458b6b; }

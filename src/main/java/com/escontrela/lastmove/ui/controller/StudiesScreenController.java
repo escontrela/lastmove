@@ -18,7 +18,6 @@ import com.escontrela.lastmove.domain.study.StudyChapterId;
 import com.escontrela.lastmove.domain.study.StudyId;
 import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
 import com.escontrela.lastmove.ui.component.header.ApplicationHeader;
-import com.escontrela.lastmove.ui.component.header.HeaderAction;
 import com.escontrela.lastmove.ui.component.header.HeaderBreadcrumb;
 import com.escontrela.lastmove.ui.component.list.ManagedListCell;
 import com.escontrela.lastmove.ui.component.message.TextInputModal;
@@ -27,7 +26,6 @@ import com.escontrela.lastmove.ui.component.search.RegexSearchFilter;
 import com.escontrela.lastmove.ui.component.tag.TagAssignmentControl;
 import com.escontrela.lastmove.ui.component.tag.TagDisplayControl;
 import com.escontrela.lastmove.ui.component.tag.TagFilterControl;
-import com.escontrela.lastmove.ui.component.toolbar.ThemeIcon;
 import com.escontrela.lastmove.ui.event.OpenStudyWorkspaceEvent;
 import com.escontrela.lastmove.ui.event.UiEventBus;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
@@ -36,11 +34,18 @@ import com.escontrela.lastmove.ui.screen.UiScreenId;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import javafx.animation.FadeTransition;
+import javafx.animation.ParallelTransition;
+import javafx.animation.PauseTransition;
+import javafx.animation.SequentialTransition;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
@@ -65,7 +70,7 @@ public final class StudiesScreenController implements UiScreenController {
   @FXML private RegexSearchControl regexSearch;
   @FXML private TagFilterControl tagFilter;
   @FXML private Label profileStateLabel;
-  @FXML private Label studyCountLabel, studyLibraryCountLabel;
+  @FXML private Label studyLibraryCountLabel;
   @FXML private Label emptyStateLabel;
   @FXML private Label statusLabel;
   @FXML private Button createStudyButton;
@@ -166,7 +171,6 @@ public final class StudiesScreenController implements UiScreenController {
       visibleStudies = List.of();
       studyList.getItems().clear();
       studyList.setPrefHeight(116.0);
-      studyCountLabel.setText("0 studies");
       studyLibraryCountLabel.setText("0 studies");
       emptyStateLabel.setText(
           state.status() == ActivePlayerStatus.NO_PROFILE
@@ -199,9 +203,7 @@ public final class StudiesScreenController implements UiScreenController {
         .filter(study -> tagsByStudy.getOrDefault(study.studyId(), List.of()).stream().map(Tag::id).collect(java.util.stream.Collectors.toSet()).containsAll(selectedTags))
         .toList();
     studyList.getItems().setAll(visibleStudies);
-    studyList.setPrefHeight(Math.max(92.0, Math.min(468.0, visibleStudies.size() * 82.0 + 2.0)));
-    studyCountLabel.setText(
-        visibleStudies.size() + (visibleStudies.size() == 1 ? " study" : " studies"));
+    animateStudyRows();
     studyLibraryCountLabel.setText(
         visibleStudies.size() + (visibleStudies.size() == 1 ? " study" : " studies"));
     emptyStateLabel.setText(allStudies.isEmpty() ? "Create a study to start collecting persistent chapters." : "No studies match this search.");
@@ -215,15 +217,30 @@ public final class StudiesScreenController implements UiScreenController {
   }
 
   private void configureCreateStudyAction(boolean available) {
-    applicationHeader.setContextActions(
-        List.of(
-            new HeaderAction(
-                "Create study",
-                "Create study",
-                "/images/add_35dp_000000.png",
-                "/images/add_35dp_FFFFFF.png",
-                event -> onCreateStudy(),
-                !available)));
+    applicationHeader.setContextActions(List.of());
+  }
+
+  private void animateStudyRows() {
+    Platform.runLater(() -> studyList.lookupAll(".study-library-cell").stream()
+        .filter(Node::isVisible)
+        .sorted(java.util.Comparator.comparingDouble(Node::getLayoutY))
+        .forEachOrdered(new java.util.function.Consumer<>() {
+          private int index;
+
+          @Override
+          public void accept(Node row) {
+            row.setOpacity(0);
+            row.setTranslateY(8);
+            FadeTransition fade = new FadeTransition(javafx.util.Duration.millis(180), row);
+            fade.setToValue(1);
+            javafx.animation.TranslateTransition lift =
+                new javafx.animation.TranslateTransition(javafx.util.Duration.millis(180), row);
+            lift.setToY(0);
+            new SequentialTransition(
+                new PauseTransition(javafx.util.Duration.millis(index++ * 48L)),
+                new ParallelTransition(fade, lift)).play();
+          }
+        }));
   }
 
   private void openStudy(StudySummary summary) {
@@ -349,7 +366,8 @@ public final class StudiesScreenController implements UiScreenController {
   private final class StudyCell extends ManagedListCell<StudySummary> {
 
     private final HBox row = new HBox(12);
-    private final ThemeIcon studyIcon = new ThemeIcon();
+    private final StackPane studyMarker = new StackPane();
+    private final Label studyInitial = new Label();
     private final VBox details = new VBox(4);
     private final Label title = new Label();
     private final Label summary = new Label();
@@ -362,12 +380,10 @@ public final class StudiesScreenController implements UiScreenController {
       getStyleClass().add("study-library-cell");
       row.getStyleClass().add("study-library-row");
       row.getStyleClass().add("tactics-library-row");
-      row.getStyleClass().add("study-library-row-with-icon");
       row.setAlignment(Pos.CENTER_LEFT);
-      studyIcon.setFitWidth(28.0);
-      studyIcon.setFitHeight(28.0);
-      studyIcon.setLightIconResource("/images/menu_book_35dp_000000.png");
-      studyIcon.setDarkIconResource("/images/menu_book_35dp_FFFFFF.png");
+      studyMarker.getStyleClass().add("tactic-suite-marker");
+      studyInitial.getStyleClass().add("tactic-suite-marker-initial");
+      studyMarker.getChildren().add(studyInitial);
       title.getStyleClass().add("study-library-title");
       summary.getStyleClass().add("study-library-summary");
       chapters.getStyleClass().add("my-games-moves");
@@ -377,7 +393,7 @@ public final class StudiesScreenController implements UiScreenController {
       details.getChildren().addAll(title, summary, tags);
       HBox.setHgrow(details, Priority.ALWAYS);
       details.setMaxWidth(Double.MAX_VALUE);
-      row.getChildren().addAll(studyIcon, details, chapters, updated, action);
+      row.getChildren().addAll(studyMarker, details, chapters, updated, action);
       row.setOnMouseClicked(
           event -> {
             if (event.getButton() == MouseButton.PRIMARY
@@ -403,6 +419,9 @@ public final class StudiesScreenController implements UiScreenController {
         return;
       }
       title.setText(item.title());
+      studyInitial.setText(studyInitials(item.title()));
+      studyMarker.getStyleClass().removeIf(styleClass -> styleClass.startsWith("tactic-suite-marker-tone-"));
+      studyMarker.getStyleClass().add("tactic-suite-marker-tone-" + Math.floorMod(item.title().hashCode(), 5));
       String description =
           item.description().filter(value -> !value.isBlank()).orElse("No description");
       summary.setText(
@@ -415,6 +434,18 @@ public final class StudiesScreenController implements UiScreenController {
       chapters.setText(Integer.toString(item.chapterCount()));
       updated.setText(UPDATED_AT.format(item.updatedAt()));
       setGraphic(row);
+    }
+
+    private String studyInitials(String studyTitle) {
+      String[] words = studyTitle.trim().split("\\s+");
+      StringBuilder initials = new StringBuilder(2);
+      for (String word : words) {
+        if (!word.isBlank()) {
+          initials.append(word.substring(0, 1));
+          if (initials.length() == 2) break;
+        }
+      }
+      return initials.isEmpty() ? "?" : initials.toString().toUpperCase(Locale.ROOT);
     }
   }
 }
