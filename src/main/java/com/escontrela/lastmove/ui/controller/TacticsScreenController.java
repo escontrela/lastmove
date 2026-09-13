@@ -14,7 +14,6 @@ import com.escontrela.lastmove.application.tactics.TacticSuiteSummary;
 import com.escontrela.lastmove.domain.player.PlayerId;
 import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
 import com.escontrela.lastmove.ui.component.header.ApplicationHeader;
-import com.escontrela.lastmove.ui.component.header.HeaderAction;
 import com.escontrela.lastmove.ui.component.header.HeaderBreadcrumb;
 import com.escontrela.lastmove.ui.component.list.ManagedListCell;
 import com.escontrela.lastmove.ui.component.message.TextInputModal;
@@ -32,11 +31,18 @@ import com.escontrela.lastmove.ui.screen.UiScreenId;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import javafx.animation.FadeTransition;
+import javafx.animation.ParallelTransition;
+import javafx.animation.PauseTransition;
+import javafx.animation.SequentialTransition;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
+import javafx.application.Platform;
+import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContentDisplay;
@@ -46,6 +52,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.util.Duration;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -62,7 +69,8 @@ public final class TacticsScreenController implements UiScreenController {
   @FXML private ListView<TacticSuiteSummary> suiteList;
   @FXML private RegexSearchControl regexSearch;
   @FXML private TagFilterControl tagFilter;
-  @FXML private Label suiteCountLabel, suiteLibraryCountLabel;
+  @FXML private Label suiteLibraryCountLabel;
+  @FXML private Button createSuiteButton;
   @FXML private Label emptyStateLabel;
   @FXML private Label statusLabel;
   @FXML private TextInputModal textInputModal;
@@ -243,7 +251,6 @@ public final class TacticsScreenController implements UiScreenController {
       allSuites = List.of();
       visibleSuites = List.of();
       suiteList.getItems().clear();
-      suiteCountLabel.setText("0 suites");
       suiteLibraryCountLabel.setText("0 suites");
       emptyStateLabel.setText("Choose an active player profile to create tactical suites.");
       emptyStateLabel.setVisible(true);
@@ -266,8 +273,7 @@ public final class TacticsScreenController implements UiScreenController {
         .filter(suite -> tagsBySuite.getOrDefault(suite.suiteId(), List.of()).stream().map(Tag::id).collect(java.util.stream.Collectors.toSet()).containsAll(selectedTags))
         .toList();
     suiteList.getItems().setAll(visibleSuites);
-    suiteCountLabel.setText(
-        visibleSuites.size() + (visibleSuites.size() == 1 ? " suite" : " suites"));
+    animateSuiteRows();
     suiteLibraryCountLabel.setText(
         visibleSuites.size() + (visibleSuites.size() == 1 ? " suite" : " suites"));
     emptyStateLabel.setText(allSuites.isEmpty() ? "Create a suite, then add a position and author its solution line." : "No tactic suites match this search.");
@@ -279,16 +285,32 @@ public final class TacticsScreenController implements UiScreenController {
             : "Open a suite to train");
   }
 
+  private void animateSuiteRows() {
+    Platform.runLater(() -> suiteList.lookupAll(".study-library-cell").stream()
+        .filter(Node::isVisible)
+        .sorted(java.util.Comparator.comparingDouble(Node::getLayoutY))
+        .forEachOrdered(new java.util.function.Consumer<>() {
+          private int index;
+
+          @Override
+          public void accept(Node row) {
+            row.setOpacity(0);
+            row.setTranslateY(8);
+            FadeTransition fade = new FadeTransition(Duration.millis(180), row);
+            fade.setToValue(1);
+            javafx.animation.TranslateTransition lift =
+                new javafx.animation.TranslateTransition(Duration.millis(180), row);
+            lift.setToY(0);
+            new SequentialTransition(
+                new PauseTransition(Duration.millis(index++ * 48L)),
+                new ParallelTransition(fade, lift)).play();
+          }
+        }));
+  }
+
   private void configureCreateSuiteAction(boolean available) {
-    applicationHeader.setContextActions(
-        List.of(
-            new HeaderAction(
-                "Create tactic suite",
-                "Create tactic suite",
-                "/images/add_35dp_000000.png",
-                "/images/add_35dp_FFFFFF.png",
-                event -> onCreateSuite(),
-                !available)));
+    applicationHeader.setContextActions(List.of());
+    createSuiteButton.setDisable(!available);
   }
 
   private void openSuite(TacticSuiteSummary suite) {
@@ -314,6 +336,8 @@ public final class TacticsScreenController implements UiScreenController {
 
   private final class SuiteCell extends ManagedListCell<TacticSuiteSummary> {
     private final HBox row = new HBox(12);
+    private final StackPane suiteMarker = new StackPane();
+    private final Label suiteInitial = new Label();
     private final VBox details = new VBox(4);
     private final Label title = new Label();
     private final Label summary = new Label();
@@ -327,6 +351,9 @@ public final class TacticsScreenController implements UiScreenController {
       row.getStyleClass().add("study-library-row");
       row.getStyleClass().add("tactics-library-row");
       row.setAlignment(Pos.CENTER_LEFT);
+      suiteMarker.getStyleClass().add("tactic-suite-marker");
+      suiteInitial.getStyleClass().add("tactic-suite-marker-initial");
+      suiteMarker.getChildren().add(suiteInitial);
       title.getStyleClass().add("study-library-title");
       summary.getStyleClass().add("study-library-summary");
       exercises.getStyleClass().add("my-games-moves");
@@ -336,7 +363,7 @@ public final class TacticsScreenController implements UiScreenController {
       action.setOnAction(event -> { if (getItem() != null) openSuite(getItem()); });
       details.getChildren().addAll(title, summary, tags);
       HBox.setHgrow(details, Priority.ALWAYS);
-      row.getChildren().addAll(details, exercises, updated, action);
+      row.getChildren().addAll(suiteMarker, details, exercises, updated, action);
 
       row.setOnMouseClicked(
           event -> {
@@ -364,6 +391,9 @@ public final class TacticsScreenController implements UiScreenController {
         return;
       }
       title.setText(item.title());
+      suiteInitial.setText(suiteInitials(item.title()));
+      suiteMarker.getStyleClass().removeIf(styleClass -> styleClass.startsWith("tactic-suite-marker-tone-"));
+      suiteMarker.getStyleClass().add("tactic-suite-marker-tone-" + Math.floorMod(item.title().hashCode(), 5));
 
       String description =
           item.description().filter(value -> !value.isBlank()).orElse("No description");
@@ -378,6 +408,18 @@ public final class TacticsScreenController implements UiScreenController {
       updated.setText(UPDATED_AT.format(item.updatedAt()));
 
       setGraphic(row);
+    }
+
+    private String suiteInitials(String suiteTitle) {
+      String[] words = suiteTitle.trim().split("\\s+");
+      StringBuilder initials = new StringBuilder(2);
+      for (String word : words) {
+        if (!word.isBlank()) {
+          initials.append(word.substring(0, 1));
+          if (initials.length() == 2) break;
+        }
+      }
+      return initials.isEmpty() ? "?" : initials.toString().toUpperCase(Locale.ROOT);
     }
   }
 }

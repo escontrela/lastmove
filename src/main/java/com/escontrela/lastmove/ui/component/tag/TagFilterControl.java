@@ -62,6 +62,7 @@ public final class TagFilterControl extends VBox {
   private Button choice(Tag tag) {
     Button button = new Button(tag.name());
     button.getStyleClass().add("tag-filter-choice");
+    button.getStyleClass().add("tag-tone-" + Math.floorMod(tag.name().toLowerCase(java.util.Locale.ROOT).hashCode(), 6));
     if (selectedIds.contains(tag.id())) button.getStyleClass().add("tag-filter-choice-selected");
     button.setOnAction(event -> {
       if (!selectedIds.add(tag.id())) selectedIds.remove(tag.id());

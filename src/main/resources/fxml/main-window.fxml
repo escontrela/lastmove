@@ -29,7 +29,7 @@
                 <content>
                     <VBox alignment="TOP_LEFT" spacing="24.0" styleClass="tool-catalog-shell">
                         <padding><Insets bottom="40.0" left="48.0" right="48.0" top="38.0" /></padding>
-                        <HBox alignment="CENTER_LEFT" fillHeight="false" spacing="18.0">
+                        <HBox alignment="CENTER_LEFT" fillHeight="false" spacing="18.0" styleClass="home-catalog-header">
                         <VBox spacing="6.0" HBox.hgrow="ALWAYS">
                             <Label fx:id="welcomeLabel" styleClass="catalog-title" text="Welcome back" />
                             <Label styleClass="catalog-support" text="What would you like to work on today?" wrapText="true" />
