@@ -66,6 +66,7 @@ import javafx.animation.Timeline;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.TextInputControl;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.input.MouseButton;
@@ -173,6 +174,23 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
   @FXML
   public void initialize() {
     root.getProperties().put("controller", this);
+    root.addEventFilter(
+        javafx.scene.input.KeyEvent.KEY_PRESSED,
+        event -> {
+          if (event.getCode() != javafx.scene.input.KeyCode.SPACE
+              || event.isConsumed()
+              || textInputModal.isVisible()
+              || promotionPicker.isVisible()
+              || contextualMenuPanel.isVisible()
+              || root.getScene() == null
+              || root.getScene().getFocusOwner() instanceof TextInputControl) {
+            return;
+          }
+          if (resultActions.isVisible() && !nextExerciseButton.isDisabled()) {
+            onNextExercise();
+            event.consume();
+          }
+        });
     chessSoundService.preload();
     chessBoard.setSoundService(chessSoundService);
     chessBoard.visualEffectsEnabledProperty().bind(

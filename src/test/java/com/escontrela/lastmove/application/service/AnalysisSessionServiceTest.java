@@ -207,6 +207,9 @@ class AnalysisSessionServiceTest {
     assertEquals(
         "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
         service.currentFen(session.sessionId()));
+    assertEquals(
+        service.currentFen(session.sessionId()),
+        service.currentFenNotation(session.sessionId()).getValue());
 
     service.previous(session.sessionId());
     assertEquals(PieceColor.WHITE, service.currentPosition(session.sessionId()).activeColor());
