@@ -24,6 +24,7 @@ import com.escontrela.lastmove.ui.component.search.RegexSearchFilter;
 import com.escontrela.lastmove.ui.component.tag.TagAssignmentControl;
 import com.escontrela.lastmove.ui.component.tag.TagDisplayControl;
 import com.escontrela.lastmove.ui.component.tag.TagFilterControl;
+import com.escontrela.lastmove.ui.component.tag.TagAdministrationControl;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
 import com.escontrela.lastmove.ui.screen.UiScreenController;
 import com.escontrela.lastmove.ui.screen.UiScreenId;
@@ -75,7 +76,7 @@ public final class MyGamesScreenController implements UiScreenController {
   public MyGamesScreenController(SavedGameRepository games, CurrentUserService currentUser, AnalysisSessionService analyses, UiEventBus events, @Lazy UiFlowManager flow, LichessArenaService arena, @Lazy ComputerVsComputerScreenController computerViewer, PlayerService players, KnightshadeArenaSettingsService arenaSettings, TagService tagService) {
     this.games=games; this.currentUser=currentUser; this.analyses=analyses; this.events=events; this.flow=flow; this.arena=arena; this.computerViewer=computerViewer; this.players=players; this.arenaSettings=arenaSettings; this.tagService=tagService;
   }
-  @FXML public void initialize() { root.getProperties().put("controller",this); gamesList.setCellFactory(v -> new Cell()); regexSearch.setOnSearch(event -> { searchPattern=event.pattern(); showGames(); }); tagFilter.setOnSelectionChanged(ignored -> showGames()); playerSelector.setOnPlayerSelected(event -> { selectedPlayer=Optional.of(event.player()); updatePlayerButton(); refresh(); }); playerSelector.setOnCancel(event -> statusLabel.setText("Games unchanged")); }
+  @FXML public void initialize() { root.getProperties().put("controller",this); gamesList.setCellFactory(v -> new Cell()); regexSearch.setOnSearch(event -> { searchPattern=event.pattern(); showGames(); }); tagFilter.setOnSelectionChanged(ignored -> showGames()); tagFilter.setOnManage(() -> TagAdministrationControl.showIn(root.getScene(), tagService, this::refresh)); playerSelector.setOnPlayerSelected(event -> { selectedPlayer=Optional.of(event.player()); updatePlayerButton(); refresh(); }); playerSelector.setOnCancel(event -> statusLabel.setText("Games unchanged")); }
   @Override public void onShow() { synchronizeConfiguredBot(); if (selectedPlayer.isEmpty()) selectedPlayer=currentUser.selectedPlayerId().flatMap(players::playerSummary); updatePlayerButton(); refresh(); }
   private void updatePlayerButton() { playerLabel.setText(selectedPlayer.map(PlayerSummary::fullName).orElse("Choose player")); }
   @FXML public void backToHome() { flow.show(UiScreenId.MAIN); }
@@ -170,6 +171,8 @@ public final class MyGamesScreenController implements UiScreenController {
       getStyleClass().add("my-games-cell");
       setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
       row.getStyleClass().add("my-games-row"); row.setAlignment(Pos.CENTER_LEFT);
+      row.setMaxWidth(Double.MAX_VALUE);
+      row.prefWidthProperty().bind(widthProperty());
       marker.getStyleClass().add("my-games-marker");
       title.getStyleClass().add("my-games-row-title");
       context.getStyleClass().add("my-games-row-context");
@@ -180,6 +183,9 @@ public final class MyGamesScreenController implements UiScreenController {
       action.getStyleClass().add("my-games-open-button");
       action.setOnAction(event -> { if (getItem() != null) open(getItem()); });
       details.getStyleClass().add("my-games-details");
+      details.setMinWidth(0);
+      title.setMinWidth(0);
+      context.setMinWidth(0);
       details.getChildren().addAll(title, context, tags);
       HBox.setHgrow(details, Priority.ALWAYS);
       row.getChildren().addAll(marker, details, result, moves, type, updated, action);

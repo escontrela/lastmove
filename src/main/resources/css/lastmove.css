@@ -311,6 +311,26 @@
     -fx-text-fill: #1c69d4;
     -fx-background-color: transparent;
 }
+.tag-filter-manage { -fx-background-color: transparent; -fx-padding: 2px 4px; -fx-text-fill: #f5c45b; -fx-font-weight: 800; -fx-cursor: hand; }
+.tag-filter-manage:hover { -fx-underline: true; }
+.tag-admin-dialog { -fx-background-color: rgba(20, 27, 36, 0.18); -fx-padding: 24px; }
+.tag-admin-dialog .dialog-pane { -fx-background-color: transparent; -fx-padding: 0; }
+.tag-admin-dialog .header-panel { -fx-background-color: transparent; -fx-padding: 0; }
+.tag-admin-title { -fx-font-size: 22px; -fx-font-weight: 800; -fx-text-fill: #172b44; }
+.tag-admin-support, .tag-admin-empty { -fx-text-fill: #637488; }
+.tag-admin-scroll { -fx-background-color: transparent; -fx-border-color: transparent; }
+.tag-admin-scroll > .viewport { -fx-background-color: transparent; }
+.tag-admin-list { -fx-background-color: #ffffff; -fx-background-radius: 10px; -fx-border-color: #e2e8ef; -fx-border-radius: 10px; }
+.tag-admin-row { -fx-padding: 9px 12px; -fx-background-color: transparent; -fx-border-color: transparent transparent #e6ebf1 transparent; -fx-border-width: 0 0 1px 0; }
+.tag-admin-row:last-child { -fx-border-color: transparent; }
+.tag-admin-row-deleted { -fx-opacity: 0.55; -fx-background-color: #fff7f8; }
+.tag-admin-name { -fx-min-width: 250px; -fx-pref-height: 40px; }
+.tag-administration-control .tag-admin-name:focused { -fx-border-color: #f2b544; }
+.tag-admin-count { -fx-min-width: 42px; -fx-text-fill: #637488; -fx-font-weight: 700; }
+.tag-admin-delete { -fx-padding: 0; -fx-background-radius: 14px; -fx-border-radius: 14px; -fx-cursor: hand; }
+.tag-admin-delete:hover { -fx-background-color: #f2b544; -fx-border-color: #f2b544; -fx-effect: null; }
+.tag-admin-delete:pressed, .tag-admin-row-deleted .tag-admin-delete { -fx-background-color: #df9b20; -fx-border-color: #df9b20; }
+.settings-filter-inactive { -fx-opacity: 0.5; -fx-strikethrough: true; }
 .tag-filter-choice, .tag-chip {
     -fx-padding: 3 8;
     -fx-font-size: 11px;
@@ -385,7 +405,7 @@
     -fx-background-radius: 6px;
     -fx-border-radius: 6px;
 }
-.my-games-details { -fx-min-width: 230px; }
+.my-games-details { -fx-min-width: 0; }
 .my-games-row-title { -fx-font-size: 14px; -fx-font-weight: 800; -fx-text-fill: #172b44; }
 .my-games-row-context { -fx-font-size: 11px; -fx-text-fill: #6d7f92; }
 .my-games-score { -fx-alignment: center-left; -fx-font-size: 12px; -fx-font-weight: 800; -fx-text-fill: #40566d; }

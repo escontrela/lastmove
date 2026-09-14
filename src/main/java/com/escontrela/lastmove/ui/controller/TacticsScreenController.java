@@ -22,6 +22,7 @@ import com.escontrela.lastmove.ui.component.search.RegexSearchFilter;
 import com.escontrela.lastmove.ui.component.tag.TagAssignmentControl;
 import com.escontrela.lastmove.ui.component.tag.TagDisplayControl;
 import com.escontrela.lastmove.ui.component.tag.TagFilterControl;
+import com.escontrela.lastmove.ui.component.tag.TagAdministrationControl;
 import com.escontrela.lastmove.ui.event.OpenTacticsWorkspaceEvent;
 import com.escontrela.lastmove.ui.event.SelectTacticDestinationEvent;
 import com.escontrela.lastmove.ui.event.UiEventBus;
@@ -109,6 +110,7 @@ public final class TacticsScreenController implements UiScreenController {
     tagFilter.setOnSelectionChanged(ignored -> {
       if (regexSearch.isValid()) regexSearch.submit();
     });
+    tagFilter.setOnManage(() -> TagAdministrationControl.showIn(root.getScene(), tagService, this::refresh));
   }
 
   @Override

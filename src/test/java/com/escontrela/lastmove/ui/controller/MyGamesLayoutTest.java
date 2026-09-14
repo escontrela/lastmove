@@ -13,7 +13,7 @@ class MyGamesLayoutTest {
       fxml = new String(input.readAllBytes(), StandardCharsets.UTF_8);
     }
     assertTrue(fxml.contains("text=\"My Games\""));
-    assertTrue(fxml.contains("styleClass=\"arena-bots-card, my-games-list-card\""));
+    assertTrue(fxml.contains("styleClass=\"arena-bots-card, my-games-list-card, tactics-library-card\""));
     assertTrue(fxml.contains("text=\"Result\""));
     assertTrue(fxml.contains("text=\"Updated\""));
     assertTrue(fxml.contains("fx:id=\"gamesList\""));

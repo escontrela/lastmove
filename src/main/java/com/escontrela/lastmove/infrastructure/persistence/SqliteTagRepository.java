@@ -3,6 +3,7 @@ package com.escontrela.lastmove.infrastructure.persistence;
 import com.escontrela.lastmove.application.tag.Tag;
 import com.escontrela.lastmove.application.tag.TagRepository;
 import com.escontrela.lastmove.application.tag.TagTarget;
+import com.escontrela.lastmove.application.tag.ManagedTag;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -28,6 +29,13 @@ public class SqliteTagRepository implements TagRepository {
   public List<Tag> listAll() {
     if (!availability.isAvailable()) return List.of();
     return jdbc.query("SELECT id, display_name FROM tags ORDER BY normalized_name", (rs, row) -> new Tag(rs.getLong("id"), rs.getString("display_name")));
+  }
+
+  @Override
+  public List<ManagedTag> listManaged() {
+    if (!availability.isAvailable()) return List.of();
+    return jdbc.query("SELECT t.id,t.display_name,COUNT(a.tag_id) asset_count FROM tags t LEFT JOIN tag_assignments a ON a.tag_id=t.id GROUP BY t.id,t.display_name,t.normalized_name ORDER BY t.normalized_name",
+        (rs, row) -> new ManagedTag(rs.getLong("id"), rs.getString("display_name"), rs.getInt("asset_count")));
   }
 
   @Override
@@ -68,6 +76,24 @@ public class SqliteTagRepository implements TagRepository {
     if (!availability.isAvailable()) return;
     TagTarget requiredTarget = required(target);
     jdbc.update("DELETE FROM tag_assignments WHERE tag_id=? AND target_type=? AND target_id=?", tagId, requiredTarget.type().name(), requiredTarget.id());
+  }
+
+  @Override
+  @Transactional
+  public void update(long tagId, String name) {
+    if (!availability.isAvailable()) throw new PersistenceUnavailableException("Tags are unavailable");
+    String display = Objects.requireNonNull(name, "tag name must not be null").trim();
+    int changed = jdbc.update("UPDATE tags SET normalized_name=?,display_name=? WHERE id=?",
+        Tag.normalizedName(display), display, tagId);
+    if (changed == 0) throw new IllegalArgumentException("Tag does not exist");
+  }
+
+  @Override
+  @Transactional
+  public void delete(long tagId) {
+    if (!availability.isAvailable()) throw new PersistenceUnavailableException("Tags are unavailable");
+    jdbc.update("DELETE FROM tag_assignments WHERE tag_id=?", tagId);
+    jdbc.update("DELETE FROM tags WHERE id=?", tagId);
   }
 
   private List<Tag> queryByTarget(TagTarget target) {

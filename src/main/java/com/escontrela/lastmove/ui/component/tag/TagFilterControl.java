@@ -20,21 +20,27 @@ public final class TagFilterControl extends VBox {
   private final Set<Long> selectedIds = new LinkedHashSet<>();
   private Consumer<Set<Long>> onSelectionChanged = ignored -> {};
   private List<Tag> availableTags = List.of();
+  private final Button clear = new Button("Clear");
+  private final Button manage = new Button("Admin");
+  private Runnable onManage = () -> {};
 
   public TagFilterControl() {
     getStyleClass().add("tag-filter-control");
     setSpacing(6);
     Label title = new Label("Filter by tags");
     title.getStyleClass().add("tag-filter-title");
-    Button clear = new Button("Clear");
     clear.getStyleClass().add("tag-filter-clear");
     clear.setOnAction(event -> { selectedIds.clear(); render(); notifySelection(); });
     Region space = new Region();
     HBox.setHgrow(space, javafx.scene.layout.Priority.ALWAYS);
-    HBox header = new HBox(8, title, space, clear);
+    manage.getStyleClass().add("tag-filter-manage");
+    manage.setOnAction(event -> onManage.run());
+    HBox header = new HBox(8, title, space, manage, clear);
     header.setAlignment(Pos.CENTER_LEFT);
     choices.getStyleClass().add("tag-filter-choices");
     getChildren().addAll(header, choices);
+    manage.setVisible(false);
+    manage.setManaged(false);
     setVisible(false);
     setManaged(false);
   }
@@ -42,8 +48,11 @@ public final class TagFilterControl extends VBox {
   public void setAvailableTags(List<Tag> tags) {
     availableTags = List.copyOf(Objects.requireNonNull(tags, "tags must not be null"));
     selectedIds.retainAll(availableTags.stream().map(Tag::id).collect(java.util.stream.Collectors.toSet()));
-    setVisible(!availableTags.isEmpty());
-    setManaged(!availableTags.isEmpty());
+    clear.setVisible(!availableTags.isEmpty());
+    clear.setManaged(!availableTags.isEmpty());
+    boolean shown = !availableTags.isEmpty() || manage.isVisible();
+    setVisible(shown);
+    setManaged(shown);
     render();
   }
 
@@ -53,6 +62,14 @@ public final class TagFilterControl extends VBox {
 
   public void setOnSelectionChanged(Consumer<Set<Long>> handler) {
     onSelectionChanged = Objects.requireNonNull(handler, "handler must not be null");
+  }
+
+  public void setOnManage(Runnable handler) {
+    onManage = Objects.requireNonNull(handler, "handler must not be null");
+    manage.setVisible(true);
+    manage.setManaged(true);
+    setVisible(true);
+    setManaged(true);
   }
 
   private void render() {

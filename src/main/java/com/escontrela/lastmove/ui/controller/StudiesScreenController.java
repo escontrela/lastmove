@@ -26,6 +26,7 @@ import com.escontrela.lastmove.ui.component.search.RegexSearchFilter;
 import com.escontrela.lastmove.ui.component.tag.TagAssignmentControl;
 import com.escontrela.lastmove.ui.component.tag.TagDisplayControl;
 import com.escontrela.lastmove.ui.component.tag.TagFilterControl;
+import com.escontrela.lastmove.ui.component.tag.TagAdministrationControl;
 import com.escontrela.lastmove.ui.event.OpenStudyWorkspaceEvent;
 import com.escontrela.lastmove.ui.event.UiEventBus;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
@@ -107,6 +108,7 @@ public final class StudiesScreenController implements UiScreenController {
     studyList.setCellFactory(ignored -> new StudyCell());
     regexSearch.setOnSearch(event -> showStudies(event.pattern()));
     tagFilter.setOnSelectionChanged(ignored -> { if (regexSearch.isValid()) regexSearch.submit(); });
+    tagFilter.setOnManage(() -> TagAdministrationControl.showIn(root.getScene(), tagService, this::refreshLibrary));
   }
 
   @Override
