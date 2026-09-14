@@ -15,6 +15,7 @@ import com.escontrela.lastmove.domain.game.GameResult;
 import com.escontrela.lastmove.domain.game.MoveCommand;
 import com.escontrela.lastmove.domain.game.Ply;
 import com.escontrela.lastmove.domain.game.PositionPiece;
+import com.escontrela.lastmove.domain.notation.Fen;
 import com.escontrela.lastmove.ui.component.board.ChessBoardControl;
 import com.escontrela.lastmove.ui.component.game.CapturedPiecesControl;
 import com.escontrela.lastmove.ui.component.game.HumanVsComputerSetupOverlay;
@@ -29,6 +30,7 @@ import com.escontrela.lastmove.ui.component.notation.MoveNotationNode;
 import com.escontrela.lastmove.ui.component.promotion.PromotionPickerControl;
 import com.escontrela.lastmove.ui.component.profile.PlayerAvatarControl;
 import com.escontrela.lastmove.ui.event.OpenAnalysisSessionEvent;
+import com.escontrela.lastmove.ui.event.OpenHumanVsComputerFromFenEvent;
 import com.escontrela.lastmove.ui.event.UiEventBus;
 import com.escontrela.lastmove.ui.model.BoardMoveInput;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
@@ -121,6 +123,7 @@ public final class HumanVsComputerScreenController implements UiScreenController
   private boolean followingLivePosition = true;
   private int reviewedPlyCount;
   private boolean threatHintsEnabled;
+  private Fen pendingChallengePosition;
 
   public HumanVsComputerScreenController(
       @Lazy UiFlowManager uiFlowManager,
@@ -176,13 +179,17 @@ public final class HumanVsComputerScreenController implements UiScreenController
   @Override
   public void onShow() {
     screenVisible = true;
-    if (restoreGameInMemory()) {
+    if (pendingChallengePosition == null && restoreGameInMemory()) {
       return;
     }
-    setupOverlay.show(
-        computerGameService.availableEngines(),
-        currentUserService.currentUser().name(),
-        computerEngineSettingsService::thinkingTime);
+    showNewGameSetup(Optional.ofNullable(pendingChallengePosition));
+    pendingChallengePosition = null;
+  }
+
+  /** Receives a reusable request to configure a new computer challenge from a supplied FEN. */
+  @EventListener
+  public void openChallengeFromFen(OpenHumanVsComputerFromFenEvent event) {
+    pendingChallengePosition = event.startingPosition();
   }
 
   /** Restores a persisted game requested by a history/notification surface through the UI bus. */
@@ -210,6 +217,10 @@ public final class HumanVsComputerScreenController implements UiScreenController
   /** Stops the current game, discards its runtime and returns to the new-game setup overlay. */
   @FXML
   public void resetModel() {
+    showNewGameSetup(Optional.empty());
+  }
+
+  private void showNewGameSetup(Optional<Fen> startingPosition) {
     clockRefresh.stop();
     if (activeGameId != null) {
       computerGameService.closeGame(activeGameId);
@@ -222,7 +233,8 @@ public final class HumanVsComputerScreenController implements UiScreenController
     setupOverlay.show(
         computerGameService.availableEngines(),
         currentUserService.currentUser().name(),
-        computerEngineSettingsService::thinkingTime);
+        computerEngineSettingsService::thinkingTime,
+        startingPosition);
   }
 
   @FXML

@@ -67,7 +67,7 @@ public final class DateTimeLinkControl extends HBox {
             detailDateLabel.setText("");
         } else {
             detailLabel.setText("Today");
-            detailDateLabel.setText(now.format(DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy", Locale.ENGLISH)));
+            detailDateLabel.setText(now.format(DateTimeFormatter.ofPattern("EEEE, MMM d, yyyy", Locale.ENGLISH)));
         }
     }
 }

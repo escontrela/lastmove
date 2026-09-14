@@ -30,7 +30,7 @@ public class JavaFxApplication extends Application {
         primaryStage.setTitle("LastMove");
         primaryStage.getIcons().add(
                 new Image(Objects.requireNonNull(
-                        JavaFxApplication.class.getResource("/images/lastmove-knight-mark.png"))
+                        JavaFxApplication.class.getResource("/images/logo/modern-logo-48.png"))
                         .toExternalForm()));
         UiFlowManager uiFlowManager = springContext.getBean(UiFlowManager.class);
         springContext.getBean(SplashScreenService.class)

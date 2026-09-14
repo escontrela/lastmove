@@ -6,11 +6,13 @@ import com.escontrela.lastmove.application.computer.ComputerEngineIds;
 import com.escontrela.lastmove.application.service.ComputerEngineHealthService;
 import com.escontrela.lastmove.application.service.ComputerEngineSettingsService;
 import com.escontrela.lastmove.application.service.KnightshadeArenaSettingsService;
+import com.escontrela.lastmove.application.service.TagService;
 import com.escontrela.lastmove.application.service.PositionAnalysisService;
 import com.escontrela.lastmove.application.arena.KnightshadeArenaSettings;
 import com.escontrela.lastmove.ui.component.header.ApplicationHeader;
 import com.escontrela.lastmove.ui.component.header.HeaderAction;
 import com.escontrela.lastmove.ui.component.settings.SettingsNavigationControl;
+import com.escontrela.lastmove.ui.component.tag.TagAdministrationControl;
 import com.escontrela.lastmove.ui.component.board.BoardAppearancePreset;
 import com.escontrela.lastmove.ui.component.board.ChessPieceSet;
 import com.escontrela.lastmove.ui.component.board.ChessPieceImageResolver;
@@ -64,13 +66,15 @@ public class SetupScreenController implements UiScreenController {
     private final ComputerEngineHealthService computerEngineHealthService;
     private final PositionAnalysisService positionAnalysisService;
     private final KnightshadeArenaSettingsService knightshadeArenaSettingsService;
+    private final TagService tagService;
 
     @FXML
     private BorderPane root;
     @FXML private ScrollPane setupScrollPane;
     @FXML private SettingsNavigationControl settingsNavigation;
     @FXML private VBox setupContent, appearanceGroup, sunfishGroup, maiaGroup, knightshadeGroup,
-            arenaGroup, analysisGroup, navigationGroup;
+            arenaGroup, analysisGroup, filtersGroup, navigationGroup;
+    @FXML private FlowPane settingsFilters;
     @FXML private FlowPane boardAppearanceChoices;
     @FXML private FlowPane chessPieceSetChoices;
     @FXML
@@ -188,7 +192,8 @@ public class SetupScreenController implements UiScreenController {
             ComputerEngineSettingsService computerEngineSettingsService,
             ComputerEngineHealthService computerEngineHealthService,
             PositionAnalysisService positionAnalysisService,
-            KnightshadeArenaSettingsService knightshadeArenaSettingsService) {
+            KnightshadeArenaSettingsService knightshadeArenaSettingsService,
+            TagService tagService) {
         this.uiFlowManager = uiFlowManager;
         this.themeService = themeService;
         this.startupPreferencesService = startupPreferencesService;
@@ -197,6 +202,7 @@ public class SetupScreenController implements UiScreenController {
         this.computerEngineHealthService = computerEngineHealthService;
         this.positionAnalysisService = positionAnalysisService;
         this.knightshadeArenaSettingsService = knightshadeArenaSettingsService;
+        this.tagService = tagService;
     }
 
     @FXML
@@ -208,6 +214,7 @@ public class SetupScreenController implements UiScreenController {
         settingsNavigation.addItem("knightshade", "Knightshade");
         settingsNavigation.addItem("arena", "Knightshade Arena");
         settingsNavigation.addItem("analysis", "Analysis");
+        settingsNavigation.addItem("filters", "Filters");
         settingsNavigation.addItem("navigation", "Navigation");
         settingsNavigation.setOnItemSelected(key -> {
             switch (key) {
@@ -217,6 +224,7 @@ public class SetupScreenController implements UiScreenController {
                 case "knightshade" -> scrollToKnightshade();
                 case "arena" -> scrollToArena();
                 case "analysis" -> scrollToAnalysis();
+                case "filters" -> scrollToFilters();
                 case "navigation" -> scrollToNavigation();
                 default -> { }
             }
@@ -359,7 +367,22 @@ public class SetupScreenController implements UiScreenController {
     @FXML public void scrollToKnightshade() { scrollTo(knightshadeGroup); }
     @FXML public void scrollToArena() { scrollTo(arenaGroup); }
     @FXML public void scrollToAnalysis() { scrollTo(analysisGroup); }
+    @FXML public void scrollToFilters() { scrollTo(filtersGroup); }
     @FXML public void scrollToNavigation() { scrollTo(navigationGroup); }
+
+    @FXML
+    public void manageFilters() {
+        TagAdministrationControl.showIn(root.getScene(), tagService, this::refreshFilters);
+    }
+
+    private void refreshFilters() {
+        settingsFilters.getChildren().setAll(tagService.managedTags().stream().map(tag -> {
+            Label label = new Label(tag.name() + " (" + tag.assetCount() + ")");
+            label.getStyleClass().addAll("tag-display-chip", "tag-tone-" + Math.floorMod(
+                    tag.name().toLowerCase(java.util.Locale.ROOT).hashCode(), 6));
+            return label;
+        }).toList());
+    }
 
     private void scrollTo(VBox group) {
         if (group == null || setupScrollPane == null || setupContent == null) return;
@@ -375,21 +398,22 @@ public class SetupScreenController implements UiScreenController {
         double range = setupContent.getHeight() - setupScrollPane.getViewportBounds().getHeight();
         double offset = range <= 0 ? 0 : setupScrollPane.getVvalue() * range;
         VBox selected = appearanceGroup;
-        for (VBox group : List.of(appearanceGroup, sunfishGroup, maiaGroup, knightshadeGroup, arenaGroup, analysisGroup, navigationGroup)) {
+        for (VBox group : List.of(appearanceGroup, sunfishGroup, maiaGroup, knightshadeGroup, arenaGroup, analysisGroup, filtersGroup, navigationGroup)) {
             if (group != null && group.getLayoutY() <= offset + 80) selected = group;
         }
         updateNavigationSelection(selected);
     }
 
     private void updateNavigationSelection(VBox selected) {
-        List<VBox> groups = List.of(appearanceGroup, sunfishGroup, maiaGroup, knightshadeGroup, arenaGroup, analysisGroup, navigationGroup);
+        List<VBox> groups = List.of(appearanceGroup, sunfishGroup, maiaGroup, knightshadeGroup, arenaGroup, analysisGroup, filtersGroup, navigationGroup);
         int index = groups.indexOf(selected);
         if (index >= 0) settingsNavigation.setSelectedKey(
-                List.of("appearance", "sunfish", "maia", "knightshade", "arena", "analysis", "navigation").get(index));
+                List.of("appearance", "sunfish", "maia", "knightshade", "arena", "analysis", "filters", "navigation").get(index));
     }
 
     @Override
     public void onShow() {
+        refreshFilters();
         savedNightMode = themeService.currentThemeMode().isNightMode();
         savedSplashScreen = startupPreferencesService.isSplashScreenEnabled();
         savedBoardVisualEffects = boardAppearancePreferencesService.isBoardVisualEffectsEnabled();

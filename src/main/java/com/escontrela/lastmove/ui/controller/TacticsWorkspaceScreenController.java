@@ -2,6 +2,7 @@ package com.escontrela.lastmove.ui.controller;
 
 import com.escontrela.lastmove.application.service.CurrentUserService;
 import com.escontrela.lastmove.application.service.TacticService;
+import com.escontrela.lastmove.application.service.TagService;
 import com.escontrela.lastmove.application.service.StudyService;
 import com.escontrela.lastmove.application.service.AnalysisSessionService;
 import com.escontrela.lastmove.application.service.GameLoadService;
@@ -35,6 +36,7 @@ import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
 import com.escontrela.lastmove.ui.component.message.TextInputModal;
 import com.escontrela.lastmove.ui.component.promotion.PromotionPickerControl;
 import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton;
+import com.escontrela.lastmove.ui.component.tag.TagDisplayControl;
 import com.escontrela.lastmove.ui.event.OpenTacticsWorkspaceEvent;
 import com.escontrela.lastmove.ui.event.OpenTacticPositionEditorEvent;
 import com.escontrela.lastmove.ui.event.OpenStudyChapterTacticEvent;
@@ -64,6 +66,7 @@ import javafx.animation.Timeline;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.TextInputControl;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.input.MouseButton;
@@ -91,6 +94,8 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
   @FXML private ContextualMenuPanel contextualMenuPanel;
   @FXML private ListView<TacticExerciseSummary> exerciseList;
   @FXML private Label suiteTitleLabel;
+  @FXML private Label suiteRailTitleLabel;
+  @FXML private TagDisplayControl suiteTags;
   @FXML private Label exerciseTitleLabel;
   @FXML private Label modeLabel;
   @FXML private Label statusLabel;
@@ -109,6 +114,7 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
   @FXML private Circle turnIndicator;
 
   private final TacticService tacticService;
+  private final TagService tagService;
   private final StudyService studyService;
   private final AnalysisSessionService analysisSessionService;
   private final GameLoadService gameLoadService;
@@ -140,6 +146,7 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
 
   public TacticsWorkspaceScreenController(
       TacticService tacticService,
+      TagService tagService,
       StudyService studyService,
       AnalysisSessionService analysisSessionService,
       GameLoadService gameLoadService,
@@ -151,6 +158,7 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
       UiEventBus uiEventBus,
       @Lazy UiFlowManager uiFlowManager) {
     this.tacticService = tacticService;
+    this.tagService = tagService;
     this.studyService = studyService;
     this.analysisSessionService = analysisSessionService;
     this.gameLoadService = gameLoadService;
@@ -166,6 +174,23 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
   @FXML
   public void initialize() {
     root.getProperties().put("controller", this);
+    root.addEventFilter(
+        javafx.scene.input.KeyEvent.KEY_PRESSED,
+        event -> {
+          if (event.getCode() != javafx.scene.input.KeyCode.SPACE
+              || event.isConsumed()
+              || textInputModal.isVisible()
+              || promotionPicker.isVisible()
+              || contextualMenuPanel.isVisible()
+              || root.getScene() == null
+              || root.getScene().getFocusOwner() instanceof TextInputControl) {
+            return;
+          }
+          if (resultActions.isVisible() && !nextExerciseButton.isDisabled()) {
+            onNextExercise();
+            event.consume();
+          }
+        });
     chessSoundService.preload();
     chessBoard.setSoundService(chessSoundService);
     chessBoard.visualEffectsEnabledProperty().bind(
@@ -468,6 +493,8 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
   private void refreshSuite() {
     TacticSuiteDetails details = tacticService.suiteDetails(activeOwner().orElseThrow(), activeSuiteId);
     suiteTitleLabel.setText(details.suite().title());
+    suiteRailTitleLabel.setText(details.suite().title());
+    suiteTags.setTags(tagService.tagsFor(TagService.tacticSuiteTarget(activeSuiteId)));
     List<TacticExerciseSummary> exercises = details.exercises();
     exerciseList.getItems().setAll(exercises);
     int solved = (int) exercises.stream().filter(TacticExerciseSummary::solved).count();

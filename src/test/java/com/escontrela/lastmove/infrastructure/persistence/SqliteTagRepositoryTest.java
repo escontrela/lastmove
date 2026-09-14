@@ -56,4 +56,20 @@ class SqliteTagRepositoryTest {
     assertTrue(repository.findByTarget(first).isEmpty());
     assertEquals(List.of("Blitz"), repository.findByTarget(second).stream().map(Tag::name).toList());
   }
+
+  @Test void managesLifecycleAndReportsTheNumberOfAssignedAssets() {
+    Tag tag = repository.findOrCreate("Strategy");
+    repository.assign(new TagTarget(TagTargetType.GAME, "game-1"), tag);
+    repository.assign(new TagTarget(TagTargetType.STUDY, "study-1"), tag);
+
+    assertEquals(2, repository.listManaged().getFirst().assetCount());
+
+    repository.update(tag.id(), "Positional");
+    assertEquals(List.of("Positional"), repository.listAll().stream().map(Tag::name).toList());
+    assertEquals("Positional", repository.listManaged().getFirst().name());
+
+    repository.delete(tag.id());
+    assertTrue(repository.listManaged().isEmpty());
+    assertTrue(repository.findByTarget(new TagTarget(TagTargetType.GAME, "game-1")).isEmpty());
+  }
 }

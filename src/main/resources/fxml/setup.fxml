@@ -75,7 +75,7 @@
                         <Label styleClass="settings-field-label" text="Executable path" />
                         <HBox alignment="CENTER_LEFT" spacing="12.0">
                             <TextField fx:id="sunfishExecutablePathField" maxWidth="Infinity" promptText="/absolute/path/to/sunfish-uci" styleClass="settings-text-field" HBox.hgrow="ALWAYS" />
-                            <Button fx:id="testSunfishButton" mnemonicParsing="false" onAction="#testSunfishConnection" styleClass="secondary-button" text="Test connection" />
+                            <Button fx:id="testSunfishButton" mnemonicParsing="false" onAction="#testSunfishConnection" styleClass="message-box-button, message-box-additional-button" text="Test connection" />
                         </HBox>
                         <Label fx:id="sunfishValidationLabel" maxWidth="Infinity" styleClass="settings-validation-message" wrapText="true" />
                     </VBox>
@@ -89,7 +89,7 @@
                         <Label styleClass="settings-field-label" text="Weights file or directory" />
                         <HBox alignment="CENTER_LEFT" spacing="12.0">
                             <TextField fx:id="maiaWeightsPathField" maxWidth="Infinity" promptText="/path/to/maia-1900.pb.gz or /directory/of/weights" styleClass="settings-text-field" HBox.hgrow="ALWAYS" />
-                            <Button fx:id="testMaiaButton" mnemonicParsing="false" onAction="#testMaiaConnection" styleClass="secondary-button" text="Test connection" />
+                            <Button fx:id="testMaiaButton" mnemonicParsing="false" onAction="#testMaiaConnection" styleClass="message-box-button, message-box-additional-button" text="Test connection" />
                         </HBox>
                         <Label fx:id="maiaValidationLabel" maxWidth="Infinity" styleClass="settings-validation-message" wrapText="true" />
                     </VBox>
@@ -114,7 +114,7 @@
                         <CheckBox fx:id="arenaAutoReconnectCheckBox" mnemonicParsing="false" styleClass="settings-check-box" text="Auto-reconnect to Lichess when LastMove starts" />
                         <Label styleClass="card-copy" text="Arena supports standard Lichess bot play, autonomous bot challenges and bot tournaments. Configure automatic reconnection to recover safely after restarting LastMove." wrapText="true" />
                         <HBox alignment="CENTER_LEFT" spacing="12.0">
-                            <Button fx:id="validateLichessAccountButton" mnemonicParsing="false" onAction="#validateLichessAccount" styleClass="secondary-button" text="Validate account" />
+                            <Button fx:id="validateLichessAccountButton" mnemonicParsing="false" onAction="#validateLichessAccount" styleClass="message-box-button, message-box-additional-button" text="Validate account" />
                             <Label fx:id="lichessValidationLabel" maxWidth="Infinity" styleClass="settings-validation-message" wrapText="true" HBox.hgrow="ALWAYS" />
                         </HBox>
                     </VBox>
@@ -126,6 +126,14 @@
                         <Label styleClass="settings-field-label" text="Engine" />
                         <ComboBox fx:id="analysisEngineCombo" maxWidth="Infinity" />
                         <CheckBox fx:id="analysisEngineDefaultCheckBox" mnemonicParsing="false" styleClass="settings-check-box" text="Use as default analysis engine" />
+                    </VBox>
+                    <VBox fx:id="filtersGroup" maxWidth="680.0" spacing="12.0" styleClass="setup-card">
+                        <padding><Insets bottom="32.0" left="32.0" right="32.0" top="32.0" /></padding>
+                        <Label styleClass="eyebrow-label" text="Library" />
+                        <Label styleClass="card-title" text="Filters" />
+                        <Label styleClass="card-copy" text="Filters are shared by studies, tactic suites and saved games. The number beside each filter is its assigned asset count." wrapText="true" />
+                        <FlowPane fx:id="settingsFilters" hgap="8.0" vgap="8.0" prefWrapLength="600.0" />
+                        <Button mnemonicParsing="false" onAction="#manageFilters" styleClass="message-box-button, message-box-accept-button" text="Manage filters" />
                     </VBox>
                     <VBox fx:id="navigationGroup" maxWidth="680.0" spacing="12.0" styleClass="setup-card">
                         <padding><Insets bottom="32.0" left="32.0" right="32.0" top="32.0" /></padding>
@@ -151,6 +159,10 @@
                         <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="shortcut-reference-row">
                             <Label styleClass="shortcut-reference-key" text="→" />
                             <Label styleClass="shortcut-reference-action" text="Next move" />
+                        </HBox>
+                        <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="shortcut-reference-row">
+                            <Label styleClass="shortcut-reference-key" text="Space" />
+                            <Label styleClass="shortcut-reference-action" text="Next tactic exercise or restart the suite when that action is available" wrapText="true" />
                         </HBox>
                         <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="shortcut-reference-row">
                             <Label styleClass="shortcut-reference-key" text="⌘⇧H / Ctrl+Shift+H" />

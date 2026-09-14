@@ -183,7 +183,12 @@ public final class AnalysisSessionService {
 
   /** Returns the selected session position encoded as complete FEN text for export workflows. */
   public String currentFen(AnalysisSessionId sessionId) {
-    return fenService.fromSnapshot(session(sessionId).currentPosition()).getValue();
+    return currentFenNotation(sessionId).getValue();
+  }
+
+  /** Returns the selected session position as a FEN value for another chess workflow. */
+  public Fen currentFenNotation(AnalysisSessionId sessionId) {
+    return fenService.fromSnapshot(session(sessionId).currentPosition());
   }
 
   /** Returns the rules state derived from the session's current position. */
