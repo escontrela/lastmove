@@ -29,7 +29,7 @@
                 <content>
                     <VBox alignment="TOP_LEFT" spacing="24.0" styleClass="tool-catalog-shell">
                         <padding><Insets bottom="40.0" left="48.0" right="48.0" top="38.0" /></padding>
-                        <HBox alignment="CENTER_LEFT" fillHeight="false" spacing="18.0">
+                        <HBox alignment="CENTER_LEFT" fillHeight="false" spacing="18.0" styleClass="home-catalog-header">
                         <VBox spacing="6.0" HBox.hgrow="ALWAYS">
                             <Label fx:id="welcomeLabel" styleClass="catalog-title" text="Welcome back" />
                             <Label styleClass="catalog-support" text="What would you like to work on today?" wrapText="true" />
@@ -68,6 +68,7 @@
             </ScrollPane>
             <NotificationsPanel fx:id="notificationsPanel" />
             <MessageBox fx:id="startupMessageBox" acceptText="Open PGN analysis" autoHide="true" buttonMode="ACCEPT_CANCEL" cancelText="Not now" cardWidth="460.0" contentPadding="20.0" contentSpacing="12.0" dragEnabled="true" message="Would you like to open the PGN analysis workspace and replay a recorded game?" title="Welcome to LastMove Chess" />
+            <MessageBox fx:id="aboutMessageBox" acceptText="Accept" autoHide="true" buttonMode="ACCEPT" cardWidth="460.0" contentPadding="20.0" contentSpacing="12.0" dragEnabled="true" />
         </StackPane>
     </center>
     <bottom>

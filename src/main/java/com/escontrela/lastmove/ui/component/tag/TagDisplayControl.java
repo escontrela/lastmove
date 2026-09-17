@@ -19,6 +19,7 @@ public final class TagDisplayControl extends FlowPane {
         .map(tag -> {
           Label chip = new Label(tag.name());
           chip.getStyleClass().add("tag-display-chip");
+          chip.getStyleClass().add("tag-tone-" + Math.floorMod(tag.name().toLowerCase(java.util.Locale.ROOT).hashCode(), 6));
           return chip;
         }).toList());
     boolean visible = !getChildren().isEmpty();

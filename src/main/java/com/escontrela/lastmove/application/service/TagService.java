@@ -4,6 +4,7 @@ import com.escontrela.lastmove.application.tag.Tag;
 import com.escontrela.lastmove.application.tag.TagRepository;
 import com.escontrela.lastmove.application.tag.TagTarget;
 import com.escontrela.lastmove.application.tag.TagTargetType;
+import com.escontrela.lastmove.application.tag.ManagedTag;
 import com.escontrela.lastmove.domain.game.GameId;
 import com.escontrela.lastmove.domain.tactics.TacticSuiteId;
 import com.escontrela.lastmove.domain.study.StudyId;
@@ -25,6 +26,19 @@ public final class TagService {
 
   public List<Tag> availableTags() {
     return tags.listAll();
+  }
+
+  public List<ManagedTag> managedTags() {
+    return tags.listManaged();
+  }
+
+  public void update(long tagId, String name) {
+    Tag.normalizedName(name);
+    tags.update(tagId, name.trim());
+  }
+
+  public void delete(long tagId) {
+    tags.delete(tagId);
   }
 
   public List<Tag> tagsFor(TagTarget target) {

@@ -335,10 +335,15 @@ public final class StudyService {
 
   /** Returns the selected chapter position encoded as complete FEN text. */
   public String currentFen(PlayerId ownerId, StudyId studyId, StudyChapterId chapterId) {
+    return currentFenNotation(ownerId, studyId, chapterId).getValue();
+  }
+
+  /** Returns the selected chapter position as a typed FEN value. */
+  public Fen currentFenNotation(PlayerId ownerId, StudyId studyId, StudyChapterId chapterId) {
     assertAvailable();
     PositionSnapshot position =
         ownedChapter(ownedStudy(ownerId, studyId), chapterId).document().currentPosition();
-    return fenService.fromSnapshot(position).getValue();
+    return fenService.fromSnapshot(position);
   }
 
   /** Returns the rules state derived from the chapter's current position. */

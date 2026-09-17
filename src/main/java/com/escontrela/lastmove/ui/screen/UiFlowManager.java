@@ -116,6 +116,12 @@ public class UiFlowManager {
                         "/images/chess_king_2_35dp_FFFFFF.png",
                         event -> show(UiScreenId.KNIGHTSHADE_ARENA),
                         false), new HeaderAction(
+                        "Start Human vs Computer",
+                        "Human vs Computer",
+                        "/images/swords_35dp_000000.png",
+                        "/images/swords_35dp_FFFFFF.png",
+                        event -> show(UiScreenId.HUMAN_VS_COMPUTER),
+                        false), new HeaderAction(
                         "Open settings",
                         "Settings",
                         "/images/settings_35dp_000000.png",

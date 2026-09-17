@@ -33,7 +33,16 @@ public final class ComputerVsComputerGameService {
   public CompletionStage<ComputerVsComputerGameState> createGame(ComputerVsComputerConfiguration configuration) {
     ComputerMoveEngineProvider whiteProvider = provider(configuration.whiteEngineId());
     ComputerMoveEngineProvider blackProvider = provider(configuration.blackEngineId());
-    ChessGame game = games.createInitial(new GamePlayer(whiteProvider.descriptor().displayName(), PieceColor.WHITE), new GamePlayer(blackProvider.descriptor().displayName(), PieceColor.BLACK), Optional.of(configuration.timeControl()));
+    GamePlayer whitePlayer =
+        new GamePlayer(whiteProvider.descriptor().displayName(), PieceColor.WHITE);
+    GamePlayer blackPlayer =
+        new GamePlayer(blackProvider.descriptor().displayName(), PieceColor.BLACK);
+    ChessGame game =
+        configuration
+            .startingPosition()
+            .map(fen -> games.createFrom(fen, whitePlayer, blackPlayer, Optional.of(configuration.timeControl())))
+            .orElseGet(
+                () -> games.createInitial(whitePlayer, blackPlayer, Optional.of(configuration.timeControl())));
     Runtime runtime = new Runtime(game, configuration, whiteProvider.descriptor(), blackProvider.descriptor(), whiteProvider.create(), blackProvider.create());
     runtimes.put(game.id(), runtime);
     return runtime.white.start().thenCompose(ignored -> runtime.black.start()).thenApply(ignored -> {

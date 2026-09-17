@@ -240,6 +240,18 @@ public final class HumanVsComputerSetupOverlay extends StackPane {
       List<ComputerEngineDescriptor> engines,
       String humanName,
       Function<String, Duration> thinkingTimeResolver) {
+    show(engines, humanName, thinkingTimeResolver, Optional.empty());
+  }
+
+  /**
+   * Shows setup for a challenge that starts from a position supplied by another application flow.
+   * The player can still choose colour, opponent and clock before creating the game.
+   */
+  public void show(
+      List<ComputerEngineDescriptor> engines,
+      String humanName,
+      Function<String, Duration> thinkingTimeResolver,
+      Optional<Fen> startingPosition) {
     List<ComputerEngineDescriptor> required =
         List.copyOf(Objects.requireNonNull(engines, "engines must not be null"));
     this.humanName = Objects.requireNonNull(humanName, "humanName must not be null").trim();
@@ -249,8 +261,15 @@ public final class HumanVsComputerSetupOverlay extends StackPane {
     engineSelector.getSelectionModel().selectFirst();
     whiteButton.setSelected(true);
     timeSelector.getSelectionModel().select(TimePreset.TEN_MINUTES);
-    initialPositionButton.setSelected(true);
-    fenField.clear();
+    Optional<Fen> suppliedPosition =
+        Objects.requireNonNull(startingPosition, "startingPosition must not be null");
+    if (suppliedPosition.isPresent()) {
+      fenPositionButton.setSelected(true);
+      fenField.setText(suppliedPosition.orElseThrow().getValue());
+    } else {
+      initialPositionButton.setSelected(true);
+      fenField.clear();
+    }
     openingPracticeCheck.setSelected(false);
     openingLineField.clear();
     safetyThresholdField.setText(

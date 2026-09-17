@@ -16,6 +16,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -32,11 +33,12 @@ public class SplashScreenService {
 
   private static final Duration MINIMUM_DISPLAY_TIME = Duration.seconds(5);
 
-  private static final double SPLASH_WIDTH = 560;
-  private static final double SPLASH_HEIGHT = 360;
+  private static final double SPLASH_WIDTH = 640;
+  private static final double SPLASH_HEIGHT = 400;
+  private static final double SPLASH_CORNER_RADIUS = 26;
 
-  private static final String LIGHT_BACKGROUND_RESOURCE = "/images/splash-light-v2.png";
-  private static final String DARK_BACKGROUND_RESOURCE = "/images/splash-dark-v2.png";
+  private static final String LIGHT_BACKGROUND_RESOURCE = "/images/splash-light-v4.png";
+  private static final String DARK_BACKGROUND_RESOURCE = "/images/splash-dark-v4.png";
   private static final String LOGO_RESOURCE = "/images/logo/modern-logo-1024.png";
 
   /*
@@ -52,8 +54,8 @@ public class SplashScreenService {
    * Increase TOP_MARGIN -> moves the indicator DOWN.
    * Decrease TOP_MARGIN -> moves the indicator UP.
    */
-  private static final double SQUARES_LEFT_MARGIN = 48;
-  private static final double SQUARES_TOP_MARGIN = 278;
+  private static final double SQUARES_LEFT_MARGIN = 52;
+  private static final double SQUARES_TOP_MARGIN = 302;
 
   /*
    * ============================================================
@@ -68,8 +70,8 @@ public class SplashScreenService {
    * Increase BOTTOM_MARGIN -> moves the text UP.
    * Decrease BOTTOM_MARGIN -> moves the text DOWN.
    */
-  private static final double STATUS_LEFT_MARGIN = 48;
-  private static final double STATUS_BOTTOM_MARGIN = 24;
+  private static final double STATUS_LEFT_MARGIN = 52;
+  private static final double STATUS_BOTTOM_MARGIN = 30;
 
   /*
    * Loading indicator appearance.
@@ -77,7 +79,7 @@ public class SplashScreenService {
   private static final double LOADING_SQUARE_SIZE = 6;
   private static final double LOADING_SQUARE_GAP = 3;
 
-  private static final String LOADING_MESSAGE = "Starting workspace...";
+  private static final String LOADING_MESSAGE = "Preparing your workspace…";
 
   private final StartupPreferencesService startupPreferencesService;
   private final ApplicationThemeService themeService;
@@ -102,13 +104,14 @@ public class SplashScreenService {
       return;
     }
 
-    Stage splashStage = new Stage(StageStyle.UNDECORATED);
+    Stage splashStage = new Stage(StageStyle.TRANSPARENT);
 
     Parent root = createRoot();
 
     themeService.register(root);
 
     Scene scene = new Scene(root, SPLASH_WIDTH, SPLASH_HEIGHT);
+    scene.setFill(Color.TRANSPARENT);
 
     scene
         .getStylesheets()
@@ -210,10 +213,12 @@ public class SplashScreenService {
     overlay.setMouseTransparent(true);
     overlay.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
 
-    overlay.getChildren().addAll(brand, loadingSquaresGrid, loadingStatus);
+    HBox engineBadge = createEngineBadge();
 
-    AnchorPane.setLeftAnchor(brand, 48.0);
-    AnchorPane.setTopAnchor(brand, 68.0);
+    overlay.getChildren().addAll(brand, loadingSquaresGrid, loadingStatus, engineBadge);
+
+    AnchorPane.setLeftAnchor(brand, 52.0);
+    AnchorPane.setTopAnchor(brand, 48.0);
 
     /*
      * ------------------------------------------------------------
@@ -239,6 +244,9 @@ public class SplashScreenService {
 
     AnchorPane.setBottomAnchor(loadingStatus, STATUS_BOTTOM_MARGIN);
 
+    AnchorPane.setRightAnchor(engineBadge, 44.0);
+    AnchorPane.setBottomAnchor(engineBadge, 34.0);
+
     /*
      * ------------------------------------------------------------
      * Root
@@ -247,12 +255,21 @@ public class SplashScreenService {
     StackPane root = new StackPane(backgroundView, overlay);
 
     root.getStyleClass().add("splash-shell");
+    root.setClip(createRoundedClip());
 
     startLoadingSquaresAnimation(loadingSquares);
 
     startLoadingTextAnimation(loadingStatus);
 
     return root;
+  }
+
+  private Rectangle createRoundedClip() {
+    Rectangle clip = new Rectangle(SPLASH_WIDTH, SPLASH_HEIGHT);
+    double arc = SPLASH_CORNER_RADIUS * 2;
+    clip.setArcWidth(arc);
+    clip.setArcHeight(arc);
+    return clip;
   }
 
   private VBox createBrand() {
@@ -264,21 +281,47 @@ public class SplashScreenService {
                         getClass().getResource(LOGO_RESOURCE),
                         () -> "Missing splash logo resource: " + LOGO_RESOURCE)
                     .toExternalForm()));
-    logo.setFitWidth(112);
-    logo.setFitHeight(112);
+    logo.setFitWidth(88);
+    logo.setFitHeight(88);
     logo.setPreserveRatio(true);
     logo.setSmooth(true);
 
     Label productName = new Label("LastMove");
     productName.getStyleClass().add("splash-product-name");
 
+    Label productQualifier = new Label("Chess");
+    productQualifier.getStyleClass().add("splash-product-qualifier");
+
+    HBox productTitle = new HBox(5, productName, productQualifier);
+    productTitle.setAlignment(Pos.BASELINE_LEFT);
+
     Label tagline = new Label("Chess, engineered for the next move.");
     tagline.getStyleClass().add("splash-tagline");
 
-    VBox brand = new VBox(10, logo, productName, tagline);
+    VBox brand = new VBox(8, logo, productTitle, tagline);
     brand.getStyleClass().add("splash-brand");
     brand.setMouseTransparent(true);
     return brand;
+  }
+
+  private HBox createEngineBadge() {
+    Label mark = new Label("♞");
+    mark.getStyleClass().add("splash-engine-mark");
+
+    Label engineName = new Label("KNIGHTSHADE");
+    engineName.getStyleClass().add("splash-engine-name");
+
+    Label engineDescription = new Label("Chess engine");
+    engineDescription.getStyleClass().add("splash-engine-description");
+
+    VBox engineCopy = new VBox(1, engineName, engineDescription);
+    engineCopy.getStyleClass().add("splash-engine-copy");
+
+    HBox badge = new HBox(10, mark, engineCopy);
+    badge.getStyleClass().add("splash-engine-badge");
+    badge.setAlignment(Pos.CENTER_LEFT);
+    badge.setMouseTransparent(true);
+    return badge;
   }
 
   /**
@@ -367,7 +410,7 @@ public class SplashScreenService {
 
     boolean nightMode = themeService.currentThemeMode() == ApplicationThemeMode.NIGHT;
 
-    Color activeColor = nightMode ? Color.web("#1683FF") : Color.web("#0878E5");
+    Color activeColor = nightMode ? Color.web("#f3b64d") : Color.web("#e3aa45");
 
     Color inactiveColor = nightMode ? Color.web("#195A91") : Color.web("#8BBDF2");
 

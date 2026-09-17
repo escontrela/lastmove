@@ -77,6 +77,7 @@ public class MessageBox extends StackPane {
     private final Button additionalButton = new Button();
     private final HBox actions = new HBox(10);
     private final VBox card = new VBox();
+    private Node body;
     private double dragStartSceneX;
     private double dragStartSceneY;
     private double dragOriginX;
@@ -136,7 +137,7 @@ public class MessageBox extends StackPane {
         header.setAlignment(Pos.CENTER_LEFT);
         HBox.setHgrow(titleSpacer, javafx.scene.layout.Priority.ALWAYS);
 
-        card.getChildren().setAll(header, messageLabel, actions);
+        rebuildCard(header);
         card.setFillWidth(true);
         card.setMinHeight(Region.USE_PREF_SIZE);
         card.setMaxHeight(Region.USE_PREF_SIZE);
@@ -188,6 +189,24 @@ public class MessageBox extends StackPane {
     public void hide() {
         setVisible(false);
         setManaged(false);
+    }
+
+    /** Adds optional rich content between the message and the shared action row. */
+    public final void setBody(Node value) {
+        body = value;
+        rebuildCard(null);
+    }
+
+    private void rebuildCard(HBox initialHeader) {
+        HBox header = initialHeader;
+        if (header == null) {
+            Region titleSpacer = new Region();
+            header = new HBox(12, titleLabel, titleSpacer, closeButton);
+            header.setAlignment(Pos.CENTER_LEFT);
+            HBox.setHgrow(titleSpacer, javafx.scene.layout.Priority.ALWAYS);
+        }
+        if (body == null) card.getChildren().setAll(header, messageLabel, actions);
+        else card.getChildren().setAll(header, messageLabel, body, actions);
     }
 
     public final StringProperty titleProperty() {

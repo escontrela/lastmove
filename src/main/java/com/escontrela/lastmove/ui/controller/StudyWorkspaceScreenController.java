@@ -44,6 +44,7 @@ import com.escontrela.lastmove.ui.component.promotion.PromotionPickerControl;
 import com.escontrela.lastmove.ui.event.OpenStudyWorkspaceEvent;
 import com.escontrela.lastmove.ui.event.OpenStudyChapterTacticEvent;
 import com.escontrela.lastmove.ui.event.OpenChapterPositionEditorEvent;
+import com.escontrela.lastmove.ui.event.OpenHumanVsComputerFromFenEvent;
 import com.escontrela.lastmove.ui.event.UiEventBus;
 import com.escontrela.lastmove.ui.model.BoardMoveInput;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
@@ -949,6 +950,8 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
     contextualMenuPanel.addItem("Rename chapter…", "", event -> renameChapter(chapter));
     contextualMenuPanel.addItem("Comments / Edit comment…", "", event -> showChapterComment(chapter));
     contextualMenuPanel.addItem("Visualize tree", "", event -> showChapterTree(chapter));
+    contextualMenuPanel.addItem(
+        "Play from this position", "", event -> startHumanVsComputerFromCurrentPosition());
     contextualMenuPanel.addItem("Run chapter as tactic", "", event -> runChapterAsTactic(chapter));
     contextualMenuPanel.addSeparator();
     contextualMenuPanel.addItem("Move chapter up", "↑", event -> moveChapter(chapter, -1));
@@ -956,6 +959,18 @@ public final class StudyWorkspaceScreenController implements UiScreenController 
     contextualMenuPanel.addSeparator();
     contextualMenuPanel.addItem("Delete chapter…", "", event -> deleteChapter(chapter));
     contextualMenuPanel.showAtScene(sceneX, sceneY);
+  }
+
+  /** Opens Human versus Computer with the FEN currently selected in this study chapter. */
+  private void startHumanVsComputerFromCurrentPosition() {
+    activeOwner()
+        .ifPresent(
+            owner -> {
+              Fen startingPosition =
+                  studyService.currentFenNotation(owner, activeStudyId, activeChapterId);
+              uiEventBus.publish(new OpenHumanVsComputerFromFenEvent(startingPosition));
+              uiFlowManager.show(UiScreenId.HUMAN_VS_COMPUTER);
+            });
   }
 
   private void editChapterPosition(StudyChapterSummary chapter) {

@@ -1,8 +1,10 @@
 package com.escontrela.lastmove.application.computer;
 
 import com.escontrela.lastmove.domain.game.TimeControl;
+import com.escontrela.lastmove.domain.notation.Fen;
 import java.time.Duration;
 import java.util.Objects;
+import java.util.Optional;
 
 /** Options for an ephemeral computer-versus-computer game. */
 public record ComputerVsComputerConfiguration(
@@ -11,7 +13,8 @@ public record ComputerVsComputerConfiguration(
     TimeControl timeControl,
     Duration whiteThinkingTime,
     Duration blackThinkingTime,
-    Duration moveDelay) {
+    Duration moveDelay,
+    Optional<Fen> startingPosition) {
   public ComputerVsComputerConfiguration {
     whiteEngineId = requireId(whiteEngineId, "whiteEngineId");
     blackEngineId = requireId(blackEngineId, "blackEngineId");
@@ -20,15 +23,16 @@ public record ComputerVsComputerConfiguration(
     blackThinkingTime = requireThinkingTime(blackThinkingTime, "blackThinkingTime");
     moveDelay = Objects.requireNonNull(moveDelay, "moveDelay must not be null");
     if (moveDelay.isNegative()) throw new IllegalArgumentException("moveDelay must not be negative");
+    startingPosition = Objects.requireNonNull(startingPosition, "startingPosition must not be null");
   }
 
   public ComputerVsComputerConfiguration(
       String whiteEngineId, String blackEngineId, TimeControl timeControl, Duration thinkingTime) {
-    this(whiteEngineId, blackEngineId, timeControl, thinkingTime, thinkingTime, Duration.ZERO);
+    this(whiteEngineId, blackEngineId, timeControl, thinkingTime, thinkingTime, Duration.ZERO, Optional.empty());
   }
   public ComputerVsComputerConfiguration(String whiteEngineId, String blackEngineId, TimeControl timeControl,
       Duration thinkingTime, Duration moveDelay) {
-    this(whiteEngineId, blackEngineId, timeControl, thinkingTime, thinkingTime, moveDelay);
+    this(whiteEngineId, blackEngineId, timeControl, thinkingTime, thinkingTime, moveDelay, Optional.empty());
   }
   private static Duration requireThinkingTime(Duration value, String field) {
     Duration required = Objects.requireNonNull(value, field + " must not be null");
