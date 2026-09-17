@@ -445,6 +445,30 @@ Con telemetría desactivada no se crean snapshots. Activada tampoco realiza I/O 
 nodo: solo notifica al completar profundidades. Una regresión sostenida superior al 2% frente a
 `telemetry=off` debe investigarse.
 
+### Cómo interpretar las métricas
+
+No existe un máximo bueno universal: profundidad, posición, tiempo y número de trabajadores cambian
+las cifras. La comparación válida enfrenta sesiones equivalentes. Los ratios y la evolución de
+`AVG` (comportamiento típico) y `MAX` (picos) aportan más información que un valor aislado.
+
+| Métrica | Señal favorable | Señal a investigar | Lectura |
+| --- | --- | --- | --- |
+| `mainNodes` | Menos nodos para la misma profundidad, o más profundidad en el mismo tiempo. | Más nodos sin avance de profundidad. | Eficiencia global de búsqueda. |
+| `qNodes` | Proporción estable y moderada frente a `mainNodes`. | Domina el total de nodos. | La quiescencia puede estar explorando demasiadas capturas o checks. |
+| `TT hit / cutoff` | Muchos hits y, sobre todo, cortes por cada probe. | Muchos probes con pocos hits/cortes. | Mide reutilización y poda de la tabla de transposición. |
+| `beta cutoff` | Alto sin perder profundidad ni calidad. | Bajo con muchos nodos. | Un corte beta frecuente suele revelar buena ordenación. |
+| `PVS re-search` | Bajo respecto al volumen de búsqueda. | Alto o creciente. | Las jugadas prometedoras están apareciendo demasiado tarde. |
+| `null / LMR` | Ahorro de árbol manteniendo resultados estables. | Muchos intentos sin ahorro o errores tácticos. | Son reducciones agresivas que deben validarse por calidad. |
+| `aspiration retries` | Cero o pocos por profundidad. | Reintentos persistentes. | La ventana inicial puede ser demasiado estrecha o el score inestable. |
+| `evaluation cache` | Hits altos frente a misses cuando hay transposiciones. | Misses casi constantes. | Indica si se evita repetir evaluación costosa. |
+| `workers` | Efectivos = solicitados y mejor NPS/profundidad. | Sin escalado, aun con todos efectivos. | Distingue disponibilidad de paralelismo y escalabilidad real. |
+| `stopReason` | `TIME_LIMIT` o `COMPLETED` según el límite. | `CANCELLED` inesperado o `ERROR`. | Clasifica paradas previstas frente a cancelaciones o fallos. |
+
+Un `MAX` alto aislado puede ser normal en una posición táctica; preocupa cuando también aumenta el
+`AVG` en partidas comparables. Para diagnosticar, revisar primero ordenación/TT/PVS si suben los
+`mainNodes`, quiescencia si crece la relación `qNodes/mainNodes`, y reparto de raíz si los workers
+no elevan NPS ni profundidad.
+
 ---
 
 ## 10. Trabajo futuro

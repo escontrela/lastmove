@@ -4908,6 +4908,23 @@
     -fx-border-radius: 16;
     -fx-effect: dropshadow(gaussian, rgba(20, 27, 36, 0.16), 24, 0.12, 0, 8);
 }
+.button.blood-pressure-metrics-toggle {
+    -fx-background-color: #d4a85f;
+    -fx-border-color: #d4a85f;
+    -fx-text-fill: #18212b;
+}
+.button.blood-pressure-metrics-toggle:hover { -fx-background-color: #e2b86d; -fx-border-color: #e2b86d; }
+.button.blood-pressure-metrics-toggle.blood-pressure-metrics-off {
+    -fx-background-color: #e4e8ed;
+    -fx-border-color: #cbd2da;
+    -fx-text-fill: #66717d;
+}
+.button.blood-pressure-metrics-toggle.blood-pressure-metrics-off:hover { -fx-background-color: #d8dee5; -fx-border-color: #b9c2cc; }
+.night-mode .button.blood-pressure-metrics-toggle.blood-pressure-metrics-off {
+    -fx-background-color: #3b4653;
+    -fx-border-color: #596776;
+    -fx-text-fill: #c6d0da;
+}
 .blood-pressure-window .blood-pressure-metric-card {
     -fx-background-color: #fff8dc;
     -fx-background-radius: 12;

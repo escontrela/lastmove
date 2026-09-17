@@ -150,13 +150,17 @@ public final class BloodPressureWindowService {
     title.getStyleClass().add("app-title");
     Label subtitle = new Label("Knightshade search telemetry");
     subtitle.getStyleClass().add("hero-support");
-    CheckBox enabled = new CheckBox("Enable monitoring");
-    enabled.setSelected(true);
-    enabled.selectedProperty().bindBidirectional(active);
-    enabled.setOnAction(event -> {
-      if (enabled.isSelected()) show();
-      else hide();
-    });
+    javafx.scene.control.Button metricsToggle = new javafx.scene.control.Button();
+    metricsToggle.getStyleClass().addAll("message-box-button", "message-box-additional-button");
+    metricsToggle.getStyleClass().add("blood-pressure-metrics-toggle");
+    metricsToggle.setOnAction(event -> active.set(!active.get()));
+    Runnable updateToggleLabel = () -> {
+      metricsToggle.setText(active.get() ? "Metrics ON" : "Metrics OFF");
+      if (active.get()) metricsToggle.getStyleClass().remove("blood-pressure-metrics-off");
+      else if (!metricsToggle.getStyleClass().contains("blood-pressure-metrics-off")) metricsToggle.getStyleClass().add("blood-pressure-metrics-off");
+    };
+    updateToggleLabel.run();
+    active.addListener((ignored, oldValue, newValue) -> updateToggleLabel.run());
     GridPane liveMetrics = new GridPane();
     liveMetrics.setHgap(18);
     liveMetrics.setVgap(7);
@@ -196,7 +200,9 @@ public final class BloodPressureWindowService {
     export.getStyleClass().addAll("message-box-button", "message-box-accept-button");
     export.setOnAction(event -> exportCsv());
     export.disableProperty().bind(active.not());
-    root.getChildren().addAll(title, subtitle, enabled, new Separator(), liveTitle, liveHint, mainNodesChart, liveMetrics, export);
+    HBox actions = new HBox(10, metricsToggle, export);
+    actions.setAlignment(Pos.CENTER_LEFT);
+    root.getChildren().addAll(title, subtitle, actions, new Separator(), liveTitle, liveHint, mainNodesChart, liveMetrics);
     return root;
   }
 
