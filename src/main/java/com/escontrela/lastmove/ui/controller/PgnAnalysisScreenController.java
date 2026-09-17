@@ -34,6 +34,7 @@ import com.escontrela.lastmove.ui.event.OpenAnalysisSessionEvent;
 import com.escontrela.lastmove.ui.event.OpenAnalysisPositionEditorEvent;
 import com.escontrela.lastmove.ui.event.OpenAnalysisSessionTacticEvent;
 import com.escontrela.lastmove.ui.event.OpenHumanVsComputerFromFenEvent;
+import com.escontrela.lastmove.ui.event.OpenComputerVsComputerFromFenEvent;
 import com.escontrela.lastmove.ui.event.ReturnToAnalysisSessionEvent;
 import com.escontrela.lastmove.ui.event.SelectStudyDestinationEvent;
 import com.escontrela.lastmove.ui.event.SelectTacticDestinationEvent;
@@ -479,6 +480,15 @@ public class PgnAnalysisScreenController implements UiScreenController {
     uiFlowManager.show(UiScreenId.HUMAN_VS_COMPUTER);
   }
 
+  /** Opens Computer versus Computer, preserving the position currently selected in this analysis. */
+  @FXML
+  public void onStartComputerVsComputerFromHere() {
+    uiEventBus.publish(
+        new OpenComputerVsComputerFromFenEvent(
+            analysisSessionService.currentFenNotation(activeAnalysisSessionId)));
+    uiFlowManager.show(UiScreenId.COMPUTER_VS_COMPUTER);
+  }
+
   /** Rotates only the reusable board presentation, leaving the active session untouched. */
   @FXML
   public void onRotateBoard() {
@@ -565,6 +575,8 @@ public class PgnAnalysisScreenController implements UiScreenController {
     contextualMenuPanel.addItem("Copy position as FEN", "", event -> onCopyFen());
     contextualMenuPanel.addItem(
         "Play this position against computer", "", event -> onStartHumanVsComputerFromHere());
+    contextualMenuPanel.addItem(
+        "Play this position: computer vs computer", "", event -> onStartComputerVsComputerFromHere());
     contextualMenuPanel.addSeparator();
     contextualMenuPanel.addItem("Edit starting position…", "", event -> onEditPosition());
     contextualMenuPanel.addItem("First move", "↑", event -> onFirstMove());

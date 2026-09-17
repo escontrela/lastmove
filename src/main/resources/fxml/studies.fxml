@@ -36,7 +36,7 @@
                 <HBox alignment="CENTER_LEFT" spacing="12" styleClass="my-games-header, tactics-page-heading">
                     <VBox spacing="3"><Label text="My Studies" styleClass="my-games-title"/><HBox spacing="4"><Label text="Create, organise and filter your saved studies." styleClass="my-games-support"/><Label fx:id="studyLibraryCountLabel" text="0 studies" styleClass="my-games-support, tactics-suite-total"/></HBox></VBox>
                     <Region HBox.hgrow="ALWAYS"/>
-                    <Button fx:id="createStudyButton" accessibleText="Create study" mnemonicParsing="false" onAction="#onCreateStudy" styleClass="toolbar-icon-button, tactics-page-action-button" text="+"/>
+                    <Button fx:id="createStudyButton" accessibleText="Create study" mnemonicParsing="false" onAction="#onCreateStudy" styleClass="create-study-button" text="Create study"/>
                 </HBox>
                 <HBox alignment="TOP_LEFT" spacing="20" VBox.vgrow="ALWAYS" styleClass="tactics-library-layout">
                 <VBox spacing="0" styleClass="arena-bots-card, my-games-list-card, tactics-library-card" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">

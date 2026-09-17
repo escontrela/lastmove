@@ -110,6 +110,18 @@ class StudyServiceTest {
     }
 
     @Test
+    void exposesTheCurrentChapterPositionAsTypedFen() {
+        StudyId studyId = service.createStudy(new CreateStudyCommand(owner, "Tactics", Optional.empty())).studyId();
+        Fen expected = Fen.of("8/8/8/8/8/8/8/K6k b - - 7 42");
+        StudyChapterSummary chapter =
+            service.createChapterFromFen(
+                new CreateChapterFromFenCommand(owner, studyId, "Kings only", expected));
+
+        assertEquals(expected, service.currentFenNotation(owner, studyId, chapter.chapterId()));
+        assertEquals(expected.getValue(), service.currentFen(owner, studyId, chapter.chapterId()));
+    }
+
+    @Test
   void importsPgnAsChapterAndNavigatesIt() throws Exception {
         StudyId studyId = service.createStudy(new CreateStudyCommand(owner, "Repertoire", Optional.empty())).studyId();
         var imported =

@@ -22,6 +22,7 @@ import com.escontrela.lastmove.ui.event.ResumeComputerGameEvent;
 import com.escontrela.lastmove.ui.event.UiEventBus;
 import com.escontrela.lastmove.application.service.CurrentUserService.ActivePlayerStatus;
 import com.escontrela.lastmove.ui.component.message.MessageBox;
+import com.escontrela.lastmove.ui.component.message.MessageBoxButtonMode;
 import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
 import com.escontrela.lastmove.ui.screen.UiFlowManager;
 import com.escontrela.lastmove.ui.screen.UiScreenController;
@@ -42,6 +43,7 @@ import javafx.event.ActionEvent;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.Hyperlink;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.TilePane;
 import javafx.scene.layout.Region;
@@ -89,6 +91,8 @@ public class MainWindowController implements UiScreenController {
     private TilePane homeCardGrid;
     @FXML
     private MessageBox startupMessageBox;
+    @FXML
+    private MessageBox aboutMessageBox;
     @FXML
     private ContextualMenuPanel contextualMenuPanel;
     @FXML private NotificationsPanel notificationsPanel;
@@ -146,6 +150,7 @@ public class MainWindowController implements UiScreenController {
                 setFeatureStatus("Welcome to LastMove Chess."));
         startupMessageBox.setOnClose(event ->
                 setFeatureStatus("Welcome to LastMove Chess."));
+        configureAboutMessageBox();
         liveArenaPulse.setAutoReverse(true);
         liveArenaPulse.setCycleCount(Timeline.INDEFINITE);
         liveArenaPulse.play();
@@ -467,8 +472,40 @@ public class MainWindowController implements UiScreenController {
             setFeatureStatus("Welcome message dismissed.");
         });
         contextualMenuPanel.addSeparator();
-        contextualMenuPanel.addItem("About LastMove Chess", "", event ->
-                setFeatureStatus("LastMove Chess — your chess study workspace."));
+        contextualMenuPanel.addItem("About LastMove Chess", "", event -> showAbout());
+    }
+
+    private void configureAboutMessageBox() {
+        aboutMessageBox.setTitle("About LastMove Chess");
+        aboutMessageBox.setMessage(
+                "LastMove Chess is an open-source desktop chess workspace.\n\n"
+                        + "Created by David Pereira.");
+        aboutMessageBox.setAcceptText("Accept");
+        aboutMessageBox.setButtonMode(MessageBoxButtonMode.ACCEPT);
+
+        Hyperlink repositoryLink = new Hyperlink("github.com/escontrela/lastmove");
+        repositoryLink.getStyleClass().add("about-repository-link");
+        repositoryLink.setOnAction(event -> openRepository());
+
+        VBox body = new VBox(6.0, new Label("Source code"), repositoryLink);
+        body.getStyleClass().add("about-message-body");
+        aboutMessageBox.setBody(body);
+    }
+
+    private void showAbout() {
+        contextualMenuPanel.hide();
+        aboutMessageBox.resetPosition();
+        aboutMessageBox.show();
+    }
+
+    private void openRepository() {
+        try {
+            if (java.awt.Desktop.isDesktopSupported()) {
+                java.awt.Desktop.getDesktop().browse(java.net.URI.create("https://github.com/escontrela/lastmove"));
+            }
+        } catch (Exception ignored) {
+            setFeatureStatus("Could not open the GitHub repository.");
+        }
     }
 
     private void updateThemeAssets() {
