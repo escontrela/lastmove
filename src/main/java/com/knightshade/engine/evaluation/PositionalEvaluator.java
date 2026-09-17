@@ -29,6 +29,9 @@ public final class PositionalEvaluator implements Evaluator {
   private final int[] cacheScores = new int[CACHE_SIZE];
   private final boolean[] cacheUsed = new boolean[CACHE_SIZE];
   private final EvaluationAttacks attacks = new EvaluationAttacks();
+  private long cacheHits;
+  private long cacheMisses;
+  private boolean telemetryEnabled;
 
   private final List<PositionalTerm> terms =
       List.of(
@@ -48,8 +51,10 @@ public final class PositionalEvaluator implements Evaluator {
       long key = board.zobristKey();
       int slot = (int) key & (CACHE_SIZE - 1);
       if (cacheUsed[slot] && cacheKeys[slot] == key) {
+        if (telemetryEnabled) cacheHits++;
         return cacheScores[slot];
       }
+      if (telemetryEnabled) cacheMisses++;
       int score = evaluateTerms(position);
       cacheKeys[slot] = key;
       cacheScores[slot] = score;
@@ -58,6 +63,10 @@ public final class PositionalEvaluator implements Evaluator {
     }
     return evaluateTerms(position);
   }
+
+  public long cacheHits() { return cacheHits; }
+  public long cacheMisses() { return cacheMisses; }
+  public void setTelemetryEnabled(boolean enabled) { telemetryEnabled = enabled; }
 
   private int evaluateTerms(Position position) {
     attacks.update(position);

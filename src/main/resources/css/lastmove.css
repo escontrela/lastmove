@@ -2448,6 +2448,20 @@
 }
 
 .threat-hints-status-icon { -fx-opacity: 0.82; -fx-padding: 2px; }
+.blood-pressure-status-indicator {
+    -fx-background-color: transparent;
+    -fx-padding: 2px;
+    -fx-cursor: hand;
+}
+.blood-pressure-status-indicator:hover { -fx-background-color: rgba(28, 105, 212, 0.12); }
+.blood-pressure-metric-row {
+    -fx-alignment: center-left;
+    -fx-padding: 3px 0;
+}
+.blood-pressure-metric-row .label:last-child {
+    -fx-font-weight: 800;
+    -fx-text-fill: #1769d8;
+}
 
 .settings-check-box { -fx-font-size: 15px; -fx-text-fill: #262626; }
 .settings-check-box .box { -fx-background-radius: 0; -fx-border-radius: 0; }
@@ -4887,3 +4901,16 @@
     -fx-background-insets: 0;
     -fx-border-insets: 0;
 }
+.blood-pressure-window { -fx-background-color: #f7f3ea; }
+.blood-pressure-window .blood-pressure-metric-card {
+    -fx-background-color: #fff8dc;
+    -fx-background-radius: 12;
+    -fx-border-color: #e2bd55;
+    -fx-border-radius: 12;
+    -fx-padding: 12;
+    -fx-min-width: 210px;
+}
+.blood-pressure-window .blood-pressure-metric-card > .label:first-child { -fx-text-fill: #80651b; -fx-font-size: 12px; -fx-font-weight: bold; }
+.blood-pressure-window .blood-pressure-metric-card > .label:nth-child(2) { -fx-text-fill: #29251c; -fx-font-size: 24px; -fx-font-weight: bold; }
+.blood-pressure-window .blood-pressure-metric-card > .label:nth-child(3) { -fx-text-fill: #9d8440; -fx-font-size: 10px; }
+.blood-pressure-window .blood-pressure-metric-card > .label:nth-child(4) { -fx-text-fill: #594716; -fx-font-size: 15px; -fx-font-weight: bold; }

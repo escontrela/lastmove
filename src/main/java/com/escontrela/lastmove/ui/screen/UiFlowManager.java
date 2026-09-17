@@ -10,12 +10,15 @@ import com.escontrela.lastmove.ui.event.UiEventBus;
 import com.escontrela.lastmove.ui.event.ToggleNotificationsPanelEvent;
 import com.escontrela.lastmove.ui.service.ApplicationThemeService;
 import com.escontrela.lastmove.ui.service.FadeEffectsService;
+import com.escontrela.lastmove.ui.service.BloodPressureWindowService;
+import com.escontrela.lastmove.ui.component.status.BloodPressureStatusIndicator;
 import java.util.List;
 import java.util.Optional;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.control.TextInputControl;
 
 /** Coordinates navigation between views hosted by the single primary window. */
 public class UiFlowManager {
@@ -26,6 +29,7 @@ public class UiFlowManager {
     private final GameNotificationRepository notifications;
     private final UiEventBus eventBus;
     private final FadeEffectsService fadeEffects;
+    private final BloodPressureWindowService bloodPressure;
     private UiScreen currentScreen;
     private boolean escapeHandlerInstalled;
 
@@ -33,13 +37,14 @@ public class UiFlowManager {
             UiScreenFactory screenFactory,
             ApplicationThemeService themeService,
             CurrentUserService currentUserService, GameNotificationRepository notifications, UiEventBus eventBus,
-            FadeEffectsService fadeEffects) {
+            FadeEffectsService fadeEffects, BloodPressureWindowService bloodPressure) {
         this.screenFactory = screenFactory;
         this.themeService = themeService;
         this.currentUserService = currentUserService;
         this.notifications = notifications;
         this.eventBus = eventBus;
         this.fadeEffects = fadeEffects;
+        this.bloodPressure = bloodPressure;
     }
 
     public void show(UiScreenId screenId) {
@@ -53,9 +58,23 @@ public class UiFlowManager {
             currentScreen.controller().onHide();
         }
         configureHeader(nextScreen.scene().getRoot(), screenId, breadcrumbs);
+        installBloodPressureStatus(nextScreen.scene().getRoot());
         installEscapeShortcut(nextScreen.scene());
+        installBloodPressureShortcut(nextScreen.scene());
         nextScreen.show();
         currentScreen = nextScreen;
+    }
+
+    private void installBloodPressureShortcut(Scene scene) {
+        // Install on every newly-created scene and during capture so focused buttons
+        // (including Home's Search button) cannot consume the shortcut first.
+        scene.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+            if (event.getCode() == KeyCode.B && event.isShortcutDown() && event.isShiftDown()
+                    && !event.isAltDown() && !(event.getTarget() instanceof TextInputControl)) {
+                bloodPressure.toggle();
+                event.consume();
+            }
+        });
     }
 
     /** Returns the active primary-window view, if one has already been shown. */
@@ -132,6 +151,17 @@ public class UiFlowManager {
                 .currentUserName(currentUserService.currentUser().name())
                 .currentUserPhoto(currentUserService.currentUserPhoto())
                 .build());
+    }
+
+    private void installBloodPressureStatus(Parent root) {
+        root.lookupAll(".status-rail").stream()
+                .filter(javafx.scene.layout.HBox.class::isInstance)
+                .map(javafx.scene.layout.HBox.class::cast)
+                .forEach(rail -> {
+                    if (rail.lookup(".blood-pressure-status-indicator") == null) {
+                        rail.getChildren().add(new BloodPressureStatusIndicator(bloodPressure));
+                    }
+                });
     }
 
     private void requestExitToHome() {

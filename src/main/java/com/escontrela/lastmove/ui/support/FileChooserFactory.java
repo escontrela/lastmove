@@ -49,6 +49,26 @@ public class FileChooserFactory {
         return Optional.ofNullable(chooser.showSaveDialog(owner)).map(this::withPgnExtension);
     }
 
+    public Optional<File> chooseCsvExportFile(Window owner, String suggestedName) {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Export Knightshade telemetry");
+        chooser.getExtensionFilters().addAll(new FileChooser.ExtensionFilter("CSV Files", "*.csv"),
+                new FileChooser.ExtensionFilter("All Files", "*.*"));
+        chooser.setInitialFileName(safeCsvFileName(suggestedName));
+        return Optional.ofNullable(chooser.showSaveDialog(owner)).map(this::withCsvExtension);
+    }
+
+    private String safeCsvFileName(String name) {
+        String safe = Optional.ofNullable(name).orElse("knightshade-telemetry").trim()
+                .replaceAll("[\\\\/:*?\"<>|]", "-");
+        return (safe.isBlank() ? "knightshade-telemetry" : safe).toLowerCase(java.util.Locale.ROOT).endsWith(".csv")
+                ? safe : safe + ".csv";
+    }
+    private File withCsvExtension(File file) {
+        return file.getName().toLowerCase(java.util.Locale.ROOT).endsWith(".csv") ? file
+                : new File(file.getAbsolutePath() + ".csv");
+    }
+
     private String safePgnFileName(String suggestedName) {
         String safe = Optional.ofNullable(suggestedName).orElse("analysis")
                 .trim()

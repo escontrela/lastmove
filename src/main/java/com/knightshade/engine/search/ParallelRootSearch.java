@@ -3,6 +3,9 @@ package com.knightshade.engine.search;
 import com.knightshade.engine.api.SearchLimits;
 import com.knightshade.engine.api.SearchResult;
 import com.knightshade.engine.api.StopSignal;
+import com.knightshade.engine.api.SearchTelemetryListener;
+import com.knightshade.engine.api.StopReason;
+import com.knightshade.engine.api.SearchTelemetrySnapshot;
 import com.knightshade.engine.board.Board;
 import com.knightshade.engine.board.Move;
 import com.knightshade.engine.evaluation.Evaluator;
@@ -35,9 +38,24 @@ public final class ParallelRootSearch implements Search {
   private static final AtomicInteger POOL_IDS = new AtomicInteger();
   private final int threads;
   private final Supplier<? extends Evaluator> evaluators;
+  private SearchTelemetryListener telemetryListener = SearchTelemetryListener.NONE;
 
   public ParallelRootSearch(int threads) {
     this(threads, PositionalEvaluator::new);
+  }
+
+  public int threads() { return threads; }
+
+  @Override
+  public SearchResult search(Board board, SearchLimits limits, StopSignal stop,
+      Map<Long, Integer> positionOccurrences, SearchTelemetryListener listener,
+      int requestedWorkers, int effectiveWorkers) {
+    telemetryListener = listener == null ? SearchTelemetryListener.NONE : listener;
+    try {
+      return search(board, limits, stop, positionOccurrences);
+    } finally {
+      telemetryListener = SearchTelemetryListener.NONE;
+    }
   }
 
   /** The supplier must return a fresh evaluator for each worker. */
@@ -74,16 +92,23 @@ public final class ParallelRootSearch implements Search {
       }
       return false;
     };
+    boolean telemetryEnabled = telemetryListener != SearchTelemetryListener.NONE;
     if (threads == 1) {
-      return new IterativeDeepeningSearch(new LegalMoveGenerator(), evaluators.get())
-          .search(board.copy(), limits, requestStop, positionOccurrences);
+      IterativeDeepeningSearch sequential = new IterativeDeepeningSearch(new LegalMoveGenerator(), evaluators.get());
+      if (telemetryEnabled) sequential.enableTelemetry(threads, 1, telemetryListener);
+      SearchResult result = sequential.search(board.copy(), limits, requestStop, positionOccurrences);
+      if (telemetryEnabled) emit(sequential.telemetryStats(), result, started, threads, 1,
+          stopReason(limits, started, requestStop));
+      return result;
     }
 
     Board root = board.copy();
     List<Move> legal = new LegalMoveGenerator().generate(root);
     if (legal.isEmpty()) {
-      return new SearchResult(null, root.inCheck(root.sideToMove()) ? -Scores.MATE : 0,
+      SearchResult result = new SearchResult(null, root.inCheck(root.sideToMove()) ? -Scores.MATE : 0,
           0, 0, elapsedMillis(started));
+      if (telemetryEnabled) emit(new SearchStats(), result, started, threads, 0, StopReason.NO_LEGAL_MOVE);
+      return result;
     }
     Move bestMove = legal.getFirst();
     int bestScore = 0;
@@ -92,9 +117,9 @@ public final class ParallelRootSearch implements Search {
       return new SearchResult(bestMove, bestScore, 0, 0, elapsedMillis(started));
     }
 
-    List<Worker> workers = new ArrayList<>();
-    workers.add(new Worker(root, positionOccurrences, evaluators.get()));
     int workerCount = Math.min(threads, legal.size());
+    List<Worker> workers = new ArrayList<>();
+    workers.add(new Worker(root, positionOccurrences, evaluators.get(), telemetryEnabled, threads, workerCount));
     ExecutorService executor = workerCount > 1
         ? Executors.newFixedThreadPool(workerCount - 1,
             Thread.ofPlatform().daemon(true)
@@ -107,7 +132,7 @@ public final class ParallelRootSearch implements Search {
         // own caches between subsequent depths and aspiration attempts in this invocation.
         if (depth == 3) {
           while (workers.size() < workerCount && !requestStop.shouldStop()) {
-            workers.add(new Worker(root, positionOccurrences, evaluators.get()));
+            workers.add(new Worker(root, positionOccurrences, evaluators.get(), telemetryEnabled, threads, workerCount));
           }
         }
         int delta = 25;
@@ -125,13 +150,17 @@ public final class ParallelRootSearch implements Search {
           }
           orderingMove = result.move();
           if (result.score() <= alpha) {
+            if (telemetryEnabled) workers.getFirst().search.telemetryStats().aspirationRetries++;
             alpha = Math.max(-Scores.INF, alpha - delta);
           } else if (result.score() >= beta) {
+            if (telemetryEnabled) workers.getFirst().search.telemetryStats().aspirationRetries++;
             beta = Math.min(Scores.INF, beta + delta);
           } else {
             bestMove = result.move();
             bestScore = result.score();
             completedDepth = depth;
+            if (telemetryEnabled) emit(aggregateStats(workers), bestMove, bestScore, depth,
+                started, threads, workerCount, StopReason.COMPLETED);
             break;
           }
           delta *= 2;
@@ -149,7 +178,36 @@ public final class ParallelRootSearch implements Search {
       }
     }
     long nodes = workers.stream().mapToLong(worker -> worker.search.nodesVisited()).sum();
-    return new SearchResult(bestMove, bestScore, completedDepth, nodes, elapsedMillis(started));
+    SearchResult result = new SearchResult(bestMove, bestScore, completedDepth, nodes, elapsedMillis(started));
+    if (telemetryEnabled) emit(aggregateStats(workers), result, started, threads, workerCount,
+        stopReason(limits, started, requestStop));
+    return result;
+  }
+
+  private SearchStats aggregateStats(List<Worker> workers) {
+    SearchStats total = new SearchStats();
+    for (Worker worker : workers) total.merge(worker.search.telemetryStats());
+    return total;
+  }
+
+  private void emit(SearchStats stats, Move move, int score, int depth, long started,
+      int requested, int effective, StopReason reason) {
+    if (stats == null) return;
+    try {
+      telemetryListener.onSnapshot(stats.snapshot(depth, move, score, requested, effective,
+          reason, elapsedMillis(started)));
+    } catch (RuntimeException ignored) { }
+  }
+
+  private void emit(SearchStats stats, SearchResult result, long started,
+      int requested, int effective, StopReason reason) {
+    emit(stats, result.move(), result.score(), result.depth(), started, requested, effective, reason);
+  }
+
+  private StopReason stopReason(SearchLimits limits, long started, StopSignal stop) {
+    if (!stop.shouldStop()) return StopReason.COMPLETED;
+    return limits.maxTimeMillis() > 0 && elapsedMillis(started) >= limits.maxTimeMillis()
+        ? StopReason.TIME_LIMIT : StopReason.CANCELLED;
   }
 
   private RootResult searchIteration(List<Worker> workers, ExecutorService executor,
@@ -278,11 +336,13 @@ public final class ParallelRootSearch implements Search {
     private final HistoryTable history = new HistoryTable();
     private final IterativeDeepeningSearch search;
 
-    private Worker(Board root, Map<Long, Integer> occurrences, Evaluator evaluator) {
+    private Worker(Board root, Map<Long, Integer> occurrences, Evaluator evaluator,
+        boolean telemetryEnabled, int requestedWorkers, int effectiveWorkers) {
       board = root.copy();
       repetitions = new HashMap<>(occurrences);
       repetitions.putIfAbsent(board.zobristKey(), 1);
       search = new IterativeDeepeningSearch(new LegalMoveGenerator(), evaluator);
+      if (telemetryEnabled) search.enableTelemetry(requestedWorkers, effectiveWorkers);
     }
 
     private int search(Move move, int depth, int alpha, int beta, boolean scout, StopSignal stop) {

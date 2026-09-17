@@ -415,18 +415,39 @@ Cada versión es funcional y testedada; las clases de búsqueda intermedias (Min
 
 ## 8. Traza
 
-KnightshadeMoveEngine registra en el log (slf4j, nivel INFO):
+KnightshadeMoveEngine deja una traza opcional en el log (slf4j, nivel DEBUG); no incluye FEN y no aparece en el log normal:
 
 ~~~
-Knightshade search started: fen='…' maxTimeMs=500
-Knightshade chose e2e4 score=12 depth=7 nodes=153212 elapsedMs=480 totalMs=485
+Knightshade search started: maxTimeMs=500
+Knightshade analysed e2e4 score=12 depth=7 nodes=153212 elapsedMs=480 totalMs=485
 ~~~
 
 La traza muestra la jugada elegida, la puntuación, la última profundidad completa, los nodos y el tiempo. Es útil para separar un problema de evaluación de un límite de tiempo demasiado corto.
 
+## 9. Telemetría Blood Pressure
+
+Se activa desde el icono de la barra de estado o con `Ctrl+Shift+B` (macOS: `⌘⇧B`). La ventana es
+flotante y permite escoger frecuencia y métricas. Solo se publica un snapshot al terminar una
+profundidad completa; al interrumpirse la búsqueda se conserva el último válido y se emite un
+resultado final con `stopReason`.
+
+La columna `max` muestra el máximo alcanzado durante la partida y se reinicia al comenzar otra.
+Exportar CSV conserva las muestras hasta la siguiente sesión e incluye timestamp, profundidad,
+score, movimiento, elapsed, parámetros, trabajadores y `stopReason`. No se exporta FEN.
+
+El benchmark headless compara ambos modos usando un listener en memoria:
+
+~~~bash
+java -cp target/classes:target/test-classes com.knightshade.engine.benchmark.SearchBenchmark 6 0 4
+~~~
+
+Con telemetría desactivada no se crean snapshots. Activada tampoco realiza I/O ni serialización por
+nodo: solo notifica al completar profundidades. Una regresión sostenida superior al 2% frente a
+`telemetry=off` debe investigarse.
+
 ---
 
-## 9. Trabajo futuro
+## 10. Trabajo futuro
 
 - Desarrollo, centro, estructura de peones, peones pasados y pareja de alfiles ya están implementados; el rey ahora adapta su evaluación a la fase.
 - Pendientes: libro de aperturas, tablebases y bitboards. La búsqueda paralela en raíz ya está implementada mediante `ParallelRootSearch`: cada trabajador conserva tablero, heurísticas, tabla de transposición y evaluador propios, y solo se comparten los límites de raíz y la cancelación. Queda por medir y ajustar su escalabilidad según la posición y el número de participantes.
