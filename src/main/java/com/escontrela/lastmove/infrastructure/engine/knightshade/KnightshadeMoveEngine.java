@@ -110,7 +110,7 @@ public final class KnightshadeMoveEngine implements ComputerMoveEngine {
     thinking.set(true);
     cancellationRequested.set(false);
     try {
-      return CompletableFuture.supplyAsync(() -> analyzeBlocking(required), executor);
+      return CompletableFuture.supplyAsync(() -> analyzeBlocking(required, false), executor);
     } catch (RejectedExecutionException exception) {
       thinking.set(false);
       return CompletableFuture.failedFuture(closedEngineException());
@@ -131,14 +131,18 @@ public final class KnightshadeMoveEngine implements ComputerMoveEngine {
   }
 
   private MoveCommand chooseMoveBlocking(ComputerMoveRequest request) {
-    EngineAnalysisResult result = analyzeBlocking(request);
+    EngineAnalysisResult result = analyzeBlocking(request, true);
     return result
         .bestMove()
         .orElseThrow(
             () -> new ComputerEngineException("Knightshade found no playable move"));
   }
 
-  private EngineAnalysisResult analyzeBlocking(ComputerMoveRequest request) {
+  /**
+   * Only a move selected for an active game emits Blood Pressure data. Generic analysis drives
+   * controls such as the strength bar and must remain invisible to match telemetry.
+   */
+  private EngineAnalysisResult analyzeBlocking(ComputerMoveRequest request, boolean gameMove) {
     long startedAt = System.nanoTime();
     try {
       String fen = fenService.fromSnapshot(request.position()).getValue();
@@ -148,7 +152,7 @@ public final class KnightshadeMoveEngine implements ComputerMoveEngine {
               .toList();
       long maxTimeMillis = request.maximumThinkingTime().toMillis();
       log.debug("Knightshade search started: maxTimeMs={}", maxTimeMillis);
-      SearchTelemetryListener listener = telemetryService != null && telemetryService.isEnabled()
+      SearchTelemetryListener listener = gameMove && telemetryService != null && telemetryService.isEnabled()
           ? telemetryService::publish : SearchTelemetryListener.NONE;
       SearchResult result = engine.search(fen, positionHistory,
           SearchLimits.timeOnly(request.maximumThinkingTime()), cancellationRequested::get, listener);

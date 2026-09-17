@@ -49,6 +49,14 @@ public final class BloodPressureWindowService {
   private final BooleanProperty active = new SimpleBooleanProperty(this, "active");
   private final Map<String, javafx.scene.control.Label> liveValues = new HashMap<>();
   private final Map<String, javafx.scene.control.Label> maxValues = new HashMap<>();
+  private final Map<String, javafx.scene.control.Label> avgValues = new HashMap<>();
+  private final Map<String, String> descriptions = Map.of(
+      "mainNodes", "Nodos principales explorados.", "qNodes", "Nodos de búsqueda quiescente.",
+      "TT hit / cutoff", "Aciertos y cortes de la tabla de transposición.", "beta cutoff", "Podas por límite beta.",
+      "PVS re-search", "Re-búsquedas PVS con ventana completa.", "null / LMR", "Intentos null-move y reducciones LMR.",
+      "aspiration retries", "Reintentos al ampliar la ventana de aspiración.", "evaluation cache", "Aciertos y fallos de caché de evaluación.",
+      "workers", "Trabajadores solicitados y efectivos.", "stopReason", "Motivo por el que terminó la búsqueda.");
+  private final Map<String, double[]> averages = new HashMap<>();
   private final Map<String, VBox> metricCards = new HashMap<>();
   private final Map<String, Long> maxima = new HashMap<>();
   private final Map<String, BooleanProperty> parameterSelection = new HashMap<>();
@@ -156,9 +164,21 @@ public final class BloodPressureWindowService {
       parameterSelection.put(metric, new SimpleBooleanProperty(telemetryService.visibleMetrics().contains(metric)));
       Label value = new Label("—");
       Label maximum = new Label("—");
+      Label average = new Label("—");
       liveValues.put(metric, value);
       maxValues.put(metric, maximum);
-      VBox card = new VBox(4, new Label(metric), value, new Label("MAX"), maximum);
+      avgValues.put(metric, average);
+      Label heading = new Label(metric); heading.getStyleClass().add("blood-pressure-metric-title");
+      Label description = new Label(descriptions.get(metric)); description.getStyleClass().add("blood-pressure-metric-description");
+      value.getStyleClass().add("blood-pressure-metric-current");
+      Label avgCaption = new Label("AVG"); avgCaption.getStyleClass().add("blood-pressure-metric-caption");
+      average.getStyleClass().add("blood-pressure-metric-summary-value");
+      Label maxCaption = new Label("MAX"); maxCaption.getStyleClass().add("blood-pressure-metric-caption");
+      maximum.getStyleClass().add("blood-pressure-metric-summary-value");
+      HBox summary = new HBox(6, avgCaption, average, new javafx.scene.layout.Region(), maxCaption, maximum);
+      javafx.scene.layout.HBox.setHgrow(summary.getChildren().get(2), javafx.scene.layout.Priority.ALWAYS);
+      VBox card = new VBox(3, heading, description, value, summary);
+      javafx.scene.control.Tooltip.install(card, new javafx.scene.control.Tooltip(descriptions.get(metric)));
       card.getStyleClass().add("blood-pressure-metric-card");
       metricCards.put(metric, card);
       liveMetrics.add(card, liveMetrics.getChildren().size() % 3, liveMetrics.getChildren().size() / 3);
@@ -210,6 +230,7 @@ public final class BloodPressureWindowService {
   private void receiveSnapshot(SearchTelemetrySnapshot snapshot) {
     if (telemetryService.sessionStartedAt() != null && !telemetryService.sessionStartedAt().equals(sessionStartedAt)) {
       maxima.clear();
+      averages.clear();
       sessionStartedAt = telemetryService.sessionStartedAt();
     }
     latestSnapshot = snapshot;
@@ -263,13 +284,17 @@ public final class BloodPressureWindowService {
 
   private void update(String metric, long... values) {
     StringBuilder current = new StringBuilder(); StringBuilder maximum = new StringBuilder();
-    for (int i = 0; i < values.length; i++) { long value = values[i];
+    double[] sum = averages.computeIfAbsent(metric, k -> new double[values.length + 1]); sum[0]++;
+    for (int i = 0; i < values.length; i++) { long value = values[i]; sum[i + 1] += value;
       if (current.length() > 0) { current.append(" / "); maximum.append(" / "); }
       current.append(value); String key = metric + "#" + i; long max = Math.max(maxima.getOrDefault(key, 0L), value);
       maxima.put(key, max); maximum.append(max);
     }
-    setValue(metric, current); setMaxValue(metric, maximum);
+    StringBuilder average = new StringBuilder();
+    for (int i = 0; i < values.length; i++) { if (i > 0) average.append(" / "); average.append(Math.round(sum[i + 1] / sum[0])); }
+    setValue(metric, current); setAverageValue(metric, average); setMaxValue(metric, maximum);
   }
   private void updateText(String metric, Object value) { setValue(metric, value); setMaxValue(metric, value); }
   private void setMaxValue(String metric, Object value) { var label = maxValues.get(metric); if (label != null) label.setText(String.valueOf(value)); }
+  private void setAverageValue(String metric, Object value) { var label = avgValues.get(metric); if (label != null) label.setText(String.valueOf(value)); }
 }

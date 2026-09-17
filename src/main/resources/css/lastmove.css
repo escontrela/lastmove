@@ -4916,10 +4916,11 @@
     -fx-padding: 12;
     -fx-min-width: 210px;
 }
-.blood-pressure-window .blood-pressure-metric-card > .label:first-child { -fx-text-fill: #80651b; -fx-font-size: 12px; -fx-font-weight: bold; }
-.blood-pressure-window .blood-pressure-metric-card > .label:nth-child(2) { -fx-text-fill: #29251c; -fx-font-size: 24px; -fx-font-weight: bold; }
-.blood-pressure-window .blood-pressure-metric-card > .label:nth-child(3) { -fx-text-fill: #9d8440; -fx-font-size: 10px; }
-.blood-pressure-window .blood-pressure-metric-card > .label:nth-child(4) { -fx-text-fill: #594716; -fx-font-size: 15px; -fx-font-weight: bold; }
+.blood-pressure-window .blood-pressure-metric-title { -fx-text-fill: #80651b; -fx-font-size: 13px; -fx-font-weight: 800; }
+.blood-pressure-window .blood-pressure-metric-description { -fx-text-fill: #806f4c; -fx-font-size: 10px; }
+.blood-pressure-window .blood-pressure-metric-current { -fx-text-fill: #29251c; -fx-font-size: 20px; -fx-font-weight: bold; }
+.blood-pressure-window .blood-pressure-metric-caption { -fx-text-fill: #9d8440; -fx-font-size: 10px; }
+.blood-pressure-window .blood-pressure-metric-summary-value { -fx-text-fill: #594716; -fx-font-size: 12px; -fx-font-weight: bold; }
 .night-mode.blood-pressure-window {
     -fx-background-color: #1c2430;
     -fx-border-color: #465465;
@@ -4930,7 +4931,8 @@
     -fx-background-color: #263244;
     -fx-border-color: #d4a85f;
 }
-.night-mode.blood-pressure-window .blood-pressure-metric-card > .label:first-child,
-.night-mode.blood-pressure-window .blood-pressure-metric-card > .label:nth-child(3) { -fx-text-fill: #e7c77e; }
-.night-mode.blood-pressure-window .blood-pressure-metric-card > .label:nth-child(2),
-.night-mode.blood-pressure-window .blood-pressure-metric-card > .label:nth-child(4) { -fx-text-fill: #f1f3f5; }
+.night-mode.blood-pressure-window .blood-pressure-metric-title,
+.night-mode.blood-pressure-window .blood-pressure-metric-description,
+.night-mode.blood-pressure-window .blood-pressure-metric-caption { -fx-text-fill: #e7c77e; }
+.night-mode.blood-pressure-window .blood-pressure-metric-current,
+.night-mode.blood-pressure-window .blood-pressure-metric-summary-value { -fx-text-fill: #f1f3f5; }

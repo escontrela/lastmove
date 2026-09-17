@@ -159,7 +159,9 @@ public class UiFlowManager {
                 .map(javafx.scene.layout.HBox.class::cast)
                 .forEach(rail -> {
                     if (rail.lookup(".blood-pressure-status-indicator") == null) {
-                        rail.getChildren().add(new BloodPressureStatusIndicator(bloodPressure));
+                        javafx.scene.layout.Region spacer = new javafx.scene.layout.Region();
+                        javafx.scene.layout.HBox.setHgrow(spacer, javafx.scene.layout.Priority.ALWAYS);
+                        rail.getChildren().addAll(spacer, new BloodPressureStatusIndicator(bloodPressure));
                     }
                 });
     }
