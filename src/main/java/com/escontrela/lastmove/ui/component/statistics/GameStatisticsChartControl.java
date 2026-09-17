@@ -34,6 +34,8 @@ public final class GameStatisticsChartControl extends Region {
   private final ListChangeListener<String> themeListener = change -> draw();
   private boolean loading;
   private DisplayMode displayMode = DisplayMode.GAME_TREND;
+  private List<Long> telemetryValues = List.of();
+  private String telemetryLabel;
 
   public GameStatisticsChartControl() {
     getStyleClass().add("game-statistics-chart");
@@ -44,8 +46,10 @@ public final class GameStatisticsChartControl extends Region {
     sceneProperty().addListener((ignored, oldValue, scene) -> observeTheme(scene == null ? null : scene.getRoot()));
   }
   public void render(List<GameStatisticsBucket> value, DateTimeFormatter formatter) {
-    buckets = List.copyOf(value); labels = formatter; setLoading(false); draw();
+    telemetryLabel = null; buckets = List.copyOf(value); labels = formatter; setLoading(false); draw();
   }
+  /** Reuses this lightweight canvas chart for a live numeric series. */
+  public void renderTelemetry(List<Long> values, String label) { telemetryValues = List.copyOf(values); telemetryLabel = label; setLoading(false); draw(); }
   public void setDisplayMode(DisplayMode value) { displayMode = java.util.Objects.requireNonNull(value, "value"); draw(); }
   public void setLoading(boolean value) {
     loading = value;
@@ -69,6 +73,7 @@ public final class GameStatisticsChartControl extends Region {
     GraphicsContext g = canvas.getGraphicsContext2D(); g.clearRect(0, 0, width, height);
     double bottom = displayMode == DisplayMode.OUTCOME_BARS ? OUTCOME_BOTTOM : BOTTOM;
     double plotWidth = Math.max(1, width - LEFT - RIGHT), plotHeight = Math.max(1, height - TOP - bottom);
+    if (telemetryLabel != null) { drawTelemetry(g, width, height, plotWidth, plotHeight, text, grid); return; }
     g.setStroke(grid); g.setLineWidth(1); g.setFill(text); g.setFont(javafx.scene.text.Font.font(11));
     long max = displayMode == DisplayMode.OUTCOME_BARS
         ? Math.max(1, buckets.stream().flatMapToLong(bucket -> java.util.stream.LongStream.of(bucket.results().won(), bucket.results().lost())).max().orElse(0))
@@ -83,6 +88,19 @@ public final class GameStatisticsChartControl extends Region {
     g.stroke(); g.setFill(PRIMARY);
     for (int i = 0; i < buckets.size(); i++) { double x = LEFT + step * i; double y = TOP + plotHeight - (buckets.get(i).games() / (double) max) * plotHeight; g.fillOval(x - 3, y - 3, 6, 6); if (i == 0 || i == buckets.size() - 1 || buckets.size() <= 5) g.fillText(labels.format(buckets.get(i).start()), Math.max(LEFT, x - 18), height - 10); }
   }
+  private void drawTelemetry(GraphicsContext g, double width, double height, double plotWidth, double plotHeight, Color text, Color grid) {
+    long max = Math.max(1, telemetryValues.stream().mapToLong(Long::longValue).max().orElse(0));
+    g.setFont(javafx.scene.text.Font.font(11)); g.setStroke(grid); g.setLineWidth(1); g.setFill(text);
+    for (int tick = 0; tick <= 4; tick++) { double y = TOP + plotHeight * tick / 4; long value = Math.round(max * (4 - tick) / 4.0); g.strokeLine(LEFT, y, width - RIGHT, y); g.fillText(compact(value), 4, y + 4); }
+    g.setFill(text); g.fillText(telemetryLabel + " (por profundidad)", LEFT, TOP + 12);
+    if (telemetryValues.isEmpty()) { g.fillText("Waiting for Knightshade…", LEFT, TOP + plotHeight / 2); return; }
+    double step = telemetryValues.size() == 1 ? 0 : plotWidth / (telemetryValues.size() - 1);
+    g.setStroke(PRIMARY); g.setLineWidth(2.5); g.beginPath();
+    for (int i = 0; i < telemetryValues.size(); i++) { double x = LEFT + step * i; double y = TOP + plotHeight - telemetryValues.get(i) * plotHeight / max; if (i == 0) g.moveTo(x, y); else g.lineTo(x, y); }
+    g.stroke(); g.setFill(PRIMARY);
+    for (int i = 0; i < telemetryValues.size(); i++) { double x = LEFT + step * i; double y = TOP + plotHeight - telemetryValues.get(i) * plotHeight / max; g.fillOval(x - 3, y - 3, 6, 6); }
+  }
+  private static String compact(long value) { return value >= 1_000_000 ? String.format(java.util.Locale.ROOT, "%.1fM", value / 1_000_000.0) : value >= 1_000 ? String.format(java.util.Locale.ROOT, "%.0fk", value / 1_000.0) : Long.toString(value); }
   private void drawOutcomeBars(GraphicsContext g, double width, double height, double plotWidth, double plotHeight, long max, boolean night) {
     double group = plotWidth / buckets.size();
     // Give short selected periods visual weight while retaining a readable chart for long ranges.

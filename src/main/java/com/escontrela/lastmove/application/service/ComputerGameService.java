@@ -65,6 +65,7 @@ public final class ComputerGameService {
   private final CurrentUserService currentUserService;
   private final ApplicationEventPublisher events;
   private final GameNotificationRepository notifications;
+  private final KnightshadeTelemetryService telemetry;
   private final Map<GameId, RuntimeContext> runtimes = new ConcurrentHashMap<>();
   private final ScheduledExecutorService runtimeTicker;
 
@@ -73,7 +74,7 @@ public final class ComputerGameService {
       ChessGameFactory gameFactory,
       List<ComputerMoveEngineProvider> engineProviders,
       Clock clock) {
-    this(gameRepository, gameFactory, engineProviders, clock, null, null, null);
+    this(gameRepository, gameFactory, engineProviders, clock, null, null, null, null);
   }
 
   public ComputerGameService(
@@ -82,7 +83,7 @@ public final class ComputerGameService {
       List<ComputerMoveEngineProvider> engineProviders,
       Clock clock,
       CurrentUserService currentUserService) {
-    this(gameRepository, gameFactory, engineProviders, clock, currentUserService, null, null);
+    this(gameRepository, gameFactory, engineProviders, clock, currentUserService, null, null, null);
   }
 
   @org.springframework.beans.factory.annotation.Autowired
@@ -93,7 +94,8 @@ public final class ComputerGameService {
       Clock clock,
       CurrentUserService currentUserService,
       ApplicationEventPublisher events,
-      GameNotificationRepository notifications) {
+      GameNotificationRepository notifications,
+      KnightshadeTelemetryService telemetry) {
     this.gameRepository =
         Objects.requireNonNull(gameRepository, "gameRepository must not be null");
     this.gameFactory = Objects.requireNonNull(gameFactory, "gameFactory must not be null");
@@ -107,6 +109,7 @@ public final class ComputerGameService {
     this.currentUserService = currentUserService;
     this.events = events;
     this.notifications = notifications;
+    this.telemetry = telemetry;
     this.runtimeTicker = Executors.newSingleThreadScheduledExecutor(task -> {
       Thread thread = new Thread(task, "lastmove-game-clock");
       thread.setDaemon(true);
@@ -119,6 +122,10 @@ public final class ComputerGameService {
   public CompletionStage<ComputerGameState> createGame(ComputerGameConfiguration configuration) {
     ComputerGameConfiguration required =
         Objects.requireNonNull(configuration, "configuration must not be null");
+    if (telemetry != null && telemetry.isEnabled()
+        && com.escontrela.lastmove.application.computer.ComputerEngineIds.KNIGHTSHADE.equals(required.engineId())) {
+      telemetry.beginSession();
+    }
     ComputerMoveEngineProvider provider = provider(required.engineId());
     PieceColor computerColor = required.humanColor().opposite();
     GamePlayer human = new GamePlayer(required.humanName(), required.humanColor());

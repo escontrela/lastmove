@@ -100,6 +100,12 @@
                         <Label styleClass="card-copy" text="Knightshade is the engine built into LastMove. Give it more thinking time per move to make it play stronger." wrapText="true" />
                         <Label styleClass="settings-field-label" text="Thinking time per move" />
                         <ComboBox fx:id="knightshadeThinkingTimeCombo" maxWidth="Infinity" />
+                        <Label styleClass="settings-field-label" text="Blood Pressure telemetry" />
+                        <CheckBox fx:id="bloodPressureEnabledCheckBox" mnemonicParsing="false" text="Enable monitoring" />
+                        <Label styleClass="settings-field-label" text="Refresh frequency" />
+                        <ComboBox fx:id="bloodPressureFrequencyCombo" maxWidth="Infinity" />
+                        <Label styleClass="settings-field-label" text="Visible parameters" />
+                        <FlowPane fx:id="bloodPressureParameters" hgap="18.0" vgap="6.0" />
                     </VBox>
                     <VBox fx:id="arenaGroup" maxWidth="680.0" spacing="12.0" styleClass="setup-card">
                         <padding><Insets bottom="32.0" left="32.0" right="32.0" top="32.0" /></padding>
@@ -171,6 +177,10 @@
                         <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="shortcut-reference-row">
                             <Label styleClass="shortcut-reference-key" text="Shift+E" />
                             <Label styleClass="shortcut-reference-action" text="Show or hide the engine strength bar in analysis and Computer vs Computer" />
+                        </HBox>
+                        <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="shortcut-reference-row">
+                            <Label styleClass="shortcut-reference-key" text="⌘⇧B / Ctrl+Shift+B" />
+                            <Label styleClass="shortcut-reference-action" text="Open or toggle the Blood Pressure Knightshade monitor" wrapText="true" />
                         </HBox>
                     </VBox>
                 </VBox>

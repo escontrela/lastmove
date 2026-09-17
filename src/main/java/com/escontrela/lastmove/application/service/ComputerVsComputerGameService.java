@@ -15,6 +15,7 @@ public final class ComputerVsComputerGameService {
   private final ChessGameFactory games;
   private final Map<String, ComputerMoveEngineProvider> providers;
   private final Clock clock;
+  private final KnightshadeTelemetryService telemetry;
   private final Map<GameId, Runtime> runtimes = new ConcurrentHashMap<>();
   private final ScheduledExecutorService moveScheduler =
       Executors.newSingleThreadScheduledExecutor(
@@ -25,12 +26,21 @@ public final class ComputerVsComputerGameService {
           });
 
   public ComputerVsComputerGameService(ChessGameFactory games, List<ComputerMoveEngineProvider> providers, Clock clock) {
-    this.games = Objects.requireNonNull(games); this.clock = Objects.requireNonNull(clock);
+    this(games, providers, clock, null);
+  }
+  @org.springframework.beans.factory.annotation.Autowired
+  public ComputerVsComputerGameService(ChessGameFactory games, List<ComputerMoveEngineProvider> providers, Clock clock, KnightshadeTelemetryService telemetry) {
+    this.games = Objects.requireNonNull(games); this.clock = Objects.requireNonNull(clock); this.telemetry = telemetry;
     this.providers = providers.stream().collect(java.util.stream.Collectors.toUnmodifiableMap(p -> p.descriptor().id(), p -> p));
   }
   public List<ComputerEngineDescriptor> availableEngines() { return providers.values().stream().map(ComputerMoveEngineProvider::descriptor).sorted(Comparator.comparing(ComputerEngineDescriptor::displayName)).toList(); }
   public List<ComputerVsComputerGameState> gamesInMemory() { return runtimes.keySet().stream().map(this::state).toList(); }
   public CompletionStage<ComputerVsComputerGameState> createGame(ComputerVsComputerConfiguration configuration) {
+    if (telemetry != null && telemetry.isEnabled()
+        && (ComputerEngineIds.KNIGHTSHADE.equals(configuration.whiteEngineId())
+            || ComputerEngineIds.KNIGHTSHADE.equals(configuration.blackEngineId()))) {
+      telemetry.beginSession();
+    }
     ComputerMoveEngineProvider whiteProvider = provider(configuration.whiteEngineId());
     ComputerMoveEngineProvider blackProvider = provider(configuration.blackEngineId());
     GamePlayer whitePlayer =

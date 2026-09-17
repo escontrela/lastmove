@@ -5,8 +5,10 @@ import com.escontrela.lastmove.application.computer.ComputerEngineIds;
 import com.escontrela.lastmove.application.computer.ComputerMoveEngine;
 import com.escontrela.lastmove.application.computer.ComputerMoveEngineProvider;
 import com.escontrela.lastmove.domain.service.FenService;
+import com.escontrela.lastmove.application.service.KnightshadeTelemetryService;
 import com.knightshade.engine.KnightshadeEngine;
 import java.util.Objects;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
@@ -23,9 +25,16 @@ public final class KnightshadeMoveEngineProvider implements ComputerMoveEnginePr
       new ComputerEngineDescriptor(ComputerEngineIds.KNIGHTSHADE, "Knightshade", "v3.5");
 
   private final FenService fenService;
+  private final KnightshadeTelemetryService telemetryService;
 
   public KnightshadeMoveEngineProvider(FenService fenService) {
+    this(fenService, new KnightshadeTelemetryService());
+  }
+
+  @Autowired
+  public KnightshadeMoveEngineProvider(FenService fenService, KnightshadeTelemetryService telemetryService) {
     this.fenService = Objects.requireNonNull(fenService, "fenService must not be null");
+    this.telemetryService = Objects.requireNonNull(telemetryService, "telemetryService must not be null");
   }
 
   @Override
@@ -35,6 +44,6 @@ public final class KnightshadeMoveEngineProvider implements ComputerMoveEnginePr
 
   @Override
   public ComputerMoveEngine create() {
-    return new KnightshadeMoveEngine(new KnightshadeEngine(), fenService, DESCRIPTOR);
+    return new KnightshadeMoveEngine(new KnightshadeEngine(), fenService, DESCRIPTOR, telemetryService);
   }
 }

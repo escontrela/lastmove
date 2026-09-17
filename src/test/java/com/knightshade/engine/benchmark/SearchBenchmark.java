@@ -22,12 +22,14 @@ public final class SearchBenchmark {
     for (String fen : POSITIONS) {
       new KnightshadeEngine(threads).search(fen, SearchLimits.depth(3), StopSignal.never());
     }
-    System.out.println("threads,position,depth,move,score,nodes,millis");
-    for (int i = 0; i < POSITIONS.length; i++) {
-      var result = new KnightshadeEngine(threads).search(
-          POSITIONS[i], limits, StopSignal.never());
-      System.out.printf("%d,%d,%d,%s,%d,%d,%d%n", threads, i + 1, result.depth(),
-          result.move().toUci(), result.score(), result.nodes(), result.elapsedMillis());
+    System.out.println("telemetry,threads,position,depth,move,score,nodes,millis");
+    for (boolean telemetry : new boolean[] {false, true}) {
+      for (int i = 0; i < POSITIONS.length; i++) {
+        var result = new KnightshadeEngine(threads).search(POSITIONS[i], java.util.List.of(), limits,
+            StopSignal.never(), telemetry ? snapshot -> {} : com.knightshade.engine.api.SearchTelemetryListener.NONE);
+        System.out.printf("%s,%d,%d,%d,%s,%d,%d,%d%n", telemetry ? "on" : "off", threads, i + 1, result.depth(),
+            result.move().toUci(), result.score(), result.nodes(), result.elapsedMillis());
+      }
     }
   }
 }
