@@ -11,6 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.io.IOException;
 import java.time.Instant;
 import com.escontrela.lastmove.ui.support.FileChooserFactory;
+import com.escontrela.lastmove.ui.component.statistics.GameStatisticsChartControl;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.geometry.Insets;
@@ -48,12 +49,13 @@ public final class BloodPressureWindowService {
   private final BooleanProperty active = new SimpleBooleanProperty(this, "active");
   private final Map<String, javafx.scene.control.Label> liveValues = new HashMap<>();
   private final Map<String, javafx.scene.control.Label> maxValues = new HashMap<>();
+  private final Map<String, VBox> metricCards = new HashMap<>();
   private final Map<String, Long> maxima = new HashMap<>();
   private final Map<String, BooleanProperty> parameterSelection = new HashMap<>();
   private final AtomicBoolean uiUpdatePending = new AtomicBoolean();
   private volatile SearchTelemetrySnapshot latestSnapshot;
   private long lastRenderNanos;
-  private ComboBox<Integer> frequencySelector;
+  private GameStatisticsChartControl mainNodesChart;
   private Stage monitorStage;
   private volatile Instant sessionStartedAt;
 
@@ -121,12 +123,12 @@ public final class BloodPressureWindowService {
     });
     VBox root = content();
     themeService.register(root);
-    Scene scene = new Scene(root, 760, 760);
+    Scene scene = new Scene(root, 840, 820);
     if (latestSnapshot != null) renderSnapshot(latestSnapshot);
     String stylesheet = getClass().getResource("/css/lastmove.css").toExternalForm();
     scene.getStylesheets().add(stylesheet);
     stage.setScene(scene);
-    stage.setX(primaryStage.getX() + Math.max(20, primaryStage.getWidth() - 780));
+    stage.setX(primaryStage.getX() + Math.max(20, primaryStage.getWidth() - 860));
     stage.setY(primaryStage.getY() + 80);
     return stage;
   }
@@ -147,46 +149,34 @@ public final class BloodPressureWindowService {
       if (enabled.isSelected()) show();
       else hide();
     });
-    Label frequencyLabel = new Label("Refresh frequency");
-    frequencyLabel.getStyleClass().add("settings-field-label");
-    frequencySelector = new ComboBox<>();
-    frequencySelector.getItems().addAll(1, 2, 4, 10);
-    frequencySelector.setValue(4);
-    frequencySelector.setMaxWidth(Double.MAX_VALUE);
-    GridPane parameters = new GridPane();
-    parameters.setHgap(28); parameters.setVgap(6);
     GridPane liveMetrics = new GridPane();
     liveMetrics.setHgap(18);
     liveMetrics.setVgap(7);
     for (String metric : METRICS) {
-      CheckBox checkBox = new CheckBox(metric);
-      checkBox.setSelected(true);
-      parameterSelection.put(metric, checkBox.selectedProperty());
-      int parameterIndex = parameters.getChildren().size();
-      parameters.add(checkBox, parameterIndex % 2, parameterIndex / 2);
+      parameterSelection.put(metric, new SimpleBooleanProperty(telemetryService.visibleMetrics().contains(metric)));
       Label value = new Label("—");
       Label maximum = new Label("—");
       liveValues.put(metric, value);
       maxValues.put(metric, maximum);
       VBox card = new VBox(4, new Label(metric), value, new Label("MAX"), maximum);
       card.getStyleClass().add("blood-pressure-metric-card");
+      metricCards.put(metric, card);
       liveMetrics.add(card, liveMetrics.getChildren().size() % 3, liveMetrics.getChildren().size() / 3);
-      checkBox.selectedProperty().addListener((ignored, oldValue, selected) -> {
-        card.setVisible(selected);
-        card.setManaged(selected);
-      });
+      boolean visible = telemetryService.visibleMetrics().contains(metric);
+      card.setVisible(visible); card.setManaged(visible);
     }
-    Label parametersTitle = new Label("Parameters to monitor");
-    parametersTitle.getStyleClass().add("card-title");
+    mainNodesChart = new GameStatisticsChartControl();
+    mainNodesChart.setPrefHeight(230);
+    mainNodesChart.renderTelemetry(List.of(), "Main nodes");
     Label liveTitle = new Label("Live metrics");
     liveTitle.getStyleClass().add("card-title");
     Label liveHint = new Label("Values appear when Knightshade is thinking.");
     liveHint.getStyleClass().add("hero-support");
     javafx.scene.control.Button export = new javafx.scene.control.Button("Export CSV");
+    export.getStyleClass().addAll("message-box-button", "message-box-accept-button");
     export.setOnAction(event -> exportCsv());
     export.disableProperty().bind(active.not());
-    root.getChildren().addAll(title, subtitle, enabled, new Separator(), frequencyLabel,
-        frequencySelector, parametersTitle, parameters, new Separator(), liveTitle, liveHint, liveMetrics, export);
+    root.getChildren().addAll(title, subtitle, enabled, new Separator(), liveTitle, liveHint, mainNodesChart, liveMetrics, export);
     return root;
   }
 
@@ -196,7 +186,7 @@ public final class BloodPressureWindowService {
     fileChooserFactory.chooseCsvExportFile(monitorStage, "knightshade-telemetry")
         .ifPresent(file -> {
           StringBuilder csv = new StringBuilder("sessionStartedAt,timestamp,depth,score,bestMove,elapsedMillis,parameters,mainNodes,qNodes,ttProbes,ttHits,ttCutoffs,betaCutoffs,pvsResearches,nullMoveAttempts,nullMoveCutoffs,lmrApplications,lmrResearches,aspirationRetries,evaluationCacheHits,evaluationCacheMisses,requestedWorkers,effectiveWorkers,stopReason\n");
-          String parameters = parameterSelection.entrySet().stream().filter(e -> e.getValue().get()).map(Map.Entry::getKey).collect(java.util.stream.Collectors.joining("|"));
+          String parameters = String.join("|", telemetryService.visibleMetrics());
           java.time.Instant started = telemetryService.sessionStartedAt();
           for (SearchTelemetrySnapshot s : samples) {
             csv.append(started == null ? "" : started).append(',').append(started == null ? "" : started.plusMillis(s.elapsedMillis())).append(',').append(s.depth()).append(',').append(s.score()).append(',')
@@ -229,11 +219,11 @@ public final class BloodPressureWindowService {
   }
 
   private void flushSnapshot() {
-    if (frequencySelector == null) {
+    if (mainNodesChart == null) {
       uiUpdatePending.set(false);
       return;
     }
-    long intervalNanos = 1_000_000_000L / Math.max(1, frequencySelector.getValue());
+    long intervalNanos = 1_000_000_000L / Math.max(1, telemetryService.refreshFrequency());
     long elapsed = System.nanoTime() - lastRenderNanos;
     if (lastRenderNanos != 0 && elapsed < intervalNanos) {
       PauseTransition delay = new PauseTransition(
@@ -245,6 +235,7 @@ public final class BloodPressureWindowService {
     SearchTelemetrySnapshot snapshot = latestSnapshot;
     if (snapshot != null) {
       renderSnapshot(snapshot);
+      mainNodesChart.renderTelemetry(telemetryService.samples().stream().map(SearchTelemetrySnapshot::mainNodes).toList(), "Main nodes");
       lastRenderNanos = System.nanoTime();
     }
     uiUpdatePending.set(false);
@@ -254,6 +245,10 @@ public final class BloodPressureWindowService {
   }
 
   private void renderSnapshot(SearchTelemetrySnapshot snapshot) {
+    for (String metric : METRICS) {
+      VBox card = metricCards.get(metric);
+      if (card != null) { boolean visible = telemetryService.visibleMetrics().contains(metric); card.setVisible(visible); card.setManaged(visible); }
+    }
     update("mainNodes", snapshot.mainNodes()); update("qNodes", snapshot.qNodes());
     update("TT hit / cutoff", snapshot.ttHits(), snapshot.ttCutoffs()); update("beta cutoff", snapshot.betaCutoffs());
     update("PVS re-search", snapshot.pvsResearches()); update("null / LMR", snapshot.nullMoveCutoffs(), snapshot.lmrApplications());

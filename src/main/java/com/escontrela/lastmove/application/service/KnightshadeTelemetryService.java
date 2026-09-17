@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.time.Instant;
 import java.util.function.Consumer;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 
 /** Application-side bridge for optional Knightshade telemetry. */
@@ -17,6 +18,8 @@ public final class KnightshadeTelemetryService {
   private volatile boolean enabled;
   private final CopyOnWriteArrayList<SearchTelemetrySnapshot> samples = new CopyOnWriteArrayList<>();
   private volatile Instant sessionStartedAt;
+  private volatile int refreshFrequency = 4;
+  private volatile Set<String> visibleMetrics = Set.of("mainNodes", "qNodes", "TT hit / cutoff", "beta cutoff", "PVS re-search", "null / LMR", "aspiration retries", "evaluation cache", "workers", "stopReason");
 
   public boolean isEnabled() { return enabled; }
 
@@ -34,6 +37,10 @@ public final class KnightshadeTelemetryService {
 
   public List<SearchTelemetrySnapshot> samples() { return List.copyOf(new ArrayList<>(samples)); }
   public Instant sessionStartedAt() { return sessionStartedAt; }
+  public int refreshFrequency() { return refreshFrequency; }
+  public void setRefreshFrequency(int value) { if (value < 1 || value > 10) throw new IllegalArgumentException("refresh frequency must be between 1 and 10"); refreshFrequency = value; }
+  public Set<String> visibleMetrics() { return visibleMetrics; }
+  public void setVisibleMetrics(Set<String> value) { visibleMetrics = Set.copyOf(value); }
 
   public Runnable subscribe(Consumer<SearchTelemetrySnapshot> listener) {
     Consumer<SearchTelemetrySnapshot> required = Objects.requireNonNull(listener);

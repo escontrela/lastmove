@@ -4901,7 +4901,13 @@
     -fx-background-insets: 0;
     -fx-border-insets: 0;
 }
-.blood-pressure-window { -fx-background-color: #f7f3ea; }
+.blood-pressure-window {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 16;
+    -fx-border-color: #d8dde3;
+    -fx-border-radius: 16;
+    -fx-effect: dropshadow(gaussian, rgba(20, 27, 36, 0.16), 24, 0.12, 0, 8);
+}
 .blood-pressure-window .blood-pressure-metric-card {
     -fx-background-color: #fff8dc;
     -fx-background-radius: 12;
@@ -4914,3 +4920,17 @@
 .blood-pressure-window .blood-pressure-metric-card > .label:nth-child(2) { -fx-text-fill: #29251c; -fx-font-size: 24px; -fx-font-weight: bold; }
 .blood-pressure-window .blood-pressure-metric-card > .label:nth-child(3) { -fx-text-fill: #9d8440; -fx-font-size: 10px; }
 .blood-pressure-window .blood-pressure-metric-card > .label:nth-child(4) { -fx-text-fill: #594716; -fx-font-size: 15px; -fx-font-weight: bold; }
+.night-mode.blood-pressure-window {
+    -fx-background-color: #1c2430;
+    -fx-border-color: #465465;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.40), 24, 0.12, 0, 8);
+}
+.night-mode.blood-pressure-window .label { -fx-text-fill: #f1f3f5; }
+.night-mode.blood-pressure-window .blood-pressure-metric-card {
+    -fx-background-color: #263244;
+    -fx-border-color: #d4a85f;
+}
+.night-mode.blood-pressure-window .blood-pressure-metric-card > .label:first-child,
+.night-mode.blood-pressure-window .blood-pressure-metric-card > .label:nth-child(3) { -fx-text-fill: #e7c77e; }
+.night-mode.blood-pressure-window .blood-pressure-metric-card > .label:nth-child(2),
+.night-mode.blood-pressure-window .blood-pressure-metric-card > .label:nth-child(4) { -fx-text-fill: #f1f3f5; }

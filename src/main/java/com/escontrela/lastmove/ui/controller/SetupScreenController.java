@@ -7,6 +7,7 @@ import com.escontrela.lastmove.application.service.ComputerEngineHealthService;
 import com.escontrela.lastmove.application.service.ComputerEngineSettingsService;
 import com.escontrela.lastmove.application.service.KnightshadeArenaSettingsService;
 import com.escontrela.lastmove.application.service.TagService;
+import com.escontrela.lastmove.application.service.KnightshadeTelemetryService;
 import com.escontrela.lastmove.application.service.PositionAnalysisService;
 import com.escontrela.lastmove.application.arena.KnightshadeArenaSettings;
 import com.escontrela.lastmove.ui.component.header.ApplicationHeader;
@@ -67,6 +68,7 @@ public class SetupScreenController implements UiScreenController {
     private final PositionAnalysisService positionAnalysisService;
     private final KnightshadeArenaSettingsService knightshadeArenaSettingsService;
     private final TagService tagService;
+    private final KnightshadeTelemetryService telemetryService;
 
     @FXML
     private BorderPane root;
@@ -105,6 +107,9 @@ public class SetupScreenController implements UiScreenController {
     private Label maiaValidationLabel;
     @FXML
     private ComboBox<Duration> knightshadeThinkingTimeCombo;
+    @FXML private CheckBox bloodPressureEnabledCheckBox;
+    @FXML private ComboBox<Integer> bloodPressureFrequencyCombo;
+    @FXML private FlowPane bloodPressureParameters;
     @FXML
     private ComboBox<ComputerEngineDescriptor> analysisEngineCombo;
     @FXML
@@ -193,7 +198,7 @@ public class SetupScreenController implements UiScreenController {
             ComputerEngineHealthService computerEngineHealthService,
             PositionAnalysisService positionAnalysisService,
             KnightshadeArenaSettingsService knightshadeArenaSettingsService,
-            TagService tagService) {
+            TagService tagService, KnightshadeTelemetryService telemetryService) {
         this.uiFlowManager = uiFlowManager;
         this.themeService = themeService;
         this.startupPreferencesService = startupPreferencesService;
@@ -203,6 +208,7 @@ public class SetupScreenController implements UiScreenController {
         this.positionAnalysisService = positionAnalysisService;
         this.knightshadeArenaSettingsService = knightshadeArenaSettingsService;
         this.tagService = tagService;
+        this.telemetryService = telemetryService;
     }
 
     @FXML
@@ -258,6 +264,7 @@ public class SetupScreenController implements UiScreenController {
         knightshadeThinkingTimeCombo.setConverter(THINKING_TIME_CONVERTER);
         knightshadeThinkingTimeCombo.valueProperty().addListener((ignored, oldValue, newValue) ->
                 updateApplyButtonVisibility());
+        configureBloodPressureTelemetry();
         analysisEngineCombo.setConverter(ENGINE_CONVERTER);
         analysisEngineCombo.valueProperty().addListener((ignored, oldValue, newValue) ->
                 updateApplyButtonVisibility());
@@ -280,6 +287,20 @@ public class SetupScreenController implements UiScreenController {
         });
         setupScrollPane.vvalueProperty().addListener((ignored, oldValue, newValue) -> updateNavigationSelection());
         Platform.runLater(this::updateNavigationSelection);
+    }
+
+    private void configureBloodPressureTelemetry() {
+        bloodPressureEnabledCheckBox.setSelected(telemetryService.isEnabled());
+        bloodPressureEnabledCheckBox.selectedProperty().addListener((o, oldValue, value) -> telemetryService.setEnabled(value));
+        bloodPressureFrequencyCombo.getItems().addAll(1, 2, 4, 10);
+        bloodPressureFrequencyCombo.setValue(telemetryService.refreshFrequency());
+        bloodPressureFrequencyCombo.valueProperty().addListener((o, oldValue, value) -> { if (value != null) telemetryService.setRefreshFrequency(value); });
+        for (String metric : List.of("mainNodes", "qNodes", "TT hit / cutoff", "beta cutoff", "PVS re-search", "null / LMR", "aspiration retries", "evaluation cache", "workers", "stopReason")) {
+            CheckBox option = new CheckBox(metric); option.setSelected(telemetryService.visibleMetrics().contains(metric));
+            option.selectedProperty().addListener((o, oldValue, value) -> telemetryService.setVisibleMetrics(
+                    bloodPressureParameters.getChildren().stream().filter(CheckBox.class::isInstance).map(CheckBox.class::cast).filter(CheckBox::isSelected).map(CheckBox::getText).collect(java.util.stream.Collectors.toSet())));
+            bloodPressureParameters.getChildren().add(option);
+        }
     }
 
     private void buildAppearanceChoices() {
