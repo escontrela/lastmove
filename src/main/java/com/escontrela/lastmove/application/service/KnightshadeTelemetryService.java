@@ -8,6 +8,8 @@ import java.util.ArrayList;
 import java.time.Instant;
 import java.util.function.Consumer;
 import java.util.Set;
+import java.util.EnumMap;
+import com.knightshade.engine.api.StopReason;
 import org.springframework.stereotype.Service;
 
 /** Application-side bridge for optional Knightshade telemetry. */
@@ -19,7 +21,8 @@ public final class KnightshadeTelemetryService {
   private final CopyOnWriteArrayList<SearchTelemetrySnapshot> samples = new CopyOnWriteArrayList<>();
   private volatile Instant sessionStartedAt;
   private volatile int refreshFrequency = 4;
-  private volatile Set<String> visibleMetrics = Set.of("mainNodes", "qNodes", "TT hit / cutoff", "beta cutoff", "PVS re-search", "null / LMR", "aspiration retries", "evaluation cache", "workers", "stopReason");
+  private volatile Set<String> visibleMetrics = Set.of("depth", "mainNodes", "qNodes", "TT hit / cutoff", "beta cutoff", "PVS re-search", "null / LMR", "aspiration retries", "evaluation cache", "workers", "stopReason", "stop counters");
+  private final EnumMap<StopReason, Long> stopReasonCounts = new EnumMap<>(StopReason.class);
 
   public boolean isEnabled() { return enabled; }
 
@@ -33,7 +36,9 @@ public final class KnightshadeTelemetryService {
   public void beginSession() {
     samples.clear();
     sessionStartedAt = Instant.now();
+    synchronized (stopReasonCounts) { stopReasonCounts.clear(); }
   }
+  public java.util.Map<StopReason, Long> stopReasonCounts() { synchronized (stopReasonCounts) { return java.util.Map.copyOf(stopReasonCounts); } }
 
   public List<SearchTelemetrySnapshot> samples() { return List.copyOf(new ArrayList<>(samples)); }
   public Instant sessionStartedAt() { return sessionStartedAt; }
@@ -52,6 +57,7 @@ public final class KnightshadeTelemetryService {
   public void publish(SearchTelemetrySnapshot snapshot) {
     if (!enabled) return;
     samples.add(snapshot);
+    synchronized (stopReasonCounts) { stopReasonCounts.merge(snapshot.stopReason(), 1L, Long::sum); }
     listeners.forEach(listener -> {
       try { listener.accept(snapshot); } catch (RuntimeException ignored) { }
     });

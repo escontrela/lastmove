@@ -469,6 +469,54 @@ Un `MAX` alto aislado puede ser normal en una posición táctica; preocupa cuand
 `mainNodes`, quiescencia si crece la relación `qNodes/mainNodes`, y reparto de raíz si los workers
 no elevan NPS ni profundidad.
 
+### Glosario sencillo
+
+- `depth`: profundidad normal de búsqueda. Indica cuántos niveles de jugadas ha completado el
+  motor. `depth = 10` no es un límite fijo: normalmente significa que la depth 11 no terminó antes
+  del límite de tiempo.
+- `mainNodes`: posiciones visitadas durante la búsqueda normal. Un nodo es una posición del tablero
+  después de considerar una jugada. Menos nodos para la misma profundidad suele indicar mejor poda,
+  pero reducir nodos no sirve si empeora la jugada.
+- `qNodes`: posiciones analizadas en quiescencia al final de las ramas normales. Incluye capturas,
+  jaques y promociones para evitar evaluar una posición táctica inestable. No aumenta la `depth`
+  iterativa.
+- `TT probes`: consultas realizadas a la tabla de transposición preguntando si una posición ya fue
+  calculada.
+- `TT hit`: una consulta encuentra una entrada guardada. No siempre permite cortar: la profundidad,
+  el tipo de límite o la ventana pueden no ser suficientes.
+- `TT cutoff`: una entrada encontrada sí demuestra que la rama puede descartarse. Por eso siempre
+  se cumple `TT cutoffs ≤ TT hits ≤ TT probes`.
+- `beta cutoff`: una rama se abandona porque una jugada ya ha superado el límite beta; las demás no
+  pueden cambiar la decisión. Muchos cortes beta suelen indicar buena ordenación.
+- `PVS re-search`: re-búsqueda con ventana completa. PVS prueba la primera jugada con ventana completa
+  y las siguientes con una ventana estrecha; solo repite una jugada si parece superar el resultado
+  actual. Un número bajo suele ser favorable.
+- Ordenación de jugadas: decide qué movimientos se prueban primero usando la mejor jugada anterior,
+  TT, capturas, promociones, jaques, killer moves e historial. Una buena ordenación aumenta los
+  beta cutoffs y reduce `mainNodes` y `PVS re-search`.
+- `null move`: simula pasar el turno. Si la posición sigue siendo suficientemente buena, puede
+  descartar una rama. Es rápida, pero debe tratarse con cuidado en zugzwang y posiciones tácticas.
+- `LMR` (Late Move Reduction): analiza con menor profundidad las jugadas que aparecen tarde en la
+  ordenación. Si una parece mejor de lo esperado, se reanaliza con profundidad completa.
+- `null / LMR`: agrupa intentos y reducciones de estas dos técnicas; conviene comprobar que ahorran
+  nodos sin cambiar la calidad de la jugada.
+- `aspiration retries`: reintentos cuando la valoración sale de la ventana estrecha estimada a partir
+  de la depth anterior. Pocos reintentos indican una valoración estable; muchos sugieren una ventana
+  demasiado estrecha o una posición táctica.
+- `evaluation cache`: memoria de evaluaciones estáticas. Un `hit` reutiliza el cálculo de material,
+  movilidad y otros términos; un `miss` obliga a recalcularlo. La relación útil es `hits / (hits +
+  misses)`.
+- TT frente a evaluation cache: la caché de evaluación guarda cuánto vale una posición; la TT guarda
+  resultados de búsqueda con profundidad, límites y a veces la mejor jugada. La TT puede permitir un
+  cutoff de una rama completa; la caché de evaluación normalmente no.
+- `workers`: trabajadores solicitados y efectivos para la búsqueda paralela. Tener todos los workers
+  efectivos no garantiza aceleración: hay que comprobar NPS y depth al aumentar su número.
+- `stopReason`: `TIME_LIMIT` indica que se agotó el tiempo; `COMPLETED`, que terminó normalmente;
+  `CANCELLED`, que se detuvo externamente; `NO_LEGAL_MOVE`, que no había jugada legal; y `ERROR`,
+  que ocurrió un fallo inesperado.
+- `stop counters`: acumuladores de `TIME_LIMIT`, `COMPLETED` y `CANCELLED` durante la sesión actual;
+  se reinician al comenzar otra partida y también se incluyen en el CSV.
+
 ---
 
 ## 10. Trabajo futuro

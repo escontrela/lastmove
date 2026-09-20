@@ -39,8 +39,8 @@ import org.springframework.context.annotation.Lazy;
 public final class BloodPressureWindowService {
 
   private static final List<String> METRICS = List.of(
-      "mainNodes", "qNodes", "TT hit / cutoff", "beta cutoff", "PVS re-search",
-      "null / LMR", "aspiration retries", "evaluation cache", "workers", "stopReason");
+      "depth", "mainNodes", "qNodes", "TT hit / cutoff", "beta cutoff", "PVS re-search",
+      "null / LMR", "aspiration retries", "evaluation cache", "workers", "stopReason", "stop counters");
 
   private final Stage primaryStage;
   private final ApplicationThemeService themeService;
@@ -50,12 +50,14 @@ public final class BloodPressureWindowService {
   private final Map<String, javafx.scene.control.Label> liveValues = new HashMap<>();
   private final Map<String, javafx.scene.control.Label> maxValues = new HashMap<>();
   private final Map<String, javafx.scene.control.Label> avgValues = new HashMap<>();
-  private final Map<String, String> descriptions = Map.of(
-      "mainNodes", "Nodos principales explorados.", "qNodes", "Nodos de búsqueda quiescente.",
-      "TT hit / cutoff", "Aciertos y cortes de la tabla de transposición.", "beta cutoff", "Podas por límite beta.",
-      "PVS re-search", "Re-búsquedas PVS con ventana completa.", "null / LMR", "Intentos null-move y reducciones LMR.",
-      "aspiration retries", "Reintentos al ampliar la ventana de aspiración.", "evaluation cache", "Aciertos y fallos de caché de evaluación.",
-      "workers", "Trabajadores solicitados y efectivos.", "stopReason", "Motivo por el que terminó la búsqueda.");
+  private final Map<String, String> descriptions = Map.ofEntries(
+      Map.entry("depth", "Profundidad máxima completada por la búsqueda."),
+      Map.entry("mainNodes", "Nodos principales explorados."), Map.entry("qNodes", "Nodos de búsqueda quiescente."),
+      Map.entry("TT hit / cutoff", "Aciertos y cortes de la tabla de transposición."), Map.entry("beta cutoff", "Podas por límite beta."),
+      Map.entry("PVS re-search", "Re-búsquedas PVS con ventana completa."), Map.entry("null / LMR", "Intentos null-move y reducciones LMR."),
+      Map.entry("aspiration retries", "Reintentos al ampliar la ventana de aspiración."), Map.entry("evaluation cache", "Aciertos y fallos de caché de evaluación."),
+      Map.entry("workers", "Trabajadores solicitados y efectivos."), Map.entry("stopReason", "Motivo por el que terminó la búsqueda."),
+      Map.entry("stop counters", "Número acumulado de búsquedas por motivo de parada."));
   private final Map<String, double[]> averages = new HashMap<>();
   private final Map<String, VBox> metricCards = new HashMap<>();
   private final Map<String, Long> maxima = new HashMap<>();
@@ -184,6 +186,7 @@ public final class BloodPressureWindowService {
       VBox card = new VBox(3, heading, description, value, summary);
       javafx.scene.control.Tooltip.install(card, new javafx.scene.control.Tooltip(descriptions.get(metric)));
       card.getStyleClass().add("blood-pressure-metric-card");
+      if ("stop counters".equals(metric)) card.getStyleClass().add("blood-pressure-stop-counters-card");
       metricCards.put(metric, card);
       liveMetrics.add(card, liveMetrics.getChildren().size() % 3, liveMetrics.getChildren().size() / 3);
       boolean visible = telemetryService.visibleMetrics().contains(metric);
@@ -211,7 +214,7 @@ public final class BloodPressureWindowService {
     if (samples.isEmpty() || monitorStage == null) return;
     fileChooserFactory.chooseCsvExportFile(monitorStage, "knightshade-telemetry")
         .ifPresent(file -> {
-          StringBuilder csv = new StringBuilder("sessionStartedAt,timestamp,depth,score,bestMove,elapsedMillis,parameters,mainNodes,qNodes,ttProbes,ttHits,ttCutoffs,betaCutoffs,pvsResearches,nullMoveAttempts,nullMoveCutoffs,lmrApplications,lmrResearches,aspirationRetries,evaluationCacheHits,evaluationCacheMisses,requestedWorkers,effectiveWorkers,stopReason\n");
+          StringBuilder csv = new StringBuilder("sessionStartedAt,timestamp,depth,score,bestMove,elapsedMillis,parameters,mainNodes,qNodes,ttProbes,ttHits,ttCutoffs,betaCutoffs,pvsResearches,nullMoveAttempts,nullMoveCutoffs,lmrApplications,lmrResearches,aspirationRetries,evaluationCacheHits,evaluationCacheMisses,requestedWorkers,effectiveWorkers,stopReason,timeLimitCount,completedCount,cancelledCount\n");
           String parameters = String.join("|", telemetryService.visibleMetrics());
           java.time.Instant started = telemetryService.sessionStartedAt();
           for (SearchTelemetrySnapshot s : samples) {
@@ -221,7 +224,10 @@ public final class BloodPressureWindowService {
                 .append(s.betaCutoffs()).append(',').append(s.pvsResearches()).append(',').append(s.nullMoveAttempts()).append(',')
                 .append(s.nullMoveCutoffs()).append(',').append(s.lmrApplications()).append(',').append(s.lmrResearches()).append(',')
                 .append(s.aspirationRetries()).append(',').append(s.evaluationCacheHits()).append(',').append(s.evaluationCacheMisses()).append(',')
-                .append(s.requestedWorkers()).append(',').append(s.effectiveWorkers()).append(',').append(s.stopReason()).append('\n');
+                .append(s.requestedWorkers()).append(',').append(s.effectiveWorkers()).append(',').append(s.stopReason()).append(',')
+                .append(telemetryService.stopReasonCounts().getOrDefault(com.knightshade.engine.api.StopReason.TIME_LIMIT, 0L)).append(',')
+                .append(telemetryService.stopReasonCounts().getOrDefault(com.knightshade.engine.api.StopReason.COMPLETED, 0L)).append(',')
+                .append(telemetryService.stopReasonCounts().getOrDefault(com.knightshade.engine.api.StopReason.CANCELLED, 0L)).append('\n');
           }
           try { Files.writeString(file.toPath(), csv.toString(), StandardCharsets.UTF_8); }
           catch (IOException ignored) { }
@@ -276,11 +282,14 @@ public final class BloodPressureWindowService {
       VBox card = metricCards.get(metric);
       if (card != null) { boolean visible = telemetryService.visibleMetrics().contains(metric); card.setVisible(visible); card.setManaged(visible); }
     }
-    update("mainNodes", snapshot.mainNodes()); update("qNodes", snapshot.qNodes());
+    update("depth", snapshot.depth()); update("mainNodes", snapshot.mainNodes()); update("qNodes", snapshot.qNodes());
     update("TT hit / cutoff", snapshot.ttHits(), snapshot.ttCutoffs()); update("beta cutoff", snapshot.betaCutoffs());
     update("PVS re-search", snapshot.pvsResearches()); update("null / LMR", snapshot.nullMoveCutoffs(), snapshot.lmrApplications());
     update("aspiration retries", snapshot.aspirationRetries()); update("evaluation cache", snapshot.evaluationCacheHits(), snapshot.evaluationCacheMisses());
     update("workers", snapshot.effectiveWorkers(), snapshot.requestedWorkers()); updateText("stopReason", snapshot.stopReason());
+    updateText("stop counters", "TIME_LIMIT " + telemetryService.stopReasonCounts().getOrDefault(com.knightshade.engine.api.StopReason.TIME_LIMIT, 0L)
+        + " / COMPLETED " + telemetryService.stopReasonCounts().getOrDefault(com.knightshade.engine.api.StopReason.COMPLETED, 0L)
+        + " / CANCELLED " + telemetryService.stopReasonCounts().getOrDefault(com.knightshade.engine.api.StopReason.CANCELLED, 0L));
   }
 
   private void setValue(String metric, Object value) {
@@ -300,7 +309,7 @@ public final class BloodPressureWindowService {
     for (int i = 0; i < values.length; i++) { if (i > 0) average.append(" / "); average.append(Math.round(sum[i + 1] / sum[0])); }
     setValue(metric, current); setAverageValue(metric, average); setMaxValue(metric, maximum);
   }
-  private void updateText(String metric, Object value) { setValue(metric, value); setMaxValue(metric, value); }
+  private void updateText(String metric, Object value) { setValue(metric, value); setAverageValue(metric, "—"); setMaxValue(metric, "—"); }
   private void setMaxValue(String metric, Object value) { var label = maxValues.get(metric); if (label != null) label.setText(String.valueOf(value)); }
   private void setAverageValue(String metric, Object value) { var label = avgValues.get(metric); if (label != null) label.setText(String.valueOf(value)); }
 }

@@ -4938,6 +4938,11 @@
 .blood-pressure-window .blood-pressure-metric-current { -fx-text-fill: #29251c; -fx-font-size: 20px; -fx-font-weight: bold; }
 .blood-pressure-window .blood-pressure-metric-caption { -fx-text-fill: #9d8440; -fx-font-size: 10px; }
 .blood-pressure-window .blood-pressure-metric-summary-value { -fx-text-fill: #594716; -fx-font-size: 12px; -fx-font-weight: bold; }
+.blood-pressure-window .blood-pressure-stop-counters-card .blood-pressure-metric-title { -fx-font-size: 11px; }
+.blood-pressure-window .blood-pressure-stop-counters-card .blood-pressure-metric-description { -fx-font-size: 8px; }
+.blood-pressure-window .blood-pressure-stop-counters-card .blood-pressure-metric-current { -fx-font-size: 13px; }
+.blood-pressure-window .blood-pressure-stop-counters-card .blood-pressure-metric-caption,
+.blood-pressure-window .blood-pressure-stop-counters-card .blood-pressure-metric-summary-value { -fx-font-size: 9px; }
 .night-mode.blood-pressure-window {
     -fx-background-color: #1c2430;
     -fx-border-color: #465465;
