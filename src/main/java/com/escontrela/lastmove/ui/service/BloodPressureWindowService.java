@@ -40,7 +40,7 @@ public final class BloodPressureWindowService {
 
   private static final List<String> METRICS = List.of(
       "depth", "mainNodes", "qNodes", "TT hit / cutoff", "beta cutoff", "PVS re-search",
-      "null / LMR", "aspiration retries", "evaluation cache", "workers", "stopReason", "stop counters");
+      "null / LMR", "aspiration retries", "evaluation cache", "workers", "NPS", "stopReason", "stop counters");
 
   private final Stage primaryStage;
   private final ApplicationThemeService themeService;
@@ -57,6 +57,7 @@ public final class BloodPressureWindowService {
       Map.entry("PVS re-search", "Re-búsquedas PVS con ventana completa."), Map.entry("null / LMR", "Intentos null-move y reducciones LMR."),
       Map.entry("aspiration retries", "Reintentos al ampliar la ventana de aspiración."), Map.entry("evaluation cache", "Aciertos y fallos de caché de evaluación."),
       Map.entry("workers", "Trabajadores solicitados y efectivos."), Map.entry("stopReason", "Motivo por el que terminó la búsqueda."),
+      Map.entry("NPS", "Nodos procesados por segundo: mainNodes y qNodes por tiempo transcurrido."),
       Map.entry("stop counters", "Número acumulado de búsquedas por motivo de parada."));
   private final Map<String, double[]> averages = new HashMap<>();
   private final Map<String, VBox> metricCards = new HashMap<>();
@@ -66,6 +67,8 @@ public final class BloodPressureWindowService {
   private volatile SearchTelemetrySnapshot latestSnapshot;
   private long lastRenderNanos;
   private GameStatisticsChartControl mainNodesChart;
+  private GameStatisticsChartControl depthChart;
+  private GameStatisticsChartControl npsChart;
   private Stage monitorStage;
   private volatile Instant sessionStartedAt;
 
@@ -133,12 +136,12 @@ public final class BloodPressureWindowService {
     });
     VBox root = content();
     themeService.register(root);
-    Scene scene = new Scene(root, 840, 820);
+    Scene scene = new Scene(root, 1_220, 900);
     if (latestSnapshot != null) renderSnapshot(latestSnapshot);
     String stylesheet = getClass().getResource("/css/lastmove.css").toExternalForm();
     scene.getStylesheets().add(stylesheet);
     stage.setScene(scene);
-    stage.setX(primaryStage.getX() + Math.max(20, primaryStage.getWidth() - 860));
+    stage.setX(Math.max(20, primaryStage.getX() + primaryStage.getWidth() - 1_240));
     stage.setY(primaryStage.getY() + 80);
     return stage;
   }
@@ -188,13 +191,19 @@ public final class BloodPressureWindowService {
       card.getStyleClass().add("blood-pressure-metric-card");
       if ("stop counters".equals(metric)) card.getStyleClass().add("blood-pressure-stop-counters-card");
       metricCards.put(metric, card);
-      liveMetrics.add(card, liveMetrics.getChildren().size() % 3, liveMetrics.getChildren().size() / 3);
+      liveMetrics.add(card, liveMetrics.getChildren().size() % 2, liveMetrics.getChildren().size() / 2);
       boolean visible = telemetryService.visibleMetrics().contains(metric);
       card.setVisible(visible); card.setManaged(visible);
     }
     mainNodesChart = new GameStatisticsChartControl();
-    mainNodesChart.setPrefHeight(230);
+    configureChartHeight(mainNodesChart);
     mainNodesChart.renderTelemetry(List.of(), "Main nodes");
+    depthChart = new GameStatisticsChartControl();
+    configureChartHeight(depthChart);
+    depthChart.renderTelemetry(List.of(), "Depth");
+    npsChart = new GameStatisticsChartControl();
+    configureChartHeight(npsChart);
+    npsChart.renderTelemetry(List.of(), "NPS");
     Label liveTitle = new Label("Live metrics");
     liveTitle.getStyleClass().add("card-title");
     Label liveHint = new Label("Values appear when Knightshade is thinking.");
@@ -205,8 +214,32 @@ public final class BloodPressureWindowService {
     export.disableProperty().bind(active.not());
     HBox actions = new HBox(10, metricsToggle, export);
     actions.setAlignment(Pos.CENTER_LEFT);
-    root.getChildren().addAll(title, subtitle, actions, new Separator(), liveTitle, liveHint, mainNodesChart, liveMetrics);
+    Label chartsTitle = new Label("Search progress");
+    chartsTitle.getStyleClass().add("card-title");
+    javafx.scene.control.ScrollPane cardsScroll = new javafx.scene.control.ScrollPane(liveMetrics);
+    cardsScroll.setFitToWidth(true);
+    cardsScroll.setMinHeight(0);
+    cardsScroll.setHbarPolicy(javafx.scene.control.ScrollPane.ScrollBarPolicy.NEVER);
+    cardsScroll.setVbarPolicy(javafx.scene.control.ScrollPane.ScrollBarPolicy.AS_NEEDED);
+    cardsScroll.getStyleClass().add("blood-pressure-cards-scroll");
+    VBox.setVgrow(cardsScroll, javafx.scene.layout.Priority.ALWAYS);
+    VBox chartsPane = new VBox(10, chartsTitle, mainNodesChart, depthChart, npsChart);
+    chartsPane.getStyleClass().add("blood-pressure-charts-pane");
+    HBox.setHgrow(chartsPane, javafx.scene.layout.Priority.ALWAYS);
+    VBox cardsPane = new VBox(10, liveTitle, liveHint, cardsScroll);
+    cardsPane.setPrefWidth(470);
+    cardsPane.setMinWidth(460);
+    VBox.setVgrow(cardsScroll, javafx.scene.layout.Priority.ALWAYS);
+    HBox dashboard = new HBox(20, chartsPane, cardsPane);
+    VBox.setVgrow(dashboard, javafx.scene.layout.Priority.ALWAYS);
+    root.getChildren().addAll(title, subtitle, actions, new Separator(), dashboard);
     return root;
+  }
+
+  private static void configureChartHeight(GameStatisticsChartControl chart) {
+    chart.setMinHeight(150);
+    chart.setPrefHeight(150);
+    chart.setMaxHeight(150);
   }
 
   private void exportCsv() {
@@ -214,13 +247,13 @@ public final class BloodPressureWindowService {
     if (samples.isEmpty() || monitorStage == null) return;
     fileChooserFactory.chooseCsvExportFile(monitorStage, "knightshade-telemetry")
         .ifPresent(file -> {
-          StringBuilder csv = new StringBuilder("sessionStartedAt,timestamp,depth,score,bestMove,elapsedMillis,parameters,mainNodes,qNodes,ttProbes,ttHits,ttCutoffs,betaCutoffs,pvsResearches,nullMoveAttempts,nullMoveCutoffs,lmrApplications,lmrResearches,aspirationRetries,evaluationCacheHits,evaluationCacheMisses,requestedWorkers,effectiveWorkers,stopReason,timeLimitCount,completedCount,cancelledCount\n");
+          StringBuilder csv = new StringBuilder("sessionStartedAt,timestamp,depth,score,bestMove,elapsedMillis,parameters,mainNodes,qNodes,nps,ttProbes,ttHits,ttCutoffs,betaCutoffs,pvsResearches,nullMoveAttempts,nullMoveCutoffs,lmrApplications,lmrResearches,aspirationRetries,evaluationCacheHits,evaluationCacheMisses,requestedWorkers,effectiveWorkers,stopReason,timeLimitCount,completedCount,cancelledCount\n");
           String parameters = String.join("|", telemetryService.visibleMetrics());
           java.time.Instant started = telemetryService.sessionStartedAt();
           for (SearchTelemetrySnapshot s : samples) {
             csv.append(started == null ? "" : started).append(',').append(started == null ? "" : started.plusMillis(s.elapsedMillis())).append(',').append(s.depth()).append(',').append(s.score()).append(',')
                 .append(csvValue(s.bestMove())).append(',').append(s.elapsedMillis()).append(',').append(csvValue(parameters)).append(',')
-                .append(s.mainNodes()).append(',').append(s.qNodes()).append(',').append(s.ttProbes()).append(',').append(s.ttHits()).append(',').append(s.ttCutoffs()).append(',')
+                .append(s.mainNodes()).append(',').append(s.qNodes()).append(',').append(nps(s)).append(',').append(s.ttProbes()).append(',').append(s.ttHits()).append(',').append(s.ttCutoffs()).append(',')
                 .append(s.betaCutoffs()).append(',').append(s.pvsResearches()).append(',').append(s.nullMoveAttempts()).append(',')
                 .append(s.nullMoveCutoffs()).append(',').append(s.lmrApplications()).append(',').append(s.lmrResearches()).append(',')
                 .append(s.aspirationRetries()).append(',').append(s.evaluationCacheHits()).append(',').append(s.evaluationCacheMisses()).append(',')
@@ -252,7 +285,7 @@ public final class BloodPressureWindowService {
   }
 
   private void flushSnapshot() {
-    if (mainNodesChart == null) {
+    if (mainNodesChart == null || depthChart == null || npsChart == null) {
       uiUpdatePending.set(false);
       return;
     }
@@ -268,7 +301,10 @@ public final class BloodPressureWindowService {
     SearchTelemetrySnapshot snapshot = latestSnapshot;
     if (snapshot != null) {
       renderSnapshot(snapshot);
-      mainNodesChart.renderTelemetry(telemetryService.samples().stream().map(SearchTelemetrySnapshot::mainNodes).toList(), "Main nodes");
+      List<SearchTelemetrySnapshot> samples = telemetryService.samples();
+      mainNodesChart.renderTelemetry(samples.stream().map(SearchTelemetrySnapshot::mainNodes).toList(), "Main nodes");
+      depthChart.renderTelemetry(samples.stream().map(s -> (long) s.depth()).toList(), "Depth");
+      npsChart.renderTelemetry(samples.stream().map(this::nps).toList(), "NPS");
       lastRenderNanos = System.nanoTime();
     }
     uiUpdatePending.set(false);
@@ -286,10 +322,15 @@ public final class BloodPressureWindowService {
     update("TT hit / cutoff", snapshot.ttHits(), snapshot.ttCutoffs()); update("beta cutoff", snapshot.betaCutoffs());
     update("PVS re-search", snapshot.pvsResearches()); update("null / LMR", snapshot.nullMoveCutoffs(), snapshot.lmrApplications());
     update("aspiration retries", snapshot.aspirationRetries()); update("evaluation cache", snapshot.evaluationCacheHits(), snapshot.evaluationCacheMisses());
-    update("workers", snapshot.effectiveWorkers(), snapshot.requestedWorkers()); updateText("stopReason", snapshot.stopReason());
+    update("workers", snapshot.effectiveWorkers(), snapshot.requestedWorkers()); update("NPS", nps(snapshot)); updateText("stopReason", snapshot.stopReason());
     updateText("stop counters", "TIME_LIMIT " + telemetryService.stopReasonCounts().getOrDefault(com.knightshade.engine.api.StopReason.TIME_LIMIT, 0L)
         + " / COMPLETED " + telemetryService.stopReasonCounts().getOrDefault(com.knightshade.engine.api.StopReason.COMPLETED, 0L)
         + " / CANCELLED " + telemetryService.stopReasonCounts().getOrDefault(com.knightshade.engine.api.StopReason.CANCELLED, 0L));
+  }
+
+  /** Derived on the JavaFX side from completed-depth snapshots; never in the search hot path. */
+  private long nps(SearchTelemetrySnapshot snapshot) {
+    return snapshot.elapsedMillis() <= 0 ? 0L : (snapshot.mainNodes() + snapshot.qNodes()) * 1_000L / snapshot.elapsedMillis();
   }
 
   private void setValue(String metric, Object value) {

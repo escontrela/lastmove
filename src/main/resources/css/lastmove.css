@@ -4925,6 +4925,19 @@
     -fx-border-color: #596776;
     -fx-text-fill: #c6d0da;
 }
+.blood-pressure-cards-scroll,
+.blood-pressure-cards-scroll > .viewport,
+.blood-pressure-cards-scroll > .corner {
+    -fx-background-color: #ffffff;
+    -fx-background: #ffffff;
+    -fx-border-color: transparent;
+}
+.night-mode .blood-pressure-cards-scroll,
+.night-mode .blood-pressure-cards-scroll > .viewport,
+.night-mode .blood-pressure-cards-scroll > .corner {
+    -fx-background-color: #1c2430;
+    -fx-background: #1c2430;
+}
 .blood-pressure-window .blood-pressure-metric-card {
     -fx-background-color: #fff8dc;
     -fx-background-radius: 12;

@@ -21,7 +21,7 @@ public final class KnightshadeTelemetryService {
   private final CopyOnWriteArrayList<SearchTelemetrySnapshot> samples = new CopyOnWriteArrayList<>();
   private volatile Instant sessionStartedAt;
   private volatile int refreshFrequency = 4;
-  private volatile Set<String> visibleMetrics = Set.of("depth", "mainNodes", "qNodes", "TT hit / cutoff", "beta cutoff", "PVS re-search", "null / LMR", "aspiration retries", "evaluation cache", "workers", "stopReason", "stop counters");
+  private volatile Set<String> visibleMetrics = Set.of("depth", "mainNodes", "qNodes", "TT hit / cutoff", "beta cutoff", "PVS re-search", "null / LMR", "aspiration retries", "evaluation cache", "workers", "NPS", "stopReason", "stop counters");
   private final EnumMap<StopReason, Long> stopReasonCounts = new EnumMap<>(StopReason.class);
 
   public boolean isEnabled() { return enabled; }
