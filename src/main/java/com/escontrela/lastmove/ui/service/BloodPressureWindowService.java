@@ -23,8 +23,8 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.Separator;
-import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.TilePane;
 import javafx.scene.layout.VBox;
 import javafx.animation.PauseTransition;
 import javafx.application.Platform;
@@ -181,9 +181,13 @@ public final class BloodPressureWindowService {
     };
     updateToggleLabel.run();
     active.addListener((ignored, oldValue, newValue) -> updateToggleLabel.run());
-    GridPane liveMetrics = new GridPane();
-    liveMetrics.setHgap(18);
-    liveMetrics.setVgap(7);
+    TilePane liveMetrics = new TilePane();
+    liveMetrics.setHgap(6);
+    liveMetrics.setVgap(4);
+    liveMetrics.setPrefTileWidth(190);
+    liveMetrics.setPrefTileHeight(68);
+    liveMetrics.setTileAlignment(Pos.CENTER_LEFT);
+    liveMetrics.setPrefColumns(5);
     for (String metric : METRICS) {
       parameterSelection.put(metric, new SimpleBooleanProperty(telemetryService.visibleMetrics().contains(metric)));
       Label value = new Label("—");
@@ -193,7 +197,6 @@ public final class BloodPressureWindowService {
       maxValues.put(metric, maximum);
       avgValues.put(metric, average);
       Label heading = new Label(metric); heading.getStyleClass().add("blood-pressure-metric-title");
-      Label description = new Label(descriptions.get(metric)); description.getStyleClass().add("blood-pressure-metric-description");
       value.getStyleClass().add("blood-pressure-metric-current");
       Label avgCaption = new Label("AVG"); avgCaption.getStyleClass().add("blood-pressure-metric-caption");
       average.getStyleClass().add("blood-pressure-metric-summary-value");
@@ -201,14 +204,14 @@ public final class BloodPressureWindowService {
       maximum.getStyleClass().add("blood-pressure-metric-summary-value");
       HBox summary = new HBox(6, avgCaption, average, new javafx.scene.layout.Region(), maxCaption, maximum);
       javafx.scene.layout.HBox.setHgrow(summary.getChildren().get(2), javafx.scene.layout.Priority.ALWAYS);
-      VBox card = new VBox(3, heading, description, value, summary);
-      javafx.scene.control.Tooltip.install(card, new javafx.scene.control.Tooltip(descriptions.get(metric)));
-      card.getStyleClass().add("blood-pressure-metric-card");
-      if ("stop counters".equals(metric)) card.getStyleClass().add("blood-pressure-stop-counters-card");
-      metricCards.put(metric, card);
-      liveMetrics.add(card, liveMetrics.getChildren().size() % 2, liveMetrics.getChildren().size() / 2);
+      javafx.scene.control.Tooltip.install(heading, new javafx.scene.control.Tooltip(descriptions.get(metric)));
+      VBox item = new VBox(3, heading, value, summary);
+      item.getStyleClass().add("blood-pressure-metric-item");
+      if ("stop counters".equals(metric)) item.getStyleClass().add("blood-pressure-stop-counters-item");
+      metricCards.put(metric, item);
+      liveMetrics.getChildren().add(item);
       boolean visible = telemetryService.visibleMetrics().contains(metric);
-      card.setVisible(visible); card.setManaged(visible);
+      item.setVisible(visible); item.setManaged(visible);
     }
     mainNodesChart = new GameStatisticsChartControl();
     configureChartHeight(mainNodesChart);
@@ -235,23 +238,20 @@ public final class BloodPressureWindowService {
     actions.setAlignment(Pos.CENTER_LEFT);
     Label chartsTitle = new Label("Search progress");
     chartsTitle.getStyleClass().add("card-title");
-    javafx.scene.control.ScrollPane cardsScroll = new javafx.scene.control.ScrollPane(liveMetrics);
-    cardsScroll.setFitToWidth(true);
-    cardsScroll.setMinHeight(0);
-    cardsScroll.setHbarPolicy(javafx.scene.control.ScrollPane.ScrollBarPolicy.NEVER);
-    cardsScroll.setVbarPolicy(javafx.scene.control.ScrollPane.ScrollBarPolicy.AS_NEEDED);
-    cardsScroll.getStyleClass().add("blood-pressure-cards-scroll");
-    VBox.setVgrow(cardsScroll, javafx.scene.layout.Priority.ALWAYS);
+    javafx.scene.control.ScrollPane metricsScroll = new javafx.scene.control.ScrollPane(liveMetrics);
+    metricsScroll.setFitToWidth(true);
+    metricsScroll.setMinHeight(0);
+    metricsScroll.setHbarPolicy(javafx.scene.control.ScrollPane.ScrollBarPolicy.NEVER);
+    metricsScroll.setVbarPolicy(javafx.scene.control.ScrollPane.ScrollBarPolicy.AS_NEEDED);
+    metricsScroll.getStyleClass().add("blood-pressure-metrics-scroll");
+    VBox.setVgrow(metricsScroll, javafx.scene.layout.Priority.ALWAYS);
     VBox chartsPane = new VBox(10, chartsTitle, mainNodesChart, depthChart, npsChart);
     chartsPane.getStyleClass().add("blood-pressure-charts-pane");
-    HBox.setHgrow(chartsPane, javafx.scene.layout.Priority.ALWAYS);
-    VBox cardsPane = new VBox(10, liveTitle, liveHint, cardsScroll);
-    cardsPane.setPrefWidth(470);
-    cardsPane.setMinWidth(460);
-    VBox.setVgrow(cardsScroll, javafx.scene.layout.Priority.ALWAYS);
-    HBox dashboard = new HBox(20, chartsPane, cardsPane);
-    VBox.setVgrow(dashboard, javafx.scene.layout.Priority.ALWAYS);
-    root.getChildren().addAll(title, subtitle, actions, new Separator(), dashboard);
+    chartsPane.setMaxWidth(Double.MAX_VALUE);
+    VBox metricsPane = new VBox(8, liveTitle, liveHint, metricsScroll);
+    metricsPane.getStyleClass().add("blood-pressure-metrics-pane");
+    VBox.setVgrow(metricsPane, javafx.scene.layout.Priority.ALWAYS);
+    root.getChildren().addAll(title, subtitle, actions, new Separator(), chartsPane, metricsPane);
     return root;
   }
 
@@ -382,8 +382,8 @@ public final class BloodPressureWindowService {
 
   private void renderSnapshot(SearchTelemetrySnapshot snapshot, List<SearchTelemetrySnapshot> samples) {
     for (String metric : METRICS) {
-      VBox card = metricCards.get(metric);
-      if (card != null) { boolean visible = telemetryService.visibleMetrics().contains(metric); card.setVisible(visible); card.setManaged(visible); }
+      VBox item = metricCards.get(metric);
+      if (item != null) { boolean visible = telemetryService.visibleMetrics().contains(metric); item.setVisible(visible); item.setManaged(visible); }
     }
     List<SearchSummary> summaries = searchSummaries(samples);
     SearchKey currentKey = new SearchKey(snapshot.context().gameId(), snapshot.context().searchId());
