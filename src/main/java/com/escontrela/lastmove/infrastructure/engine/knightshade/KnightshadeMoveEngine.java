@@ -156,7 +156,8 @@ public final class KnightshadeMoveEngine implements ComputerMoveEngine {
       SearchTelemetryListener listener = gameMove && telemetryService != null && telemetryService.isEnabled()
           ? telemetryService::publish : SearchTelemetryListener.NONE;
       SearchTelemetryContext telemetryContext = listener == SearchTelemetryListener.NONE ? null
-          : SearchTelemetryContext.forSearch(telemetryService.gameId(), fen,
+          : SearchTelemetryContext.forSearch(request.gameId() == null
+                  ? telemetryService.gameId() : request.gameId().value().toString(), fen,
               SearchLimits.timeOnly(request.maximumThinkingTime()), positionHistory);
       SearchResult result = engine.search(fen, positionHistory,
           SearchLimits.timeOnly(request.maximumThinkingTime()), cancellationRequested::get, listener,

@@ -24,8 +24,9 @@ public final class KnightshadeTelemetryService {
   private volatile String gameId = "unscoped";
   private volatile int refreshFrequency = 4;
   private volatile Set<String> visibleMetrics = Set.of(
-      "depth", "mainNodes", "qNodes", "TT hit / cutoff", "beta cutoff", "PVS re-search",
-      "null / LMR", "aspiration retries", "evaluation cache", "workers", "qsearch", "stand-pat",
+      "depth", "time to depth (ms)", "post-depth time (ms)", "post-depth nodes",
+      "mainNodes", "qNodes", "TT hit / cutoff", "beta cutoff", "PVS re-search",
+      "null / LMR", "aspiration retries", "mate confirmations", "evaluation cache", "workers", "qsearch", "stand-pat",
       "move lists", "quiet checks", "SEE", "search", "NPS", "stopReason", "stop counters");
   private final EnumMap<StopReason, Long> stopReasonCounts = new EnumMap<>(StopReason.class);
 

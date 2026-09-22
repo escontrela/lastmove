@@ -8,9 +8,11 @@ import com.knightshade.engine.board.Move;
 final class SearchStats {
   long mainNodes, qNodes, ttProbes, ttHits, ttCutoffs, betaCutoffs, pvsResearches;
   long nullMoveAttempts, nullMoveCutoffs, lmrApplications, lmrResearches, aspirationRetries;
+  long mateConfirmations;
   long evaluationCacheHits, evaluationCacheMisses;
   long quiescenceEntries, standPatCutoffs, stalemateChecks, moveListsGenerated;
   long quietChecksExamined, seeEvaluations, seePrunes;
+  boolean quietnessMetricsAvailable;
 
   void merge(SearchStats other) {
     mainNodes += other.mainNodes; qNodes += other.qNodes; ttProbes += other.ttProbes;
@@ -23,6 +25,8 @@ final class SearchStats {
     stalemateChecks += other.stalemateChecks; moveListsGenerated += other.moveListsGenerated;
     quietChecksExamined += other.quietChecksExamined; seeEvaluations += other.seeEvaluations;
     seePrunes += other.seePrunes;
+    mateConfirmations += other.mateConfirmations;
+    quietnessMetricsAvailable |= other.quietnessMetricsAvailable;
   }
 
   SearchTelemetrySnapshot snapshot(com.knightshade.engine.api.SearchTelemetryContext context,
@@ -30,8 +34,9 @@ final class SearchStats {
       int requested, int active, StopReason reason, long elapsedMillis) {
     return new SearchTelemetrySnapshot(context, event, java.time.Instant.now(), depth, move, score, mainNodes, qNodes, ttProbes, ttHits,
         ttCutoffs, betaCutoffs, pvsResearches, nullMoveAttempts, nullMoveCutoffs, lmrApplications,
-        lmrResearches, aspirationRetries, evaluationCacheHits, evaluationCacheMisses,
+        lmrResearches, aspirationRetries, mateConfirmations, evaluationCacheHits, evaluationCacheMisses,
         requested, active, quiescenceEntries, standPatCutoffs, stalemateChecks, moveListsGenerated,
-        quietChecksExamined, seeEvaluations, seePrunes, reason, elapsedMillis);
+        quietChecksExamined, seeEvaluations, seePrunes, quietnessMetricsAvailable,
+        reason, elapsedMillis);
   }
 }

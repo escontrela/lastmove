@@ -150,6 +150,7 @@ public final class IterativeDeepeningSearch implements Search {
       SearchTelemetryContext context) {
     telemetryListener = listener == null ? SearchTelemetryListener.NONE : listener;
     telemetry = telemetryListener == SearchTelemetryListener.NONE ? null : new SearchStats();
+    if (telemetry != null) telemetry.quietnessMetricsAvailable = true;
     telemetryRequestedWorkers = requestedWorkers;
     telemetryEffectiveWorkers = effectiveWorkers;
     telemetryContext = context;
@@ -198,6 +199,8 @@ public final class IterativeDeepeningSearch implements Search {
 
   void enableTelemetry(int requestedWorkers, int effectiveWorkers, SearchTelemetryListener listener) {
     telemetry = new SearchStats();
+    telemetry.quietnessMetricsAvailable = true;
+    quiescence.setTelemetry(telemetry);
     telemetryListener = listener == null ? SearchTelemetryListener.NONE : listener;
     if (evaluator instanceof PositionalEvaluator positional) positional.setTelemetryEnabled(true);
     telemetryRequestedWorkers = requestedWorkers;
@@ -244,9 +247,23 @@ public final class IterativeDeepeningSearch implements Search {
         return previousScore;
       }
       if (score <= alpha) {
+        if (Scores.isMate(score) && (alpha != -Scores.INF || beta != Scores.INF)) {
+          if (telemetry != null) telemetry.mateConfirmations++;
+          alpha = -Scores.INF;
+          beta = Scores.INF;
+          delta = Scores.INF;
+          continue;
+        }
         if (telemetry != null) telemetry.aspirationRetries++;
         alpha = Math.max(-Scores.INF, alpha - delta);
       } else if (score >= beta) {
+        if (Scores.isMate(score) && (alpha != -Scores.INF || beta != Scores.INF)) {
+          if (telemetry != null) telemetry.mateConfirmations++;
+          alpha = -Scores.INF;
+          beta = Scores.INF;
+          delta = Scores.INF;
+          continue;
+        }
         if (telemetry != null) telemetry.aspirationRetries++;
         beta = Math.min(Scores.INF, beta + delta);
       } else {

@@ -437,7 +437,7 @@ public final class ComputerGameService {
     OpeningPracticeConfiguration practice = context.configuration.openingPractice().orElse(null);
     if (practice == null || context.openingPracticeState != OpeningPracticeState.FOLLOWING) {
       return context.engine.chooseMove(
-          new ComputerMoveRequest(position, thinkingTime, context.game.positionHistory()));
+          new ComputerMoveRequest(position, thinkingTime, context.game.positionHistory(), context.game.id()));
     }
     MoveCommand guided = practice.line().get(context.openingPlyIndex);
     ChessGame candidateGame = gameFactory.createAnalysisGame(position);
@@ -445,14 +445,14 @@ public final class ComputerGameService {
     if (!execution.accepted()) {
       context.openingPracticeState = OpeningPracticeState.ABANDONED_BY_DEVIATION;
       return context.engine.chooseMove(
-          new ComputerMoveRequest(position, thinkingTime, context.game.positionHistory()));
+          new ComputerMoveRequest(position, thinkingTime, context.game.positionHistory(), context.game.id()));
     }
     ComputerMoveRequest bestRequest =
-        new ComputerMoveRequest(position, thinkingTime, context.game.positionHistory());
+        new ComputerMoveRequest(position, thinkingTime, context.game.positionHistory(), context.game.id());
     List<PositionSnapshot> guidedHistory = new ArrayList<>(context.game.positionHistory());
     guidedHistory.add(candidateGame.currentPosition());
     ComputerMoveRequest guidedRequest =
-        new ComputerMoveRequest(candidateGame.currentPosition(), thinkingTime, guidedHistory);
+        new ComputerMoveRequest(candidateGame.currentPosition(), thinkingTime, guidedHistory, context.game.id());
     return context.engine.analyze(bestRequest).thenCompose(best ->
         context.engine.analyze(guidedRequest).thenApply(afterGuided -> {
           if (withinThreshold(best, afterGuided, practice.safetyThresholdCentipawns())) {

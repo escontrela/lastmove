@@ -36,11 +36,6 @@ public final class ComputerVsComputerGameService {
   public List<ComputerEngineDescriptor> availableEngines() { return providers.values().stream().map(ComputerMoveEngineProvider::descriptor).sorted(Comparator.comparing(ComputerEngineDescriptor::displayName)).toList(); }
   public List<ComputerVsComputerGameState> gamesInMemory() { return runtimes.keySet().stream().map(this::state).toList(); }
   public CompletionStage<ComputerVsComputerGameState> createGame(ComputerVsComputerConfiguration configuration) {
-    if (telemetry != null && telemetry.isEnabled()
-        && (ComputerEngineIds.KNIGHTSHADE.equals(configuration.whiteEngineId())
-            || ComputerEngineIds.KNIGHTSHADE.equals(configuration.blackEngineId()))) {
-      telemetry.beginSession();
-    }
     ComputerMoveEngineProvider whiteProvider = provider(configuration.whiteEngineId());
     ComputerMoveEngineProvider blackProvider = provider(configuration.blackEngineId());
     GamePlayer whitePlayer =
@@ -53,6 +48,11 @@ public final class ComputerVsComputerGameService {
             .map(fen -> games.createFrom(fen, whitePlayer, blackPlayer, Optional.of(configuration.timeControl())))
             .orElseGet(
                 () -> games.createInitial(whitePlayer, blackPlayer, Optional.of(configuration.timeControl())));
+    if (telemetry != null && telemetry.isEnabled()
+        && (ComputerEngineIds.KNIGHTSHADE.equals(configuration.whiteEngineId())
+            || ComputerEngineIds.KNIGHTSHADE.equals(configuration.blackEngineId()))) {
+      telemetry.beginSession(game.id().value().toString());
+    }
     Runtime runtime = new Runtime(game, configuration, whiteProvider.descriptor(), blackProvider.descriptor(), whiteProvider.create(), blackProvider.create());
     runtimes.put(game.id(), runtime);
     return runtime.white.start().thenCompose(ignored -> runtime.black.start()).thenApply(ignored -> {
@@ -79,7 +79,8 @@ public final class ComputerVsComputerGameService {
   private void requestMove(Runtime runtime) {
     final PositionSnapshot position; final long version; final Duration limit; final ComputerMoveEngine engine;
     synchronized (runtime) { expire(runtime); if (runtime.game.result().isPresent() || runtime.stopped) return; position = runtime.game.currentPosition(); version = ++runtime.searchVersion; engine = runtime.game.currentTurn() == PieceColor.WHITE ? runtime.white : runtime.black; limit = permitted(runtime); }
-    engine.chooseMove(new ComputerMoveRequest(position, limit, runtime.game.positionHistory())).handle((move, failure) -> {
+    engine.chooseMove(new ComputerMoveRequest(position, limit, runtime.game.positionHistory(),
+        runtime.game.id())).handle((move, failure) -> {
       boolean continueMatch;
       synchronized (runtime) {
         if (version != runtime.searchVersion) return null;

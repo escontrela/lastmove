@@ -170,9 +170,23 @@ public final class ParallelRootSearch implements Search {
           }
           orderingMove = result.move();
           if (result.score() <= alpha) {
+            if (Scores.isMate(result.score()) && (alpha != -Scores.INF || beta != Scores.INF)) {
+              if (telemetryEnabled) workers.getFirst().search.telemetryStats().mateConfirmations++;
+              alpha = -Scores.INF;
+              beta = Scores.INF;
+              delta = Scores.INF;
+              continue;
+            }
             if (telemetryEnabled) workers.getFirst().search.telemetryStats().aspirationRetries++;
             alpha = Math.max(-Scores.INF, alpha - delta);
           } else if (result.score() >= beta) {
+            if (Scores.isMate(result.score()) && (alpha != -Scores.INF || beta != Scores.INF)) {
+              if (telemetryEnabled) workers.getFirst().search.telemetryStats().mateConfirmations++;
+              alpha = -Scores.INF;
+              beta = Scores.INF;
+              delta = Scores.INF;
+              continue;
+            }
             if (telemetryEnabled) workers.getFirst().search.telemetryStats().aspirationRetries++;
             beta = Math.min(Scores.INF, beta + delta);
           } else {

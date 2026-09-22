@@ -110,8 +110,11 @@ public final class QuiescenceSearch {
     // full move list for positions that are clearly good enough.
     int standPat = evaluateFromSideToMove(board);
     if (standPat >= beta) {
+      if (!hasLegalMove(board)) {
+        return 0;
+      }
       if (telemetry != null) telemetry.standPatCutoffs++;
-      return hasLegalMove(board) ? beta : 0;
+      return beta;
     }
     if (standPat > alpha) {
       alpha = standPat;
@@ -161,10 +164,10 @@ public final class QuiescenceSearch {
         || seeAtLeastZero(board, move)) {
       return true;
     }
-    if (telemetry != null) telemetry.seePrunes++;
     board.make(move);
     boolean givesCheck = board.inCheck(board.sideToMove());
     board.unmake();
+    if (!givesCheck && telemetry != null) telemetry.seePrunes++;
     return givesCheck;
   }
 

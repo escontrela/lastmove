@@ -1715,6 +1715,11 @@
     -fx-text-fill: #58718c;
 }
 
+.splash-version {
+    -fx-font-size: 11px;
+    -fx-text-fill: #8295a8;
+}
+
 .splash-loader-cell {
     -fx-min-width: 9px;
     -fx-min-height: 9px;
@@ -3465,6 +3470,11 @@
     -fx-font-weight: 700;
     -fx-text-fill: #6b7e91;
 }
+.about-message-body > .about-version {
+    -fx-font-size: 12px;
+    -fx-font-weight: 600;
+    -fx-text-fill: #8295a8;
+}
 .about-repository-link {
     -fx-padding: 0;
     -fx-border-width: 0;
@@ -3475,6 +3485,7 @@
 }
 .about-repository-link:hover { -fx-text-fill: #b87919; }
 .night-mode .about-message-body > .label { -fx-text-fill: #aebfd0; }
+.night-mode .about-message-body > .about-version { -fx-text-fill: #8295a8; }
 .night-mode .about-repository-link { -fx-text-fill: #efb34b; }
 .night-mode .about-repository-link:hover { -fx-text-fill: #ffd27a; }
 .night-mode .message-box-card {
