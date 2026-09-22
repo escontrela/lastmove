@@ -13,6 +13,7 @@ import com.knightshade.engine.KnightshadeEngine;
 import com.knightshade.engine.api.SearchLimits;
 import com.knightshade.engine.api.SearchResult;
 import com.knightshade.engine.api.SearchTelemetryListener;
+import com.knightshade.engine.api.SearchTelemetryContext;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -154,8 +155,12 @@ public final class KnightshadeMoveEngine implements ComputerMoveEngine {
       log.debug("Knightshade search started: maxTimeMs={}", maxTimeMillis);
       SearchTelemetryListener listener = gameMove && telemetryService != null && telemetryService.isEnabled()
           ? telemetryService::publish : SearchTelemetryListener.NONE;
+      SearchTelemetryContext telemetryContext = listener == SearchTelemetryListener.NONE ? null
+          : SearchTelemetryContext.forSearch(telemetryService.gameId(), fen,
+              SearchLimits.timeOnly(request.maximumThinkingTime()), positionHistory);
       SearchResult result = engine.search(fen, positionHistory,
-          SearchLimits.timeOnly(request.maximumThinkingTime()), cancellationRequested::get, listener);
+          SearchLimits.timeOnly(request.maximumThinkingTime()), cancellationRequested::get, listener,
+          telemetryContext);
       EngineScore score =
           result.mate()
               ? EngineScore.mateIn(signedMatePlies(result))

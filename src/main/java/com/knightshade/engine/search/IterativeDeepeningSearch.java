@@ -5,6 +5,8 @@ import com.knightshade.engine.api.SearchResult;
 import com.knightshade.engine.api.StopSignal;
 import com.knightshade.engine.api.SearchTelemetryListener;
 import com.knightshade.engine.api.StopReason;
+import com.knightshade.engine.api.SearchTelemetryContext;
+import com.knightshade.engine.api.SearchTelemetryEvent;
 import com.knightshade.engine.board.Board;
 import com.knightshade.engine.board.Move;
 import com.knightshade.engine.board.Piece;
@@ -50,6 +52,7 @@ public final class IterativeDeepeningSearch implements Search {
   private SearchTelemetryListener telemetryListener = SearchTelemetryListener.NONE;
   private int telemetryRequestedWorkers = 1;
   private int telemetryEffectiveWorkers = 1;
+  private SearchTelemetryContext telemetryContext;
 
   public IterativeDeepeningSearch(MoveGenerator moveGenerator, Evaluator evaluator) {
     this(moveGenerator, evaluator, new TranspositionTable());
@@ -90,6 +93,7 @@ public final class IterativeDeepeningSearch implements Search {
     bestRootMove = null;
     nodes = 0;
     quiescence.resetNodes();
+    quiescence.setTelemetry(telemetry);
     long startedAt = System.nanoTime();
     int maxDepth = limits.maxDepth() > 0 ? limits.maxDepth() : DEFAULT_MAX_DEPTH;
 
@@ -122,7 +126,8 @@ public final class IterativeDeepeningSearch implements Search {
       completedDepth = depth;
       bestScore = score;
       bestMove = bestRootMove;
-      emit(depth, bestMove, bestScore, StopReason.COMPLETED, elapsedMillis(startedAt));
+      emit(depth, bestMove, bestScore, SearchTelemetryEvent.ITERATION_COMPLETED,
+          StopReason.COMPLETED, elapsedMillis(startedAt));
       if (Scores.isMate(score)) {
         break;
       }
@@ -135,26 +140,44 @@ public final class IterativeDeepeningSearch implements Search {
   public SearchResult search(
       Board board, SearchLimits limits, StopSignal stop, Map<Long, Integer> positionOccurrences,
       SearchTelemetryListener listener, int requestedWorkers, int effectiveWorkers) {
+    return search(board, limits, stop, positionOccurrences, listener, requestedWorkers, effectiveWorkers, null);
+  }
+
+  @Override
+  public SearchResult search(
+      Board board, SearchLimits limits, StopSignal stop, Map<Long, Integer> positionOccurrences,
+      SearchTelemetryListener listener, int requestedWorkers, int effectiveWorkers,
+      SearchTelemetryContext context) {
     telemetryListener = listener == null ? SearchTelemetryListener.NONE : listener;
     telemetry = telemetryListener == SearchTelemetryListener.NONE ? null : new SearchStats();
     telemetryRequestedWorkers = requestedWorkers;
     telemetryEffectiveWorkers = effectiveWorkers;
+    telemetryContext = context;
     SearchResult result = search(board, limits, stop, positionOccurrences);
     if (telemetry != null) {
       telemetry.qNodes = quiescence.nodes();
-      StopReason reason = result.move() == null ? StopReason.NO_LEGAL_MOVE
-          : !stop.shouldStop() ? StopReason.COMPLETED
-          : limits.maxTimeMillis() > 0 && result.elapsedMillis() >= limits.maxTimeMillis()
-              ? StopReason.TIME_LIMIT : StopReason.CANCELLED;
-      emit(result.depth(), result.move(), result.score(), reason, result.elapsedMillis());
+      StopReason reason = terminalReason(result, limits, stop);
+      emit(result.depth(), result.move(), result.score(), SearchTelemetryEvent.SEARCH_FINISHED,
+          reason, result.elapsedMillis());
     }
     telemetry = null;
+    quiescence.setTelemetry(null);
     telemetryListener = SearchTelemetryListener.NONE;
+    telemetryContext = null;
     if (evaluator instanceof PositionalEvaluator positional) positional.setTelemetryEnabled(false);
     return result;
   }
 
-  private void emit(int depth, Move move, int score, StopReason reason, long elapsedMillis) {
+  private StopReason terminalReason(SearchResult result, SearchLimits limits, StopSignal stop) {
+    if (result.move() == null) return Scores.isMate(result.score()) ? StopReason.MATE : StopReason.NO_LEGAL_MOVE;
+    if (stop.shouldStop()) return StopReason.CANCELLED;
+    if (Scores.isMate(result.score())) return StopReason.MATE;
+    if (limits.maxDepth() > 0 && result.depth() >= limits.maxDepth()) return StopReason.DEPTH_LIMIT;
+    return limits.maxTimeMillis() > 0 ? StopReason.TIME_LIMIT : StopReason.COMPLETED;
+  }
+
+  private void emit(int depth, Move move, int score, SearchTelemetryEvent event,
+      StopReason reason, long elapsedMillis) {
     if (telemetry == null) return;
     telemetry.qNodes = quiescence.nodes();
     if (evaluator instanceof PositionalEvaluator positional) {
@@ -162,7 +185,7 @@ public final class IterativeDeepeningSearch implements Search {
       telemetry.evaluationCacheMisses = positional.cacheMisses();
     }
     try {
-      telemetryListener.onSnapshot(telemetry.snapshot(depth, move, score,
+      telemetryListener.onSnapshot(telemetry.snapshot(telemetryContext, event, depth, move, score,
           telemetryRequestedWorkers, telemetryEffectiveWorkers, reason, elapsedMillis));
     } catch (RuntimeException ignored) {
       // Observability must never alter search correctness or latency.
@@ -289,6 +312,7 @@ public final class IterativeDeepeningSearch implements Search {
                 false,
                 stop);
         if (score > alpha && score < beta) {
+          if (telemetry != null) telemetry.pvsResearches++;
           score =
               -pvSearch(
                   board,
@@ -334,6 +358,7 @@ public final class IterativeDeepeningSearch implements Search {
       int score = -pvSearch(board, depth - 1, scout ? -alpha - 1 : -beta, -alpha,
           1, 0, killers, history, repetitions, false, stop);
       if (scout && score > alpha && score < beta && !stop.shouldStop()) {
+        if (telemetry != null) telemetry.pvsResearches++;
         score = -pvSearch(board, depth - 1, -beta, -alpha,
             1, 0, killers, history, repetitions, false, stop);
       }
@@ -473,13 +498,12 @@ public final class IterativeDeepeningSearch implements Search {
               && !move.isPromotion()
               && !move.equals(killers.primary(ply))
               && !move.equals(killers.secondary(ply));
-      if (telemetry != null && reduce) telemetry.lmrApplications++;
-
       board.make(move);
       long childKey = board.zobristKey();
       recordPosition(repetitions, childKey);
       boolean givesCheck = board.inCheck(board.sideToMove());
       boolean reduced = reduce && !givesCheck;
+      if (telemetry != null && reduced) telemetry.lmrApplications++;
       int score;
       if (moveCount == 1) {
         score =

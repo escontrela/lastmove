@@ -6,6 +6,8 @@ import com.knightshade.engine.api.StopSignal;
 import com.knightshade.engine.api.SearchTelemetryListener;
 import com.knightshade.engine.api.StopReason;
 import com.knightshade.engine.api.SearchTelemetrySnapshot;
+import com.knightshade.engine.api.SearchTelemetryContext;
+import com.knightshade.engine.api.SearchTelemetryEvent;
 import com.knightshade.engine.board.Board;
 import com.knightshade.engine.board.Move;
 import com.knightshade.engine.evaluation.Evaluator;
@@ -24,6 +26,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
@@ -38,7 +41,9 @@ public final class ParallelRootSearch implements Search {
   private static final AtomicInteger POOL_IDS = new AtomicInteger();
   private final int threads;
   private final Supplier<? extends Evaluator> evaluators;
-  private SearchTelemetryListener telemetryListener = SearchTelemetryListener.NONE;
+  private final ThreadLocal<SearchTelemetryListener> telemetryListeners =
+      ThreadLocal.withInitial(() -> SearchTelemetryListener.NONE);
+  private final ThreadLocal<SearchTelemetryContext> telemetryContexts = new ThreadLocal<>();
 
   public ParallelRootSearch(int threads) {
     this(threads, PositionalEvaluator::new);
@@ -50,11 +55,21 @@ public final class ParallelRootSearch implements Search {
   public SearchResult search(Board board, SearchLimits limits, StopSignal stop,
       Map<Long, Integer> positionOccurrences, SearchTelemetryListener listener,
       int requestedWorkers, int effectiveWorkers) {
-    telemetryListener = listener == null ? SearchTelemetryListener.NONE : listener;
+    return search(board, limits, stop, positionOccurrences, listener, requestedWorkers,
+        effectiveWorkers, null);
+  }
+
+  @Override
+  public SearchResult search(Board board, SearchLimits limits, StopSignal stop,
+      Map<Long, Integer> positionOccurrences, SearchTelemetryListener listener,
+      int requestedWorkers, int effectiveWorkers, SearchTelemetryContext context) {
+    telemetryListeners.set(listener == null ? SearchTelemetryListener.NONE : listener);
+    telemetryContexts.set(context);
     try {
       return search(board, limits, stop, positionOccurrences);
     } finally {
-      telemetryListener = SearchTelemetryListener.NONE;
+      telemetryListeners.remove();
+      telemetryContexts.remove();
     }
   }
 
@@ -92,14 +107,15 @@ public final class ParallelRootSearch implements Search {
       }
       return false;
     };
+    SearchTelemetryListener telemetryListener = telemetryListeners.get();
+    SearchTelemetryContext telemetryContext = telemetryContexts.get();
     boolean telemetryEnabled = telemetryListener != SearchTelemetryListener.NONE;
     if (threads == 1) {
       IterativeDeepeningSearch sequential = new IterativeDeepeningSearch(new LegalMoveGenerator(), evaluators.get());
-      if (telemetryEnabled) sequential.enableTelemetry(threads, 1, telemetryListener);
-      SearchResult result = sequential.search(board.copy(), limits, requestStop, positionOccurrences);
-      if (telemetryEnabled) emit(sequential.telemetryStats(), result, started, threads, 1,
-          stopReason(limits, started, requestStop));
-      return result;
+      return telemetryEnabled
+          ? sequential.search(board.copy(), limits, stop, positionOccurrences, telemetryListener,
+              threads, 1, telemetryContext)
+          : sequential.search(board.copy(), limits, stop, positionOccurrences);
     }
 
     Board root = board.copy();
@@ -107,14 +123,18 @@ public final class ParallelRootSearch implements Search {
     if (legal.isEmpty()) {
       SearchResult result = new SearchResult(null, root.inCheck(root.sideToMove()) ? -Scores.MATE : 0,
           0, 0, elapsedMillis(started));
-      if (telemetryEnabled) emit(new SearchStats(), result, started, threads, 0, StopReason.NO_LEGAL_MOVE);
+      if (telemetryEnabled) emit(new SearchStats(), result, started, threads, 0,
+          SearchTelemetryEvent.SEARCH_FINISHED, terminalReason(limits, started, stop, result));
       return result;
     }
     Move bestMove = legal.getFirst();
     int bestScore = 0;
     int completedDepth = 0;
     if (requestStop.shouldStop()) {
-      return new SearchResult(bestMove, bestScore, 0, 0, elapsedMillis(started));
+      SearchResult result = new SearchResult(bestMove, bestScore, 0, 0, elapsedMillis(started));
+      if (telemetryEnabled) emit(new SearchStats(), result, started, threads, 0,
+          SearchTelemetryEvent.SEARCH_FINISHED, terminalReason(limits, started, stop, result));
+      return result;
     }
 
     int workerCount = Math.min(threads, legal.size());
@@ -160,7 +180,8 @@ public final class ParallelRootSearch implements Search {
             bestScore = result.score();
             completedDepth = depth;
             if (telemetryEnabled) emit(aggregateStats(workers), bestMove, bestScore, depth,
-                started, threads, workerCount, StopReason.COMPLETED);
+                started, threads, workers.size(), SearchTelemetryEvent.ITERATION_COMPLETED,
+                StopReason.COMPLETED);
             break;
           }
           delta *= 2;
@@ -172,15 +193,13 @@ public final class ParallelRootSearch implements Search {
     } finally {
       cancelled.set(true);
       if (executor != null) {
-        // close waits even when the calling thread is interrupted. No worker outlives search.
-        executor.shutdownNow();
-        executor.close();
+        shutdownAndAwait(executor);
       }
     }
     long nodes = workers.stream().mapToLong(worker -> worker.search.nodesVisited()).sum();
     SearchResult result = new SearchResult(bestMove, bestScore, completedDepth, nodes, elapsedMillis(started));
-    if (telemetryEnabled) emit(aggregateStats(workers), result, started, threads, workerCount,
-        stopReason(limits, started, requestStop));
+    if (telemetryEnabled) emit(aggregateStats(workers), result, started, threads, workers.size(),
+        SearchTelemetryEvent.SEARCH_FINISHED, terminalReason(limits, started, stop, result));
     return result;
   }
 
@@ -191,23 +210,25 @@ public final class ParallelRootSearch implements Search {
   }
 
   private void emit(SearchStats stats, Move move, int score, int depth, long started,
-      int requested, int effective, StopReason reason) {
+      int requested, int active, SearchTelemetryEvent event, StopReason reason) {
     if (stats == null) return;
     try {
-      telemetryListener.onSnapshot(stats.snapshot(depth, move, score, requested, effective,
+      telemetryListeners.get().onSnapshot(stats.snapshot(telemetryContexts.get(), event, depth, move, score, requested, active,
           reason, elapsedMillis(started)));
     } catch (RuntimeException ignored) { }
   }
 
   private void emit(SearchStats stats, SearchResult result, long started,
-      int requested, int effective, StopReason reason) {
-    emit(stats, result.move(), result.score(), result.depth(), started, requested, effective, reason);
+      int requested, int active, SearchTelemetryEvent event, StopReason reason) {
+    emit(stats, result.move(), result.score(), result.depth(), started, requested, active, event, reason);
   }
 
-  private StopReason stopReason(SearchLimits limits, long started, StopSignal stop) {
-    if (!stop.shouldStop()) return StopReason.COMPLETED;
-    return limits.maxTimeMillis() > 0 && elapsedMillis(started) >= limits.maxTimeMillis()
-        ? StopReason.TIME_LIMIT : StopReason.CANCELLED;
+  private StopReason terminalReason(SearchLimits limits, long started, StopSignal externalStop, SearchResult result) {
+    if (result.move() == null) return Scores.isMate(result.score()) ? StopReason.MATE : StopReason.NO_LEGAL_MOVE;
+    if (externalStop.shouldStop()) return StopReason.CANCELLED;
+    if (Scores.isMate(result.score())) return StopReason.MATE;
+    if (limits.maxDepth() > 0 && result.depth() >= limits.maxDepth()) return StopReason.DEPTH_LIMIT;
+    return limits.maxTimeMillis() > 0 ? StopReason.TIME_LIMIT : StopReason.COMPLETED;
   }
 
   private RootResult searchIteration(List<Worker> workers, ExecutorService executor,
@@ -289,6 +310,23 @@ public final class ParallelRootSearch implements Search {
     }
     if (failure != null) {
       throw failure;
+    }
+  }
+
+  /** Stops all root workers before returning, even when the caller was interrupted. */
+  private void shutdownAndAwait(ExecutorService executor) {
+    boolean interrupted = Thread.interrupted();
+    executor.shutdownNow();
+    while (!executor.isTerminated()) {
+      try {
+        executor.awaitTermination(1, TimeUnit.DAYS);
+      } catch (InterruptedException exception) {
+        interrupted = true;
+        executor.shutdownNow();
+      }
+    }
+    if (interrupted) {
+      Thread.currentThread().interrupt();
     }
   }
 

@@ -10,6 +10,7 @@ import java.util.function.Consumer;
 import java.util.Set;
 import java.util.EnumMap;
 import com.knightshade.engine.api.StopReason;
+import com.knightshade.engine.api.SearchTelemetryEvent;
 import org.springframework.stereotype.Service;
 
 /** Application-side bridge for optional Knightshade telemetry. */
@@ -20,8 +21,12 @@ public final class KnightshadeTelemetryService {
   private volatile boolean enabled;
   private final CopyOnWriteArrayList<SearchTelemetrySnapshot> samples = new CopyOnWriteArrayList<>();
   private volatile Instant sessionStartedAt;
+  private volatile String gameId = "unscoped";
   private volatile int refreshFrequency = 4;
-  private volatile Set<String> visibleMetrics = Set.of("depth", "mainNodes", "qNodes", "TT hit / cutoff", "beta cutoff", "PVS re-search", "null / LMR", "aspiration retries", "evaluation cache", "workers", "NPS", "stopReason", "stop counters");
+  private volatile Set<String> visibleMetrics = Set.of(
+      "depth", "mainNodes", "qNodes", "TT hit / cutoff", "beta cutoff", "PVS re-search",
+      "null / LMR", "aspiration retries", "evaluation cache", "workers", "qsearch", "stand-pat",
+      "move lists", "quiet checks", "SEE", "search", "NPS", "stopReason", "stop counters");
   private final EnumMap<StopReason, Long> stopReasonCounts = new EnumMap<>(StopReason.class);
 
   public boolean isEnabled() { return enabled; }
@@ -34,14 +39,21 @@ public final class KnightshadeTelemetryService {
 
   /** Starts a new game session, discarding samples from the previous game. */
   public void beginSession() {
+    beginSession("unscoped");
+  }
+
+  /** Starts a game-scoped telemetry session. */
+  public void beginSession(String gameId) {
     samples.clear();
     sessionStartedAt = Instant.now();
+    this.gameId = Objects.requireNonNull(gameId, "gameId must not be null");
     synchronized (stopReasonCounts) { stopReasonCounts.clear(); }
   }
   public java.util.Map<StopReason, Long> stopReasonCounts() { synchronized (stopReasonCounts) { return java.util.Map.copyOf(stopReasonCounts); } }
 
   public List<SearchTelemetrySnapshot> samples() { return List.copyOf(new ArrayList<>(samples)); }
   public Instant sessionStartedAt() { return sessionStartedAt; }
+  public String gameId() { return gameId; }
   public int refreshFrequency() { return refreshFrequency; }
   public void setRefreshFrequency(int value) { if (value < 1 || value > 10) throw new IllegalArgumentException("refresh frequency must be between 1 and 10"); refreshFrequency = value; }
   public Set<String> visibleMetrics() { return visibleMetrics; }
@@ -57,7 +69,9 @@ public final class KnightshadeTelemetryService {
   public void publish(SearchTelemetrySnapshot snapshot) {
     if (!enabled) return;
     samples.add(snapshot);
-    synchronized (stopReasonCounts) { stopReasonCounts.merge(snapshot.stopReason(), 1L, Long::sum); }
+    if (snapshot.event() == SearchTelemetryEvent.SEARCH_FINISHED) {
+      synchronized (stopReasonCounts) { stopReasonCounts.merge(snapshot.stopReason(), 1L, Long::sum); }
+    }
     listeners.forEach(listener -> {
       try { listener.accept(snapshot); } catch (RuntimeException ignored) { }
     });

@@ -295,7 +295,10 @@ public class SetupScreenController implements UiScreenController {
         bloodPressureFrequencyCombo.getItems().addAll(1, 2, 4, 10);
         bloodPressureFrequencyCombo.setValue(telemetryService.refreshFrequency());
         bloodPressureFrequencyCombo.valueProperty().addListener((o, oldValue, value) -> { if (value != null) telemetryService.setRefreshFrequency(value); });
-        for (String metric : List.of("depth", "mainNodes", "qNodes", "TT hit / cutoff", "beta cutoff", "PVS re-search", "null / LMR", "aspiration retries", "evaluation cache", "workers", "NPS", "stopReason", "stop counters")) {
+        for (String metric : List.of(
+                "depth", "mainNodes", "qNodes", "TT hit / cutoff", "beta cutoff", "PVS re-search",
+                "null / LMR", "aspiration retries", "evaluation cache", "workers", "qsearch", "stand-pat",
+                "move lists", "quiet checks", "SEE", "search", "NPS", "stopReason", "stop counters")) {
             CheckBox option = new CheckBox(metric); option.setSelected(telemetryService.visibleMetrics().contains(metric));
             option.selectedProperty().addListener((o, oldValue, value) -> telemetryService.setVisibleMetrics(
                     bloodPressureParameters.getChildren().stream().filter(CheckBox.class::isInstance).map(CheckBox.class::cast).filter(CheckBox::isSelected).map(CheckBox::getText).collect(java.util.stream.Collectors.toSet())));

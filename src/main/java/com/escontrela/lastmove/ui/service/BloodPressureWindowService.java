@@ -40,7 +40,8 @@ public final class BloodPressureWindowService {
 
   private static final List<String> METRICS = List.of(
       "depth", "mainNodes", "qNodes", "TT hit / cutoff", "beta cutoff", "PVS re-search",
-      "null / LMR", "aspiration retries", "evaluation cache", "workers", "NPS", "stopReason", "stop counters");
+      "null / LMR", "aspiration retries", "evaluation cache", "workers", "qsearch", "stand-pat",
+      "move lists", "quiet checks", "SEE", "search", "NPS", "stopReason", "stop counters");
 
   private final Stage primaryStage;
   private final ApplicationThemeService themeService;
@@ -57,6 +58,12 @@ public final class BloodPressureWindowService {
       Map.entry("PVS re-search", "Re-búsquedas PVS con ventana completa."), Map.entry("null / LMR", "Intentos null-move y reducciones LMR."),
       Map.entry("aspiration retries", "Reintentos al ampliar la ventana de aspiración."), Map.entry("evaluation cache", "Aciertos y fallos de caché de evaluación."),
       Map.entry("workers", "Trabajadores solicitados y efectivos."), Map.entry("stopReason", "Motivo por el que terminó la búsqueda."),
+      Map.entry("qsearch", "Entradas acumuladas en la búsqueda quiescente."),
+      Map.entry("stand-pat", "Cortes por evaluación estática y comprobaciones de ahogado."),
+      Map.entry("move lists", "Listas de movimientos generadas por quietud."),
+      Map.entry("quiet checks", "Jugadas tranquilas examinadas para comprobar jaques."),
+      Map.entry("SEE", "Evaluaciones SEE y capturas podadas por SEE."),
+      Map.entry("search", "Identidad, posición raíz y tipo de puntuación de esta búsqueda."),
       Map.entry("NPS", "Nodos procesados por segundo: mainNodes y qNodes por tiempo transcurrido."),
       Map.entry("stop counters", "Número acumulado de búsquedas por motivo de parada."));
   private final Map<String, double[]> averages = new HashMap<>();
@@ -247,20 +254,24 @@ public final class BloodPressureWindowService {
     if (samples.isEmpty() || monitorStage == null) return;
     fileChooserFactory.chooseCsvExportFile(monitorStage, "knightshade-telemetry")
         .ifPresent(file -> {
-          StringBuilder csv = new StringBuilder("sessionStartedAt,timestamp,depth,score,bestMove,elapsedMillis,parameters,mainNodes,qNodes,nps,ttProbes,ttHits,ttCutoffs,betaCutoffs,pvsResearches,nullMoveAttempts,nullMoveCutoffs,lmrApplications,lmrResearches,aspirationRetries,evaluationCacheHits,evaluationCacheMisses,requestedWorkers,effectiveWorkers,stopReason,timeLimitCount,completedCount,cancelledCount\n");
+          StringBuilder csv = new StringBuilder("gameId,searchId,event,searchStartedAt,observedAt,rootFen,sideToMove,fullmoveNumber,limits,engineVersion,engineBuild,positionHistory,depth,score,scoreType,bestMove,elapsedMillis,parameters,mainNodes,qNodes,nps,ttProbes,ttHits,ttCutoffs,betaCutoffs,pvsResearches,nullMoveAttempts,nullMoveCutoffs,lmrApplications,lmrResearches,aspirationRetries,evaluationCacheHits,evaluationCacheMisses,requestedWorkers,activeWorkers,quiescenceEntries,standPatCutoffs,stalemateChecks,moveListsGenerated,quietChecksExamined,seeEvaluations,seePrunes,stopReason\n");
           String parameters = String.join("|", telemetryService.visibleMetrics());
-          java.time.Instant started = telemetryService.sessionStartedAt();
           for (SearchTelemetrySnapshot s : samples) {
-            csv.append(started == null ? "" : started).append(',').append(started == null ? "" : started.plusMillis(s.elapsedMillis())).append(',').append(s.depth()).append(',').append(s.score()).append(',')
-                .append(csvValue(s.bestMove())).append(',').append(s.elapsedMillis()).append(',').append(csvValue(parameters)).append(',')
+            var context = s.context();
+            csv.append(csvValue(context.gameId())).append(',').append(csvValue(context.searchId())).append(',').append(s.event()).append(',')
+                .append(context.startedAt()).append(',').append(s.observedAt()).append(',').append(csvValue(context.rootFen())).append(',')
+                .append(context.sideToMove()).append(',').append(context.fullmoveNumber()).append(',').append(csvValue(context.limits())).append(',')
+                .append(csvValue(context.engineVersion())).append(',').append(csvValue(context.engineBuild())).append(',')
+                .append(csvValue(String.join("|", context.positionHistory()))).append(',').append(s.depth()).append(',').append(s.score()).append(',')
+                .append(s.isMateScore() ? "MATE" : "CENTIPAWNS").append(',').append(csvValue(s.bestMove())).append(',').append(s.elapsedMillis()).append(',').append(csvValue(parameters)).append(',')
                 .append(s.mainNodes()).append(',').append(s.qNodes()).append(',').append(nps(s)).append(',').append(s.ttProbes()).append(',').append(s.ttHits()).append(',').append(s.ttCutoffs()).append(',')
                 .append(s.betaCutoffs()).append(',').append(s.pvsResearches()).append(',').append(s.nullMoveAttempts()).append(',')
                 .append(s.nullMoveCutoffs()).append(',').append(s.lmrApplications()).append(',').append(s.lmrResearches()).append(',')
                 .append(s.aspirationRetries()).append(',').append(s.evaluationCacheHits()).append(',').append(s.evaluationCacheMisses()).append(',')
-                .append(s.requestedWorkers()).append(',').append(s.effectiveWorkers()).append(',').append(s.stopReason()).append(',')
-                .append(telemetryService.stopReasonCounts().getOrDefault(com.knightshade.engine.api.StopReason.TIME_LIMIT, 0L)).append(',')
-                .append(telemetryService.stopReasonCounts().getOrDefault(com.knightshade.engine.api.StopReason.COMPLETED, 0L)).append(',')
-                .append(telemetryService.stopReasonCounts().getOrDefault(com.knightshade.engine.api.StopReason.CANCELLED, 0L)).append('\n');
+                .append(s.requestedWorkers()).append(',').append(s.activeWorkers()).append(',').append(s.quiescenceEntries()).append(',')
+                .append(s.standPatCutoffs()).append(',').append(s.stalemateChecks()).append(',').append(s.moveListsGenerated()).append(',')
+                .append(s.quietChecksExamined()).append(',').append(s.seeEvaluations()).append(',').append(s.seePrunes()).append(',')
+                .append(s.stopReason()).append('\n');
           }
           try { Files.writeString(file.toPath(), csv.toString(), StandardCharsets.UTF_8); }
           catch (IOException ignored) { }
@@ -302,9 +313,12 @@ public final class BloodPressureWindowService {
     if (snapshot != null) {
       renderSnapshot(snapshot);
       List<SearchTelemetrySnapshot> samples = telemetryService.samples();
-      mainNodesChart.renderTelemetry(samples.stream().map(SearchTelemetrySnapshot::mainNodes).toList(), "Main nodes");
-      depthChart.renderTelemetry(samples.stream().map(s -> (long) s.depth()).toList(), "Depth");
-      npsChart.renderTelemetry(samples.stream().map(this::nps).toList(), "NPS");
+      List<SearchTelemetrySnapshot> iterations = samples.stream()
+          .filter(s -> s.event() == com.knightshade.engine.api.SearchTelemetryEvent.ITERATION_COMPLETED)
+          .toList();
+      mainNodesChart.renderTelemetry(iterations.stream().map(SearchTelemetrySnapshot::mainNodes).toList(), "Main nodes");
+      depthChart.renderTelemetry(iterations.stream().map(s -> (long) s.depth()).toList(), "Depth");
+      npsChart.renderTelemetry(iterations.stream().map(this::nps).toList(), "NPS");
       lastRenderNanos = System.nanoTime();
     }
     uiUpdatePending.set(false);
@@ -322,9 +336,16 @@ public final class BloodPressureWindowService {
     update("TT hit / cutoff", snapshot.ttHits(), snapshot.ttCutoffs()); update("beta cutoff", snapshot.betaCutoffs());
     update("PVS re-search", snapshot.pvsResearches()); update("null / LMR", snapshot.nullMoveCutoffs(), snapshot.lmrApplications());
     update("aspiration retries", snapshot.aspirationRetries()); update("evaluation cache", snapshot.evaluationCacheHits(), snapshot.evaluationCacheMisses());
-    update("workers", snapshot.effectiveWorkers(), snapshot.requestedWorkers()); update("NPS", nps(snapshot)); updateText("stopReason", snapshot.stopReason());
+    update("workers", snapshot.activeWorkers(), snapshot.requestedWorkers());
+    update("qsearch", snapshot.quiescenceEntries()); update("stand-pat", snapshot.standPatCutoffs(), snapshot.stalemateChecks());
+    update("move lists", snapshot.moveListsGenerated()); update("quiet checks", snapshot.quietChecksExamined());
+    update("SEE", snapshot.seeEvaluations(), snapshot.seePrunes());
+    updateText("search", snapshot.context().gameId() + " · " + snapshot.context().searchId().substring(0, 8)
+        + " · " + (snapshot.isMateScore() ? "MATE" : "CP"));
+    update("NPS", nps(snapshot)); updateText("stopReason", snapshot.event() + " · " + snapshot.stopReason());
     updateText("stop counters", "TIME_LIMIT " + telemetryService.stopReasonCounts().getOrDefault(com.knightshade.engine.api.StopReason.TIME_LIMIT, 0L)
-        + " / COMPLETED " + telemetryService.stopReasonCounts().getOrDefault(com.knightshade.engine.api.StopReason.COMPLETED, 0L)
+        + " / DEPTH " + telemetryService.stopReasonCounts().getOrDefault(com.knightshade.engine.api.StopReason.DEPTH_LIMIT, 0L)
+        + " / MATE " + telemetryService.stopReasonCounts().getOrDefault(com.knightshade.engine.api.StopReason.MATE, 0L)
         + " / CANCELLED " + telemetryService.stopReasonCounts().getOrDefault(com.knightshade.engine.api.StopReason.CANCELLED, 0L));
   }
 

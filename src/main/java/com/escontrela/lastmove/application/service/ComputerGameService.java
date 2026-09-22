@@ -122,10 +122,6 @@ public final class ComputerGameService {
   public CompletionStage<ComputerGameState> createGame(ComputerGameConfiguration configuration) {
     ComputerGameConfiguration required =
         Objects.requireNonNull(configuration, "configuration must not be null");
-    if (telemetry != null && telemetry.isEnabled()
-        && com.escontrela.lastmove.application.computer.ComputerEngineIds.KNIGHTSHADE.equals(required.engineId())) {
-      telemetry.beginSession();
-    }
     ComputerMoveEngineProvider provider = provider(required.engineId());
     PieceColor computerColor = required.humanColor().opposite();
     GamePlayer human = new GamePlayer(required.humanName(), required.humanColor());
@@ -144,6 +140,10 @@ public final class ComputerGameService {
                     gameFactory.createInitial(
                         white, black, Optional.of(required.timeControl())));
     validateOpeningLine(game.initialPosition(), required.openingPractice());
+    if (telemetry != null && telemetry.isEnabled()
+        && com.escontrela.lastmove.application.computer.ComputerEngineIds.KNIGHTSHADE.equals(required.engineId())) {
+      telemetry.beginSession(game.id().value().toString());
+    }
     ComputerMoveEngine engine = provider.create();
     RuntimeContext context = new RuntimeContext(game, required, engine, provider.descriptor(), selectedPlayer());
     save(game, context);
@@ -652,6 +652,10 @@ public final class ComputerGameService {
             provider.create(),
             provider.descriptor(),
             saved.context().ownerPlayerId());
+    if (telemetry != null && telemetry.isEnabled()
+        && com.escontrela.lastmove.application.computer.ComputerEngineIds.KNIGHTSHADE.equals(configuration.engineId())) {
+      telemetry.beginSession(game.id().value().toString());
+    }
     restoreOpeningProgress(context, game.moveHistory());
     runtimes.put(game.id(), context);
     return context.engine.start().thenCompose(ignored -> {
