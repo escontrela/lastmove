@@ -19,6 +19,12 @@ public interface Engine {
     return search(fen, limits, stop);
   }
 
+  default SearchResult search(
+      String fen, List<String> positionHistory, SearchLimits limits, StopSignal stop,
+      SearchTelemetryListener listener) {
+    return search(fen, positionHistory, limits, stop);
+  }
+
   default SearchResult search(String fen, SearchLimits limits) {
     return search(fen, limits, StopSignal.never());
   }

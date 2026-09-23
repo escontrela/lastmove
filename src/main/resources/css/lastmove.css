@@ -1715,6 +1715,11 @@
     -fx-text-fill: #58718c;
 }
 
+.splash-version {
+    -fx-font-size: 11px;
+    -fx-text-fill: #8295a8;
+}
+
 .splash-loader-cell {
     -fx-min-width: 9px;
     -fx-min-height: 9px;
@@ -2448,6 +2453,20 @@
 }
 
 .threat-hints-status-icon { -fx-opacity: 0.82; -fx-padding: 2px; }
+.blood-pressure-status-indicator {
+    -fx-background-color: transparent;
+    -fx-padding: 2px;
+    -fx-cursor: hand;
+}
+.blood-pressure-status-indicator:hover { -fx-background-color: rgba(28, 105, 212, 0.12); }
+.blood-pressure-metric-row {
+    -fx-alignment: center-left;
+    -fx-padding: 3px 0;
+}
+.blood-pressure-metric-row .label:last-child {
+    -fx-font-weight: 800;
+    -fx-text-fill: #1769d8;
+}
 
 .settings-check-box { -fx-font-size: 15px; -fx-text-fill: #262626; }
 .settings-check-box .box { -fx-background-radius: 0; -fx-border-radius: 0; }
@@ -3451,6 +3470,11 @@
     -fx-font-weight: 700;
     -fx-text-fill: #6b7e91;
 }
+.about-message-body > .about-version {
+    -fx-font-size: 12px;
+    -fx-font-weight: 600;
+    -fx-text-fill: #8295a8;
+}
 .about-repository-link {
     -fx-padding: 0;
     -fx-border-width: 0;
@@ -3461,6 +3485,7 @@
 }
 .about-repository-link:hover { -fx-text-fill: #b87919; }
 .night-mode .about-message-body > .label { -fx-text-fill: #aebfd0; }
+.night-mode .about-message-body > .about-version { -fx-text-fill: #8295a8; }
 .night-mode .about-repository-link { -fx-text-fill: #efb34b; }
 .night-mode .about-repository-link:hover { -fx-text-fill: #ffd27a; }
 .night-mode .message-box-card {
@@ -4887,3 +4912,74 @@
     -fx-background-insets: 0;
     -fx-border-insets: 0;
 }
+.blood-pressure-window {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 16;
+    -fx-border-color: #d8dde3;
+    -fx-border-radius: 16;
+    -fx-effect: dropshadow(gaussian, rgba(20, 27, 36, 0.16), 24, 0.12, 0, 8);
+}
+.button.blood-pressure-metrics-toggle {
+    -fx-background-color: #d4a85f;
+    -fx-border-color: #d4a85f;
+    -fx-text-fill: #18212b;
+}
+.button.blood-pressure-metrics-toggle:hover { -fx-background-color: #e2b86d; -fx-border-color: #e2b86d; }
+.button.blood-pressure-metrics-toggle.blood-pressure-metrics-off {
+    -fx-background-color: #e4e8ed;
+    -fx-border-color: #cbd2da;
+    -fx-text-fill: #66717d;
+}
+.button.blood-pressure-metrics-toggle.blood-pressure-metrics-off:hover { -fx-background-color: #d8dee5; -fx-border-color: #b9c2cc; }
+.night-mode .button.blood-pressure-metrics-toggle.blood-pressure-metrics-off {
+    -fx-background-color: #3b4653;
+    -fx-border-color: #596776;
+    -fx-text-fill: #c6d0da;
+}
+.blood-pressure-metrics-scroll,
+.blood-pressure-metrics-scroll > .viewport,
+.blood-pressure-metrics-scroll > .corner {
+    -fx-background-color: #ffffff;
+    -fx-background: #ffffff;
+    -fx-border-color: transparent;
+}
+.night-mode .blood-pressure-metrics-scroll,
+.night-mode .blood-pressure-metrics-scroll > .viewport,
+.night-mode .blood-pressure-metrics-scroll > .corner {
+    -fx-background-color: #1c2430;
+    -fx-background: #1c2430;
+}
+.blood-pressure-window .blood-pressure-metrics-pane {
+    -fx-padding: 8 0 0 0;
+    -fx-border-color: #d8dde3 transparent transparent transparent;
+}
+.blood-pressure-window .blood-pressure-metric-item {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent #e6eaf0 #e6eaf0 transparent;
+    -fx-border-width: 0 1 1 0;
+    -fx-padding: 5 9 6 9;
+    -fx-min-width: 180px;
+    -fx-pref-width: 190px;
+    -fx-max-width: 260px;
+}
+.blood-pressure-window .blood-pressure-metric-title { -fx-text-fill: #d4a85f; -fx-font-size: 11px; -fx-font-weight: 700; -fx-cursor: hand; }
+.blood-pressure-window .blood-pressure-metric-current { -fx-text-fill: #18212b; -fx-font-size: 17px; -fx-font-weight: bold; }
+.blood-pressure-window .blood-pressure-metric-caption { -fx-text-fill: #80651b; -fx-font-size: 9px; }
+.blood-pressure-window .blood-pressure-metric-summary-value { -fx-text-fill: #594716; -fx-font-size: 10px; -fx-font-weight: bold; }
+.blood-pressure-window .blood-pressure-stop-counters-item .blood-pressure-metric-current { -fx-font-size: 12px; }
+.blood-pressure-window .blood-pressure-stop-counters-item .blood-pressure-metric-caption,
+.blood-pressure-window .blood-pressure-stop-counters-item .blood-pressure-metric-summary-value { -fx-font-size: 8px; }
+.night-mode.blood-pressure-window {
+    -fx-background-color: #1c2430;
+    -fx-border-color: #465465;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.40), 24, 0.12, 0, 8);
+}
+.night-mode.blood-pressure-window .label { -fx-text-fill: #f1f3f5; }
+.night-mode.blood-pressure-window .blood-pressure-metrics-pane {
+    -fx-border-color: #465465 transparent transparent transparent;
+}
+.night-mode.blood-pressure-window .blood-pressure-metric-item { -fx-border-color: transparent #3b4858 #3b4858 transparent; }
+.night-mode.blood-pressure-window .blood-pressure-metric-title { -fx-text-fill: #efb34b; }
+.night-mode.blood-pressure-window .blood-pressure-metric-caption { -fx-text-fill: #e7c77e; }
+.night-mode.blood-pressure-window .blood-pressure-metric-current,
+.night-mode.blood-pressure-window .blood-pressure-metric-summary-value { -fx-text-fill: #f1f3f5; }

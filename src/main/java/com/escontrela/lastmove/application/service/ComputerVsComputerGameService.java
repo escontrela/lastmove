@@ -15,6 +15,7 @@ public final class ComputerVsComputerGameService {
   private final ChessGameFactory games;
   private final Map<String, ComputerMoveEngineProvider> providers;
   private final Clock clock;
+  private final KnightshadeTelemetryService telemetry;
   private final Map<GameId, Runtime> runtimes = new ConcurrentHashMap<>();
   private final ScheduledExecutorService moveScheduler =
       Executors.newSingleThreadScheduledExecutor(
@@ -25,7 +26,11 @@ public final class ComputerVsComputerGameService {
           });
 
   public ComputerVsComputerGameService(ChessGameFactory games, List<ComputerMoveEngineProvider> providers, Clock clock) {
-    this.games = Objects.requireNonNull(games); this.clock = Objects.requireNonNull(clock);
+    this(games, providers, clock, null);
+  }
+  @org.springframework.beans.factory.annotation.Autowired
+  public ComputerVsComputerGameService(ChessGameFactory games, List<ComputerMoveEngineProvider> providers, Clock clock, KnightshadeTelemetryService telemetry) {
+    this.games = Objects.requireNonNull(games); this.clock = Objects.requireNonNull(clock); this.telemetry = telemetry;
     this.providers = providers.stream().collect(java.util.stream.Collectors.toUnmodifiableMap(p -> p.descriptor().id(), p -> p));
   }
   public List<ComputerEngineDescriptor> availableEngines() { return providers.values().stream().map(ComputerMoveEngineProvider::descriptor).sorted(Comparator.comparing(ComputerEngineDescriptor::displayName)).toList(); }
@@ -43,6 +48,11 @@ public final class ComputerVsComputerGameService {
             .map(fen -> games.createFrom(fen, whitePlayer, blackPlayer, Optional.of(configuration.timeControl())))
             .orElseGet(
                 () -> games.createInitial(whitePlayer, blackPlayer, Optional.of(configuration.timeControl())));
+    if (telemetry != null && telemetry.isEnabled()
+        && (ComputerEngineIds.KNIGHTSHADE.equals(configuration.whiteEngineId())
+            || ComputerEngineIds.KNIGHTSHADE.equals(configuration.blackEngineId()))) {
+      telemetry.beginSession(game.id().value().toString());
+    }
     Runtime runtime = new Runtime(game, configuration, whiteProvider.descriptor(), blackProvider.descriptor(), whiteProvider.create(), blackProvider.create());
     runtimes.put(game.id(), runtime);
     return runtime.white.start().thenCompose(ignored -> runtime.black.start()).thenApply(ignored -> {
@@ -69,7 +79,8 @@ public final class ComputerVsComputerGameService {
   private void requestMove(Runtime runtime) {
     final PositionSnapshot position; final long version; final Duration limit; final ComputerMoveEngine engine;
     synchronized (runtime) { expire(runtime); if (runtime.game.result().isPresent() || runtime.stopped) return; position = runtime.game.currentPosition(); version = ++runtime.searchVersion; engine = runtime.game.currentTurn() == PieceColor.WHITE ? runtime.white : runtime.black; limit = permitted(runtime); }
-    engine.chooseMove(new ComputerMoveRequest(position, limit, runtime.game.positionHistory())).handle((move, failure) -> {
+    engine.chooseMove(new ComputerMoveRequest(position, limit, runtime.game.positionHistory(),
+        runtime.game.id())).handle((move, failure) -> {
       boolean continueMatch;
       synchronized (runtime) {
         if (version != runtime.searchVersion) return null;

@@ -1,6 +1,7 @@
 package com.escontrela.lastmove.ui.service;
 
 import com.escontrela.lastmove.ui.model.ApplicationThemeMode;
+import com.escontrela.lastmove.ui.support.ApplicationVersion;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -298,7 +299,10 @@ public class SplashScreenService {
     Label tagline = new Label("Chess, engineered for the next move.");
     tagline.getStyleClass().add("splash-tagline");
 
-    VBox brand = new VBox(8, logo, productTitle, tagline);
+    Label version = new Label("Version " + ApplicationVersion.value());
+    version.getStyleClass().add("splash-version");
+
+    VBox brand = new VBox(8, logo, productTitle, tagline, version);
     brand.getStyleClass().add("splash-brand");
     brand.setMouseTransparent(true);
     return brand;

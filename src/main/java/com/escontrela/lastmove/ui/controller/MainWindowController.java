@@ -29,6 +29,7 @@ import com.escontrela.lastmove.ui.screen.UiScreenController;
 import com.escontrela.lastmove.ui.screen.UiScreenId;
 import com.escontrela.lastmove.ui.service.ChessSound;
 import com.escontrela.lastmove.ui.service.ChessSoundService;
+import com.escontrela.lastmove.ui.support.ApplicationVersion;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -487,7 +488,9 @@ public class MainWindowController implements UiScreenController {
         repositoryLink.getStyleClass().add("about-repository-link");
         repositoryLink.setOnAction(event -> openRepository());
 
-        VBox body = new VBox(6.0, new Label("Source code"), repositoryLink);
+        Label version = new Label("Version " + ApplicationVersion.value());
+        version.getStyleClass().add("about-version");
+        VBox body = new VBox(6.0, version, new Label("Source code"), repositoryLink);
         body.getStyleClass().add("about-message-body");
         aboutMessageBox.setBody(body);
     }

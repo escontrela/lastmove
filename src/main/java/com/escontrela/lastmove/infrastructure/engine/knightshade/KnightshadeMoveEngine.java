@@ -6,11 +6,14 @@ import com.escontrela.lastmove.application.computer.ComputerMoveEngine;
 import com.escontrela.lastmove.application.computer.ComputerMoveRequest;
 import com.escontrela.lastmove.application.computer.EngineAnalysisResult;
 import com.escontrela.lastmove.application.computer.EngineScore;
+import com.escontrela.lastmove.application.service.KnightshadeTelemetryService;
 import com.escontrela.lastmove.domain.game.MoveCommand;
 import com.escontrela.lastmove.domain.service.FenService;
 import com.knightshade.engine.KnightshadeEngine;
 import com.knightshade.engine.api.SearchLimits;
 import com.knightshade.engine.api.SearchResult;
+import com.knightshade.engine.api.SearchTelemetryListener;
+import com.knightshade.engine.api.SearchTelemetryContext;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -37,6 +40,7 @@ public final class KnightshadeMoveEngine implements ComputerMoveEngine {
   private final KnightshadeEngine engine;
   private final FenService fenService;
   private final ComputerEngineDescriptor descriptor;
+  private final KnightshadeTelemetryService telemetryService;
   private final ExecutorService executor =
       Executors.newSingleThreadExecutor(Thread.ofVirtual().name("knightshade-", 0).factory());
   private final AtomicBoolean closed = new AtomicBoolean();
@@ -45,9 +49,16 @@ public final class KnightshadeMoveEngine implements ComputerMoveEngine {
 
   public KnightshadeMoveEngine(
       KnightshadeEngine engine, FenService fenService, ComputerEngineDescriptor descriptor) {
+    this(engine, fenService, descriptor, null);
+  }
+
+  public KnightshadeMoveEngine(
+      KnightshadeEngine engine, FenService fenService, ComputerEngineDescriptor descriptor,
+      KnightshadeTelemetryService telemetryService) {
     this.engine = Objects.requireNonNull(engine, "engine must not be null");
     this.fenService = Objects.requireNonNull(fenService, "fenService must not be null");
     this.descriptor = Objects.requireNonNull(descriptor, "descriptor must not be null");
+    this.telemetryService = telemetryService;
   }
 
   @Override
@@ -100,7 +111,7 @@ public final class KnightshadeMoveEngine implements ComputerMoveEngine {
     thinking.set(true);
     cancellationRequested.set(false);
     try {
-      return CompletableFuture.supplyAsync(() -> analyzeBlocking(required), executor);
+      return CompletableFuture.supplyAsync(() -> analyzeBlocking(required, false), executor);
     } catch (RejectedExecutionException exception) {
       thinking.set(false);
       return CompletableFuture.failedFuture(closedEngineException());
@@ -121,14 +132,18 @@ public final class KnightshadeMoveEngine implements ComputerMoveEngine {
   }
 
   private MoveCommand chooseMoveBlocking(ComputerMoveRequest request) {
-    EngineAnalysisResult result = analyzeBlocking(request);
+    EngineAnalysisResult result = analyzeBlocking(request, true);
     return result
         .bestMove()
         .orElseThrow(
             () -> new ComputerEngineException("Knightshade found no playable move"));
   }
 
-  private EngineAnalysisResult analyzeBlocking(ComputerMoveRequest request) {
+  /**
+   * Only a move selected for an active game emits Blood Pressure data. Generic analysis drives
+   * controls such as the strength bar and must remain invisible to match telemetry.
+   */
+  private EngineAnalysisResult analyzeBlocking(ComputerMoveRequest request, boolean gameMove) {
     long startedAt = System.nanoTime();
     try {
       String fen = fenService.fromSnapshot(request.position()).getValue();
@@ -137,18 +152,21 @@ public final class KnightshadeMoveEngine implements ComputerMoveEngine {
               .map(position -> fenService.fromSnapshot(position).getValue())
               .toList();
       long maxTimeMillis = request.maximumThinkingTime().toMillis();
-      log.info("Knightshade search started: fen='{}' maxTimeMs={}", fen, maxTimeMillis);
-      SearchResult result =
-          engine.search(
-              fen,
-              positionHistory,
-              SearchLimits.timeOnly(request.maximumThinkingTime()),
-              cancellationRequested::get);
+      log.debug("Knightshade search started: maxTimeMs={}", maxTimeMillis);
+      SearchTelemetryListener listener = gameMove && telemetryService != null && telemetryService.isEnabled()
+          ? telemetryService::publish : SearchTelemetryListener.NONE;
+      SearchTelemetryContext telemetryContext = listener == SearchTelemetryListener.NONE ? null
+          : SearchTelemetryContext.forSearch(request.gameId() == null
+                  ? telemetryService.gameId() : request.gameId().value().toString(), fen,
+              SearchLimits.timeOnly(request.maximumThinkingTime()), positionHistory);
+      SearchResult result = engine.search(fen, positionHistory,
+          SearchLimits.timeOnly(request.maximumThinkingTime()), cancellationRequested::get, listener,
+          telemetryContext);
       EngineScore score =
           result.mate()
               ? EngineScore.mateIn(signedMatePlies(result))
               : EngineScore.centipawns(result.score());
-      log.info(
+      log.debug(
           "Knightshade analysed {} score={} depth={} nodes={} elapsedMs={} totalMs={}",
           result.move() == null ? "(none)" : result.move().toUci(),
           result.score(),

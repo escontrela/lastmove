@@ -53,12 +53,30 @@ public final class LegalMoveGenerator implements MoveGenerator {
   @Override
   public boolean hasLegalMove(Board board) {
     PieceColor side = board.sideToMove();
-    for (Move move : generatePseudoLegal(board, false)) {
-      board.make(move);
-      boolean safe = !board.inCheck(side);
-      board.unmake();
-      if (safe) {
-        return true;
+    boolean inCheck = board.inCheck(side);
+    long pinned = inCheck ? 0 : board.pinnedPieces(side);
+    for (int index = 0; index < 64; index++) {
+      int piece = board.pieceAt(index);
+      if (piece == Piece.NONE || Piece.color(piece) != side) {
+        continue;
+      }
+      List<Move> candidates = new ArrayList<>();
+      Square from = Position.squareOf(index);
+      switch (Piece.type(piece)) {
+        case PAWN -> generatePawnMoves(board, from, piece, candidates, false);
+        case KNIGHT -> generateLeaperMoves(board, from, piece, KNIGHT_OFFSETS, candidates, false);
+        case BISHOP -> generateSliderMoves(board, from, piece, BISHOP_DIRECTIONS, candidates, false);
+        case ROOK -> generateSliderMoves(board, from, piece, ROOK_DIRECTIONS, candidates, false);
+        case QUEEN -> {
+          generateSliderMoves(board, from, piece, BISHOP_DIRECTIONS, candidates, false);
+          generateSliderMoves(board, from, piece, ROOK_DIRECTIONS, candidates, false);
+        }
+        case KING -> generateKingMoves(board, from, piece, candidates, false);
+      }
+      for (Move move : candidates) {
+        if (isLegal(board, side, inCheck, pinned, move)) {
+          return true;
+        }
       }
     }
     return false;
@@ -95,21 +113,25 @@ public final class LegalMoveGenerator implements MoveGenerator {
     for (Move move : pseudoLegal) {
       // In a non-check position, only king moves, pinned pieces and en passant can expose
       // our king. En passant can open a rank through two removed pawns, so always test it.
-      boolean needsTest = inCheck || move.isEnPassant()
-          || Piece.type(board.pieceAt(move.from())) == PieceType.KING
-          || (pinned & (1L << Position.indexOf(move.from()))) != 0;
-      if (!needsTest) {
-        legal.add(move);
-        continue;
-      }
-      board.make(move);
-      boolean leavesKingSafe = !board.inCheck(side);
-      board.unmake();
-      if (leavesKingSafe) {
+      if (isLegal(board, side, inCheck, pinned, move)) {
         legal.add(move);
       }
     }
     return legal;
+  }
+
+  private boolean isLegal(
+      Board board, PieceColor side, boolean inCheck, long pinned, Move move) {
+    boolean needsTest = inCheck || move.isEnPassant()
+        || Piece.type(board.pieceAt(move.from())) == PieceType.KING
+        || (pinned & (1L << Position.indexOf(move.from()))) != 0;
+    if (!needsTest) {
+      return true;
+    }
+    board.make(move);
+    boolean leavesKingSafe = !board.inCheck(side);
+    board.unmake();
+    return leavesKingSafe;
   }
 
   private void generatePawnMoves(

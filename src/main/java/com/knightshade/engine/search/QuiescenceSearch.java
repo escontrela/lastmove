@@ -29,6 +29,7 @@ public final class QuiescenceSearch {
   private final Evaluator evaluator;
   private final MoveOrderer moveOrderer;
   private long nodes;
+  private SearchStats telemetry;
 
   public QuiescenceSearch(
       MoveGenerator moveGenerator, Evaluator evaluator, MoveOrderer moveOrderer) {
@@ -39,6 +40,10 @@ public final class QuiescenceSearch {
 
   void resetNodes() {
     nodes = 0;
+  }
+
+  void setTelemetry(SearchStats telemetry) {
+    this.telemetry = telemetry;
   }
 
   long nodes() {
@@ -66,6 +71,7 @@ public final class QuiescenceSearch {
       Board board, int alpha, int beta, int ply, StopSignal stop, boolean quietChecks,
       Map<Long, Integer> repetitions) {
     nodes++;
+    if (telemetry != null) telemetry.quiescenceEntries++;
     if (stop.shouldStop()) {
       return alpha;
     }
@@ -76,9 +82,10 @@ public final class QuiescenceSearch {
     boolean inCheck = board.inCheck(board.sideToMove());
     if (repetitions != null && (board.halfmoveClock() >= 100
         || repetitions.getOrDefault(board.zobristKey(), 0) >= 3)) {
-      return inCheck && !moveGenerator.hasLegalMove(board) ? -(Scores.MATE - ply) : 0;
+      return inCheck && !hasLegalMove(board) ? -(Scores.MATE - ply) : 0;
     }
     if (inCheck) {
+      if (telemetry != null) telemetry.moveListsGenerated++;
       List<Move> evasions = moveGenerator.generate(board);
       if (evasions.isEmpty()) {
         return -(Scores.MATE - ply);
@@ -98,20 +105,30 @@ public final class QuiescenceSearch {
       return alpha;
     }
 
-    // Generate once at the horizon and reuse the same legal list for captures and quiet checks.
-    List<Move> legal = quietChecks ? moveGenerator.generate(board) : null;
-    List<Move> captures = quietChecks
-        ? legal.stream().filter(move -> move.isCapture() || move.isPromotion()).toList()
-        : moveGenerator.generateCaptures(board);
-    if (quietChecks ? legal.isEmpty() : captures.isEmpty() && !moveGenerator.hasLegalMove(board)) {
-      return 0;
-    }
+    // A static evaluation is sufficient for the overwhelmingly common fail-high path.  Check
+    // for stalemate only after it fails high: this preserves a draw score without allocating a
+    // full move list for positions that are clearly good enough.
     int standPat = evaluateFromSideToMove(board);
     if (standPat >= beta) {
+      if (!hasLegalMove(board)) {
+        return 0;
+      }
+      if (telemetry != null) telemetry.standPatCutoffs++;
       return beta;
     }
     if (standPat > alpha) {
       alpha = standPat;
+    }
+
+    // Materialize moves only when the static evaluation cannot cut.  Quiet-check mode needs the
+    // complete list so it can retain the existing capture/promotion/check set and ordering.
+    if (telemetry != null) telemetry.moveListsGenerated++;
+    List<Move> legal = quietChecks ? moveGenerator.generate(board) : null;
+    List<Move> captures = quietChecks
+        ? legal.stream().filter(move -> move.isCapture() || move.isPromotion()).toList()
+        : moveGenerator.generateCaptures(board);
+    if (quietChecks ? legal.isEmpty() : captures.isEmpty() && !hasLegalMove(board)) {
+      return 0;
     }
     captures = moveOrderer.orderCaptures(board, captures);
     for (Move move : captures) {
@@ -144,12 +161,13 @@ public final class QuiescenceSearch {
     if (move.isPromotion()
         || move.captured() == PieceType.QUEEN
         || move.captured() == PieceType.ROOK
-        || See.ge(board, move, 0)) {
+        || seeAtLeastZero(board, move)) {
       return true;
     }
     board.make(move);
     boolean givesCheck = board.inCheck(board.sideToMove());
     board.unmake();
+    if (!givesCheck && telemetry != null) telemetry.seePrunes++;
     return givesCheck;
   }
 
@@ -159,6 +177,7 @@ public final class QuiescenceSearch {
       if (move.isCapture() || move.isPromotion()) {
         continue;
       }
+      if (telemetry != null) telemetry.quietChecksExamined++;
       board.make(move);
       boolean givesCheck = board.inCheck(board.sideToMove());
       if (!givesCheck) {
@@ -200,5 +219,15 @@ public final class QuiescenceSearch {
   private int evaluateFromSideToMove(Board board) {
     int score = evaluator.evaluate(board);
     return board.sideToMove() == PieceColor.WHITE ? score : -score;
+  }
+
+  private boolean hasLegalMove(Board board) {
+    if (telemetry != null) telemetry.stalemateChecks++;
+    return moveGenerator.hasLegalMove(board);
+  }
+
+  private boolean seeAtLeastZero(Board board, Move move) {
+    if (telemetry != null) telemetry.seeEvaluations++;
+    return See.ge(board, move, 0);
   }
 }

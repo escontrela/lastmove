@@ -171,6 +171,25 @@ class ComputerGameServiceTest {
   }
 
   @Test
+  void startsFromFenWithTheHumanPlayingBlackWhenBlackIsToMove() {
+    Fen blackToMove =
+        Fen.of("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1");
+
+    var state =
+        service
+            .createGame(configuration(PieceColor.BLACK, blackToMove))
+            .toCompletableFuture()
+            .join();
+
+    assertEquals(PieceColor.BLACK, state.initialPosition().activeColor());
+    assertEquals(PieceColor.BLACK, state.gameState().whoseTurn());
+    assertTrue(state.moves().isEmpty());
+    assertEquals(ComputerGamePhase.WAITING_FOR_HUMAN, state.phase());
+    assertTrue(state.canMove());
+    assertEquals(0, engineProvider.lastEngine.chooseMoveCalls);
+  }
+
+  @Test
   void rejectsAnInvalidFenBeforeCreatingTheEngineRuntime() {
     assertThrows(
         RuntimeException.class,

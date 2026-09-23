@@ -3,10 +3,15 @@ package com.knightshade.engine.search;
 import com.knightshade.engine.api.SearchLimits;
 import com.knightshade.engine.api.SearchResult;
 import com.knightshade.engine.api.StopSignal;
+import com.knightshade.engine.api.SearchTelemetryListener;
+import com.knightshade.engine.api.StopReason;
+import com.knightshade.engine.api.SearchTelemetryContext;
+import com.knightshade.engine.api.SearchTelemetryEvent;
 import com.knightshade.engine.board.Board;
 import com.knightshade.engine.board.Move;
 import com.knightshade.engine.board.Piece;
 import com.knightshade.engine.evaluation.Evaluator;
+import com.knightshade.engine.evaluation.PositionalEvaluator;
 import com.knightshade.engine.movegen.MoveGenerator;
 import com.knightshade.engine.ordering.HistoryTable;
 import com.knightshade.engine.ordering.KillerMoves;
@@ -43,6 +48,11 @@ public final class IterativeDeepeningSearch implements Search {
 
   private long nodes;
   private Move bestRootMove;
+  private SearchStats telemetry;
+  private SearchTelemetryListener telemetryListener = SearchTelemetryListener.NONE;
+  private int telemetryRequestedWorkers = 1;
+  private int telemetryEffectiveWorkers = 1;
+  private SearchTelemetryContext telemetryContext;
 
   public IterativeDeepeningSearch(MoveGenerator moveGenerator, Evaluator evaluator) {
     this(moveGenerator, evaluator, new TranspositionTable());
@@ -83,6 +93,7 @@ public final class IterativeDeepeningSearch implements Search {
     bestRootMove = null;
     nodes = 0;
     quiescence.resetNodes();
+    quiescence.setTelemetry(telemetry);
     long startedAt = System.nanoTime();
     int maxDepth = limits.maxDepth() > 0 ? limits.maxDepth() : DEFAULT_MAX_DEPTH;
 
@@ -115,12 +126,96 @@ public final class IterativeDeepeningSearch implements Search {
       completedDepth = depth;
       bestScore = score;
       bestMove = bestRootMove;
+      emit(depth, bestMove, bestScore, SearchTelemetryEvent.ITERATION_COMPLETED,
+          StopReason.COMPLETED, elapsedMillis(startedAt));
       if (Scores.isMate(score)) {
         break;
       }
     }
     return new SearchResult(
         bestMove, bestScore, completedDepth, totalNodes(), elapsedMillis(startedAt));
+  }
+
+  @Override
+  public SearchResult search(
+      Board board, SearchLimits limits, StopSignal stop, Map<Long, Integer> positionOccurrences,
+      SearchTelemetryListener listener, int requestedWorkers, int effectiveWorkers) {
+    return search(board, limits, stop, positionOccurrences, listener, requestedWorkers, effectiveWorkers, null);
+  }
+
+  @Override
+  public SearchResult search(
+      Board board, SearchLimits limits, StopSignal stop, Map<Long, Integer> positionOccurrences,
+      SearchTelemetryListener listener, int requestedWorkers, int effectiveWorkers,
+      SearchTelemetryContext context) {
+    telemetryListener = listener == null ? SearchTelemetryListener.NONE : listener;
+    telemetry = telemetryListener == SearchTelemetryListener.NONE ? null : new SearchStats();
+    if (telemetry != null) telemetry.quietnessMetricsAvailable = true;
+    telemetryRequestedWorkers = requestedWorkers;
+    telemetryEffectiveWorkers = effectiveWorkers;
+    telemetryContext = context;
+    SearchResult result = search(board, limits, stop, positionOccurrences);
+    if (telemetry != null) {
+      telemetry.qNodes = quiescence.nodes();
+      StopReason reason = terminalReason(result, limits, stop);
+      emit(result.depth(), result.move(), result.score(), SearchTelemetryEvent.SEARCH_FINISHED,
+          reason, result.elapsedMillis());
+    }
+    telemetry = null;
+    quiescence.setTelemetry(null);
+    telemetryListener = SearchTelemetryListener.NONE;
+    telemetryContext = null;
+    if (evaluator instanceof PositionalEvaluator positional) positional.setTelemetryEnabled(false);
+    return result;
+  }
+
+  private StopReason terminalReason(SearchResult result, SearchLimits limits, StopSignal stop) {
+    if (result.move() == null) return Scores.isMate(result.score()) ? StopReason.MATE : StopReason.NO_LEGAL_MOVE;
+    if (stop.shouldStop()) return StopReason.CANCELLED;
+    if (Scores.isMate(result.score())) return StopReason.MATE;
+    if (limits.maxDepth() > 0 && result.depth() >= limits.maxDepth()) return StopReason.DEPTH_LIMIT;
+    return limits.maxTimeMillis() > 0 ? StopReason.TIME_LIMIT : StopReason.COMPLETED;
+  }
+
+  private void emit(int depth, Move move, int score, SearchTelemetryEvent event,
+      StopReason reason, long elapsedMillis) {
+    if (telemetry == null) return;
+    telemetry.qNodes = quiescence.nodes();
+    if (evaluator instanceof PositionalEvaluator positional) {
+      telemetry.evaluationCacheHits = positional.cacheHits();
+      telemetry.evaluationCacheMisses = positional.cacheMisses();
+    }
+    try {
+      telemetryListener.onSnapshot(telemetry.snapshot(telemetryContext, event, depth, move, score,
+          telemetryRequestedWorkers, telemetryEffectiveWorkers, reason, elapsedMillis));
+    } catch (RuntimeException ignored) {
+      // Observability must never alter search correctness or latency.
+    }
+  }
+
+  void enableTelemetry(int requestedWorkers, int effectiveWorkers) {
+    enableTelemetry(requestedWorkers, effectiveWorkers, SearchTelemetryListener.NONE);
+  }
+
+  void enableTelemetry(int requestedWorkers, int effectiveWorkers, SearchTelemetryListener listener) {
+    telemetry = new SearchStats();
+    telemetry.quietnessMetricsAvailable = true;
+    quiescence.setTelemetry(telemetry);
+    telemetryListener = listener == null ? SearchTelemetryListener.NONE : listener;
+    if (evaluator instanceof PositionalEvaluator positional) positional.setTelemetryEnabled(true);
+    telemetryRequestedWorkers = requestedWorkers;
+    telemetryEffectiveWorkers = effectiveWorkers;
+  }
+
+  SearchStats telemetryStats() {
+    if (telemetry != null) {
+      telemetry.qNodes = quiescence.nodes();
+      if (evaluator instanceof PositionalEvaluator positional) {
+        telemetry.evaluationCacheHits = positional.cacheHits();
+        telemetry.evaluationCacheMisses = positional.cacheMisses();
+      }
+    }
+    return telemetry;
   }
 
   private int searchDepth(
@@ -152,8 +247,24 @@ public final class IterativeDeepeningSearch implements Search {
         return previousScore;
       }
       if (score <= alpha) {
+        if (Scores.isMate(score) && (alpha != -Scores.INF || beta != Scores.INF)) {
+          if (telemetry != null) telemetry.mateConfirmations++;
+          alpha = -Scores.INF;
+          beta = Scores.INF;
+          delta = Scores.INF;
+          continue;
+        }
+        if (telemetry != null) telemetry.aspirationRetries++;
         alpha = Math.max(-Scores.INF, alpha - delta);
       } else if (score >= beta) {
+        if (Scores.isMate(score) && (alpha != -Scores.INF || beta != Scores.INF)) {
+          if (telemetry != null) telemetry.mateConfirmations++;
+          alpha = -Scores.INF;
+          beta = Scores.INF;
+          delta = Scores.INF;
+          continue;
+        }
+        if (telemetry != null) telemetry.aspirationRetries++;
         beta = Math.min(Scores.INF, beta + delta);
       } else {
         return score;
@@ -218,6 +329,7 @@ public final class IterativeDeepeningSearch implements Search {
                 false,
                 stop);
         if (score > alpha && score < beta) {
+          if (telemetry != null) telemetry.pvsResearches++;
           score =
               -pvSearch(
                   board,
@@ -263,6 +375,7 @@ public final class IterativeDeepeningSearch implements Search {
       int score = -pvSearch(board, depth - 1, scout ? -alpha - 1 : -beta, -alpha,
           1, 0, killers, history, repetitions, false, stop);
       if (scout && score > alpha && score < beta && !stop.shouldStop()) {
+        if (telemetry != null) telemetry.pvsResearches++;
         score = -pvSearch(board, depth - 1, -beta, -alpha,
             1, 0, killers, history, repetitions, false, stop);
       }
@@ -290,6 +403,7 @@ public final class IterativeDeepeningSearch implements Search {
       boolean nullBranch,
       StopSignal stop) {
     nodes++;
+    if (telemetry != null) telemetry.mainNodes++;
     if (stop.shouldStop()) {
       return alpha;
     }
@@ -317,17 +431,22 @@ public final class IterativeDeepeningSearch implements Search {
 
     long key = tableKey(board);
     boolean useTable = !nullBranch && repetitions.getOrDefault(board.zobristKey(), 0) <= 1;
+    if (telemetry != null && useTable) telemetry.ttProbes++;
     Entry entry = useTable ? transpositionTable.probe(key) : null;
+    if (telemetry != null && entry != null) telemetry.ttHits++;
     Move ttMove = entry == null ? null : entry.move();
     if (entry != null && entry.depth() >= depth && ply > 0) {
       int stored = Scores.fromTable(entry.score(), ply);
       if (entry.type() == ScoreType.EXACT) {
+        if (telemetry != null) telemetry.ttCutoffs++;
         return stored;
       }
       if (entry.type() == ScoreType.LOWER_BOUND && stored >= beta) {
+        if (telemetry != null) telemetry.ttCutoffs++;
         return stored;
       }
       if (entry.type() == ScoreType.UPPER_BOUND && stored <= alpha) {
+        if (telemetry != null) telemetry.ttCutoffs++;
         return stored;
       }
     }
@@ -348,6 +467,7 @@ public final class IterativeDeepeningSearch implements Search {
         && depth >= 3
         && hasNonPawnMaterial(board, board.sideToMove())
         && evaluateFromSideToMove(board) >= beta) {
+      if (telemetry != null) telemetry.nullMoveAttempts++;
       int reduction = 2 + depth / 4;
       board.makeNullMove();
       int score =
@@ -368,6 +488,7 @@ public final class IterativeDeepeningSearch implements Search {
         return alpha;
       }
       if (score >= beta && !Scores.isMate(score)) {
+        if (telemetry != null) telemetry.nullMoveCutoffs++;
         if (useTable) {
           transpositionTable.store(
               key, null, depth, Scores.toTable(score, ply), ScoreType.LOWER_BOUND);
@@ -394,12 +515,12 @@ public final class IterativeDeepeningSearch implements Search {
               && !move.isPromotion()
               && !move.equals(killers.primary(ply))
               && !move.equals(killers.secondary(ply));
-
       board.make(move);
       long childKey = board.zobristKey();
       recordPosition(repetitions, childKey);
       boolean givesCheck = board.inCheck(board.sideToMove());
       boolean reduced = reduce && !givesCheck;
+      if (telemetry != null && reduced) telemetry.lmrApplications++;
       int score;
       if (moveCount == 1) {
         score =
@@ -430,6 +551,7 @@ public final class IterativeDeepeningSearch implements Search {
                 nullBranch,
                 stop);
         if (reduced && score > alpha) {
+          if (telemetry != null) telemetry.lmrResearches++;
           score =
               -pvSearch(
                   board,
@@ -445,6 +567,7 @@ public final class IterativeDeepeningSearch implements Search {
                   stop);
         }
         if (score > alpha && score < beta) {
+          if (telemetry != null) telemetry.pvsResearches++;
           score =
               -pvSearch(
                   board,
@@ -467,6 +590,7 @@ public final class IterativeDeepeningSearch implements Search {
       }
 
       if (score >= beta) {
+        if (telemetry != null) telemetry.betaCutoffs++;
         if (!move.isCapture() && !move.isPromotion()) {
           killers.record(move, ply);
           history.record(board.sideToMove(), move, depth);

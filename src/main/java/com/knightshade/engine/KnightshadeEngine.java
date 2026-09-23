@@ -4,6 +4,8 @@ import com.knightshade.engine.api.Engine;
 import com.knightshade.engine.api.SearchLimits;
 import com.knightshade.engine.api.SearchResult;
 import com.knightshade.engine.api.StopSignal;
+import com.knightshade.engine.api.SearchTelemetryListener;
+import com.knightshade.engine.api.SearchTelemetryContext;
 import com.knightshade.engine.board.Board;
 import com.knightshade.engine.board.FenParser;
 import com.knightshade.engine.evaluation.Evaluator;
@@ -50,6 +52,20 @@ public final class KnightshadeEngine implements Engine {
   @Override
   public SearchResult search(
       String fen, List<String> positionHistory, SearchLimits limits, StopSignal stop) {
+    return search(fen, positionHistory, limits, stop, SearchTelemetryListener.NONE);
+  }
+
+  @Override
+  public SearchResult search(
+      String fen, List<String> positionHistory, SearchLimits limits, StopSignal stop,
+      SearchTelemetryListener listener) {
+    return search(fen, positionHistory, limits, stop, listener, null);
+  }
+
+  /** Searches with caller-supplied telemetry identity, or creates an unscoped one when absent. */
+  public SearchResult search(
+      String fen, List<String> positionHistory, SearchLimits limits, StopSignal stop,
+      SearchTelemetryListener listener, SearchTelemetryContext telemetryContext) {
     Objects.requireNonNull(fen, "fen must not be null");
     Objects.requireNonNull(positionHistory, "positionHistory must not be null");
     Objects.requireNonNull(limits, "limits must not be null");
@@ -61,6 +77,13 @@ public final class KnightshadeEngine implements Engine {
       occurrences.merge(key, 1, Integer::sum);
     }
     occurrences.putIfAbsent(board.zobristKey(), 1);
-    return search.search(board, limits, stop, occurrences);
+    SearchTelemetryContext context = telemetryContext == null
+        ? SearchTelemetryContext.unscoped(fen, board.sideToMove(), board.fullmoveNumber(), limits.toString(), positionHistory)
+        : telemetryContext;
+    return search.search(board, limits, stop, occurrences, listener, configuredThreads(), configuredThreads(), context);
+  }
+
+  private int configuredThreads() {
+    return search instanceof ParallelRootSearch parallel ? parallel.threads() : 1;
   }
 }

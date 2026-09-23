@@ -65,6 +65,7 @@ public final class ComputerGameService {
   private final CurrentUserService currentUserService;
   private final ApplicationEventPublisher events;
   private final GameNotificationRepository notifications;
+  private final KnightshadeTelemetryService telemetry;
   private final Map<GameId, RuntimeContext> runtimes = new ConcurrentHashMap<>();
   private final ScheduledExecutorService runtimeTicker;
 
@@ -73,7 +74,7 @@ public final class ComputerGameService {
       ChessGameFactory gameFactory,
       List<ComputerMoveEngineProvider> engineProviders,
       Clock clock) {
-    this(gameRepository, gameFactory, engineProviders, clock, null, null, null);
+    this(gameRepository, gameFactory, engineProviders, clock, null, null, null, null);
   }
 
   public ComputerGameService(
@@ -82,7 +83,7 @@ public final class ComputerGameService {
       List<ComputerMoveEngineProvider> engineProviders,
       Clock clock,
       CurrentUserService currentUserService) {
-    this(gameRepository, gameFactory, engineProviders, clock, currentUserService, null, null);
+    this(gameRepository, gameFactory, engineProviders, clock, currentUserService, null, null, null);
   }
 
   @org.springframework.beans.factory.annotation.Autowired
@@ -93,7 +94,8 @@ public final class ComputerGameService {
       Clock clock,
       CurrentUserService currentUserService,
       ApplicationEventPublisher events,
-      GameNotificationRepository notifications) {
+      GameNotificationRepository notifications,
+      KnightshadeTelemetryService telemetry) {
     this.gameRepository =
         Objects.requireNonNull(gameRepository, "gameRepository must not be null");
     this.gameFactory = Objects.requireNonNull(gameFactory, "gameFactory must not be null");
@@ -107,6 +109,7 @@ public final class ComputerGameService {
     this.currentUserService = currentUserService;
     this.events = events;
     this.notifications = notifications;
+    this.telemetry = telemetry;
     this.runtimeTicker = Executors.newSingleThreadScheduledExecutor(task -> {
       Thread thread = new Thread(task, "lastmove-game-clock");
       thread.setDaemon(true);
@@ -137,6 +140,10 @@ public final class ComputerGameService {
                     gameFactory.createInitial(
                         white, black, Optional.of(required.timeControl())));
     validateOpeningLine(game.initialPosition(), required.openingPractice());
+    if (telemetry != null && telemetry.isEnabled()
+        && com.escontrela.lastmove.application.computer.ComputerEngineIds.KNIGHTSHADE.equals(required.engineId())) {
+      telemetry.beginSession(game.id().value().toString());
+    }
     ComputerMoveEngine engine = provider.create();
     RuntimeContext context = new RuntimeContext(game, required, engine, provider.descriptor(), selectedPlayer());
     save(game, context);
@@ -430,7 +437,7 @@ public final class ComputerGameService {
     OpeningPracticeConfiguration practice = context.configuration.openingPractice().orElse(null);
     if (practice == null || context.openingPracticeState != OpeningPracticeState.FOLLOWING) {
       return context.engine.chooseMove(
-          new ComputerMoveRequest(position, thinkingTime, context.game.positionHistory()));
+          new ComputerMoveRequest(position, thinkingTime, context.game.positionHistory(), context.game.id()));
     }
     MoveCommand guided = practice.line().get(context.openingPlyIndex);
     ChessGame candidateGame = gameFactory.createAnalysisGame(position);
@@ -438,14 +445,14 @@ public final class ComputerGameService {
     if (!execution.accepted()) {
       context.openingPracticeState = OpeningPracticeState.ABANDONED_BY_DEVIATION;
       return context.engine.chooseMove(
-          new ComputerMoveRequest(position, thinkingTime, context.game.positionHistory()));
+          new ComputerMoveRequest(position, thinkingTime, context.game.positionHistory(), context.game.id()));
     }
     ComputerMoveRequest bestRequest =
-        new ComputerMoveRequest(position, thinkingTime, context.game.positionHistory());
+        new ComputerMoveRequest(position, thinkingTime, context.game.positionHistory(), context.game.id());
     List<PositionSnapshot> guidedHistory = new ArrayList<>(context.game.positionHistory());
     guidedHistory.add(candidateGame.currentPosition());
     ComputerMoveRequest guidedRequest =
-        new ComputerMoveRequest(candidateGame.currentPosition(), thinkingTime, guidedHistory);
+        new ComputerMoveRequest(candidateGame.currentPosition(), thinkingTime, guidedHistory, context.game.id());
     return context.engine.analyze(bestRequest).thenCompose(best ->
         context.engine.analyze(guidedRequest).thenApply(afterGuided -> {
           if (withinThreshold(best, afterGuided, practice.safetyThresholdCentipawns())) {
@@ -645,6 +652,10 @@ public final class ComputerGameService {
             provider.create(),
             provider.descriptor(),
             saved.context().ownerPlayerId());
+    if (telemetry != null && telemetry.isEnabled()
+        && com.escontrela.lastmove.application.computer.ComputerEngineIds.KNIGHTSHADE.equals(configuration.engineId())) {
+      telemetry.beginSession(game.id().value().toString());
+    }
     restoreOpeningProgress(context, game.moveHistory());
     runtimes.put(game.id(), context);
     return context.engine.start().thenCompose(ignored -> {
