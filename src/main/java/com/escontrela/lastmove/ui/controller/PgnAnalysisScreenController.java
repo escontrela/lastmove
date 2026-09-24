@@ -63,6 +63,9 @@ import javafx.scene.layout.StackPane;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * FXML controller for the main application screen.
@@ -72,6 +75,8 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class PgnAnalysisScreenController implements UiScreenController {
+  private static final Logger log = LoggerFactory.getLogger(PgnAnalysisScreenController.class);
+  private static final AtomicLong SOUND_DIAGNOSTIC_SEQUENCE = new AtomicLong();
 
   private static final String EMPTY_COMMENT_LIGHT_ICON = "/images/mode_comment_35dp_000000.png";
   private static final String EMPTY_COMMENT_DARK_ICON = "/images/mode_comment_35dp_FFFFFF.png";
@@ -193,16 +198,26 @@ public class PgnAnalysisScreenController implements UiScreenController {
       chessBoard.setOnMoveRequested(
           event -> {
             BoardMoveInput moveInput = event.getMoveInput();
+            long diagnosticId = SOUND_DIAGNOSTIC_SEQUENCE.incrementAndGet();
+            long gestureReceivedNanos = System.nanoTime();
+            String moveLabel = moveInput.fromSquare() + "-" + moveInput.toSquare();
+            chessSoundService.beginAnalysisMoveDiagnostic(diagnosticId, moveLabel);
+            log.info("analysis_move_received id={} move={} thread={}", diagnosticId, moveLabel,
+                Thread.currentThread().getName());
             MoveExecutionResult moveResult =
                 analysisSessionService.attemptMove(
                     activeAnalysisSessionId,
                     new MoveCommand(
                         moveInput.fromSquare(), moveInput.toSquare(), moveInput.promotionPiece()));
+            log.info("analysis_move_applied id={} move={} accepted={} elapsed_ms={}", diagnosticId,
+                moveLabel, moveResult.accepted(),
+                (System.nanoTime() - gestureReceivedNanos) / 1_000_000.0);
 
             if (moveResult.accepted()) {
               renderBoard(moveResult.newSnapshot());
               refreshMoveList();
             } else {
+              chessSoundService.cancelAnalysisMoveDiagnostic(diagnosticId);
               // A dedicated status/message component can render this later without changing flow.
               moveResult.rejectionReason().ifPresent(reason -> root.setAccessibleHelp(reason));
             }

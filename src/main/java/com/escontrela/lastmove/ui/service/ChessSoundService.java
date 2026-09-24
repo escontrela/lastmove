@@ -5,7 +5,11 @@ import java.util.EnumMap;
 import java.util.Map;
 import java.util.Objects;
 import javafx.scene.media.AudioClip;
+import javafx.scene.media.Media;
+import javafx.scene.media.MediaPlayer;
 import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Plays short presentation sound effects bundled with the application.
@@ -15,10 +19,21 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class ChessSoundService {
+  private static final Logger log = LoggerFactory.getLogger(ChessSoundService.class);
   private static final int LOOP_FOREVER = AudioClip.INDEFINITE;
 
   private final Map<ChessSound, AudioClip> clips = new EnumMap<>(ChessSound.class);
   private boolean preloaded;
+  private volatile AnalysisMoveDiagnostic analysisMoveDiagnostic;
+
+  public void beginAnalysisMoveDiagnostic(long id, String move) {
+    analysisMoveDiagnostic = new AnalysisMoveDiagnostic(id, move, System.nanoTime());
+  }
+
+  public void cancelAnalysisMoveDiagnostic(long id) {
+    AnalysisMoveDiagnostic diagnostic = analysisMoveDiagnostic;
+    if (diagnostic != null && diagnostic.id() == id) analysisMoveDiagnostic = null;
+  }
 
   /** Preloads every bundled effect. Call this once from JavaFX screen initialization. */
   public synchronized void preload() {
@@ -35,7 +50,32 @@ public class ChessSoundService {
   public void play(ChessSound sound) {
     Objects.requireNonNull(sound, "sound must not be null");
     preload();
+    AnalysisMoveDiagnostic diagnostic = analysisMoveDiagnostic;
+    if (diagnostic != null) {
+      playWithPlaybackDiagnostics(sound, diagnostic);
+      analysisMoveDiagnostic = null;
+      return;
+    }
     clips.get(sound).play();
+  }
+
+  /** Uses MediaPlayer for a traced move so its PLAYING transition can be timed. */
+  private void playWithPlaybackDiagnostics(ChessSound sound, AnalysisMoveDiagnostic diagnostic) {
+    URL resource = Objects.requireNonNull(getClass().getResource(sound.resourcePath()),
+        () -> "Missing chess sound resource: " + sound.resourcePath());
+    MediaPlayer player = new MediaPlayer(new Media(resource.toExternalForm()));
+    player.setOnReady(() -> log.info(
+        "analysis_sound_ready id={} move={} sound={} elapsed_ms={}", diagnostic.id(),
+        diagnostic.move(), sound, elapsedMillis(diagnostic.startedNanos())));
+    player.setOnPlaying(() -> log.info(
+        "analysis_sound_playing id={} move={} sound={} elapsed_ms={}", diagnostic.id(),
+        diagnostic.move(), sound, elapsedMillis(diagnostic.startedNanos())));
+    player.setOnError(() -> log.warn("analysis_sound_error id={} move={} sound={} error={}",
+        diagnostic.id(), diagnostic.move(), sound, player.getError()));
+    player.setOnEndOfMedia(player::dispose);
+    log.info("analysis_sound_play_requested id={} move={} sound={} elapsed_ms={}", diagnostic.id(),
+        diagnostic.move(), sound, elapsedMillis(diagnostic.startedNanos()));
+    player.play();
   }
 
   /** Starts an effect that continues until {@link #stop(ChessSound)} is called. */
@@ -73,4 +113,10 @@ public class ChessSoundService {
             () -> "Missing chess sound resource: " + sound.resourcePath());
     return new AudioClip(resource.toExternalForm());
   }
+
+  private static double elapsedMillis(long startedNanos) {
+    return (System.nanoTime() - startedNanos) / 1_000_000.0;
+  }
+
+  private record AnalysisMoveDiagnostic(long id, String move, long startedNanos) {}
 }
