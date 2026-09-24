@@ -98,6 +98,8 @@
                         <Label styleClass="eyebrow-label" text="Computer opponents" />
                         <Label styleClass="card-title" text="Knightshade" />
                         <Label styleClass="card-copy" text="Knightshade is the engine built into LastMove. Give it more thinking time per move to make it play stronger." wrapText="true" />
+                        <CheckBox fx:id="knightshadeBitboardsCheckBox" mnemonicParsing="false" styleClass="settings-check-box" text="Use bitboard move generation (experimental)" />
+                        <Label styleClass="card-copy" text="Uses Knightshade's optional 64-bit bitboard implementation for attack checks and move generation. New games use the selected option." wrapText="true" />
                         <Label styleClass="settings-field-label" text="Thinking time per move" />
                         <ComboBox fx:id="knightshadeThinkingTimeCombo" maxWidth="Infinity" />
                         <Label styleClass="settings-field-label" text="Anticipatory search (pondering)" />

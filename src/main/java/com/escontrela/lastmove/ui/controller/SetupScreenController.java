@@ -108,6 +108,7 @@ public class SetupScreenController implements UiScreenController {
     private Label maiaValidationLabel;
     @FXML
     private ComboBox<Duration> knightshadeThinkingTimeCombo;
+    @FXML private CheckBox knightshadeBitboardsCheckBox;
     @FXML private CheckBox ponderEnabledCheckBox;
     @FXML private CheckBox ponderWorkerEnabledCheckBox;
     @FXML private ComboBox<Integer> ponderPredictionDepthCombo;
@@ -189,6 +190,7 @@ public class SetupScreenController implements UiScreenController {
     private String savedMaiaExecutablePath;
     private String savedMaiaWeightsPath;
     private Duration savedKnightshadeThinkingTime;
+    private boolean savedKnightshadeBitboards;
     private PonderSettings savedPonderSettings;
     private String savedAnalysisEngineDefaultId;
     private KnightshadeArenaSettings savedArenaSettings;
@@ -271,6 +273,8 @@ public class SetupScreenController implements UiScreenController {
         knightshadeThinkingTimeCombo.setItems(FXCollections.observableArrayList(THINKING_TIME_PRESETS));
         knightshadeThinkingTimeCombo.setConverter(THINKING_TIME_CONVERTER);
         knightshadeThinkingTimeCombo.valueProperty().addListener((ignored, oldValue, newValue) ->
+                updateApplyButtonVisibility());
+        knightshadeBitboardsCheckBox.selectedProperty().addListener((ignored, oldValue, newValue) ->
                 updateApplyButtonVisibility());
         configurePonderSettings();
         configureBloodPressureTelemetry();
@@ -507,6 +511,7 @@ public class SetupScreenController implements UiScreenController {
                 .toString();
         savedKnightshadeThinkingTime = computerEngineSettingsService
                 .thinkingTime(ComputerEngineIds.KNIGHTSHADE);
+        savedKnightshadeBitboards = computerEngineSettingsService.knightshadeBitboardsEnabled();
         savedPonderSettings = computerEngineSettingsService.ponderSettings();
         nightModeCheckBox.setSelected(savedNightMode);
         showSplashCheckBox.setSelected(savedSplashScreen);
@@ -520,6 +525,7 @@ public class SetupScreenController implements UiScreenController {
             knightshadeThinkingTimeCombo.getItems().add(savedKnightshadeThinkingTime);
         }
         knightshadeThinkingTimeCombo.getSelectionModel().select(savedKnightshadeThinkingTime);
+        knightshadeBitboardsCheckBox.setSelected(savedKnightshadeBitboards);
         ponderEnabledCheckBox.setSelected(savedPonderSettings.enabled());
         ponderWorkerEnabledCheckBox.setSelected(savedPonderSettings.speculativeWorkerEnabled());
         ponderPredictionDepthCombo.setValue(savedPonderSettings.predictionDepth());
@@ -562,6 +568,9 @@ public class SetupScreenController implements UiScreenController {
         }
         savedKnightshadeThinkingTime = computerEngineSettingsService.updateThinkingTime(
                 ComputerEngineIds.KNIGHTSHADE, knightshadeThinkingTimeCombo.getValue());
+        computerEngineSettingsService.updateKnightshadeBitboardsEnabled(
+                knightshadeBitboardsCheckBox.isSelected());
+        savedKnightshadeBitboards = knightshadeBitboardsCheckBox.isSelected();
         savedPonderSettings = computerEngineSettingsService.updatePonderSettings(selectedPonderSettings());
         savedAnalysisEngineDefaultId = effectiveAnalysisEngineDefaultId();
         computerEngineSettingsService.updateDefaultAnalysisEngineId(
@@ -702,6 +711,7 @@ public class SetupScreenController implements UiScreenController {
                 || !trimmed(maiaWeightsPathField.getText()).equals(savedMaiaWeightsPath)
                 || !Objects.equals(
                         knightshadeThinkingTimeCombo.getValue(), savedKnightshadeThinkingTime)
+                || knightshadeBitboardsCheckBox.isSelected() != savedKnightshadeBitboards
                 || !Objects.equals(selectedPonderSettings(), savedPonderSettings)
                 || !Objects.equals(
                         effectiveAnalysisEngineDefaultId(), savedAnalysisEngineDefaultId)

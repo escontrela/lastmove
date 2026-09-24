@@ -158,6 +158,7 @@ public final class ComputerGameService {
                 () ->
                     gameFactory.createInitial(
                         white, black, Optional.of(required.timeControl())));
+    LocalGameAdjudication.drawBareKings(game);
     validateOpeningLine(game.initialPosition(), required.openingPractice());
     if (telemetry != null && telemetry.isEnabled()
         && com.escontrela.lastmove.application.computer.ComputerEngineIds.KNIGHTSHADE.equals(required.engineId())) {
@@ -257,10 +258,11 @@ public final class ComputerGameService {
           context.message = result.rejectionReason();
           return CompletableFuture.completedFuture(stateOf(game, context));
         }
+        LocalGameAdjudication.drawBareKings(game);
         advanceOpeningAfterMove(context, command, game.moveHistory().size() - 1);
         save(game, context);
         context.message = Optional.empty();
-        context.turnStartedAt = clock.instant();
+        context.turnStartedAt = game.result().isPresent() ? null : clock.instant();
         if (game.result().isPresent()) {
           context.phase = ComputerGamePhase.FINISHED;
           invalidateSearch(context);
@@ -282,13 +284,21 @@ public final class ComputerGameService {
   public ComputerGameState state(GameId gameId) {
     ChessGame game = game(gameId);
     RuntimeContext context = runtime(gameId);
+    boolean finishedNow;
     boolean expired;
     ComputerGameState state;
     synchronized (context) {
+      finishedNow = LocalGameAdjudication.drawBareKings(game);
+      if (finishedNow) {
+        invalidateSearch(context);
+        context.phase = ComputerGamePhase.FINISHED;
+        context.turnStartedAt = null;
+        save(game, context);
+      }
       expired = expireClockIfNecessary(game, context);
       state = stateOf(game, context);
     }
-    if (expired) cancelInvalidatedWork(context);
+    if (finishedNow || expired) cancelInvalidatedWork(context);
     return state;
   }
 
@@ -306,9 +316,11 @@ public final class ComputerGameService {
       request.accept(context.configuration.humanColor().opposite());
       game.takeBack(request);
       restoreOpeningProgress(context, game.moveHistory());
+      LocalGameAdjudication.drawBareKings(game);
       save(game, context);
-      context.phase = ComputerGamePhase.WAITING_FOR_HUMAN;
-      context.turnStartedAt = clock.instant();
+      context.phase = game.result().isPresent()
+          ? ComputerGamePhase.FINISHED : ComputerGamePhase.WAITING_FOR_HUMAN;
+      context.turnStartedAt = game.result().isPresent() ? null : clock.instant();
       context.message = Optional.of("Takeback accepted by " + context.descriptor.displayName());
       state = stateOf(game, context);
     }
@@ -438,10 +450,11 @@ public final class ComputerGameService {
                       Optional.of("The engine returned an illegal move: " + move);
                   return stateOf(game, context);
                 }
+                LocalGameAdjudication.drawBareKings(game);
                 advanceOpeningAfterMove(context, move, game.moveHistory().size() - 1);
                 save(game, context);
                 context.message = Optional.empty();
-                context.turnStartedAt = clock.instant();
+                context.turnStartedAt = game.result().isPresent() ? null : clock.instant();
                 context.phase =
                     game.result().isPresent()
                         ? ComputerGamePhase.FINISHED
@@ -748,6 +761,7 @@ public final class ComputerGameService {
     }
     ChessGame game = saved.game();
     ComputerGameConfiguration configuration = saved.context().computerConfiguration().orElseThrow();
+    boolean adjudicatedBareKings = LocalGameAdjudication.drawBareKings(game);
     if (game.result().isPresent()) {
       ComputerMoveEngineProvider provider = provider(configuration.engineId());
       RuntimeContext context =
@@ -759,6 +773,7 @@ public final class ComputerGameService {
               saved.context().ownerPlayerId());
       restoreOpeningProgress(context, game.moveHistory());
       context.phase = ComputerGamePhase.FINISHED;
+      if (adjudicatedBareKings) save(game, context);
       runtimes.put(game.id(), context);
       return CompletableFuture.completedFuture(stateOf(game, context));
     }

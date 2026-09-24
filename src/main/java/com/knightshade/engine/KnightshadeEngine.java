@@ -30,19 +30,25 @@ import java.util.Optional;
 public final class KnightshadeEngine implements Engine {
 
   private final Search search;
+  private final boolean bitboards;
 
   public KnightshadeEngine() {
-    this(
-        Integer.getInteger(
-            "knightshade.threads", Math.min(4, Runtime.getRuntime().availableProcessors())));
+    this(Integer.getInteger(
+        "knightshade.threads", Math.min(4, Runtime.getRuntime().availableProcessors())), false);
   }
 
   /** Total search participants, including the calling thread. One preserves sequential search. */
   public KnightshadeEngine(int threads) {
-    this.search = new ParallelRootSearch(threads);
+    this(threads, false);
+  }
+
+  public KnightshadeEngine(int threads, boolean bitboards) {
+    this.bitboards = bitboards;
+    this.search = new ParallelRootSearch(threads, bitboards);
   }
 
   KnightshadeEngine(MoveGenerator moveGenerator, Evaluator evaluator) {
+    this.bitboards = false;
     this.search = new IterativeDeepeningSearch(moveGenerator, evaluator);
   }
 
@@ -99,7 +105,7 @@ public final class KnightshadeEngine implements Engine {
     Objects.requireNonNull(stop, "stop must not be null");
     Objects.requireNonNull(continuationStarted, "continuationStarted must not be null");
     // Speculation uses one participant even when the ordinary search is parallel.
-    ParallelRootSearch ponderOwner = new ParallelRootSearch(1);
+    ParallelRootSearch ponderOwner = new ParallelRootSearch(1, bitboards);
     return PonderSearchContext.prepare(ponderOwner, fen, positionHistory,
         predictionLimits, continuationLimits, stop, continuationStarted);
   }

@@ -221,6 +221,36 @@ class ComputerGameServiceTest {
   }
 
   @Test
+  void endsAsInsufficientMaterialWhenTheHumanCapturesTheLastOtherPiece() {
+    Fen lastRook = Fen.of("8/8/8/8/8/8/1k6/R3K3 b - - 0 1");
+    var created = service.createGame(configuration(PieceColor.BLACK, lastRook))
+        .toCompletableFuture().join();
+
+    var finished = service.playHumanMove(created.gameId(), move("b2", "a1"))
+        .toCompletableFuture().join();
+
+    assertEquals(ComputerGamePhase.FINISHED, finished.phase());
+    assertEquals(GameResult.DRAW, finished.result().orElseThrow());
+    assertEquals(GameTerminationReason.INSUFFICIENT_MATERIAL,
+        finished.terminationReason().orElseThrow());
+    assertEquals(0, engineProvider.lastEngine.chooseMoveCalls);
+  }
+
+  @Test
+  void startsWithBareKingsAlreadyDrawn() {
+    Fen bareKings = Fen.of("8/8/8/8/8/8/1k6/4K3 w - - 0 1");
+
+    var state = service.createGame(configuration(PieceColor.WHITE, bareKings))
+        .toCompletableFuture().join();
+
+    assertEquals(ComputerGamePhase.FINISHED, state.phase());
+    assertEquals(GameResult.DRAW, state.result().orElseThrow());
+    assertEquals(GameTerminationReason.INSUFFICIENT_MATERIAL,
+        state.terminationReason().orElseThrow());
+    assertEquals(0, engineProvider.lastEngine.chooseMoveCalls);
+  }
+
+  @Test
   void rejectsAnInvalidFenBeforeCreatingTheEngineRuntime() {
     assertThrows(
         RuntimeException.class,

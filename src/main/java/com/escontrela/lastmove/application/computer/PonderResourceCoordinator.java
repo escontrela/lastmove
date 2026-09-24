@@ -1,7 +1,9 @@
 package com.escontrela.lastmove.application.computer;
 
 import com.escontrela.lastmove.domain.game.GameId;
+import java.util.ArrayDeque;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 /** Process-wide, non-blocking admission for bounded speculation versus real engine work. */
 public final class PonderResourceCoordinator {
@@ -9,6 +11,7 @@ public final class PonderResourceCoordinator {
   private static int activeRealSearches;
   private static int activeAnalyses;
   private static PonderLease activePonder;
+  private static final ArrayDeque<AnalysisWaiter> waitingAnalyses = new ArrayDeque<>();
 
   private PonderResourceCoordinator() {}
 
@@ -27,6 +30,35 @@ public final class PonderResourceCoordinator {
       activeAnalyses++;
       return new RealSearchLease(true);
     }
+  }
+
+  /** Reserves the next available analysis slot, preserving game-search priority. */
+  public static AnalysisAdmission awaitAnalysis(Consumer<RealSearchLease> admitted) {
+    AnalysisWaiter waiter = new AnalysisWaiter(Objects.requireNonNull(admitted, "admitted"));
+    Runnable dispatch;
+    synchronized (MONITOR) {
+      waitingAnalyses.addLast(waiter);
+      dispatch = reserveNextAnalysis();
+    }
+    if (dispatch != null) dispatch.run();
+    return new AnalysisAdmission(waiter);
+  }
+
+  private static Runnable reserveNextAnalysis() {
+    if (activeRealSearches != 0 || activeAnalyses != 0 || activePonder != null
+        || waitingAnalyses.isEmpty()) return null;
+    AnalysisWaiter waiter = waitingAnalyses.removeFirst();
+    if (waiter.cancelled) return reserveNextAnalysis();
+    waiter.admitted = true;
+    waiter.lease = new RealSearchLease(true);
+    return () -> {
+      try {
+        waiter.callback.accept(waiter.lease);
+      } catch (RuntimeException failure) {
+        waiter.lease.close();
+        throw failure;
+      }
+    };
   }
 
   /** Registers demand for a real search and promptly asks any speculative search to yield. */
@@ -72,13 +104,37 @@ public final class PonderResourceCoordinator {
     private RealSearchLease() { this(false); }
     private RealSearchLease(boolean analysis) { this.analysis = analysis; }
     @Override public void close() {
+      Runnable nextAnalysis;
       synchronized (MONITOR) {
         if (closed) return;
         closed = true;
         if (analysis) activeAnalyses = Math.max(0, activeAnalyses - 1);
         else activeRealSearches = Math.max(0, activeRealSearches - 1);
+        nextAnalysis = reserveNextAnalysis();
+      }
+      if (nextAnalysis != null) nextAnalysis.run();
+    }
+  }
+
+  public static final class AnalysisAdmission {
+    private final AnalysisWaiter waiter;
+    private AnalysisAdmission(AnalysisWaiter waiter) { this.waiter = waiter; }
+    /** Removes this request if it is still waiting for a slot. */
+    public boolean cancel() {
+      synchronized (MONITOR) {
+        if (waiter.admitted || waiter.cancelled) return false;
+        waiter.cancelled = true;
+        return waitingAnalyses.remove(waiter);
       }
     }
+  }
+
+  private static final class AnalysisWaiter {
+    private final Consumer<RealSearchLease> callback;
+    private boolean admitted;
+    private boolean cancelled;
+    private RealSearchLease lease;
+    private AnalysisWaiter(Consumer<RealSearchLease> callback) { this.callback = callback; }
   }
 
   public static final class PonderLease implements AutoCloseable {
@@ -102,11 +158,14 @@ public final class PonderResourceCoordinator {
       return shareWithSameGameRealSearch && gameId != null && gameId.equals(requestedGameId);
     }
     @Override public void close() {
+      Runnable nextAnalysis;
       synchronized (MONITOR) {
         if (closed) return;
         closed = true;
         if (activePonder == this) activePonder = null;
+        nextAnalysis = reserveNextAnalysis();
       }
+      if (nextAnalysis != null) nextAnalysis.run();
     }
   }
 }

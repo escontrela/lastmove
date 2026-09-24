@@ -22,6 +22,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
@@ -30,8 +32,8 @@ import org.springframework.stereotype.Service;
  *
  * <p>The service reuses the same engine providers as the progressive game but keeps a single
  * engine instance alive for the lifetime of the analysis workflow, so external engines are not
- * restarted on every navigation step. Results are guarded against out-of-order completion: a stale
- * search that is superseded by a newer request completes with an empty result.
+ * restarted on every navigation step. A request waiting for CPU admission is superseded by a newer
+ * position, while an admitted search is allowed to finish and publish its result.
  */
 @Service
 public final class PositionAnalysisService {
@@ -39,10 +41,14 @@ public final class PositionAnalysisService {
   private final Map<String, ComputerMoveEngineProvider> providers;
   private final ChessRulesEngine rulesEngine;
   private final ComputerEngineSettingsService settingsService;
+  private final AtomicLong version = new AtomicLong();
+  private final AtomicLong cancellationVersion = new AtomicLong();
+  private volatile PonderResourceCoordinator.AnalysisAdmission pendingAdmission;
+  private volatile CompletableFuture<Optional<PositionAnalysisResult>> pendingAnalysis;
 
   private ComputerMoveEngine currentEngine;
   private String currentEngineId;
-  private volatile long version;
+  private boolean currentKnightshadeBitboardsEnabled;
 
   public PositionAnalysisService(
       List<ComputerMoveEngineProvider> providers,
@@ -84,15 +90,26 @@ public final class PositionAnalysisService {
   /**
    * Analyses one position with the selected engine.
    *
-   * <p>The returned stage completes with an empty optional when this request was superseded by a
-   * newer one before the engine replied, allowing callers to discard stale results without any
-   * position comparison.
+   * <p>The returned stage completes empty when it was superseded before admission or explicitly
+   * cancelled. Once admitted, the result is retained even if the game advances to another position.
    */
   public CompletionStage<Optional<PositionAnalysisResult>> analyze(
       PositionSnapshot position, String engineId) {
+    String requiredId = Objects.requireNonNull(engineId, "engineId must not be null").trim();
+    return analyze(position, requiredId, settingsService.thinkingTime(requiredId));
+  }
+
+  /** Analyses one position with a caller-selected budget, used by compact live indicators. */
+  public CompletionStage<Optional<PositionAnalysisResult>> analyze(
+      PositionSnapshot position, String engineId, Duration maximumThinkingTime) {
     PositionSnapshot requiredPosition =
         Objects.requireNonNull(position, "position must not be null");
     String requiredId = Objects.requireNonNull(engineId, "engineId must not be null").trim();
+    Duration requiredThinkingTime =
+        Objects.requireNonNull(maximumThinkingTime, "maximumThinkingTime must not be null");
+    if (requiredThinkingTime.isZero() || requiredThinkingTime.isNegative()) {
+      throw new IllegalArgumentException("maximumThinkingTime must be positive");
+    }
 
     final ComputerMoveEngine engine;
     final ComputerEngineDescriptor descriptor;
@@ -103,42 +120,94 @@ public final class PositionAnalysisService {
       return CompletableFuture.failedFuture(exception);
     }
 
-    final long requestedVersion = ++version;
-    Duration thinkingTime = settingsService.thinkingTime(requiredId);
+    final long requestedVersion = version.incrementAndGet();
+    final long requestedCancellationVersion = cancellationVersion.get();
+    cancelPendingAdmission();
     return engine
         .start()
         .thenCompose(
-            ignored -> {
-              PonderResourceCoordinator.RealSearchLease resourceLease = PonderResourceCoordinator.tryBeginAnalysis();
-              if (resourceLease == null) return CompletableFuture.<EngineAnalysisResult>completedFuture(null);
-              try {
-                return engine.analyze(new ComputerMoveRequest(requiredPosition, thinkingTime))
-                    .whenComplete((result, failure) -> resourceLease.close());
-              } catch (RuntimeException failure) {
-                resourceLease.close();
-                throw failure;
-              }
-            })
-        .thenApply(
-            result ->
-                result != null && requestedVersion == version
-                    ? Optional.of(toResult(descriptor, requiredPosition, result))
-                    : Optional.empty());
+            ignored -> analyzeWhenAdmitted(
+                engine, descriptor, requiredPosition, requiredThinkingTime,
+                requestedVersion, requestedCancellationVersion));
+  }
+
+  /** Cancels both an admitted search and any retry waiting for CPU capacity. */
+  public void cancel() {
+    cancellationVersion.incrementAndGet();
+    version.incrementAndGet();
+    cancelPendingAdmission();
+    ComputerMoveEngine engine = currentEngine;
+    if (engine != null) engine.cancelSearch();
+  }
+
+  private void cancelPendingAdmission() {
+    PonderResourceCoordinator.AnalysisAdmission admission = pendingAdmission;
+    pendingAdmission = null;
+    CompletableFuture<Optional<PositionAnalysisResult>> pending = pendingAnalysis;
+    pendingAnalysis = null;
+    if (admission != null && admission.cancel() && pending != null) {
+      pending.complete(Optional.empty());
+    }
+  }
+
+  private CompletionStage<Optional<PositionAnalysisResult>> analyzeWhenAdmitted(
+      ComputerMoveEngine engine,
+      ComputerEngineDescriptor descriptor,
+      PositionSnapshot position,
+      Duration thinkingTime,
+      long requestedVersion,
+      long requestedCancellationVersion) {
+    if (requestedVersion != version.get()
+        || requestedCancellationVersion != cancellationVersion.get()) {
+      return CompletableFuture.completedFuture(Optional.empty());
+    }
+    CompletableFuture<Optional<PositionAnalysisResult>> deferred = new CompletableFuture<>();
+    pendingAnalysis = deferred;
+    PonderResourceCoordinator.AnalysisAdmission admission =
+        PonderResourceCoordinator.awaitAnalysis(resourceLease -> {
+          if (requestedVersion != version.get()
+              || requestedCancellationVersion != cancellationVersion.get()) {
+            resourceLease.close();
+            deferred.complete(Optional.empty());
+            return;
+          }
+          try {
+            engine.analyze(new ComputerMoveRequest(position, thinkingTime))
+                .whenComplete((result, failure) -> {
+                  resourceLease.close();
+                  if (requestedCancellationVersion != cancellationVersion.get()) {
+                    deferred.complete(Optional.empty());
+                  }
+                  else if (failure != null) deferred.completeExceptionally(failure);
+                  else deferred.complete(Optional.of(toResult(descriptor, position, result)));
+                });
+          } catch (RuntimeException failure) {
+            resourceLease.close();
+            deferred.completeExceptionally(new CompletionException(failure));
+          }
+        });
+    pendingAdmission = admission;
+    return deferred;
   }
 
   /** Closes the retained engine instance, if any. */
   @PreDestroy
   public void close() {
+    cancel();
     closeCurrentEngine();
   }
 
   private ComputerMoveEngine engineFor(String engineId) {
-    if (currentEngine != null && engineId.equals(currentEngineId)) {
+    boolean knightshade = ComputerEngineIds.KNIGHTSHADE.equals(engineId);
+    boolean bitboardsEnabled = knightshade && settingsService.knightshadeBitboardsEnabled();
+    if (currentEngine != null && engineId.equals(currentEngineId)
+        && (!knightshade || currentKnightshadeBitboardsEnabled == bitboardsEnabled)) {
       return currentEngine;
     }
     closeCurrentEngine();
     currentEngine = providers.get(engineId).create();
     currentEngineId = engineId;
+    currentKnightshadeBitboardsEnabled = bitboardsEnabled;
     return currentEngine;
   }
 
@@ -147,6 +216,7 @@ public final class PositionAnalysisService {
       currentEngine.close();
       currentEngine = null;
       currentEngineId = null;
+      currentKnightshadeBitboardsEnabled = false;
     }
   }
 

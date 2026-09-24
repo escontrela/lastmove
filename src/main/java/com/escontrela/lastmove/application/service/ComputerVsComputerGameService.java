@@ -62,6 +62,7 @@ public final class ComputerVsComputerGameService {
             .map(fen -> games.createFrom(fen, whitePlayer, blackPlayer, Optional.of(configuration.timeControl())))
             .orElseGet(
                 () -> games.createInitial(whitePlayer, blackPlayer, Optional.of(configuration.timeControl())));
+    LocalGameAdjudication.drawBareKings(game);
     if (telemetry != null && telemetry.isEnabled()
         && (ComputerEngineIds.KNIGHTSHADE.equals(configuration.whiteEngineId())
             || ComputerEngineIds.KNIGHTSHADE.equals(configuration.blackEngineId()))) {
@@ -72,15 +73,33 @@ public final class ComputerVsComputerGameService {
     return runtime.white.start().thenCompose(ignored -> runtime.black.start()).thenApply(ignored -> {
       ComputerVsComputerGameState initial;
       synchronized (runtime) {
-        runtime.turnStartedAt = clock.instant();
-        runtime.phase = ComputerGamePhase.ENGINE_THINKING;
+        runtime.turnStartedAt = game.result().isPresent() ? null : clock.instant();
+        runtime.phase = game.result().isPresent()
+            ? ComputerGamePhase.FINISHED : ComputerGamePhase.ENGINE_THINKING;
         initial = snapshot(runtime);
       }
-      requestMove(runtime);
+      if (game.result().isEmpty()) requestMove(runtime);
       return initial;
     });
   }
-  public ComputerVsComputerGameState state(GameId id) { Runtime runtime = runtime(id); ComputerVsComputerGameState state; boolean expired; synchronized (runtime) { expired = expire(runtime); state = snapshot(runtime); } if (expired) cancelSearches(runtime); return state; }
+  public ComputerVsComputerGameState state(GameId id) {
+    Runtime runtime = runtime(id);
+    ComputerVsComputerGameState state;
+    boolean finishedNow;
+    boolean expired;
+    synchronized (runtime) {
+      finishedNow = LocalGameAdjudication.drawBareKings(runtime.game);
+      if (finishedNow) {
+        runtime.searchVersion++;
+        runtime.phase = ComputerGamePhase.FINISHED;
+        runtime.turnStartedAt = null;
+      }
+      expired = expire(runtime);
+      state = snapshot(runtime);
+    }
+    if (finishedNow || expired) cancelSearches(runtime);
+    return state;
+  }
   public GameRecord gameRecord(GameId id) { return runtime(id).game.toRecord(); }
   /** Stops the match without assigning either player a result. */
   public ComputerVsComputerGameState stop(GameId id) { Runtime runtime = runtime(id); ComputerVsComputerGameState state; synchronized (runtime) { runtime.searchVersion++; runtime.phase = ComputerGamePhase.FINISHED; runtime.stopped = true; runtime.turnStartedAt = null; runtime.message = Optional.of("Game stopped"); state = snapshot(runtime); } cancelSearches(runtime); return state; }
@@ -136,7 +155,10 @@ public final class ComputerVsComputerGameService {
         expire(runtime); if (runtime.game.result().isPresent() || runtime.stopped || !runtime.game.currentPosition().equals(position)) return null;
         var applied = runtime.game.move(move, elapsed(runtime));
         if (!applied.accepted()) { runtime.phase = ComputerGamePhase.ENGINE_ERROR; runtime.message = Optional.of("The engine returned an illegal move: " + move); return null; }
-        runtime.turnStartedAt = clock.instant(); runtime.phase = runtime.game.result().isPresent() ? ComputerGamePhase.FINISHED : ComputerGamePhase.ENGINE_THINKING;
+        LocalGameAdjudication.drawBareKings(runtime.game);
+        runtime.turnStartedAt = runtime.game.result().isPresent() ? null : clock.instant();
+        runtime.phase = runtime.game.result().isPresent()
+            ? ComputerGamePhase.FINISHED : ComputerGamePhase.ENGINE_THINKING;
         continueMatch = runtime.phase == ComputerGamePhase.ENGINE_THINKING;
         if (continueMatch) {
           nextGeneration = side == PieceColor.WHITE

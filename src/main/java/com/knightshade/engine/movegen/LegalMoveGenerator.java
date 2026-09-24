@@ -19,7 +19,7 @@ import java.util.List;
  * side's own king is left in check. Castling additionally verifies that the king neither crosses
  * nor lands on an attacked square, which the final make/unmake check alone cannot catch.
  */
-public final class LegalMoveGenerator implements MoveGenerator {
+public class LegalMoveGenerator implements MoveGenerator {
 
   private static final int[][] KNIGHT_OFFSETS = {
     {1, 2}, {2, 1}, {2, -1}, {1, -2}, {-1, -2}, {-2, -1}, {-2, 1}, {-1, 2}
@@ -120,7 +120,7 @@ public final class LegalMoveGenerator implements MoveGenerator {
     return legal;
   }
 
-  private boolean isLegal(
+  protected boolean isLegal(
       Board board, PieceColor side, boolean inCheck, long pinned, Move move) {
     boolean needsTest = inCheck || move.isEnPassant()
         || Piece.type(board.pieceAt(move.from())) == PieceType.KING

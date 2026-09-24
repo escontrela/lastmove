@@ -25,6 +25,8 @@ public final class Board implements Position {
   private static final Square BLACK_QUEEN_ROOK = Square.of(0, 7);
 
   private final int[] pieces = new int[64];
+  private long[] pieceBitboards;
+  private long[] colorOccupancy;
   private Undo[] undoStack = new Undo[128];
   private int undoSize;
 
@@ -45,6 +47,10 @@ public final class Board implements Position {
   public Board copy() {
     Board copy = new Board();
     System.arraycopy(pieces, 0, copy.pieces, 0, pieces.length);
+    if (pieceBitboards != null) {
+      copy.pieceBitboards = pieceBitboards.clone();
+      copy.colorOccupancy = colorOccupancy.clone();
+    }
     System.arraycopy(kingSquares, 0, copy.kingSquares, 0, kingSquares.length);
     copy.sideToMove = sideToMove;
     copy.castlingRights = castlingRights;
@@ -106,16 +112,41 @@ public final class Board implements Position {
     return pieces[index];
   }
 
+  /** Builds the optional masks once for a bitboard search workspace. */
+  public void enableBitboards() {
+    if (pieceBitboards != null) return;
+    pieceBitboards = new long[16];
+    colorOccupancy = new long[2];
+    for (int index = 0; index < pieces.length; index++) {
+      int piece = pieces[index];
+      if (piece == Piece.NONE) continue;
+      long square = 1L << index;
+      pieceBitboards[piece] |= square;
+      colorOccupancy[Piece.color(piece).ordinal()] |= square;
+    }
+  }
+
+  /** Returns the cached squares occupied by the encoded piece. */
+  public long pieceBitboard(int piece) {
+    enableBitboards();
+    return pieceBitboards[piece];
+  }
+
+  /** Returns the cached occupied squares for one color. */
+  public long occupancy(PieceColor color) {
+    enableBitboards();
+    return colorOccupancy[color.ordinal()];
+  }
+
+  /** Returns all occupied squares. */
+  public long occupancy() {
+    enableBitboards();
+    return colorOccupancy[0] | colorOccupancy[1];
+  }
+
   void setPiece(Square square, int piece) {
     int index = indexOf(square);
-    int previous = pieces[index];
-    if (previous != Piece.NONE && Piece.type(previous) == PieceType.KING) {
-      kingSquares[Piece.color(previous).ordinal()] = -1;
-    }
-    pieces[index] = piece;
-    if (piece != Piece.NONE && Piece.type(piece) == PieceType.KING) {
-      kingSquares[Piece.color(piece).ordinal()] = index;
-    }
+    setPieceAt(index, piece);
   }
 
   void setSideToMove(PieceColor color) {
@@ -168,13 +199,10 @@ public final class Board implements Position {
     nextUndo().save(move, capturedPiece, capturedSquare, castlingRights, enPassantTarget,
         halfmoveClock, fullmoveNumber, zobristKey);
 
-    pieces[fromIndex] = Piece.NONE;
-    pieces[toIndex] = placedPiece;
-    if (Piece.type(movingPiece) == PieceType.KING) {
-      kingSquares[movingColor.ordinal()] = toIndex;
-    }
+    setPieceAt(fromIndex, Piece.NONE);
+    setPieceAt(toIndex, placedPiece);
     if (move.isEnPassant()) {
-      pieces[indexOf(capturedSquare)] = Piece.NONE;
+      setPieceAt(indexOf(capturedSquare), Piece.NONE);
     }
 
     long key = zobristKey;
@@ -219,14 +247,12 @@ public final class Board implements Position {
     int placedPiece = pieces[indexOf(to)];
     PieceColor color = Piece.color(placedPiece);
     PieceType restoredType = move.isPromotion() ? PieceType.PAWN : Piece.type(placedPiece);
-    pieces[indexOf(from)] = Piece.of(color, restoredType);
-    if (restoredType == PieceType.KING) {
-      kingSquares[color.ordinal()] = indexOf(from);
-    }
-    pieces[indexOf(to)] = undo.capturedPiece;
+    setPieceAt(indexOf(to), Piece.NONE);
+    setPieceAt(indexOf(from), Piece.of(color, restoredType));
     if (move.isEnPassant()) {
-      pieces[indexOf(to)] = Piece.NONE;
-      pieces[indexOf(undo.capturedSquare)] = undo.capturedPiece;
+      setPieceAt(indexOf(undo.capturedSquare), undo.capturedPiece);
+    } else {
+      setPieceAt(indexOf(to), undo.capturedPiece);
     }
     if (move.isCastle()) {
       moveRookBackForCastle(color, move.flag() == MoveFlag.KING_CASTLE);
@@ -414,15 +440,15 @@ public final class Board implements Position {
   private void moveRookForCastle(PieceColor color, boolean kingSide) {
     int rookFrom = indexOf(castlingRookFrom(color, kingSide));
     int rookTo = indexOf(castlingRookTo(color, kingSide));
-    pieces[rookTo] = pieces[rookFrom];
-    pieces[rookFrom] = Piece.NONE;
+    setPieceAt(rookTo, pieces[rookFrom]);
+    setPieceAt(rookFrom, Piece.NONE);
   }
 
   private void moveRookBackForCastle(PieceColor color, boolean kingSide) {
     int rookTo = indexOf(castlingRookTo(color, kingSide));
     int rookFrom = indexOf(castlingRookFrom(color, kingSide));
-    pieces[rookFrom] = pieces[rookTo];
-    pieces[rookTo] = Piece.NONE;
+    setPieceAt(rookFrom, pieces[rookTo]);
+    setPieceAt(rookTo, Piece.NONE);
   }
 
   private Square castlingRookFrom(PieceColor color, boolean kingSide) {
@@ -484,6 +510,31 @@ public final class Board implements Position {
       return false;
     }
     return Piece.is(pieces[rank * 8 + file], color, type);
+  }
+
+  private void setPieceAt(int index, int piece) {
+    int previous = pieces[index];
+    if (previous != Piece.NONE) {
+      if (pieceBitboards != null) {
+        long square = 1L << index;
+        pieceBitboards[previous] &= ~square;
+        colorOccupancy[Piece.color(previous).ordinal()] &= ~square;
+      }
+      if (Piece.type(previous) == PieceType.KING) {
+        kingSquares[Piece.color(previous).ordinal()] = -1;
+      }
+    }
+    pieces[index] = piece;
+    if (piece != Piece.NONE) {
+      if (pieceBitboards != null) {
+        long square = 1L << index;
+        pieceBitboards[piece] |= square;
+        colorOccupancy[Piece.color(piece).ordinal()] |= square;
+      }
+      if (Piece.type(piece) == PieceType.KING) {
+        kingSquares[Piece.color(piece).ordinal()] = index;
+      }
+    }
   }
 
   private boolean orthogonalSliderAttacks(

@@ -8,7 +8,6 @@ import com.knightshade.engine.api.SearchTelemetryContext;
 import com.knightshade.engine.board.Board;
 import com.knightshade.engine.board.FenParser;
 import com.knightshade.engine.board.Move;
-import com.knightshade.engine.movegen.LegalMoveGenerator;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -77,7 +76,7 @@ public final class PonderSearchContext {
       return Optional.empty();
     }
 
-    List<Move> legal = new LegalMoveGenerator().generate(root);
+    List<Move> legal = owner.generateLegalMoves(root);
     if (!legal.contains(prediction.move())) return Optional.empty();
     Board expectedBoard = root.copy();
     expectedBoard.make(prediction.move());

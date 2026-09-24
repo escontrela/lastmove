@@ -90,6 +90,11 @@ to choose the parallel participant count. The thinking-time limit is shared by a
 Each request joins its workers before returning. See [parallel search](docs/knightshade-parallel-search.md)
 for synchronization details and headless benchmark commands.
 
+The optional Knightshade bitboard move generator is controlled in **Settings → Knightshade** and
+is off by default. The preference is saved on this device and applies to new games and ponder
+continuations. If Knightshade is already open for position analysis, the next analysis request
+recreates it with the selected setting.
+
 ### Planned
 
 * PGN editing and export.

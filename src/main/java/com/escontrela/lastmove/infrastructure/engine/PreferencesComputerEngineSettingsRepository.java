@@ -24,6 +24,7 @@ public class PreferencesComputerEngineSettingsRepository
   private static final String PONDER_PREDICTION_BUDGET_KEY = "knightshade.ponder.prediction-budget-ms";
   private static final String PONDER_CONTINUATION_DEPTH_KEY = "knightshade.ponder.continuation-depth";
   private static final String PONDER_CONTINUATION_BUDGET_KEY = "knightshade.ponder.continuation-budget-ms";
+  private static final String KNIGHTSHADE_BITBOARDS_ENABLED_KEY = "knightshade.bitboards.enabled";
 
   private final Preferences preferences =
       Preferences.userNodeForPackage(PreferencesComputerEngineSettingsRepository.class)
@@ -122,6 +123,16 @@ public class PreferencesComputerEngineSettingsRepository
     preferences.putLong(PONDER_PREDICTION_BUDGET_KEY, value.predictionBudget().toMillis());
     preferences.putInt(PONDER_CONTINUATION_DEPTH_KEY, value.continuationDepth());
     preferences.putLong(PONDER_CONTINUATION_BUDGET_KEY, value.continuationBudget().toMillis());
+  }
+
+  @Override
+  public boolean findKnightshadeBitboardsEnabled() {
+    return preferences.getBoolean(KNIGHTSHADE_BITBOARDS_ENABLED_KEY, false);
+  }
+
+  @Override
+  public void saveKnightshadeBitboardsEnabled(boolean enabled) {
+    preferences.putBoolean(KNIGHTSHADE_BITBOARDS_ENABLED_KEY, enabled);
   }
 
   private String requireEngineId(String value) {

@@ -9,6 +9,10 @@ trabajador mediante `searchRootMove`. No se duplican las reglas de búsqueda pro
 - Por defecto: `min(4, Runtime.getRuntime().availableProcessors())` participantes totales.
 - Constructor explícito: `new KnightshadeEngine(1)`, `new KnightshadeEngine(2)`, etc.
 - La propiedad JVM `-Dknightshade.threads=N` configura el constructor por defecto (1–32).
+- El ajuste **Settings → Knightshade → Use bitboard move generation** selecciona el generador
+  opcional; su valor predeterminado es `false` y se guarda en Java Preferences. El proveedor lo
+  aplica a los motores nuevos y a sus búsquedas raíz, trabajadores y continuaciones ponder. El
+  análisis de posiciones recrea Knightshade en la siguiente petición si cambió este ajuste.
 - N incluye el hilo coordinador. Los N−1 ayudantes son hilos de plataforma para trabajo de CPU.
 - Las profundidades 1 y 2 se ejecutan en el coordinador para ahorrar costes de despacho.
 - El límite de tiempo es único para toda la solicitud, incluida la preparación de trabajadores.
