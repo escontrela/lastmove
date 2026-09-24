@@ -80,6 +80,7 @@ public class SetupScreenController implements UiScreenController {
     @FXML private FlowPane settingsFilters;
     @FXML private FlowPane boardAppearanceChoices;
     @FXML private FlowPane chessPieceSetChoices;
+    @FXML private FlowPane applicationLookChoices;
     @FXML
     private CheckBox nightModeCheckBox;
     @FXML
@@ -182,6 +183,8 @@ public class SetupScreenController implements UiScreenController {
             };
 
     private boolean savedNightMode;
+    private ApplicationThemeService.Look savedLook;
+    private ApplicationThemeService.Look pendingLook;
     private boolean savedSplashScreen;
     private boolean savedBoardVisualEffects;
     private BoardAppearancePreset savedBoardAppearancePreset;
@@ -198,6 +201,7 @@ public class SetupScreenController implements UiScreenController {
     private boolean loadingArenaToken;
     private final Map<BoardAppearancePreset, Button> boardChoiceButtons = new EnumMap<>(BoardAppearancePreset.class);
     private final Map<ChessPieceSet, Button> pieceSetChoiceButtons = new EnumMap<>(ChessPieceSet.class);
+    private final Map<ApplicationThemeService.Look, Button> lookChoiceButtons = new EnumMap<>(ApplicationThemeService.Look.class);
 
     public SetupScreenController(
             @Lazy UiFlowManager uiFlowManager,
@@ -258,6 +262,22 @@ public class SetupScreenController implements UiScreenController {
         chessPieceSetCombo.valueProperty().addListener((ignored, oldValue, newValue) ->
                 { refreshAppearanceChoices(); updateApplyButtonVisibility(); });
         buildAppearanceChoices();
+        for (ApplicationThemeService.Look look : ApplicationThemeService.Look.values()) {
+            Button choice = new Button();
+            choice.getStyleClass().add("appearance-choice-card");
+            choice.setAccessibleText("Select " + look.name().toLowerCase() + " application look");
+            String image = look == ApplicationThemeService.Look.MODERN
+                    ? "/images/card-background-v4-play.png" : "/images/card-background-light.png";
+            ImageView card = new ImageView(new javafx.scene.image.Image(getClass().getResource(image).toExternalForm()));
+            card.setFitWidth(180); card.setFitHeight(102); card.setPreserveRatio(false);
+            Label label = new Label(look == ApplicationThemeService.Look.MODERN ? "Modern · v4 cards" : "Classic");
+            label.getStyleClass().add("appearance-choice-name");
+            VBox preview = new VBox(8, card, label); preview.getStyleClass().add("appearance-choice-content");
+            choice.setGraphic(preview);
+            choice.setOnAction(event -> { pendingLook = look; refreshLookChoices(); updateApplyButtonVisibility(); });
+            lookChoiceButtons.put(look, choice);
+        }
+        applicationLookChoices.getChildren().setAll(lookChoiceButtons.values());
         sunfishExecutablePathField.textProperty().addListener((ignored, oldValue, newValue) -> {
             clearSunfishValidation();
             updateApplyButtonVisibility();
@@ -435,6 +455,10 @@ public class SetupScreenController implements UiScreenController {
         pieceSetChoiceButtons.forEach((pieceSet, choice) -> updateChoiceSelection(choice, pieceSet == selectedSet));
     }
 
+    private void refreshLookChoices() {
+        lookChoiceButtons.forEach((look, button) -> updateChoiceSelection(button, look == pendingLook));
+    }
+
     private void updateChoiceSelection(Button choice, boolean selected) {
         choice.getStyleClass().remove("appearance-choice-card-selected");
         if (selected) choice.getStyleClass().add("appearance-choice-card-selected");
@@ -494,6 +518,9 @@ public class SetupScreenController implements UiScreenController {
     public void onShow() {
         refreshFilters();
         savedNightMode = themeService.currentThemeMode().isNightMode();
+        savedLook = themeService.currentLook();
+        pendingLook = savedLook;
+        refreshLookChoices();
         savedSplashScreen = startupPreferencesService.isSplashScreenEnabled();
         savedBoardVisualEffects = boardAppearancePreferencesService.isBoardVisualEffectsEnabled();
         savedBoardAppearancePreset = boardAppearancePreferencesService.getBoardAppearancePreset();
@@ -577,11 +604,13 @@ public class SetupScreenController implements UiScreenController {
                 Optional.ofNullable(savedAnalysisEngineDefaultId));
         applyArenaSettings();
         themeService.setNightMode(nightModeCheckBox.isSelected());
+        themeService.setLook(pendingLook);
         startupPreferencesService.setSplashScreenEnabled(showSplashCheckBox.isSelected());
         boardAppearancePreferencesService.setBoardVisualEffectsEnabled(boardVisualEffectsCheckBox.isSelected());
         boardAppearancePreferencesService.setBoardAppearancePreset(boardAppearancePresetCombo.getValue());
         boardAppearancePreferencesService.setChessPieceSet(chessPieceSetCombo.getValue());
         savedNightMode = nightModeCheckBox.isSelected();
+        savedLook = pendingLook;
         savedSplashScreen = showSplashCheckBox.isSelected();
         savedBoardVisualEffects = boardVisualEffectsCheckBox.isSelected();
         savedBoardAppearancePreset = boardAppearancePresetCombo.getValue();
@@ -702,6 +731,7 @@ public class SetupScreenController implements UiScreenController {
 
     private boolean hasUnsavedChanges() {
         return nightModeCheckBox.isSelected() != savedNightMode
+                || pendingLook != savedLook
                 || showSplashCheckBox.isSelected() != savedSplashScreen
                 || boardVisualEffectsCheckBox.isSelected() != savedBoardVisualEffects
                 || boardAppearancePresetCombo.getValue() != savedBoardAppearancePreset

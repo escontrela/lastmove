@@ -38,8 +38,10 @@ public class SplashScreenService {
   private static final double SPLASH_HEIGHT = 400;
   private static final double SPLASH_CORNER_RADIUS = 26;
 
-  private static final String LIGHT_BACKGROUND_RESOURCE = "/images/splash-light-v4.png";
-  private static final String DARK_BACKGROUND_RESOURCE = "/images/splash-dark-v4.png";
+  private static final String CLASSIC_LIGHT_BACKGROUND_RESOURCE = "/images/splash-light-v4.png";
+  private static final String CLASSIC_DARK_BACKGROUND_RESOURCE = "/images/splash-dark-v4.png";
+  private static final String MODERN_LIGHT_BACKGROUND_RESOURCE = "/images/splash-light-v5.png";
+  private static final String MODERN_DARK_BACKGROUND_RESOURCE = "/images/splash-dark-v5.png";
   private static final String LOGO_RESOURCE = "/images/logo/modern-logo-1024.png";
 
   /*
@@ -507,10 +509,11 @@ public class SplashScreenService {
 
   private Image loadBackground() {
 
-    String resource =
-        themeService.currentThemeMode() == ApplicationThemeMode.NIGHT
-            ? DARK_BACKGROUND_RESOURCE
-            : LIGHT_BACKGROUND_RESOURCE;
+    boolean night = themeService.currentThemeMode() == ApplicationThemeMode.NIGHT;
+    boolean modern = themeService.currentLook() == ApplicationThemeService.Look.MODERN;
+    String resource = modern
+        ? (night ? MODERN_DARK_BACKGROUND_RESOURCE : MODERN_LIGHT_BACKGROUND_RESOURCE)
+        : (night ? CLASSIC_DARK_BACKGROUND_RESOURCE : CLASSIC_LIGHT_BACKGROUND_RESOURCE);
 
     return new Image(
         Objects.requireNonNull(

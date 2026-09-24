@@ -46,6 +46,9 @@
                         <Label styleClass="card-title" text="Night mode" />
                         <Label styleClass="card-copy" text="Use the dark LastMove workspace across every screen. This preference is saved for your next session." wrapText="true" />
                         <CheckBox fx:id="nightModeCheckBox" mnemonicParsing="false" styleClass="settings-check-box" text="Enable night mode" />
+                        <Label styleClass="card-title" text="Application look and feel" />
+                        <Label styleClass="card-copy" text="Choose the classic workspace or the modern workspace with the new v4 cards." wrapText="true" />
+                        <FlowPane fx:id="applicationLookChoices" hgap="10.0" prefWrapLength="410.0" vgap="10.0" styleClass="appearance-choice-grid" />
                         <Label styleClass="card-title" text="Board visual effects" />
                         <Label styleClass="card-copy" text="Add a soft halo around chess boards and a subtle gradient to their squares. Works in day and night mode." wrapText="true" />
                         <CheckBox fx:id="boardVisualEffectsCheckBox" mnemonicParsing="false" styleClass="settings-check-box" text="Enable board glow and square gradients" />

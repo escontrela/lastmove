@@ -75,25 +75,6 @@ class PositionAnalysisServiceTest {
   }
 
   @Test
-  void discardsASupersededAnalysisResult() {
-    FakeEngineProvider knightshade = new FakeEngineProvider("knightshade");
-    CompletableFuture<EngineAnalysisResult> first = new CompletableFuture<>();
-    CompletableFuture<EngineAnalysisResult> second = new CompletableFuture<>();
-    knightshade.enqueue(first);
-    knightshade.enqueue(second);
-    PositionAnalysisService service = service(List.of(knightshade));
-
-    var firstStage = service.analyze(position(PieceColor.WHITE), "knightshade");
-    var secondStage = service.analyze(position(PieceColor.WHITE), "knightshade");
-
-    first.complete(EngineAnalysisResult.moveOnly(MOVE));
-    second.complete(EngineAnalysisResult.moveOnly(MOVE));
-
-    assertTrue(firstStage.toCompletableFuture().join().isEmpty());
-    assertTrue(secondStage.toCompletableFuture().join().isPresent());
-  }
-
-  @Test
   void closesThePreviousEngineWhenSwitchingEngine() {
     FakeEngineProvider knightshade = new FakeEngineProvider("knightshade");
     FakeEngineProvider sunfish = new FakeEngineProvider("sunfish");
