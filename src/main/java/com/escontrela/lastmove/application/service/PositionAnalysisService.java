@@ -5,6 +5,7 @@ import com.escontrela.lastmove.application.computer.ComputerEngineIds;
 import com.escontrela.lastmove.application.computer.ComputerMoveEngine;
 import com.escontrela.lastmove.application.computer.ComputerMoveEngineProvider;
 import com.escontrela.lastmove.application.computer.ComputerMoveRequest;
+import com.escontrela.lastmove.application.computer.PonderResourceCoordinator;
 import com.escontrela.lastmove.application.computer.EngineAnalysisResult;
 import com.escontrela.lastmove.application.computer.EngineScoreFormatter;
 import com.escontrela.lastmove.application.dto.PositionAnalysisResult;
@@ -107,11 +108,20 @@ public final class PositionAnalysisService {
     return engine
         .start()
         .thenCompose(
-            ignored ->
-                engine.analyze(new ComputerMoveRequest(requiredPosition, thinkingTime)))
+            ignored -> {
+              PonderResourceCoordinator.RealSearchLease resourceLease = PonderResourceCoordinator.tryBeginAnalysis();
+              if (resourceLease == null) return CompletableFuture.<EngineAnalysisResult>completedFuture(null);
+              try {
+                return engine.analyze(new ComputerMoveRequest(requiredPosition, thinkingTime))
+                    .whenComplete((result, failure) -> resourceLease.close());
+              } catch (RuntimeException failure) {
+                resourceLease.close();
+                throw failure;
+              }
+            })
         .thenApply(
             result ->
-                requestedVersion == version
+                result != null && requestedVersion == version
                     ? Optional.of(toResult(descriptor, requiredPosition, result))
                     : Optional.empty());
   }

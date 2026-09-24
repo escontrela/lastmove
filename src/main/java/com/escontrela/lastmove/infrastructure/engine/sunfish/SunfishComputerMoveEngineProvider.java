@@ -43,6 +43,11 @@ public final class SunfishComputerMoveEngineProvider implements ComputerMoveEngi
     return create(runtime());
   }
 
+  @Override
+  public int estimatedSearchWorkers() {
+    return 1;
+  }
+
   ComputerMoveEngine create(SunfishRuntimeDetails runtime) {
     return new UciProcessEngine(
         UciEngineConfiguration.of(DESCRIPTOR, List.of(runtime.executable().toString())), fenService);

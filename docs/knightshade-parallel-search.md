@@ -81,6 +81,15 @@ cancelación e interrupción durante la tercera profundidad. También inyecta un
 que los hilos observados han terminado antes de devolver el control. Las regresiones existentes
 de sacrificios de dama se ejecutan con el motor paralelo por defecto.
 
+La preparación especulativa y su transferencia se cubren en `PonderSearchContextTest` y
+`KnightshadeMoveEngineTest`: validación de raíz e historial, continuación completa, respuesta
+distinta con fallback legal y respuesta que llega tras una predicción completa pero antes de
+completar una profundidad reutilizable. Las muestras de ponderación se verifican aparte de los
+snapshots de búsqueda; no instalan contadores ni instrumentación en `pvSearch`/quiescencia.
+Las pruebas de aplicación también comprueban deduplicación de una decisión y confirmaciones Arena
+repetidas, reset/filtros de sesión, cálculo de tarjetas y contenido CSV. El helper de refresco de
+Blood Pressure se prueba como componente puro para no requerir toolkit/display en `mvn test`.
+
 El número de nodos agregado incluye trabajo especulativo y transposiciones repetidas entre
 trabajadores. El rendimiento debe evaluarse junto con profundidad completada y resultados de
 torneo; no permite deducir una ganancia de ELO por sí solo.

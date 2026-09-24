@@ -62,6 +62,11 @@ public final class MaiaComputerMoveEngineProvider implements ComputerMoveEngineP
     return create(runtime());
   }
 
+  @Override
+  public int estimatedSearchWorkers() {
+    return threads;
+  }
+
   ComputerMoveEngine create(MaiaRuntimeDetails runtime) {
     List<String> command =
         List.of(

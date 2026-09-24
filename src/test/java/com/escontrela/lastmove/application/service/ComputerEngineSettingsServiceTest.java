@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.escontrela.lastmove.application.computer.ComputerEngineSettings;
 import com.escontrela.lastmove.application.computer.ComputerEngineSettingsRepository;
+import com.escontrela.lastmove.application.computer.PonderSettings;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.HashMap;
@@ -133,6 +134,18 @@ class ComputerEngineSettingsServiceTest {
     assertTrue(service.defaultAnalysisEngineId().isEmpty());
   }
 
+  @Test
+  void ponderingIsOptInAndItsSettingsArePersistedAsOneSnapshot() {
+    InMemorySettingsRepository repository = new InMemorySettingsRepository();
+    ComputerEngineSettingsService service = service(repository);
+    assertEquals(PonderSettings.defaults(), service.ponderSettings());
+
+    PonderSettings configured = new PonderSettings(true, true, 4, Duration.ofMillis(100),
+        8, Duration.ofMillis(1000));
+    assertEquals(configured, service.updatePonderSettings(configured));
+    assertEquals(configured, service.ponderSettings());
+  }
+
   private static ComputerEngineSettingsService service(InMemorySettingsRepository repository) {
     return new ComputerEngineSettingsService(
         repository, "/default/sunfish-uci", DEFAULT_MAIA_WEIGHTS);
@@ -144,6 +157,7 @@ class ComputerEngineSettingsServiceTest {
     private final Map<String, ComputerEngineSettings> settings = new HashMap<>();
     private final Map<String, Long> thinkingTimes = new HashMap<>();
     private String defaultAnalysisEngineId;
+    private PonderSettings ponderSettings = PonderSettings.defaults();
 
     @Override
     public Optional<ComputerEngineSettings> findByEngineId(String engineId) {
@@ -184,5 +198,9 @@ class ComputerEngineSettingsServiceTest {
     public void deleteDefaultAnalysisEngineId() {
       this.defaultAnalysisEngineId = null;
     }
+
+    @Override public PonderSettings findPonderSettings() { return ponderSettings; }
+
+    @Override public void savePonderSettings(PonderSettings settings) { ponderSettings = settings; }
   }
 }

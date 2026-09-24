@@ -36,4 +36,14 @@ public interface ComputerEngineSettingsRepository {
   default void deleteDefaultAnalysisEngineId() {
     // Not persisted by default; repositories that retain the default override this method.
   }
+
+  /** Returns persisted Knightshade pondering preferences, or safe opt-out defaults. */
+  default PonderSettings findPonderSettings() {
+    return PonderSettings.defaults();
+  }
+
+  /** Persists Knightshade pondering preferences when supported by this repository. */
+  default void savePonderSettings(PonderSettings settings) {
+    // Not persisted by default; repositories that retain these preferences override this method.
+  }
 }

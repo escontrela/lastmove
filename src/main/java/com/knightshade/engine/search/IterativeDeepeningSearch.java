@@ -79,61 +79,116 @@ public final class IterativeDeepeningSearch implements Search {
       SearchLimits limits,
       StopSignal stop,
       Map<Long, Integer> positionOccurrences) {
+    return search(newContext(board, positionOccurrences), limits, stop);
+  }
+
+  /** Creates an exclusive reusable context for one root and its complete repetition history. */
+  public SearchContext newContext(Board board, Map<Long, Integer> positionOccurrences) {
     Objects.requireNonNull(board, "board must not be null");
+    Objects.requireNonNull(positionOccurrences, "positionOccurrences must not be null");
+    transpositionTable.clear();
+    Board root = board.copy();
+    return new SearchContext(this, root, positionOccurrences, moveGenerator.generate(root));
+  }
+
+  /** Resumes this context at its next incomplete depth; callers must transfer ownership first. */
+  public SearchResult search(SearchContext context, SearchLimits limits, StopSignal stop) {
+    Objects.requireNonNull(context, "context must not be null");
     Objects.requireNonNull(limits, "limits must not be null");
     Objects.requireNonNull(stop, "stop must not be null");
-    Map<Long, Integer> repetitions =
-        new HashMap<>(
-            Objects.requireNonNull(
-                positionOccurrences, "positionOccurrences must not be null"));
-    repetitions.putIfAbsent(board.zobristKey(), 1);
+    if (context.owner != this) throw new IllegalArgumentException("context belongs to another search");
+    if (!context.inUse.compareAndSet(false, true)) {
+      throw new IllegalStateException("search context is already in use");
+    }
+    try {
+      return searchOwnedContext(context, limits, stop);
+    } finally {
+      context.inUse.set(false);
+    }
+  }
 
-    // Scores depend on the supplied game history; reuse entries only within this search.
-    transpositionTable.clear();
-    bestRootMove = null;
+  /** Resumes a context while emitting ordinary-turn telemetry for only the newly searched work. */
+  public SearchResult search(SearchContext context, SearchLimits limits, StopSignal stop,
+      SearchTelemetryListener listener, int requestedWorkers, int effectiveWorkers,
+      SearchTelemetryContext contextIdentity) {
+    telemetryListener = listener == null ? SearchTelemetryListener.NONE : listener;
+    telemetry = telemetryListener == SearchTelemetryListener.NONE ? null : new SearchStats();
+    if (telemetry != null) telemetry.quietnessMetricsAvailable = true;
+    telemetryRequestedWorkers = requestedWorkers;
+    telemetryEffectiveWorkers = effectiveWorkers;
+    telemetryContext = contextIdentity;
+    if (evaluator instanceof PositionalEvaluator positional) positional.setTelemetryEnabled(telemetry != null);
+    try {
+      SearchResult result = search(context, limits, stop);
+      if (telemetry != null) {
+        telemetry.qNodes = quiescence.nodes();
+        emit(result.depth(), result.move(), result.score(), SearchTelemetryEvent.SEARCH_FINISHED,
+            terminalReason(result, limits, stop), result.elapsedMillis());
+      }
+      return result;
+    } finally {
+      telemetry = null;
+      quiescence.setTelemetry(null);
+      telemetryListener = SearchTelemetryListener.NONE;
+      telemetryContext = null;
+      if (evaluator instanceof PositionalEvaluator positional) positional.setTelemetryEnabled(false);
+    }
+  }
+
+  private SearchResult searchOwnedContext(SearchContext context, SearchLimits limits, StopSignal stop) {
+    Board board = context.root;
+    Map<Long, Integer> repetitions = context.repetitions;
+    long startedAt = System.nanoTime();
+    long priorElapsedMillis = context.totalElapsedMillis;
+    if (context.rootMoves.isEmpty()) {
+      long elapsed = elapsedMillis(startedAt);
+      context.totalElapsedMillis += elapsed;
+      SearchResult terminal = new SearchResult(null, terminalScore(board), 0,
+          context.totalNodes, elapsed, context.totalNodes, 0, priorElapsedMillis);
+      context.lastResult = terminal;
+      return terminal;
+    }
+
+    bestRootMove = context.bestMove;
     nodes = 0;
     quiescence.resetNodes();
     quiescence.setTelemetry(telemetry);
-    long startedAt = System.nanoTime();
     int maxDepth = limits.maxDepth() > 0 ? limits.maxDepth() : DEFAULT_MAX_DEPTH;
-
-    List<Move> rootMoves = moveGenerator.generate(board);
-    if (rootMoves.isEmpty()) {
-      return new SearchResult(null, terminalScore(board), 0, 0, elapsedMillis(startedAt));
-    }
-
-    KillerMoves killers = new KillerMoves();
-    HistoryTable history = new HistoryTable();
     TimeManager timeManager = new TimeManager(limits.maxTimeMillis());
     StopSignal timeBoundStop = () -> stop.shouldStop() || timeManager.exceeded();
-
-    Move bestMove = rootMoves.getFirst();
-    int bestScore = 0;
-    int completedDepth = 0;
-    for (int depth = 1; depth <= maxDepth; depth++) {
+    long priorNodes = context.totalNodes;
+    for (int depth = context.completedDepth + 1; depth <= maxDepth; depth++) {
       int score =
           searchDepth(
               board,
               depth,
-              bestScore,
-              killers,
-              history,
+              context.bestScore,
+              context.killers,
+              context.history,
               repetitions,
               timeBoundStop);
       if (timeBoundStop.shouldStop()) {
         break;
       }
-      completedDepth = depth;
-      bestScore = score;
-      bestMove = bestRootMove;
-      emit(depth, bestMove, bestScore, SearchTelemetryEvent.ITERATION_COMPLETED,
+      context.completedDepth = depth;
+      context.bestScore = score;
+      context.bestMove = bestRootMove;
+      context.lastResult = new SearchResult(context.bestMove, score, depth,
+          context.totalNodes + totalNodes(), elapsedMillis(startedAt), priorNodes, totalNodes(),
+          priorElapsedMillis);
+      emit(depth, context.bestMove, context.bestScore, SearchTelemetryEvent.ITERATION_COMPLETED,
           StopReason.COMPLETED, elapsedMillis(startedAt));
       if (Scores.isMate(score)) {
         break;
       }
     }
-    return new SearchResult(
-        bestMove, bestScore, completedDepth, totalNodes(), elapsedMillis(startedAt));
+    long searchedThisCall = totalNodes();
+    long elapsedThisCall = elapsedMillis(startedAt);
+    context.totalNodes += searchedThisCall;
+    context.totalElapsedMillis += elapsedThisCall;
+    SearchResult last = context.lastResult;
+    return new SearchResult(last.move(), last.score(), last.depth(), context.totalNodes,
+        elapsedThisCall, priorNodes, searchedThisCall, priorElapsedMillis);
   }
 
   @Override

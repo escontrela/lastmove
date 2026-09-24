@@ -11,6 +11,9 @@ import com.escontrela.lastmove.application.computer.EngineAnalysisResult;
 import com.escontrela.lastmove.application.computer.EngineScore;
 import com.escontrela.lastmove.application.computer.OpeningPracticeConfiguration;
 import com.escontrela.lastmove.application.computer.OpeningPracticeState;
+import com.escontrela.lastmove.application.computer.PonderRequest;
+import com.escontrela.lastmove.application.computer.PonderSettings;
+import com.escontrela.lastmove.application.computer.PonderResourceCoordinator;
 import com.escontrela.lastmove.application.repository.ProgressiveGameRepository;
 import com.escontrela.lastmove.application.repository.SavedGameRepository;
 import com.escontrela.lastmove.application.event.ComputerGameFinishedEvent;
@@ -66,6 +69,7 @@ public final class ComputerGameService {
   private final ApplicationEventPublisher events;
   private final GameNotificationRepository notifications;
   private final KnightshadeTelemetryService telemetry;
+  private final ComputerEngineSettingsService engineSettings;
   private final Map<GameId, RuntimeContext> runtimes = new ConcurrentHashMap<>();
   private final ScheduledExecutorService runtimeTicker;
 
@@ -74,7 +78,7 @@ public final class ComputerGameService {
       ChessGameFactory gameFactory,
       List<ComputerMoveEngineProvider> engineProviders,
       Clock clock) {
-    this(gameRepository, gameFactory, engineProviders, clock, null, null, null, null);
+    this(gameRepository, gameFactory, engineProviders, clock, null, null, null, null, null);
   }
 
   public ComputerGameService(
@@ -83,7 +87,20 @@ public final class ComputerGameService {
       List<ComputerMoveEngineProvider> engineProviders,
       Clock clock,
       CurrentUserService currentUserService) {
-    this(gameRepository, gameFactory, engineProviders, clock, currentUserService, null, null, null);
+    this(gameRepository, gameFactory, engineProviders, clock, currentUserService, null, null, null, null);
+  }
+
+  public ComputerGameService(
+      SavedGameRepository gameRepository,
+      ChessGameFactory gameFactory,
+      List<ComputerMoveEngineProvider> engineProviders,
+      Clock clock,
+      CurrentUserService currentUserService,
+      ApplicationEventPublisher events,
+      GameNotificationRepository notifications,
+      KnightshadeTelemetryService telemetry) {
+    this(gameRepository, gameFactory, engineProviders, clock, currentUserService, events,
+        notifications, telemetry, null);
   }
 
   @org.springframework.beans.factory.annotation.Autowired
@@ -95,7 +112,8 @@ public final class ComputerGameService {
       CurrentUserService currentUserService,
       ApplicationEventPublisher events,
       GameNotificationRepository notifications,
-      KnightshadeTelemetryService telemetry) {
+      KnightshadeTelemetryService telemetry,
+      ComputerEngineSettingsService engineSettings) {
     this.gameRepository =
         Objects.requireNonNull(gameRepository, "gameRepository must not be null");
     this.gameFactory = Objects.requireNonNull(gameFactory, "gameFactory must not be null");
@@ -110,6 +128,7 @@ public final class ComputerGameService {
     this.events = events;
     this.notifications = notifications;
     this.telemetry = telemetry;
+    this.engineSettings = engineSettings;
     this.runtimeTicker = Executors.newSingleThreadScheduledExecutor(task -> {
       Thread thread = new Thread(task, "lastmove-game-clock");
       thread.setDaemon(true);
@@ -221,30 +240,40 @@ public final class ComputerGameService {
   public CompletionStage<ComputerGameState> playHumanMove(GameId gameId, MoveCommand command) {
     ChessGame game = game(gameId);
     RuntimeContext context = runtime(gameId);
+    ComputerGameState expiredState = null;
     synchronized (context) {
-      expireClockIfNecessary(game, context);
-      if (game.result().isPresent()) {
-        return CompletableFuture.completedFuture(stateOf(game, context));
+      if (expireClockIfNecessary(game, context)) expiredState = stateOf(game, context);
+      if (expiredState == null) {
+        if (game.result().isPresent()) {
+          return CompletableFuture.completedFuture(stateOf(game, context));
+        }
+        if (context.phase != ComputerGamePhase.WAITING_FOR_HUMAN
+            || game.currentTurn() != context.configuration.humanColor()) {
+          throw new IllegalStateException("The game is not waiting for a human move");
+        }
+        Duration elapsed = elapsedSinceTurnStarted(context);
+        var result = game.move(Objects.requireNonNull(command, "command must not be null"), elapsed);
+        if (!result.accepted()) {
+          context.message = result.rejectionReason();
+          return CompletableFuture.completedFuture(stateOf(game, context));
+        }
+        advanceOpeningAfterMove(context, command, game.moveHistory().size() - 1);
+        save(game, context);
+        context.message = Optional.empty();
+        context.turnStartedAt = clock.instant();
+        if (game.result().isPresent()) {
+          context.phase = ComputerGamePhase.FINISHED;
+          invalidateSearch(context);
+          context.ponderGeneration++;
+          expiredState = stateOf(game, context);
+        } else {
+          context.phase = ComputerGamePhase.ENGINE_THINKING;
+        }
       }
-      if (context.phase != ComputerGamePhase.WAITING_FOR_HUMAN
-          || game.currentTurn() != context.configuration.humanColor()) {
-        throw new IllegalStateException("The game is not waiting for a human move");
-      }
-      Duration elapsed = elapsedSinceTurnStarted(context);
-      var result = game.move(Objects.requireNonNull(command, "command must not be null"), elapsed);
-      if (!result.accepted()) {
-        context.message = result.rejectionReason();
-        return CompletableFuture.completedFuture(stateOf(game, context));
-      }
-      advanceOpeningAfterMove(context, command, game.moveHistory().size() - 1);
-      save(game, context);
-      context.message = Optional.empty();
-      context.turnStartedAt = clock.instant();
-      if (game.result().isPresent()) {
-        context.phase = ComputerGamePhase.FINISHED;
-        return CompletableFuture.completedFuture(stateOf(game, context));
-      }
-      context.phase = ComputerGamePhase.ENGINE_THINKING;
+    }
+    if (expiredState != null) {
+      cancelInvalidatedWork(context);
+      return CompletableFuture.completedFuture(expiredState);
     }
     return requestComputerMove(game, context);
   }
@@ -253,18 +282,24 @@ public final class ComputerGameService {
   public ComputerGameState state(GameId gameId) {
     ChessGame game = game(gameId);
     RuntimeContext context = runtime(gameId);
+    boolean expired;
+    ComputerGameState state;
     synchronized (context) {
-      expireClockIfNecessary(game, context);
-      return stateOf(game, context);
+      expired = expireClockIfNecessary(game, context);
+      state = stateOf(game, context);
     }
+    if (expired) cancelInvalidatedWork(context);
+    return state;
   }
 
   /** Automatically accepts the human player's takeback and restores one complete human turn. */
   public ComputerGameState takeBack(GameId gameId) {
     ChessGame game = game(gameId);
     RuntimeContext context = runtime(gameId);
+    ComputerGameState state;
     synchronized (context) {
-      cancelCurrentSearch(context);
+      invalidateSearch(context);
+      context.ponderGeneration++;
       int pliesToUndo = pliesToUndo(game, context.configuration.humanColor());
       TakebackRequest request =
           game.requestTakeback(context.configuration.humanColor(), pliesToUndo);
@@ -275,16 +310,20 @@ public final class ComputerGameService {
       context.phase = ComputerGamePhase.WAITING_FOR_HUMAN;
       context.turnStartedAt = clock.instant();
       context.message = Optional.of("Takeback accepted by " + context.descriptor.displayName());
-      return stateOf(game, context);
+      state = stateOf(game, context);
     }
+    cancelInvalidatedWork(context);
+    return state;
   }
 
   /** Finishes the selected game as a human resignation and cancels any active engine search. */
   public ComputerGameState resign(GameId gameId) {
     ChessGame game = game(gameId);
     RuntimeContext context = runtime(gameId);
+    ComputerGameState state;
     synchronized (context) {
-      cancelCurrentSearch(context);
+      invalidateSearch(context);
+      context.ponderGeneration++;
       if (game.result().isEmpty()) {
         game.resign(context.configuration.humanColor());
         save(game, context);
@@ -292,8 +331,10 @@ public final class ComputerGameService {
       context.phase = ComputerGamePhase.FINISHED;
       context.turnStartedAt = null;
       context.message = Optional.of(context.configuration.humanName() + " resigned");
-      return stateOf(game, context);
+      state = stateOf(game, context);
     }
+    cancelInvalidatedWork(context);
+    return state;
   }
 
   /** Exports the completed or in-progress official line for later analysis. */
@@ -308,9 +349,11 @@ public final class ComputerGameService {
     RuntimeContext context = runtimes.remove(required);
     if (context != null) {
       synchronized (context) {
-        cancelCurrentSearch(context);
-        context.engine.close();
+        invalidateSearch(context);
+        context.ponderGeneration++;
       }
+      cancelInvalidatedWork(context);
+      context.engine.close();
     }
     return context != null;
   }
@@ -318,7 +361,14 @@ public final class ComputerGameService {
   @PreDestroy
   void closeEngines() {
     runtimeTicker.shutdownNow();
-    runtimes.values().forEach(context -> context.engine.close());
+    runtimes.values().forEach(context -> {
+      synchronized (context) {
+        invalidateSearch(context);
+        context.ponderGeneration++;
+      }
+      cancelInvalidatedWork(context);
+      context.engine.close();
+    });
     runtimes.clear();
   }
 
@@ -338,18 +388,31 @@ public final class ComputerGameService {
     final long searchVersion;
     final PositionSnapshot searchedPosition;
     final Duration thinkingTime;
+    boolean expired;
     synchronized (context) {
-      expireClockIfNecessary(game, context);
+      expired = expireClockIfNecessary(game, context);
       if (game.result().isPresent()) {
+        // Do not call engine cancellation while the runtime monitor is held.
+        searchedPosition = null;
+        thinkingTime = null;
+        searchVersion = context.searchVersion;
+      } else {
+        searchedPosition = game.currentPosition();
+        thinkingTime = permittedEngineThinkingTime(game, context);
+        searchVersion = ++context.searchVersion;
+      }
+    }
+    if (expired) cancelInvalidatedWork(context);
+    if (searchedPosition == null) {
+      synchronized (context) {
         return CompletableFuture.completedFuture(stateOf(game, context));
       }
-      searchedPosition = game.currentPosition();
-      thinkingTime = permittedEngineThinkingTime(game, context);
-      searchVersion = ++context.searchVersion;
     }
     return chooseComputerMove(context, searchedPosition, thinkingTime)
         .handle(
             (move, failure) -> {
+              PonderSeed[] ponderSeed = new PonderSeed[1];
+              ComputerGameState resultState;
               synchronized (context) {
                 if (searchVersion != context.searchVersion) {
                   return stateOf(game, context);
@@ -358,8 +421,9 @@ public final class ComputerGameService {
                   markEngineFailure(context, failure);
                   return stateOf(game, context);
                 }
-                expireClockIfNecessary(game, context);
+                boolean expiredDuringSearch = expireClockIfNecessary(game, context);
                 if (game.result().isPresent()) {
+                  if (expiredDuringSearch) CompletableFuture.runAsync(() -> cancelInvalidatedWork(context));
                   return stateOf(game, context);
                 }
                 if (!game.currentPosition().equals(searchedPosition)) {
@@ -384,26 +448,35 @@ public final class ComputerGameService {
                         : ComputerGamePhase.WAITING_FOR_HUMAN;
                 if (game.result().isEmpty()) {
                   notifyOpponentMoved(game, context);
+                  context.ponderGeneration++;
+                  ponderSeed[0] = ponderSeedAfterOwnMove(context);
                 }
-                return stateOf(game, context);
+                resultState = stateOf(game, context);
               }
+              PonderRequest ponderRequest = ponderRequest(context, ponderSeed[0]);
+              if (ponderRequest != null) context.engine.startPonder(ponderRequest);
+              return resultState;
             });
   }
 
-  private void expireClockIfNecessary(ChessGame game, RuntimeContext context) {
+  private boolean expireClockIfNecessary(ChessGame game, RuntimeContext context) {
     if (game.result().isPresent() || context.turnStartedAt == null || !game.currentClock().timed()) {
-      return;
+      return false;
     }
     Duration remaining = game.currentClock().remaining(game.currentTurn()).orElseThrow();
     if (elapsedSinceTurnStarted(context).compareTo(remaining) < 0) {
-      return;
+      return false;
     }
-    cancelCurrentSearch(context);
+    invalidateSearch(context);
+    context.ponderGeneration++;
+    cancelPonder(context);
+    context.ponderGeneration++;
     game.timeout(game.currentTurn());
     save(game, context);
     context.phase = ComputerGamePhase.FINISHED;
     context.turnStartedAt = null;
     context.message = Optional.of("Time expired");
+    return true;
   }
 
   private ComputerGameState stateOf(ChessGame game, RuntimeContext context) {
@@ -434,10 +507,23 @@ public final class ComputerGameService {
 
   private CompletionStage<MoveCommand> chooseComputerMove(
       RuntimeContext context, PositionSnapshot position, Duration thinkingTime) {
+    PonderResourceCoordinator.RealSearchLease resourceLease =
+        PonderResourceCoordinator.beginRealSearch(context.game.id(), context.ponderGeneration);
+    try {
+      return chooseComputerMoveWithoutResourceLease(context, position, thinkingTime)
+          .whenComplete((ignored, failure) -> resourceLease.close());
+    } catch (RuntimeException failure) {
+      resourceLease.close();
+      throw failure;
+    }
+  }
+
+  private CompletionStage<MoveCommand> chooseComputerMoveWithoutResourceLease(
+      RuntimeContext context, PositionSnapshot position, Duration thinkingTime) {
     OpeningPracticeConfiguration practice = context.configuration.openingPractice().orElse(null);
     if (practice == null || context.openingPracticeState != OpeningPracticeState.FOLLOWING) {
       return context.engine.chooseMove(
-          new ComputerMoveRequest(position, thinkingTime, context.game.positionHistory(), context.game.id()));
+          new ComputerMoveRequest(position, thinkingTime, context.game.positionHistory(), context.game.id(), context.ponderGeneration));
     }
     MoveCommand guided = practice.line().get(context.openingPlyIndex);
     ChessGame candidateGame = gameFactory.createAnalysisGame(position);
@@ -445,14 +531,14 @@ public final class ComputerGameService {
     if (!execution.accepted()) {
       context.openingPracticeState = OpeningPracticeState.ABANDONED_BY_DEVIATION;
       return context.engine.chooseMove(
-          new ComputerMoveRequest(position, thinkingTime, context.game.positionHistory(), context.game.id()));
+          new ComputerMoveRequest(position, thinkingTime, context.game.positionHistory(), context.game.id(), context.ponderGeneration));
     }
     ComputerMoveRequest bestRequest =
-        new ComputerMoveRequest(position, thinkingTime, context.game.positionHistory(), context.game.id());
+        new ComputerMoveRequest(position, thinkingTime, context.game.positionHistory(), context.game.id(), context.ponderGeneration);
     List<PositionSnapshot> guidedHistory = new ArrayList<>(context.game.positionHistory());
     guidedHistory.add(candidateGame.currentPosition());
     ComputerMoveRequest guidedRequest =
-        new ComputerMoveRequest(candidateGame.currentPosition(), thinkingTime, guidedHistory, context.game.id());
+        new ComputerMoveRequest(candidateGame.currentPosition(), thinkingTime, guidedHistory, context.game.id(), context.ponderGeneration);
     return context.engine.analyze(bestRequest).thenCompose(best ->
         context.engine.analyze(guidedRequest).thenApply(afterGuided -> {
           if (withinThreshold(best, afterGuided, practice.safetyThresholdCentipawns())) {
@@ -565,13 +651,45 @@ public final class ComputerGameService {
     return elapsed.isNegative() ? Duration.ZERO : elapsed;
   }
 
-  private void cancelCurrentSearch(RuntimeContext context) {
+  private void invalidateSearch(RuntimeContext context) {
     context.searchVersion++;
+  }
+
+  private void cancelInvalidatedWork(RuntimeContext context) {
     context.engine.cancelSearch();
+    context.engine.cancelPonder();
+  }
+
+  private void cancelPonder(RuntimeContext context) {
+    context.engine.cancelPonder();
+  }
+
+  private PonderSeed ponderSeedAfterOwnMove(RuntimeContext context) {
+    if (!com.escontrela.lastmove.application.computer.ComputerEngineIds.KNIGHTSHADE
+        .equals(context.configuration.engineId())
+        || (context.configuration.openingPractice().isPresent()
+            && context.openingPracticeState == OpeningPracticeState.FOLLOWING)) {
+      return null;
+    }
+    return new PonderSeed(context.game.id(), context.ponderGeneration,
+        context.game.currentPosition(), context.game.positionHistory());
+  }
+
+  private PonderRequest ponderRequest(RuntimeContext context, PonderSeed seed) {
+    if (seed == null || engineSettings == null) return null;
+    PonderSettings settings = engineSettings.ponderSettings();
+    if (!settings.enabled() || !settings.speculativeWorkerEnabled()) return null;
+    synchronized (context) {
+      if (context.ponderGeneration != seed.generation()
+          || context.phase != ComputerGamePhase.WAITING_FOR_HUMAN
+          || context.game.result().isPresent()) return null;
+    }
+    return new PonderRequest(seed.gameId(), seed.generation(), seed.positionAfterOurMove(),
+        seed.positionHistory(), settings, "knightshade-default-v1");
   }
 
   private void markEngineFailure(RuntimeContext context, Throwable failure) {
-    context.engine.close();
+    CompletableFuture.runAsync(context.engine::close);
     context.phase = ComputerGamePhase.ENGINE_ERROR;
     context.turnStartedAt = null;
     Throwable cause = rootCause(failure);
@@ -659,11 +777,22 @@ public final class ComputerGameService {
     restoreOpeningProgress(context, game.moveHistory());
     runtimes.put(game.id(), context);
     return context.engine.start().thenCompose(ignored -> {
+      PonderSeed[] seed = new PonderSeed[1];
+      boolean[] requestComputer = new boolean[1];
       synchronized (context) {
         context.turnStartedAt = clock.instant();
         context.phase = game.currentTurn() == configuration.humanColor() ? ComputerGamePhase.WAITING_FOR_HUMAN : ComputerGamePhase.ENGINE_THINKING;
+        requestComputer[0] = context.phase == ComputerGamePhase.ENGINE_THINKING;
+        if (context.phase == ComputerGamePhase.WAITING_FOR_HUMAN && !game.moveHistory().isEmpty()) {
+          context.ponderGeneration++;
+          seed[0] = ponderSeedAfterOwnMove(context);
+        }
       }
-      return context.phase == ComputerGamePhase.ENGINE_THINKING ? requestComputerMove(game, context) : CompletableFuture.completedFuture(stateOf(game, context));
+      PonderRequest prepared = ponderRequest(context, seed[0]);
+      if (prepared != null) context.engine.startPonder(prepared);
+      return requestComputer[0]
+          ? requestComputerMove(game, context)
+          : CompletableFuture.completedFuture(stateOf(game, context));
     });
   }
 
@@ -714,6 +843,7 @@ public final class ComputerGameService {
     private ComputerGamePhase phase = ComputerGamePhase.STARTING;
     private Instant turnStartedAt;
     private long searchVersion;
+    private long ponderGeneration;
     private Optional<String> message = Optional.empty();
     private int openingPlyIndex;
     private OpeningPracticeState openingPracticeState;
@@ -734,4 +864,7 @@ public final class ComputerGameService {
       this.ownerPlayerId = Objects.requireNonNull(ownerPlayerId, "ownerPlayerId must not be null");
     }
   }
+
+  private record PonderSeed(GameId gameId, long generation, PositionSnapshot positionAfterOurMove,
+      List<PositionSnapshot> positionHistory) {}
 }

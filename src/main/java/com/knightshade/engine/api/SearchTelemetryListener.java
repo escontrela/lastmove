@@ -5,6 +5,6 @@ package com.knightshade.engine.api;
 public interface SearchTelemetryListener {
   SearchTelemetryListener NONE = snapshot -> {};
 
-  /** Receives a snapshot only after a complete depth or the final search result. */
+  /** Receives snapshots after a complete depth, final search result, or validated ponder decision. */
   void onSnapshot(SearchTelemetrySnapshot snapshot);
 }

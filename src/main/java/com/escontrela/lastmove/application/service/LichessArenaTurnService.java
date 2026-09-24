@@ -28,13 +28,22 @@ public final class LichessArenaTurnService {
   private final ChessGameFactory games;
   private final ComputerMoveEngineProvider knightshade;
   private final SavedGameRepository savedGames; private final PlayerRepository players;
+  private final ComputerEngineSettingsService engineSettings;
   private final Map<String, Runtime> runtimes = new ConcurrentHashMap<>();
 
   public LichessArenaTurnService(ChessGameFactory games, List<ComputerMoveEngineProvider> providers, SavedGameRepository savedGames, PlayerRepository players) {
+    this(games, providers, savedGames, players, null);
+  }
+
+  @org.springframework.beans.factory.annotation.Autowired
+  public LichessArenaTurnService(ChessGameFactory games, List<ComputerMoveEngineProvider> providers,
+      SavedGameRepository savedGames, PlayerRepository players,
+      ComputerEngineSettingsService engineSettings) {
     this.games = Objects.requireNonNull(games);
     this.knightshade = providers.stream().filter(p -> ComputerEngineIds.KNIGHTSHADE.equals(p.descriptor().id())).findFirst()
         .orElseThrow(() -> new IllegalStateException("Knightshade engine provider is not available"));
     this.savedGames=Objects.requireNonNull(savedGames); this.players=Objects.requireNonNull(players);
+    this.engineSettings = engineSettings;
   }
 
   public void consume(String gameId, JsonNode event, Optional<GameId> existingLocalGameId, Optional<String> tournamentId,
@@ -46,7 +55,7 @@ public final class LichessArenaTurnService {
       if (color == null) throw new IllegalStateException("The configured bot is not a player in this Lichess game");
       Runtime replacement = new Runtime(event.path("initialFen").asText("startpos"), color,
           playerName(white,"White"), playerName(black,"Black"), playerId(white), playerId(black),
-          timeControl(event.path("clock")), tournamentId);
+          timeControl(event.path("clock")), tournamentId, knightshade.create());
       replacement.localGameId = existingLocalGameId.orElse(null);
       Runtime old = runtimes.put(gameId, replacement);
       if (old != null) old.close();
@@ -55,11 +64,28 @@ public final class LichessArenaTurnService {
     if (runtime == null || (!"gameFull".equals(type) && !"gameState".equals(type))) return;
     JsonNode state = "gameFull".equals(type) ? event.path("state") : event;
     boolean accepted;
+    boolean confirmedOwnMove = false;
+    boolean cancelInvalidatedWork = false;
+    String incomingMoves = state.path("moves").asText();
     synchronized (runtime) {
       accepted = shouldAcceptState(runtime.moves, runtime.state, state);
       if (accepted) {
         runtime.moves = state.path("moves").asText();
         runtime.state = state;
+        if (runtime.pendingServerConfirmationMoves != null) {
+          ServerMoveConfirmation confirmation = reconcileServerConfirmation(
+              runtime.pendingServerConfirmationMoves, runtime.moves);
+          confirmedOwnMove = confirmation.confirmed();
+          runtime.pendingServerConfirmationMoves = confirmation.pendingMoves();
+          if (confirmation.invalidated()) {
+            runtime.generation++;
+            cancelInvalidatedWork = true;
+          }
+        }
+        if (terminal(state)) {
+          runtime.generation++;
+          cancelInvalidatedWork = true;
+        }
         persist(runtime, account);
       }
     }
@@ -69,11 +95,17 @@ public final class LichessArenaTurnService {
           state.path("status").asText());
       return;
     }
+    if (cancelInvalidatedWork) {
+      runtime.engine.cancelSearch();
+      runtime.engine.cancelPonder();
+    }
     log.info("Lichess game state reconciled: gameId={} localGameId={} type={} status={} plies={}", gameId, runtime.localGameId, type, state.path("status").asText(), plyCount(runtime.moves));
-    request(gameId, runtime, token, client);
+    request(gameId, runtime, token, client, confirmedOwnMove);
   }
 
   public void close(String gameId) { Optional.ofNullable(runtimes.remove(gameId)).ifPresent(Runtime::close); }
+  public void cancelAllPonders() { runtimes.values().forEach(runtime -> { runtime.generation++; runtime.engine.cancelSearch(); runtime.engine.cancelPonder(); }); }
+  public void invalidate(String gameId) { Optional.ofNullable(runtimes.get(gameId)).ifPresent(runtime -> { runtime.generation++; runtime.engine.cancelSearch(); runtime.engine.cancelPonder(); }); }
   public Optional<GameId> localGameId(String gameId) { return Optional.ofNullable(runtimes.get(gameId)).map(r -> r.localGameId); }
 
   /** Persists the terminal account-stream summary when it arrives before the game stream. */
@@ -91,23 +123,57 @@ public final class LichessArenaTurnService {
       if (!status.isBlank()) terminal.put("status", status);
       if (!winner.isBlank()) terminal.put("winner", winner);
       runtime.state = terminal;
+      runtime.generation++;
       persist(runtime, account);
     }
+    runtime.engine.cancelSearch();
+    runtime.engine.cancelPonder();
     log.info("Lichess game finish reconciled from account stream: gameId={} status={} winner={}",
         gameId, status, winner);
   }
 
-  private void request(String gameId, Runtime runtime, String token, LichessBotClient client) {
+  private void request(String gameId, Runtime runtime, String token, LichessBotClient client,
+      boolean confirmedOwnMove) {
     if (!"started".equals(runtime.state.path("status").asText())) return;
     ChessGame game = replay(runtime.initialFen, runtime.moves, runtime);
+    if (confirmedOwnMove && game.currentTurn() != runtime.color) startPonder(runtime, game);
     if (game.currentTurn() != runtime.color || !runtime.thinking.compareAndSet(false, true)) return;
     String expectedMoves = runtime.moves;
-    ComputerMoveEngine engine = knightshade.create(); runtime.engine = engine;
-    engine.start().thenCompose(ignored -> engine.chooseMove(new ComputerMoveRequest(game.currentPosition(), limit(runtime))))
+    long requestGeneration = runtime.generation;
+    ComputerMoveEngine engine = runtime.engine;
+    engine.start().thenCompose(ignored -> {
+      PonderResourceCoordinator.RealSearchLease resourceLease =
+          PonderResourceCoordinator.beginRealSearch(runtime.localGameId, requestGeneration);
+      try {
+        return engine.chooseMove(new ComputerMoveRequest(game.currentPosition(), limit(runtime),
+            game.positionHistory(), runtime.localGameId, requestGeneration))
+            .whenComplete((ignoredMove, searchFailure) -> resourceLease.close());
+      } catch (RuntimeException failure) {
+        resourceLease.close();
+        throw failure;
+      }
+    })
         .whenComplete((move, failure) -> {
-          try { if (failure == null && expectedMoves.equals(runtime.moves)) client.sendMove(token, gameId, uci(move)); }
-          finally { engine.close(); runtime.engine = null; runtime.thinking.set(false); if (!expectedMoves.equals(runtime.moves)) request(gameId, runtime, token, client); }
+          try {
+            if (failure == null && expectedMoves.equals(runtime.moves)
+                && requestGeneration == runtime.generation) {
+              String confirmedMoves = expectedMoves.isBlank() ? uci(move) : expectedMoves + " " + uci(move);
+              runtime.pendingServerConfirmationMoves = confirmedMoves;
+              client.sendMove(token, gameId, uci(move));
+            }
+          } finally {
+            runtime.thinking.set(false);
+            if (!expectedMoves.equals(runtime.moves)) request(gameId, runtime, token, client, false);
+          }
         });
+  }
+
+  private void startPonder(Runtime runtime, ChessGame game) {
+    if (engineSettings == null || !"started".equals(runtime.state.path("status").asText())) return;
+    PonderSettings settings = engineSettings.ponderSettings();
+    if (!settings.enabled() || !settings.speculativeWorkerEnabled()) return;
+    runtime.engine.startPonder(new PonderRequest(runtime.localGameId, runtime.generation,
+        game.currentPosition(), game.positionHistory(), settings, "knightshade-default-v1"));
   }
 
   private ChessGame replay(String initialFen, String moves, Runtime runtime) {
@@ -186,10 +252,20 @@ public final class LichessArenaTurnService {
     if (incomingPlies > currentPlies) return true;
     return !terminal(currentState) || terminal(incomingState);
   }
+  static ServerMoveConfirmation reconcileServerConfirmation(String pendingMoves, String actualMoves) {
+    if (pendingMoves == null) return new ServerMoveConfirmation(false, null, false);
+    if (pendingMoves.equals(actualMoves)) return new ServerMoveConfirmation(true, null, false);
+    if (actualMoves.startsWith(pendingMoves + " ")) {
+      // The opponent replied before the confirmation-only state was observed.
+      return new ServerMoveConfirmation(false, null, false);
+    }
+    return new ServerMoveConfirmation(false, null, true);
+  }
+  record ServerMoveConfirmation(boolean confirmed, String pendingMoves, boolean invalidated) {}
   private static boolean terminal(JsonNode state) {
     if (state == null) return false;
     String value = status(state.path("status"));
     return !value.isBlank() && !"started".equals(value) && !"created".equals(value);
   }
-  private static final class Runtime { final String initialFen; final PieceColor color; final String whiteName,blackName; final Optional<String> whiteLichessId,blackLichessId,tournamentId; final TimeControl timeControl; final AtomicBoolean thinking = new AtomicBoolean(); volatile String moves = ""; volatile JsonNode state; volatile ComputerMoveEngine engine; volatile GameId localGameId; Runtime(String initialFen, PieceColor color,String whiteName,String blackName,Optional<String> whiteLichessId,Optional<String> blackLichessId,TimeControl timeControl,Optional<String> tournamentId) { this.initialFen=initialFen; this.color=color;this.whiteName=whiteName;this.blackName=blackName;this.whiteLichessId=whiteLichessId;this.blackLichessId=blackLichessId;this.timeControl=timeControl;this.tournamentId=tournamentId; } void close() { if(engine != null) { engine.cancelSearch(); engine.close(); } } }
+  private static final class Runtime { final String initialFen; final PieceColor color; final String whiteName,blackName; final Optional<String> whiteLichessId,blackLichessId,tournamentId; final TimeControl timeControl; final AtomicBoolean thinking = new AtomicBoolean(); volatile String moves = ""; volatile JsonNode state; final ComputerMoveEngine engine; volatile GameId localGameId; volatile long generation; volatile String pendingServerConfirmationMoves; Runtime(String initialFen, PieceColor color,String whiteName,String blackName,Optional<String> whiteLichessId,Optional<String> blackLichessId,TimeControl timeControl,Optional<String> tournamentId, ComputerMoveEngine engine) { this.initialFen=initialFen; this.color=color;this.whiteName=whiteName;this.blackName=blackName;this.whiteLichessId=whiteLichessId;this.blackLichessId=blackLichessId;this.timeControl=timeControl;this.tournamentId=tournamentId;this.engine=engine; } void close() { generation++; engine.cancelSearch(); engine.cancelPonder(); engine.close(); } }
 }

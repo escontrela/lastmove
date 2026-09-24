@@ -7,7 +7,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.ToLongFunction;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.nio.file.Files;
 import java.nio.charset.StandardCharsets;
 import java.io.IOException;
@@ -44,7 +43,8 @@ public final class BloodPressureWindowService {
       "depth", "time to depth (ms)", "post-depth time (ms)", "post-depth nodes",
       "mainNodes", "qNodes", "TT hit / cutoff", "beta cutoff", "PVS re-search",
       "null / LMR", "aspiration retries", "mate confirmations", "evaluation cache", "workers", "qsearch", "stand-pat",
-      "move lists", "quiet checks", "SEE", "search", "NPS", "stopReason", "stop counters");
+      "move lists", "quiet checks", "SEE", "search", "NPS", "stopReason", "stop counters",
+      "ponder starts", "ponder hit rate", "ponder reused depth");
 
   private final Stage primaryStage;
   private final ApplicationThemeService themeService;
@@ -73,12 +73,17 @@ public final class BloodPressureWindowService {
       Map.entry("SEE", "Evaluaciones SEE y capturas podadas por SEE."),
       Map.entry("search", "Identidad, posición raíz y tipo de puntuación de esta búsqueda."),
       Map.entry("NPS", "Nodos procesados por segundo: mainNodes y qNodes por tiempo transcurrido."),
-      Map.entry("stop counters", "Número acumulado de búsquedas por motivo de parada."));
+      Map.entry("stop counters", "Número acumulado de búsquedas por motivo de parada."),
+      Map.entry("ponder starts", "Veces que arrancó realmente la predicción mientras esperaba al rival. Cuenta una vez por tarea; requiere Ponder activo en Settings y capacidad libre."),
+      Map.entry("ponder hit rate", "Aciertos / (aciertos + fallos). Solo cuenta predicciones finalizadas comparadas con la respuesta real; cancelaciones y omisiones no cuentan."),
+      Map.entry("ponder reused depth", "Profundidad completa de continuación adoptada al llegar el turno. AVG y MAX cuentan una vez cada decisión de reutilización."));
   private final Map<String, double[]> averages = new HashMap<>();
   private final Map<String, VBox> metricCards = new HashMap<>();
   private final Map<String, Long> maxima = new HashMap<>();
+  private final java.util.Set<SnapshotKey> aggregatedSnapshots = new java.util.HashSet<>();
   private final Map<String, BooleanProperty> parameterSelection = new HashMap<>();
-  private final AtomicBoolean uiUpdatePending = new AtomicBoolean();
+  private final LatestValueRefreshCoalescer<SearchTelemetrySnapshot> refreshCoalescer =
+      new LatestValueRefreshCoalescer<>();
   private volatile SearchTelemetrySnapshot latestSnapshot;
   private long lastRenderNanos;
   private GameStatisticsChartControl mainNodesChart;
@@ -224,7 +229,7 @@ public final class BloodPressureWindowService {
     npsChart.renderTelemetry(List.of(), "NPS");
     Label liveTitle = new Label("Live metrics");
     liveTitle.getStyleClass().add("card-title");
-    Label liveHint = new Label("Values appear when Knightshade is thinking.");
+    Label liveHint = new Label("Values appear when Knightshade is thinking. Ponder metrics update after the opponent replies; enable Ponder in Settings → Knightshade.");
     liveHint.getStyleClass().add("hero-support");
     javafx.scene.control.Button export = new javafx.scene.control.Button("Export CSV");
     export.getStyleClass().addAll("message-box-button", "message-box-accept-button");
@@ -266,27 +271,9 @@ public final class BloodPressureWindowService {
     if (samples.isEmpty() || monitorStage == null) return;
     fileChooserFactory.chooseCsvExportFile(monitorStage, "knightshade-telemetry")
         .ifPresent(file -> {
-          StringBuilder csv = new StringBuilder("gameId,searchId,event,searchStartedAt,observedAt,rootFen,sideToMove,fullmoveNumber,limits,engineVersion,engineBuild,positionHistory,depth,score,scoreType,bestMove,elapsedMillis,parameters,mainNodes,qNodes,nps,ttProbes,ttHits,ttCutoffs,betaCutoffs,pvsResearches,nullMoveAttempts,nullMoveCutoffs,lmrApplications,lmrResearches,aspirationRetries,mateConfirmations,evaluationCacheHits,evaluationCacheMisses,requestedWorkers,activeWorkers,quiescenceEntries,standPatCutoffs,stalemateChecks,moveListsGenerated,quietChecksExamined,seeEvaluations,seePrunes,quietnessMetricsAvailable,stopReason\n");
-          String parameters = String.join("|", telemetryService.visibleMetrics());
-          for (SearchTelemetrySnapshot s : samples) {
-            var context = s.context();
-            csv.append(csvValue(context.gameId())).append(',').append(csvValue(context.searchId())).append(',').append(s.event()).append(',')
-                .append(context.startedAt()).append(',').append(s.observedAt()).append(',').append(csvValue(context.rootFen())).append(',')
-                .append(context.sideToMove()).append(',').append(context.fullmoveNumber()).append(',').append(csvValue(context.limits())).append(',')
-                .append(csvValue(context.engineVersion())).append(',').append(csvValue(context.engineBuild())).append(',')
-                .append(csvValue(String.join("|", context.positionHistory()))).append(',').append(s.depth()).append(',').append(s.score()).append(',')
-                .append(s.isMateScore() ? "MATE" : "CENTIPAWNS").append(',').append(csvValue(s.bestMove())).append(',').append(s.elapsedMillis()).append(',').append(csvValue(parameters)).append(',')
-                .append(s.mainNodes()).append(',').append(s.qNodes()).append(',').append(nps(s)).append(',').append(s.ttProbes()).append(',').append(s.ttHits()).append(',').append(s.ttCutoffs()).append(',')
-                .append(s.betaCutoffs()).append(',').append(s.pvsResearches()).append(',').append(s.nullMoveAttempts()).append(',')
-                .append(s.nullMoveCutoffs()).append(',').append(s.lmrApplications()).append(',').append(s.lmrResearches()).append(',')
-                .append(s.aspirationRetries()).append(',').append(s.mateConfirmations()).append(',')
-                .append(s.evaluationCacheHits()).append(',').append(s.evaluationCacheMisses()).append(',')
-                .append(s.requestedWorkers()).append(',').append(s.activeWorkers()).append(',').append(s.quiescenceEntries()).append(',')
-                .append(s.standPatCutoffs()).append(',').append(s.stalemateChecks()).append(',').append(s.moveListsGenerated()).append(',')
-                .append(s.quietChecksExamined()).append(',').append(s.seeEvaluations()).append(',').append(s.seePrunes()).append(',')
-                .append(s.quietnessMetricsAvailable()).append(',').append(s.stopReason()).append('\n');
-          }
-          try { Files.writeString(file.toPath(), csv.toString(), StandardCharsets.UTF_8); }
+          String csv = KnightshadeTelemetryCsvExporter.toCsv(samples,
+              telemetryService.visibleMetrics(), telemetryService);
+          try { Files.writeString(file.toPath(), csv, StandardCharsets.UTF_8); }
           catch (IOException ignored) { }
         });
   }
@@ -300,15 +287,14 @@ public final class BloodPressureWindowService {
     fileChooserFactory.chooseCsvExportFile(monitorStage, "knightshade-search-summary")
         .ifPresent(file -> {
           StringBuilder csv = new StringBuilder(
-              "gameId,searchId,searchStartedAt,rootFen,sideToMove,fullmoveNumber,positionHistory,engineVersion,engineBuild,limits,requestedWorkers,activeWorkers,lastCompletedDepth,timeToDepthMillis,nodesAtLastCompletedDepth,postDepthTimeMillis,postDepthNodes,terminalDepth,terminalScore,scoreType,bestMove,totalElapsedMillis,totalNodes,stopReason\n");
+              "gameId,searchId,searchStartedAt,sideToMove,fullmoveNumber,engineVersion,engineBuild,limits,requestedWorkers,activeWorkers,lastCompletedDepth,timeToDepthMillis,nodesAtLastCompletedDepth,postDepthTimeMillis,postDepthNodes,terminalDepth,terminalScore,scoreType,bestMove,totalElapsedMillis,totalNodes,stopReason,ponderHits,ponderMisses,ponderDecisions,ponderHitRate,ponderReusedDepthAvg,ponderReusedDepthMax,ponderStarts\n");
           for (SearchSummary summary : summaries) {
             SearchTelemetrySnapshot terminal = summary.terminal();
             SearchTelemetrySnapshot iteration = summary.lastCompletedIteration();
             var context = terminal.context();
             appendCsvRow(csv, List.of(
-                context.gameId(), context.searchId(), context.startedAt(), context.rootFen(),
-                context.sideToMove(), context.fullmoveNumber(), String.join("|", context.positionHistory()),
-                context.engineVersion(), context.engineBuild(), context.limits(), terminal.requestedWorkers(),
+                context.gameId(), context.searchId(), context.startedAt(), context.sideToMove(),
+                context.fullmoveNumber(), context.engineVersion(), context.engineBuild(), context.limits(), terminal.requestedWorkers(),
                 terminal.activeWorkers(), iteration == null ? "" : iteration.depth(),
                 iteration == null ? "" : iteration.elapsedMillis(),
                 iteration == null ? "" : totalNodes(iteration),
@@ -316,7 +302,10 @@ public final class BloodPressureWindowService {
                 summary.postDepthNodes() == null ? "" : summary.postDepthNodes(), terminal.depth(),
                 terminal.score(), terminal.isMateScore() ? "MATE" : "CENTIPAWNS",
                 terminal.bestMove() == null ? "" : terminal.bestMove().toUci(), terminal.elapsedMillis(),
-                totalNodes(terminal), terminal.stopReason()));
+                totalNodes(terminal), terminal.stopReason(), telemetryService.ponderHits(),
+                telemetryService.ponderMisses(), telemetryService.ponderDecisions(),
+                formatRate(telemetryService.ponderHitRate()), formatAverageDepth(), formatMaxDepth(),
+                telemetryService.ponderStarts()));
           }
           try { Files.writeString(file.toPath(), csv.toString(), StandardCharsets.UTF_8); }
           catch (IOException ignored) { }
@@ -340,17 +329,16 @@ public final class BloodPressureWindowService {
     if (telemetryService.sessionStartedAt() != null && !telemetryService.sessionStartedAt().equals(sessionStartedAt)) {
       maxima.clear();
       averages.clear();
+      aggregatedSnapshots.clear();
       sessionStartedAt = telemetryService.sessionStartedAt();
     }
     latestSnapshot = snapshot;
-    if (uiUpdatePending.compareAndSet(false, true)) {
-      Platform.runLater(this::flushSnapshot);
-    }
+    refreshCoalescer.offer(snapshot, Platform::runLater, this::flushSnapshot);
   }
 
   private void flushSnapshot() {
     if (mainNodesChart == null || depthChart == null || npsChart == null) {
-      uiUpdatePending.set(false);
+      refreshCoalescer.finished(refreshCoalescer.latest(), Platform::runLater, this::flushSnapshot);
       return;
     }
     long intervalNanos = 1_000_000_000L / Math.max(1, telemetryService.refreshFrequency());
@@ -362,7 +350,7 @@ public final class BloodPressureWindowService {
       delay.play();
       return;
     }
-    SearchTelemetrySnapshot snapshot = latestSnapshot;
+    SearchTelemetrySnapshot snapshot = refreshCoalescer.latest();
     if (snapshot != null) {
       List<SearchTelemetrySnapshot> samples = telemetryService.samples();
       renderSnapshot(snapshot, samples);
@@ -374,10 +362,7 @@ public final class BloodPressureWindowService {
       npsChart.renderTelemetry(iterations.stream().map(this::nps).toList(), "NPS");
       lastRenderNanos = System.nanoTime();
     }
-    uiUpdatePending.set(false);
-    if (latestSnapshot != snapshot && uiUpdatePending.compareAndSet(false, true)) {
-      Platform.runLater(this::flushSnapshot);
-    }
+    refreshCoalescer.finished(snapshot, Platform::runLater, this::flushSnapshot);
   }
 
   private void renderSnapshot(SearchTelemetrySnapshot snapshot, List<SearchTelemetrySnapshot> samples) {
@@ -385,12 +370,20 @@ public final class BloodPressureWindowService {
       VBox item = metricCards.get(metric);
       if (item != null) { boolean visible = telemetryService.visibleMetrics().contains(metric); item.setVisible(visible); item.setManaged(visible); }
     }
+    if (snapshot.event() == com.knightshade.engine.api.SearchTelemetryEvent.PONDER_STARTED
+        || snapshot.event() == com.knightshade.engine.api.SearchTelemetryEvent.PONDER_HIT
+        || snapshot.event() == com.knightshade.engine.api.SearchTelemetryEvent.PONDER_MISS) {
+      renderPonderMetrics();
+      return; // Decision samples must not overwrite the last real-search values with zeroes.
+    }
     List<SearchSummary> summaries = searchSummaries(samples);
     SearchKey currentKey = new SearchKey(snapshot.context().gameId(), snapshot.context().searchId());
     SearchSummary currentSummary = summaries.stream()
         .filter(summary -> summary.key().equals(currentKey)).findFirst().orElse(null);
     SearchTelemetrySnapshot lastIteration = currentSummary == null
         ? null : currentSummary.lastCompletedIteration();
+    boolean aggregateThisSnapshot = aggregatedSnapshots.add(new SnapshotKey(
+        snapshot.context().gameId(), snapshot.context().searchId(), snapshot.event(), snapshot.observedAt()));
     updateSearchSummary("depth", lastIteration == null ? null : (long) lastIteration.depth(), summaries,
         summary -> summary.lastCompletedIteration().depth());
     updateSearchSummary("time to depth (ms)", lastIteration == null ? null : lastIteration.elapsedMillis(), summaries,
@@ -399,24 +392,51 @@ public final class BloodPressureWindowService {
         summaries, SearchSummary::postDepthTimeMillis);
     updateSearchSummary("post-depth nodes", currentSummary == null ? null : currentSummary.postDepthNodes(),
         summaries, SearchSummary::postDepthNodes);
-    update("mainNodes", snapshot.mainNodes()); update("qNodes", snapshot.qNodes());
-    update("TT hit / cutoff", snapshot.ttHits(), snapshot.ttCutoffs()); update("beta cutoff", snapshot.betaCutoffs());
-    update("PVS re-search", snapshot.pvsResearches()); update("null / LMR", snapshot.nullMoveCutoffs(), snapshot.lmrApplications());
-    update("aspiration retries", snapshot.aspirationRetries()); update("mate confirmations", snapshot.mateConfirmations());
-    update("evaluation cache", snapshot.evaluationCacheHits(), snapshot.evaluationCacheMisses());
-    update("workers", snapshot.activeWorkers(), snapshot.requestedWorkers());
-    updateAvailable("qsearch", snapshot.quietnessMetricsAvailable(), snapshot.quiescenceEntries());
-    updateAvailable("stand-pat", snapshot.quietnessMetricsAvailable(), snapshot.standPatCutoffs(), snapshot.stalemateChecks());
-    updateAvailable("move lists", snapshot.quietnessMetricsAvailable(), snapshot.moveListsGenerated());
-    updateAvailable("quiet checks", snapshot.quietnessMetricsAvailable(), snapshot.quietChecksExamined());
-    updateAvailable("SEE", snapshot.quietnessMetricsAvailable(), snapshot.seeEvaluations(), snapshot.seePrunes());
+    update("mainNodes", aggregateThisSnapshot, snapshot.mainNodes()); update("qNodes", aggregateThisSnapshot, snapshot.qNodes());
+    update("TT hit / cutoff", aggregateThisSnapshot, snapshot.ttHits(), snapshot.ttCutoffs()); update("beta cutoff", aggregateThisSnapshot, snapshot.betaCutoffs());
+    update("PVS re-search", aggregateThisSnapshot, snapshot.pvsResearches()); update("null / LMR", aggregateThisSnapshot, snapshot.nullMoveCutoffs(), snapshot.lmrApplications());
+    update("aspiration retries", aggregateThisSnapshot, snapshot.aspirationRetries()); update("mate confirmations", aggregateThisSnapshot, snapshot.mateConfirmations());
+    update("evaluation cache", aggregateThisSnapshot, snapshot.evaluationCacheHits(), snapshot.evaluationCacheMisses());
+    update("workers", aggregateThisSnapshot, snapshot.activeWorkers(), snapshot.requestedWorkers());
+    updateAvailable("qsearch", aggregateThisSnapshot, snapshot.quietnessMetricsAvailable(), snapshot.quiescenceEntries());
+    updateAvailable("stand-pat", aggregateThisSnapshot, snapshot.quietnessMetricsAvailable(), snapshot.standPatCutoffs(), snapshot.stalemateChecks());
+    updateAvailable("move lists", aggregateThisSnapshot, snapshot.quietnessMetricsAvailable(), snapshot.moveListsGenerated());
+    updateAvailable("quiet checks", aggregateThisSnapshot, snapshot.quietnessMetricsAvailable(), snapshot.quietChecksExamined());
+    updateAvailable("SEE", aggregateThisSnapshot, snapshot.quietnessMetricsAvailable(), snapshot.seeEvaluations(), snapshot.seePrunes());
     updateText("search", snapshot.context().gameId() + " · " + snapshot.context().searchId().substring(0, 8)
         + " · " + (snapshot.isMateScore() ? "MATE" : "CP"));
-    update("NPS", nps(snapshot)); updateText("stopReason", snapshot.event() + " · " + snapshot.stopReason());
+    update("NPS", aggregateThisSnapshot, nps(snapshot)); updateText("stopReason", snapshot.event() + " · " + snapshot.stopReason());
     updateText("stop counters", "TIME_LIMIT " + telemetryService.stopReasonCounts().getOrDefault(com.knightshade.engine.api.StopReason.TIME_LIMIT, 0L)
         + " / DEPTH " + telemetryService.stopReasonCounts().getOrDefault(com.knightshade.engine.api.StopReason.DEPTH_LIMIT, 0L)
         + " / MATE " + telemetryService.stopReasonCounts().getOrDefault(com.knightshade.engine.api.StopReason.MATE, 0L)
         + " / CANCELLED " + telemetryService.stopReasonCounts().getOrDefault(com.knightshade.engine.api.StopReason.CANCELLED, 0L));
+    renderPonderMetrics();
+  }
+
+  private void renderPonderMetrics() {
+    updateText("ponder starts", Long.toString(telemetryService.ponderStarts()));
+    long decisions = telemetryService.ponderDecisions();
+    var hitRate = telemetryService.ponderHitRate();
+    updateText("ponder hit rate", decisions == 0 ? "—" : telemetryService.ponderHits() + " / " + decisions
+        + " · " + String.format(java.util.Locale.ROOT, "%.1f%%", hitRate.orElse(0) * 100));
+    var lastDepth = telemetryService.lastPonderReusedDepth();
+    setValue("ponder reused depth", lastDepth.isPresent() ? lastDepth.getAsInt() : "—");
+    setAverageValue("ponder reused depth", formatAverageDepth());
+    setMaxValue("ponder reused depth", formatMaxDepth());
+  }
+
+  private String formatRate(java.util.OptionalDouble rate) {
+    return rate.isPresent() ? String.format(java.util.Locale.ROOT, "%.6f", rate.getAsDouble()) : "";
+  }
+
+  private String formatAverageDepth() {
+    return telemetryService.ponderReusedDepthAverage().isPresent()
+        ? String.format(java.util.Locale.ROOT, "%.2f", telemetryService.ponderReusedDepthAverage().getAsDouble()) : "";
+  }
+
+  private String formatMaxDepth() {
+    return telemetryService.ponderReusedDepthMax().isPresent()
+        ? Integer.toString(telemetryService.ponderReusedDepthMax().getAsInt()) : "";
   }
 
   /** Derived on the JavaFX side from completed-depth snapshots; never in the search hot path. */
@@ -429,21 +449,24 @@ public final class BloodPressureWindowService {
     if (label != null) label.setText(String.valueOf(value));
   }
 
-  private void update(String metric, long... values) {
+  private void update(String metric, boolean aggregate, long... values) {
     StringBuilder current = new StringBuilder(); StringBuilder maximum = new StringBuilder();
-    double[] sum = averages.computeIfAbsent(metric, k -> new double[values.length + 1]); sum[0]++;
-    for (int i = 0; i < values.length; i++) { long value = values[i]; sum[i + 1] += value;
+    double[] sum = averages.computeIfAbsent(metric, k -> new double[values.length + 1]);
+    if (aggregate) sum[0]++;
+    for (int i = 0; i < values.length; i++) { long value = values[i]; if (aggregate) sum[i + 1] += value;
       if (current.length() > 0) { current.append(" / "); maximum.append(" / "); }
-      current.append(value); String key = metric + "#" + i; long max = Math.max(maxima.getOrDefault(key, 0L), value);
-      maxima.put(key, max); maximum.append(max);
+      current.append(value); String key = metric + "#" + i;
+      long max = aggregate ? Math.max(maxima.getOrDefault(key, 0L), value) : maxima.getOrDefault(key, value);
+      if (aggregate) maxima.put(key, max);
+      maximum.append(max);
     }
     StringBuilder average = new StringBuilder();
     for (int i = 0; i < values.length; i++) { if (i > 0) average.append(" / "); average.append(Math.round(sum[i + 1] / sum[0])); }
     setValue(metric, current); setAverageValue(metric, average); setMaxValue(metric, maximum);
   }
-  private void updateAvailable(String metric, boolean available, long... values) {
+  private void updateAvailable(String metric, boolean aggregate, boolean available, long... values) {
     if (available) {
-      update(metric, values);
+      update(metric, aggregate, values);
       return;
     }
     setValue(metric, "—");
@@ -471,6 +494,8 @@ public final class BloodPressureWindowService {
   private static List<SearchSummary> searchSummaries(List<SearchTelemetrySnapshot> samples) {
     Map<SearchKey, SearchSummaryBuilder> grouped = new LinkedHashMap<>();
     for (SearchTelemetrySnapshot sample : samples) {
+      if (sample.event() != com.knightshade.engine.api.SearchTelemetryEvent.ITERATION_COMPLETED
+          && sample.event() != com.knightshade.engine.api.SearchTelemetryEvent.SEARCH_FINISHED) continue;
       SearchKey key = new SearchKey(sample.context().gameId(), sample.context().searchId());
       SearchSummaryBuilder builder = grouped.computeIfAbsent(key, SearchSummaryBuilder::new);
       if (sample.event() == com.knightshade.engine.api.SearchTelemetryEvent.ITERATION_COMPLETED) {
@@ -487,6 +512,8 @@ public final class BloodPressureWindowService {
   }
 
   private record SearchKey(String gameId, String searchId) {}
+  private record SnapshotKey(String gameId, String searchId,
+      com.knightshade.engine.api.SearchTelemetryEvent event, Instant observedAt) {}
 
   private record SearchSummary(SearchKey key, SearchTelemetrySnapshot lastCompletedIteration,
       SearchTelemetrySnapshot terminal, Long postDepthTimeMillis, Long postDepthNodes) {}

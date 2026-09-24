@@ -12,6 +12,9 @@ import com.escontrela.lastmove.application.computer.ComputerGamePhase;
 import com.escontrela.lastmove.application.computer.ComputerMoveEngine;
 import com.escontrela.lastmove.application.computer.ComputerMoveEngineProvider;
 import com.escontrela.lastmove.application.computer.ComputerMoveRequest;
+import com.escontrela.lastmove.application.computer.ComputerEngineSettingsRepository;
+import com.escontrela.lastmove.application.computer.PonderRequest;
+import com.escontrela.lastmove.application.computer.PonderSettings;
 import com.escontrela.lastmove.application.computer.EngineAnalysisResult;
 import com.escontrela.lastmove.application.computer.EngineScore;
 import com.escontrela.lastmove.application.computer.OpeningPracticeConfiguration;
@@ -71,6 +74,34 @@ class ComputerGameServiceTest {
     assertEquals(Duration.ofMinutes(4).plusSeconds(48), state.clock().whiteRemaining().orElseThrow());
     assertTrue(state.canMove());
     assertTrue(state.canTakeBack());
+  }
+
+  @Test
+  void startsPonderAfterKnightshadeMoveAndCancelsItOnTakeback() {
+    engineProvider.moves.add(move("e7", "e5"));
+    ComputerEngineSettingsRepository repository = new ComputerEngineSettingsRepository() {
+      @Override public Optional<com.escontrela.lastmove.application.computer.ComputerEngineSettings> findByEngineId(String id) { return Optional.empty(); }
+      @Override public void save(com.escontrela.lastmove.application.computer.ComputerEngineSettings settings) {}
+      @Override public void deleteByEngineId(String id) {}
+      @Override public PonderSettings findPonderSettings() {
+        return new PonderSettings(true, true, 1, Duration.ofMillis(20), 1, Duration.ofMillis(50));
+      }
+    };
+    ComputerGameService ponderingService = new ComputerGameService(
+        new InMemoryProgressiveGameRepository(), new ChessGameFactory(new ChesspressoRulesEngine()),
+        List.of(engineProvider), clock, null, null, null, null,
+        new ComputerEngineSettingsService(repository, "/tmp/sunfish", "/tmp/maia"));
+
+    var created = ponderingService.createGame(configuration(PieceColor.WHITE)).toCompletableFuture().join();
+    ponderingService.playHumanMove(created.gameId(), move("e2", "e4")).toCompletableFuture().join();
+
+    PonderRequest request = engineProvider.lastEngine.ponderRequests.getFirst();
+    assertEquals(created.gameId(), request.gameId());
+    assertEquals(1, request.generation());
+    assertEquals(engineProvider.lastEngine.lastRequestHistorySize + 1, request.positionHistory().size());
+    ponderingService.takeBack(created.gameId());
+    assertEquals(1, engineProvider.lastEngine.cancelPonderCalls);
+    ponderingService.closeGame(created.gameId());
   }
 
   @Test
@@ -437,6 +468,9 @@ class ComputerGameServiceTest {
     private CompletableFuture<MoveCommand> pendingMove;
     private MoveCommand deferredMove;
     private int cancelSearchCalls;
+    private final java.util.ArrayList<PonderRequest> ponderRequests = new java.util.ArrayList<>();
+    private int cancelPonderCalls;
+    private int lastRequestHistorySize;
 
     private FakeEngine(
         ComputerEngineDescriptor descriptor, Queue<MoveCommand> moves,
@@ -479,6 +513,7 @@ class ComputerGameServiceTest {
     @Override
     public CompletionStage<MoveCommand> chooseMove(ComputerMoveRequest request) {
       chooseMoveCalls++;
+      lastRequestHistorySize = request.positionHistory().size();
       MoveCommand move = moves.poll();
       if (move == null) {
         return CompletableFuture.failedFuture(new IllegalStateException("No fake move queued"));
@@ -490,6 +525,10 @@ class ComputerGameServiceTest {
       }
       return CompletableFuture.completedFuture(move);
     }
+
+    @Override public void startPonder(PonderRequest request) { ponderRequests.add(request); }
+
+    @Override public void cancelPonder() { cancelPonderCalls++; }
 
     @Override
     public void cancelSearch() {

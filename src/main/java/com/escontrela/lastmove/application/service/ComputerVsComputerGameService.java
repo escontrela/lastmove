@@ -16,6 +16,8 @@ public final class ComputerVsComputerGameService {
   private final Map<String, ComputerMoveEngineProvider> providers;
   private final Clock clock;
   private final KnightshadeTelemetryService telemetry;
+  private final ComputerEngineSettingsService engineSettings;
+  private final int availableProcessors;
   private final Map<GameId, Runtime> runtimes = new ConcurrentHashMap<>();
   private final ScheduledExecutorService moveScheduler =
       Executors.newSingleThreadScheduledExecutor(
@@ -28,9 +30,21 @@ public final class ComputerVsComputerGameService {
   public ComputerVsComputerGameService(ChessGameFactory games, List<ComputerMoveEngineProvider> providers, Clock clock) {
     this(games, providers, clock, null);
   }
-  @org.springframework.beans.factory.annotation.Autowired
   public ComputerVsComputerGameService(ChessGameFactory games, List<ComputerMoveEngineProvider> providers, Clock clock, KnightshadeTelemetryService telemetry) {
+    this(games, providers, clock, telemetry, null);
+  }
+  @org.springframework.beans.factory.annotation.Autowired
+  public ComputerVsComputerGameService(ChessGameFactory games, List<ComputerMoveEngineProvider> providers,
+      Clock clock, KnightshadeTelemetryService telemetry, ComputerEngineSettingsService engineSettings) {
+    this(games, providers, clock, telemetry, engineSettings,
+        java.lang.Runtime.getRuntime().availableProcessors());
+  }
+  ComputerVsComputerGameService(ChessGameFactory games, List<ComputerMoveEngineProvider> providers,
+      Clock clock, KnightshadeTelemetryService telemetry, ComputerEngineSettingsService engineSettings,
+      int availableProcessors) {
     this.games = Objects.requireNonNull(games); this.clock = Objects.requireNonNull(clock); this.telemetry = telemetry;
+    this.engineSettings = engineSettings;
+    this.availableProcessors = availableProcessors;
     this.providers = providers.stream().collect(java.util.stream.Collectors.toUnmodifiableMap(p -> p.descriptor().id(), p -> p));
   }
   public List<ComputerEngineDescriptor> availableEngines() { return providers.values().stream().map(ComputerMoveEngineProvider::descriptor).sorted(Comparator.comparing(ComputerEngineDescriptor::displayName)).toList(); }
@@ -56,20 +70,22 @@ public final class ComputerVsComputerGameService {
     Runtime runtime = new Runtime(game, configuration, whiteProvider.descriptor(), blackProvider.descriptor(), whiteProvider.create(), blackProvider.create());
     runtimes.put(game.id(), runtime);
     return runtime.white.start().thenCompose(ignored -> runtime.black.start()).thenApply(ignored -> {
+      ComputerVsComputerGameState initial;
       synchronized (runtime) {
         runtime.turnStartedAt = clock.instant();
         runtime.phase = ComputerGamePhase.ENGINE_THINKING;
-        requestMove(runtime);
-        return snapshot(runtime);
+        initial = snapshot(runtime);
       }
+      requestMove(runtime);
+      return initial;
     });
   }
-  public ComputerVsComputerGameState state(GameId id) { Runtime runtime = runtime(id); synchronized (runtime) { expire(runtime); return snapshot(runtime); } }
+  public ComputerVsComputerGameState state(GameId id) { Runtime runtime = runtime(id); ComputerVsComputerGameState state; boolean expired; synchronized (runtime) { expired = expire(runtime); state = snapshot(runtime); } if (expired) cancelSearches(runtime); return state; }
   public GameRecord gameRecord(GameId id) { return runtime(id).game.toRecord(); }
   /** Stops the match without assigning either player a result. */
-  public ComputerVsComputerGameState stop(GameId id) { Runtime runtime = runtime(id); synchronized (runtime) { runtime.searchVersion++; runtime.white.cancelSearch(); runtime.black.cancelSearch(); runtime.phase = ComputerGamePhase.FINISHED; runtime.stopped = true; runtime.turnStartedAt = null; runtime.message = Optional.of("Game stopped"); return snapshot(runtime); } }
+  public ComputerVsComputerGameState stop(GameId id) { Runtime runtime = runtime(id); ComputerVsComputerGameState state; synchronized (runtime) { runtime.searchVersion++; runtime.phase = ComputerGamePhase.FINISHED; runtime.stopped = true; runtime.turnStartedAt = null; runtime.message = Optional.of("Game stopped"); state = snapshot(runtime); } cancelSearches(runtime); return state; }
   public CompletionStage<ComputerVsComputerGameState> restartGame(GameId id) { Runtime old = runtime(id); ComputerVsComputerConfiguration config = old.configuration; closeGame(id); return createGame(config); }
-  public boolean closeGame(GameId id) { Runtime runtime = runtimes.remove(id); if (runtime == null) return false; synchronized (runtime) { runtime.searchVersion++; runtime.white.cancelSearch(); runtime.black.cancelSearch(); runtime.white.close(); runtime.black.close(); } return true; }
+  public boolean closeGame(GameId id) { Runtime runtime = runtimes.remove(id); if (runtime == null) return false; synchronized (runtime) { runtime.searchVersion++; } cancelSearches(runtime); runtime.white.close(); runtime.black.close(); return true; }
   @PreDestroy void closeAll() { moveScheduler.shutdownNow(); new ArrayList<>(runtimes.keySet()).forEach(this::closeGame); }
   /** Starts one engine turn and schedules the next turn after its result.
    *
@@ -77,11 +93,43 @@ public final class ComputerVsComputerGameService {
    * the initial snapshot immediately so JavaFX can reveal the live board between engine moves.
    */
   private void requestMove(Runtime runtime) {
-    final PositionSnapshot position; final long version; final Duration limit; final ComputerMoveEngine engine;
-    synchronized (runtime) { expire(runtime); if (runtime.game.result().isPresent() || runtime.stopped) return; position = runtime.game.currentPosition(); version = ++runtime.searchVersion; engine = runtime.game.currentTurn() == PieceColor.WHITE ? runtime.white : runtime.black; limit = permitted(runtime); }
-    engine.chooseMove(new ComputerMoveRequest(position, limit, runtime.game.positionHistory(),
-        runtime.game.id())).handle((move, failure) -> {
+    final PositionSnapshot position; final long version; final Duration limit;
+    final ComputerMoveEngine engine; final List<PositionSnapshot> history;
+    final long generation; final PieceColor side;
+    boolean expired;
+    synchronized (runtime) {
+      expired = expire(runtime);
+      if (runtime.game.result().isPresent() || runtime.stopped) {
+        position = null; version = runtime.searchVersion; engine = null; limit = null;
+        history = null; generation = 0; side = null;
+      } else {
+        position = runtime.game.currentPosition();
+        version = ++runtime.searchVersion;
+        side = runtime.game.currentTurn();
+        engine = side == PieceColor.WHITE ? runtime.white : runtime.black;
+        generation = side == PieceColor.WHITE ? runtime.whitePonderGeneration : runtime.blackPonderGeneration;
+        history = runtime.game.positionHistory();
+        limit = permitted(runtime);
+      }
+    }
+    if (expired) cancelSearches(runtime);
+    if (position == null) return;
+    PonderResourceCoordinator.RealSearchLease resourceLease =
+        PonderResourceCoordinator.beginRealSearch(runtime.game.id(), generation);
+    CompletionStage<com.escontrela.lastmove.domain.game.MoveCommand> moveStage;
+    try {
+      moveStage = engine.chooseMove(new ComputerMoveRequest(position, limit, history,
+          runtime.game.id(), generation));
+    } catch (RuntimeException failure) {
+      resourceLease.close();
+      throw failure;
+    }
+    moveStage.handle((move, failure) -> {
+      resourceLease.close();
       boolean continueMatch;
+      long nextGeneration = 0;
+      PositionSnapshot afterMove = null;
+      List<PositionSnapshot> afterHistory = null;
       synchronized (runtime) {
         if (version != runtime.searchVersion) return null;
         if (failure != null) { runtime.phase = ComputerGamePhase.ENGINE_ERROR; runtime.turnStartedAt = null; runtime.message = Optional.of("Computer engine error: " + detail(failure)); return null; }
@@ -90,15 +138,56 @@ public final class ComputerVsComputerGameService {
         if (!applied.accepted()) { runtime.phase = ComputerGamePhase.ENGINE_ERROR; runtime.message = Optional.of("The engine returned an illegal move: " + move); return null; }
         runtime.turnStartedAt = clock.instant(); runtime.phase = runtime.game.result().isPresent() ? ComputerGamePhase.FINISHED : ComputerGamePhase.ENGINE_THINKING;
         continueMatch = runtime.phase == ComputerGamePhase.ENGINE_THINKING;
+        if (continueMatch) {
+          nextGeneration = side == PieceColor.WHITE
+              ? ++runtime.whitePonderGeneration : ++runtime.blackPonderGeneration;
+          afterMove = runtime.game.currentPosition();
+          afterHistory = runtime.game.positionHistory();
+        }
       }
       if (continueMatch) {
+        PonderRequest ponderRequest = ponderRequest(runtime, engine, side, nextGeneration,
+            afterMove, afterHistory);
+        if (ponderRequest != null) {
+          boolean stillCurrent;
+          synchronized (runtime) {
+            stillCurrent = runtime.searchVersion == version && !runtime.stopped
+                && runtime.game.result().isEmpty();
+          }
+          if (stillCurrent) {
+            try {
+              engine.startPonder(ponderRequest);
+            } catch (RuntimeException ignored) {
+              // Optional speculation must not interrupt the confirmed game move.
+            }
+            synchronized (runtime) {
+              stillCurrent = runtime.searchVersion == version && !runtime.stopped
+                  && runtime.game.result().isEmpty();
+            }
+            if (!stillCurrent) engine.cancelPonder();
+          }
+        }
         long delayMillis = runtime.configuration.moveDelay().toMillis();
         moveScheduler.schedule(() -> requestMove(runtime), delayMillis, TimeUnit.MILLISECONDS);
       }
       return null;
     });
   }
-  private void expire(Runtime runtime) { if (runtime.game.result().isPresent() || runtime.stopped || runtime.turnStartedAt == null || !runtime.game.currentClock().timed()) return; Duration remaining = runtime.game.currentClock().remaining(runtime.game.currentTurn()).orElseThrow(); if (elapsed(runtime).compareTo(remaining) < 0) return; runtime.searchVersion++; runtime.white.cancelSearch(); runtime.black.cancelSearch(); runtime.game.timeout(runtime.game.currentTurn()); runtime.phase = ComputerGamePhase.FINISHED; runtime.turnStartedAt = null; runtime.message = Optional.of("Time expired"); }
+  private PonderRequest ponderRequest(Runtime runtime, ComputerMoveEngine engine,
+      PieceColor side, long generation, PositionSnapshot afterMove,
+      List<PositionSnapshot> afterHistory) {
+    if (engineSettings == null || !ComputerEngineIds.KNIGHTSHADE.equals(engine.descriptor().id())) return null;
+    PonderSettings settings = engineSettings.ponderSettings();
+    if (!settings.enabled() || !settings.speculativeWorkerEnabled()) return null;
+    String opponentId = side == PieceColor.WHITE
+        ? runtime.configuration.blackEngineId() : runtime.configuration.whiteEngineId();
+    int realWorkers = providers.get(opponentId).estimatedSearchWorkers();
+    if (availableProcessors - Math.max(1, realWorkers) < 2) return null;
+    return new PonderRequest(runtime.game.id(), generation, afterMove,
+        afterHistory, settings, "knightshade-default-v1", true);
+  }
+  private boolean expire(Runtime runtime) { if (runtime.game.result().isPresent() || runtime.stopped || runtime.turnStartedAt == null || !runtime.game.currentClock().timed()) return false; Duration remaining = runtime.game.currentClock().remaining(runtime.game.currentTurn()).orElseThrow(); if (elapsed(runtime).compareTo(remaining) < 0) return false; runtime.searchVersion++; runtime.game.timeout(runtime.game.currentTurn()); runtime.phase = ComputerGamePhase.FINISHED; runtime.turnStartedAt = null; runtime.message = Optional.of("Time expired"); return true; }
+  private void cancelSearches(Runtime runtime) { runtime.white.cancelSearch(); runtime.black.cancelSearch(); runtime.white.cancelPonder(); runtime.black.cancelPonder(); }
   private Duration permitted(Runtime r) {
     Duration configured = r.game.currentTurn() == PieceColor.WHITE
         ? r.configuration.whiteThinkingTime() : r.configuration.blackThinkingTime();
@@ -111,5 +200,5 @@ public final class ComputerVsComputerGameService {
   private ComputerMoveEngineProvider provider(String id) { ComputerMoveEngineProvider value = providers.get(id); if (value == null) throw new NoSuchElementException("Unknown computer engine: " + id); return value; }
   private Runtime runtime(GameId id) { Runtime value = runtimes.get(Objects.requireNonNull(id)); if (value == null) throw new NoSuchElementException("No computer-versus-computer runtime for game: " + id); return value; }
   private static String detail(Throwable failure) { Throwable cause = failure; while (cause.getCause() != null) cause = cause.getCause(); return cause.getMessage() == null ? cause.getClass().getSimpleName() : cause.getMessage(); }
-  private static final class Runtime { final ChessGame game; final ComputerVsComputerConfiguration configuration; final ComputerEngineDescriptor whiteDescriptor, blackDescriptor; final ComputerMoveEngine white, black; long searchVersion; Instant turnStartedAt; ComputerGamePhase phase = ComputerGamePhase.STARTING; boolean stopped; Optional<String> message = Optional.empty(); Runtime(ChessGame game, ComputerVsComputerConfiguration configuration, ComputerEngineDescriptor whiteDescriptor, ComputerEngineDescriptor blackDescriptor, ComputerMoveEngine white, ComputerMoveEngine black) { this.game=game; this.configuration=configuration; this.whiteDescriptor=whiteDescriptor; this.blackDescriptor=blackDescriptor; this.white=white; this.black=black; } }
+  private static final class Runtime { final ChessGame game; final ComputerVsComputerConfiguration configuration; final ComputerEngineDescriptor whiteDescriptor, blackDescriptor; final ComputerMoveEngine white, black; long searchVersion; long whitePonderGeneration, blackPonderGeneration; Instant turnStartedAt; ComputerGamePhase phase = ComputerGamePhase.STARTING; boolean stopped; Optional<String> message = Optional.empty(); Runtime(ChessGame game, ComputerVsComputerConfiguration configuration, ComputerEngineDescriptor whiteDescriptor, ComputerEngineDescriptor blackDescriptor, ComputerMoveEngine white, ComputerMoveEngine black) { this.game=game; this.configuration=configuration; this.whiteDescriptor=whiteDescriptor; this.blackDescriptor=blackDescriptor; this.white=white; this.black=black; } }
 }

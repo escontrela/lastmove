@@ -51,6 +51,50 @@ public final class ParallelRootSearch implements Search {
 
   public int threads() { return threads; }
 
+  /** Creates a private one-worker continuation owner for speculative search. */
+  public ContinuationContext newContinuationContext(Board root,
+      Map<Long, Integer> positionOccurrences) {
+    Objects.requireNonNull(root, "root must not be null");
+    Objects.requireNonNull(positionOccurrences, "positionOccurrences must not be null");
+    IterativeDeepeningSearch iterative =
+        new IterativeDeepeningSearch(new LegalMoveGenerator(), evaluators.get());
+    return new ContinuationContext(iterative,
+        iterative.newContext(root, positionOccurrences));
+  }
+
+  /** Runs or resumes a speculative continuation after its previous owner has returned. */
+  public SearchResult searchContinuation(ContinuationContext context, SearchLimits limits,
+      StopSignal stop, SearchTelemetryListener listener, int requestedWorkers,
+      SearchTelemetryContext telemetryContext) {
+    Objects.requireNonNull(context, "context must not be null");
+    return context.owner.search(context.searchContext, limits, stop, listener,
+        requestedWorkers, 1, telemetryContext);
+  }
+
+  public SearchResult searchContinuation(ContinuationContext context, SearchLimits limits,
+      StopSignal stop) {
+    Objects.requireNonNull(context, "context must not be null");
+    return context.owner.search(context.searchContext, limits, stop);
+  }
+
+  public static final class ContinuationContext {
+    private final IterativeDeepeningSearch owner;
+    private final SearchContext searchContext;
+
+    private ContinuationContext(IterativeDeepeningSearch owner, SearchContext searchContext) {
+      this.owner = owner;
+      this.searchContext = searchContext;
+    }
+
+    public SearchResult lastCompleteResult() {
+      return searchContext.lastResult();
+    }
+
+    public int completedDepth() {
+      return searchContext.completedDepth();
+    }
+  }
+
   @Override
   public SearchResult search(Board board, SearchLimits limits, StopSignal stop,
       Map<Long, Integer> positionOccurrences, SearchTelemetryListener listener,

@@ -37,6 +37,6 @@ final class SearchStats {
         lmrResearches, aspirationRetries, mateConfirmations, evaluationCacheHits, evaluationCacheMisses,
         requested, active, quiescenceEntries, standPatCutoffs, stalemateChecks, moveListsGenerated,
         quietChecksExamined, seeEvaluations, seePrunes, quietnessMetricsAvailable,
-        reason, elapsedMillis);
+        reason, elapsedMillis, 0);
   }
 }
