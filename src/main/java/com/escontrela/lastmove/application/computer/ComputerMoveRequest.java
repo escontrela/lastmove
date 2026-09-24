@@ -11,15 +11,21 @@ public record ComputerMoveRequest(
     PositionSnapshot position,
     Duration maximumThinkingTime,
     List<PositionSnapshot> positionHistory,
-    GameId gameId) {
+    GameId gameId,
+    long generation) {
 
   public ComputerMoveRequest(PositionSnapshot position, Duration maximumThinkingTime) {
-    this(position, maximumThinkingTime, List.of(), null);
+    this(position, maximumThinkingTime, List.of(), null, 0);
   }
 
   public ComputerMoveRequest(PositionSnapshot position, Duration maximumThinkingTime,
       List<PositionSnapshot> positionHistory) {
-    this(position, maximumThinkingTime, positionHistory, null);
+    this(position, maximumThinkingTime, positionHistory, null, 0);
+  }
+
+  public ComputerMoveRequest(PositionSnapshot position, Duration maximumThinkingTime,
+      List<PositionSnapshot> positionHistory, GameId gameId) {
+    this(position, maximumThinkingTime, positionHistory, gameId, 0);
   }
 
   public ComputerMoveRequest {
@@ -31,6 +37,7 @@ public record ComputerMoveRequest(
     }
     positionHistory =
         List.copyOf(Objects.requireNonNull(positionHistory, "positionHistory must not be null"));
+    if (generation < 0) throw new IllegalArgumentException("generation must not be negative");
   }
 
 }

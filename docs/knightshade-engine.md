@@ -435,15 +435,53 @@ La columna `max` muestra el máximo alcanzado durante la partida y se reinicia a
 Exportar CSV conserva las muestras hasta la siguiente sesión e incluye timestamp, profundidad,
 score, movimiento, elapsed, parámetros, trabajadores y `stopReason`. No se exporta FEN.
 
+Cuando la ponderación está activada, aparecen además `ponder starts`, `ponder hit rate` y `ponder reused depth`:
+
+- `ponder starts` cuenta tareas especulativas que realmente empezaron a predecir una respuesta.
+  Sube al arrancar el worker, incluso si más tarde se cancela. No cuenta solicitudes omitidas por
+  configuración o falta de capacidad. Se reinicia con la sesión de partida.
+- `ponder hit rate` muestra `hits / decisiones` y el porcentaje `hits / (hits + misses)`. Solo
+  cuenta una predicción de respuesta rival que llegó a completarse y pudo compararse con la
+  respuesta real. Cancelaciones, falta de worker, predicción incompleta y cambios de partida no
+  suman ni hit ni miss.
+- `ponder reused depth` muestra la última profundidad completa de continuación transferida a una
+  búsqueda real. Su AVG y MAX incluyen una observación por decisión HIT que reutilizó una
+  continuación completa; un HIT sin continuación reutilizable no aporta profundidad.
+- Los dos eventos se emiten una vez al validar la respuesta real, no por profundidad especulativa,
+  render de UI ni nodo. Blood Pressure debe estar activo para retener y presentar estas métricas.
+  La capa de aplicación deduplica por partida y búsqueda para que una entrega repetida no duplique
+  conteos ni filas.
+
+El CSV incluye filas `PONDER_STARTED`, `PONDER_HIT` / `PONDER_MISS`, la columna `ponderStarts`, el depth transferido y los acumulados de sesión
+(hits, misses, decisiones, tasa, AVG y MAX de profundidad). El CSV detallado y el resumen no
+incluyen FEN ni historial de posiciones.
+
+En Computer vs Computer, Knightshade inicia la predicción después de confirmar su jugada y la
+valida en su siguiente turno, con generación e historial propios de cada color. Ponder debe estar
+habilitado en Settings → Knightshade; Blood Pressure solo controla la observación. La búsqueda
+real del rival puede convivir con el único worker especulativo cuando su configuración deja al
+menos dos procesadores disponibles (uno para ponderación y otro de margen). Se usan los workers
+configurados de Knightshade/Maia y uno para Sunfish; los proveedores desconocidos son conservadores
+y no admiten concurrencia hasta declarar su presupuesto. Esto es una admisión por presupuesto,
+no una garantía frente a la carga de otros procesos del sistema.
+
+Una búsqueda real de otra partida cancela la especulación activa. El análisis de la barra de
+fuerza cede mientras haya búsqueda de partida o ponderación, conservando la última evaluación.
+Una continuación ya preparada libera el permiso global de CPU y permanece privada hasta su
+validación o invalidación. Las tarjetas de aciertos/reutilización cambian al recibir la respuesta
+real; `ponder starts` permite comprobar el arranque durante la espera del rival.
+
 El benchmark headless compara ambos modos usando un listener en memoria:
 
 ~~~bash
-java -cp target/classes:target/test-classes com.knightshade.engine.benchmark.SearchBenchmark 6 0 4
+java -cp target/classes:target/test-classes com.knightshade.engine.benchmark.SearchBenchmark \\
+  --suite representative --depth 7 --repetitions 5 --warmups 2 --warmup-depth 3 \\
+  --threads 1 --telemetry both --output target/knightshade-search-benchmark.csv
 ~~~
 
 Con telemetría desactivada no se crean snapshots. Activada tampoco realiza I/O ni serialización por
 nodo: solo notifica al completar profundidades. Una regresión sostenida superior al 2% frente a
-`telemetry=off` debe investigarse.
+`telemetry=off` debe investigarse. Consulta el [registro local de resultados](knightshade-ponder-results-2026-09-24.md).
 
 ### Cómo interpretar las métricas
 
@@ -463,6 +501,8 @@ las cifras. La comparación válida enfrenta sesiones equivalentes. Los ratios y
 | `evaluation cache` | Hits altos frente a misses cuando hay transposiciones. | Misses casi constantes. | Indica si se evita repetir evaluación costosa. |
 | `workers` | Efectivos = solicitados y mejor NPS/profundidad. | Sin escalado, aun con todos efectivos. | Distingue disponibilidad de paralelismo y escalabilidad real. |
 | `stopReason` | `TIME_LIMIT` o `COMPLETED` según el límite. | `CANCELLED` inesperado o `ERROR`. | Clasifica paradas previstas frente a cancelaciones o fallos. |
+| `ponder hit rate` | Predicciones acertadas con reutilización efectiva frecuente. | Muchos fallos en posiciones comparables. | Aciertos / (aciertos + fallos); la tarjeta enseña ambos conteos. |
+| `ponder reused depth` | Profundidad completa adoptada mayor, sin perjudicar el turno real. | Cero muestras aunque haya HITs, o depth superficial. | Trabajo especulativo completo que se transfirió realmente al turno. |
 
 Un `MAX` alto aislado puede ser normal en una posición táctica; preocupa cuando también aumenta el
 `AVG` en partidas comparables. Para diagnosticar, revisar primero ordenación/TT/PVS si suben los

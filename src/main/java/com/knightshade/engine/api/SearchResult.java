@@ -8,7 +8,14 @@ import com.knightshade.engine.board.Move;
  * <p>{@code move} is {@code null} only when the input position has no legal move (checkmate or
  * stalemate).
  */
-public record SearchResult(Move move, int score, int depth, long nodes, long elapsedMillis) {
+public record SearchResult(
+    Move move, int score, int depth, long nodes, long elapsedMillis,
+    long nodesBeforeThisSearch, long nodesThisSearch, long elapsedMillisBeforeThisSearch) {
+
+  /** Compatibility constructor for ordinary, non-resumed searches. */
+  public SearchResult(Move move, int score, int depth, long nodes, long elapsedMillis) {
+    this(move, score, depth, nodes, elapsedMillis, 0, nodes, 0);
+  }
 
   private static final int MATE_SCORE = 1_000_000;
   private static final int MAX_PLY = 128;

@@ -3,6 +3,7 @@ package com.escontrela.lastmove.application.service;
 import com.escontrela.lastmove.application.computer.ComputerEngineIds;
 import com.escontrela.lastmove.application.computer.ComputerEngineSettings;
 import com.escontrela.lastmove.application.computer.ComputerEngineSettingsRepository;
+import com.escontrela.lastmove.application.computer.PonderSettings;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -133,6 +134,18 @@ public final class ComputerEngineSettingsService {
     } else {
       repository.deleteDefaultAnalysisEngineId();
     }
+  }
+
+  /** Returns the opt-in Knightshade anticipatory-search preferences. */
+  public PonderSettings ponderSettings() {
+    return repository.findPonderSettings();
+  }
+
+  /** Persists Knightshade anticipatory-search preferences. */
+  public PonderSettings updatePonderSettings(PonderSettings settings) {
+    PonderSettings required = Objects.requireNonNull(settings, "settings must not be null");
+    repository.savePonderSettings(required);
+    return required;
   }
 
   private static Path parsePath(String value, String description) {

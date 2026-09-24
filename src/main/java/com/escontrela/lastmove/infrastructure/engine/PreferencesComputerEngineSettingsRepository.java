@@ -2,6 +2,7 @@ package com.escontrela.lastmove.infrastructure.engine;
 
 import com.escontrela.lastmove.application.computer.ComputerEngineSettings;
 import com.escontrela.lastmove.application.computer.ComputerEngineSettingsRepository;
+import com.escontrela.lastmove.application.computer.PonderSettings;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.Objects;
@@ -17,6 +18,12 @@ public class PreferencesComputerEngineSettingsRepository
   private static final String EXECUTABLE_SUFFIX = ".executable";
   private static final String THINKING_TIME_SUFFIX = ".thinking-time";
   private static final String DEFAULT_ANALYSIS_ENGINE_KEY = "analysis.default-engine";
+  private static final String PONDER_ENABLED_KEY = "knightshade.ponder.enabled";
+  private static final String PONDER_WORKER_KEY = "knightshade.ponder.worker-enabled";
+  private static final String PONDER_PREDICTION_DEPTH_KEY = "knightshade.ponder.prediction-depth";
+  private static final String PONDER_PREDICTION_BUDGET_KEY = "knightshade.ponder.prediction-budget-ms";
+  private static final String PONDER_CONTINUATION_DEPTH_KEY = "knightshade.ponder.continuation-depth";
+  private static final String PONDER_CONTINUATION_BUDGET_KEY = "knightshade.ponder.continuation-budget-ms";
 
   private final Preferences preferences =
       Preferences.userNodeForPackage(PreferencesComputerEngineSettingsRepository.class)
@@ -86,6 +93,35 @@ public class PreferencesComputerEngineSettingsRepository
   @Override
   public void deleteDefaultAnalysisEngineId() {
     preferences.remove(DEFAULT_ANALYSIS_ENGINE_KEY);
+  }
+
+  @Override
+  public PonderSettings findPonderSettings() {
+    PonderSettings defaults = PonderSettings.defaults();
+    try {
+      return new PonderSettings(
+          preferences.getBoolean(PONDER_ENABLED_KEY, defaults.enabled()),
+          preferences.getBoolean(PONDER_WORKER_KEY, defaults.speculativeWorkerEnabled()),
+          preferences.getInt(PONDER_PREDICTION_DEPTH_KEY, defaults.predictionDepth()),
+          java.time.Duration.ofMillis(preferences.getLong(PONDER_PREDICTION_BUDGET_KEY,
+              defaults.predictionBudget().toMillis())),
+          preferences.getInt(PONDER_CONTINUATION_DEPTH_KEY, defaults.continuationDepth()),
+          java.time.Duration.ofMillis(preferences.getLong(PONDER_CONTINUATION_BUDGET_KEY,
+              defaults.continuationBudget().toMillis())));
+    } catch (IllegalArgumentException exception) {
+      return defaults;
+    }
+  }
+
+  @Override
+  public void savePonderSettings(PonderSettings settings) {
+    PonderSettings value = Objects.requireNonNull(settings, "settings must not be null");
+    preferences.putBoolean(PONDER_ENABLED_KEY, value.enabled());
+    preferences.putBoolean(PONDER_WORKER_KEY, value.speculativeWorkerEnabled());
+    preferences.putInt(PONDER_PREDICTION_DEPTH_KEY, value.predictionDepth());
+    preferences.putLong(PONDER_PREDICTION_BUDGET_KEY, value.predictionBudget().toMillis());
+    preferences.putInt(PONDER_CONTINUATION_DEPTH_KEY, value.continuationDepth());
+    preferences.putLong(PONDER_CONTINUATION_BUDGET_KEY, value.continuationBudget().toMillis());
   }
 
   private String requireEngineId(String value) {

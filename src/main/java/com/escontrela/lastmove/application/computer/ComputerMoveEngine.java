@@ -27,6 +27,16 @@ public interface ComputerMoveEngine extends AutoCloseable {
   /** Chooses one move asynchronously without mutating the supplied position. */
   CompletionStage<MoveCommand> chooseMove(ComputerMoveRequest request);
 
+  /** Starts optional anticipatory search. Engines without this capability may ignore the request. */
+  default void startPonder(PonderRequest request) {
+    // Optional capability; ordinary engines remain unaffected.
+  }
+
+  /** Cancels optional anticipatory search without cancelling a real move search. */
+  default void cancelPonder() {
+    // Optional capability; ordinary engines remain unaffected.
+  }
+
   /**
    * Analyses one position asynchronously without mutating it.
    *

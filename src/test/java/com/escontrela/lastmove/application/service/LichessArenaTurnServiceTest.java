@@ -1,6 +1,7 @@
 package com.escontrela.lastmove.application.service;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -30,5 +31,23 @@ class LichessArenaTurnServiceTest {
         terminal.path("moves").asText(), terminal, stale));
     assertTrue(LichessArenaTurnService.shouldAcceptState(
         terminal.path("moves").asText(), terminal, newer));
+  }
+
+  @Test void duplicateArenaConfirmationCannotProduceASecondPonderStart() {
+    var firstDelivery = LichessArenaTurnService.reconcileServerConfirmation("e2e4", "e2e4");
+    var duplicateDelivery = LichessArenaTurnService.reconcileServerConfirmation(
+        firstDelivery.pendingMoves(), "e2e4");
+
+    assertTrue(firstDelivery.confirmed());
+    assertFalse(duplicateDelivery.confirmed());
+    assertFalse(firstDelivery.invalidated());
+  }
+
+  @Test void opponentReplyBeforeOwnMoveConfirmationDoesNotMarkAnotherPonderHit() {
+    var response = LichessArenaTurnService.reconcileServerConfirmation("e2e4", "e2e4 e7e5");
+
+    assertFalse(response.confirmed());
+    assertFalse(response.invalidated());
+    assertNull(response.pendingMoves());
   }
 }

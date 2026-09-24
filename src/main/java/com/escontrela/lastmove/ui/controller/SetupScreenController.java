@@ -3,6 +3,7 @@ package com.escontrela.lastmove.ui.controller;
 import com.escontrela.lastmove.application.computer.ComputerEngineDescriptor;
 import com.escontrela.lastmove.application.computer.ComputerEngineHealth;
 import com.escontrela.lastmove.application.computer.ComputerEngineIds;
+import com.escontrela.lastmove.application.computer.PonderSettings;
 import com.escontrela.lastmove.application.service.ComputerEngineHealthService;
 import com.escontrela.lastmove.application.service.ComputerEngineSettingsService;
 import com.escontrela.lastmove.application.service.KnightshadeArenaSettingsService;
@@ -107,6 +108,12 @@ public class SetupScreenController implements UiScreenController {
     private Label maiaValidationLabel;
     @FXML
     private ComboBox<Duration> knightshadeThinkingTimeCombo;
+    @FXML private CheckBox ponderEnabledCheckBox;
+    @FXML private CheckBox ponderWorkerEnabledCheckBox;
+    @FXML private ComboBox<Integer> ponderPredictionDepthCombo;
+    @FXML private ComboBox<Integer> ponderPredictionBudgetCombo;
+    @FXML private ComboBox<Integer> ponderContinuationDepthCombo;
+    @FXML private ComboBox<Integer> ponderContinuationBudgetCombo;
     @FXML private CheckBox bloodPressureEnabledCheckBox;
     @FXML private ComboBox<Integer> bloodPressureFrequencyCombo;
     @FXML private FlowPane bloodPressureParameters;
@@ -182,6 +189,7 @@ public class SetupScreenController implements UiScreenController {
     private String savedMaiaExecutablePath;
     private String savedMaiaWeightsPath;
     private Duration savedKnightshadeThinkingTime;
+    private PonderSettings savedPonderSettings;
     private String savedAnalysisEngineDefaultId;
     private KnightshadeArenaSettings savedArenaSettings;
     private boolean arenaTokenChanged;
@@ -264,6 +272,7 @@ public class SetupScreenController implements UiScreenController {
         knightshadeThinkingTimeCombo.setConverter(THINKING_TIME_CONVERTER);
         knightshadeThinkingTimeCombo.valueProperty().addListener((ignored, oldValue, newValue) ->
                 updateApplyButtonVisibility());
+        configurePonderSettings();
         configureBloodPressureTelemetry();
         analysisEngineCombo.setConverter(ENGINE_CONVERTER);
         analysisEngineCombo.valueProperty().addListener((ignored, oldValue, newValue) ->
@@ -299,12 +308,53 @@ public class SetupScreenController implements UiScreenController {
                 "depth", "time to depth (ms)", "post-depth time (ms)", "post-depth nodes",
                 "mainNodes", "qNodes", "TT hit / cutoff", "beta cutoff", "PVS re-search",
                 "null / LMR", "aspiration retries", "mate confirmations", "evaluation cache", "workers", "qsearch", "stand-pat",
-                "move lists", "quiet checks", "SEE", "search", "NPS", "stopReason", "stop counters")) {
+                "move lists", "quiet checks", "SEE", "search", "NPS", "stopReason", "stop counters",
+                "ponder starts", "ponder hit rate", "ponder reused depth")) {
             CheckBox option = new CheckBox(metric); option.setSelected(telemetryService.visibleMetrics().contains(metric));
             option.selectedProperty().addListener((o, oldValue, value) -> telemetryService.setVisibleMetrics(
                     bloodPressureParameters.getChildren().stream().filter(CheckBox.class::isInstance).map(CheckBox.class::cast).filter(CheckBox::isSelected).map(CheckBox::getText).collect(java.util.stream.Collectors.toSet())));
             bloodPressureParameters.getChildren().add(option);
         }
+    }
+
+    private void configurePonderSettings() {
+        ponderPredictionDepthCombo.getItems().setAll(2, 3, 4, 5, 6, 8);
+        ponderPredictionBudgetCombo.getItems().setAll(50, 100, 150, 200, 300);
+        ponderContinuationDepthCombo.getItems().setAll(4, 6, 8, 10, 12);
+        ponderContinuationBudgetCombo.getItems().setAll(250, 500, 750, 1000, 1500, 2000);
+        ponderPredictionBudgetCombo.setConverter(millisecondsConverter());
+        ponderContinuationBudgetCombo.setConverter(millisecondsConverter());
+        for (CheckBox control : List.of(ponderEnabledCheckBox, ponderWorkerEnabledCheckBox)) {
+            control.selectedProperty().addListener((ignored, oldValue, newValue) -> updateApplyButtonVisibility());
+        }
+        for (ComboBox<Integer> control : List.of(ponderPredictionDepthCombo, ponderPredictionBudgetCombo,
+                ponderContinuationDepthCombo, ponderContinuationBudgetCombo)) {
+            control.valueProperty().addListener((ignored, oldValue, newValue) -> updateApplyButtonVisibility());
+        }
+    }
+
+    private static StringConverter<Integer> millisecondsConverter() {
+        return new StringConverter<>() {
+            @Override public String toString(Integer millis) { return millis == null ? "" : millis + " ms"; }
+            @Override public Integer fromString(String value) {
+                throw new UnsupportedOperationException("The pondering budget selector is not editable");
+            }
+        };
+    }
+
+    private PonderSettings selectedPonderSettings() {
+        return new PonderSettings(ponderEnabledCheckBox.isSelected(),
+                ponderWorkerEnabledCheckBox.isSelected(),
+                valueOr(ponderPredictionDepthCombo, PonderSettings.DEFAULT_PREDICTION_DEPTH),
+                Duration.ofMillis(valueOr(ponderPredictionBudgetCombo,
+                        (int) PonderSettings.DEFAULT_PREDICTION_BUDGET.toMillis())),
+                valueOr(ponderContinuationDepthCombo, PonderSettings.DEFAULT_CONTINUATION_DEPTH),
+                Duration.ofMillis(valueOr(ponderContinuationBudgetCombo,
+                        (int) PonderSettings.DEFAULT_CONTINUATION_BUDGET.toMillis())));
+    }
+
+    private static int valueOr(ComboBox<Integer> combo, int fallback) {
+        return combo.getValue() == null ? fallback : combo.getValue();
     }
 
     private void buildAppearanceChoices() {
@@ -457,6 +507,7 @@ public class SetupScreenController implements UiScreenController {
                 .toString();
         savedKnightshadeThinkingTime = computerEngineSettingsService
                 .thinkingTime(ComputerEngineIds.KNIGHTSHADE);
+        savedPonderSettings = computerEngineSettingsService.ponderSettings();
         nightModeCheckBox.setSelected(savedNightMode);
         showSplashCheckBox.setSelected(savedSplashScreen);
         boardVisualEffectsCheckBox.setSelected(savedBoardVisualEffects);
@@ -469,6 +520,12 @@ public class SetupScreenController implements UiScreenController {
             knightshadeThinkingTimeCombo.getItems().add(savedKnightshadeThinkingTime);
         }
         knightshadeThinkingTimeCombo.getSelectionModel().select(savedKnightshadeThinkingTime);
+        ponderEnabledCheckBox.setSelected(savedPonderSettings.enabled());
+        ponderWorkerEnabledCheckBox.setSelected(savedPonderSettings.speculativeWorkerEnabled());
+        ponderPredictionDepthCombo.setValue(savedPonderSettings.predictionDepth());
+        ponderPredictionBudgetCombo.setValue((int) savedPonderSettings.predictionBudget().toMillis());
+        ponderContinuationDepthCombo.setValue(savedPonderSettings.continuationDepth());
+        ponderContinuationBudgetCombo.setValue((int) savedPonderSettings.continuationBudget().toMillis());
         analysisEngineCombo.setItems(FXCollections.observableArrayList(positionAnalysisService.availableEngines()));
         savedAnalysisEngineDefaultId =
                 computerEngineSettingsService.defaultAnalysisEngineId().orElse(null);
@@ -505,6 +562,7 @@ public class SetupScreenController implements UiScreenController {
         }
         savedKnightshadeThinkingTime = computerEngineSettingsService.updateThinkingTime(
                 ComputerEngineIds.KNIGHTSHADE, knightshadeThinkingTimeCombo.getValue());
+        savedPonderSettings = computerEngineSettingsService.updatePonderSettings(selectedPonderSettings());
         savedAnalysisEngineDefaultId = effectiveAnalysisEngineDefaultId();
         computerEngineSettingsService.updateDefaultAnalysisEngineId(
                 Optional.ofNullable(savedAnalysisEngineDefaultId));
@@ -644,6 +702,7 @@ public class SetupScreenController implements UiScreenController {
                 || !trimmed(maiaWeightsPathField.getText()).equals(savedMaiaWeightsPath)
                 || !Objects.equals(
                         knightshadeThinkingTimeCombo.getValue(), savedKnightshadeThinkingTime)
+                || !Objects.equals(selectedPonderSettings(), savedPonderSettings)
                 || !Objects.equals(
                         effectiveAnalysisEngineDefaultId(), savedAnalysisEngineDefaultId)
                 || arenaTokenChanged

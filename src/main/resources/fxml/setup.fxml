@@ -100,6 +100,14 @@
                         <Label styleClass="card-copy" text="Knightshade is the engine built into LastMove. Give it more thinking time per move to make it play stronger." wrapText="true" />
                         <Label styleClass="settings-field-label" text="Thinking time per move" />
                         <ComboBox fx:id="knightshadeThinkingTimeCombo" maxWidth="Infinity" />
+                        <Label styleClass="settings-field-label" text="Anticipatory search (pondering)" />
+                        <Label styleClass="card-copy" text="While the opponent thinks, Knightshade may prepare one predicted continuation. This is opt-in and yields its reserved worker to every real move search." wrapText="true" />
+                        <CheckBox fx:id="ponderEnabledCheckBox" mnemonicParsing="false" styleClass="settings-check-box" text="Enable anticipatory search" />
+                        <CheckBox fx:id="ponderWorkerEnabledCheckBox" mnemonicParsing="false" styleClass="settings-check-box" text="Allow one speculative worker when available" />
+                        <Label styleClass="settings-field-label" text="Opponent prediction limit (depth / time)" />
+                        <HBox spacing="12.0"><ComboBox fx:id="ponderPredictionDepthCombo" maxWidth="Infinity" HBox.hgrow="ALWAYS" /><ComboBox fx:id="ponderPredictionBudgetCombo" maxWidth="Infinity" HBox.hgrow="ALWAYS" /></HBox>
+                        <Label styleClass="settings-field-label" text="Continuation limit (depth / time)" />
+                        <HBox spacing="12.0"><ComboBox fx:id="ponderContinuationDepthCombo" maxWidth="Infinity" HBox.hgrow="ALWAYS" /><ComboBox fx:id="ponderContinuationBudgetCombo" maxWidth="Infinity" HBox.hgrow="ALWAYS" /></HBox>
                         <Label styleClass="settings-field-label" text="Blood Pressure telemetry" />
                         <CheckBox fx:id="bloodPressureEnabledCheckBox" mnemonicParsing="false" text="Enable monitoring" />
                         <Label styleClass="settings-field-label" text="Refresh frequency" />

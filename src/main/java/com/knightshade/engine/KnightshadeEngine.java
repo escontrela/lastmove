@@ -12,11 +12,13 @@ import com.knightshade.engine.evaluation.Evaluator;
 import com.knightshade.engine.movegen.MoveGenerator;
 import com.knightshade.engine.search.IterativeDeepeningSearch;
 import com.knightshade.engine.search.ParallelRootSearch;
+import com.knightshade.engine.search.PonderSearchContext;
 import com.knightshade.engine.search.Search;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Default, dependency-free Knightshade engine assembly.
@@ -81,6 +83,25 @@ public final class KnightshadeEngine implements Engine {
         ? SearchTelemetryContext.unscoped(fen, board.sideToMove(), board.fullmoveNumber(), limits.toString(), positionHistory)
         : telemetryContext;
     return search.search(board, limits, stop, occurrences, listener, configuredThreads(), configuredThreads(), context);
+  }
+
+  /** Prepares one opponent prediction and a reusable, single-worker continuation context. */
+  public Optional<PonderSearchContext> preparePonder(String fen, List<String> positionHistory,
+      SearchLimits predictionLimits, SearchLimits continuationLimits, StopSignal stop) {
+    return preparePonder(fen, positionHistory, predictionLimits, continuationLimits, stop, () -> {});
+  }
+
+  public Optional<PonderSearchContext> preparePonder(String fen, List<String> positionHistory,
+      SearchLimits predictionLimits, SearchLimits continuationLimits, StopSignal stop,
+      Runnable continuationStarted) {
+    Objects.requireNonNull(fen, "fen must not be null");
+    Objects.requireNonNull(positionHistory, "positionHistory must not be null");
+    Objects.requireNonNull(stop, "stop must not be null");
+    Objects.requireNonNull(continuationStarted, "continuationStarted must not be null");
+    // Speculation uses one participant even when the ordinary search is parallel.
+    ParallelRootSearch ponderOwner = new ParallelRootSearch(1);
+    return PonderSearchContext.prepare(ponderOwner, fen, positionHistory,
+        predictionLimits, continuationLimits, stop, continuationStarted);
   }
 
   private int configuredThreads() {
