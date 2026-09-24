@@ -6,6 +6,7 @@ import com.escontrela.lastmove.application.computer.*;
 import com.escontrela.lastmove.domain.common.Square;
 import com.escontrela.lastmove.domain.game.*;
 import com.escontrela.lastmove.infrastructure.chesspresso.ChesspressoRulesEngine;
+import com.escontrela.lastmove.domain.notation.Fen;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
@@ -14,6 +15,50 @@ import java.util.concurrent.*;
 import org.junit.jupiter.api.Test;
 
 class ComputerVsComputerGameServiceTest {
+  @Test
+  void stopsLocalMatchWhenOnlyKingsRemainAfterACapture() throws Exception {
+    FakeEngine white = new FakeEngine("knightshade");
+    FakeEngine black = new FakeEngine("opponent");
+    var service = service(white, black, false, 8);
+    var configuration = new ComputerVsComputerConfiguration("knightshade", "opponent",
+        TimeControl.unlimited(), Duration.ofSeconds(1), Duration.ofSeconds(1),
+        Duration.ZERO, Optional.of(Fen.of("8/8/8/8/8/8/1k6/R3K3 b - - 0 1")));
+    try {
+      var created = service.createGame(configuration).toCompletableFuture().get(2, TimeUnit.SECONDS);
+      black.nextSearch().result.complete(move("b2", "a1"));
+
+      var finished = service.state(created.gameId());
+      assertEquals(ComputerGamePhase.FINISHED, finished.phase());
+      assertEquals(GameResult.DRAW, finished.result().orElseThrow());
+      assertEquals(GameTerminationReason.INSUFFICIENT_MATERIAL,
+          finished.terminationReason().orElseThrow());
+      assertTrue(white.searches.isEmpty());
+    } finally {
+      service.closeAll();
+    }
+  }
+
+  @Test
+  void startsLocalMatchWithBareKingsAlreadyDrawn() throws Exception {
+    FakeEngine white = new FakeEngine("knightshade");
+    FakeEngine black = new FakeEngine("opponent");
+    var service = service(white, black, false, 8);
+    var configuration = new ComputerVsComputerConfiguration("knightshade", "opponent",
+        TimeControl.unlimited(), Duration.ofSeconds(1), Duration.ofSeconds(1),
+        Duration.ZERO, Optional.of(Fen.of("8/8/8/8/8/8/1k6/4K3 w - - 0 1")));
+    try {
+      var state = service.createGame(configuration).toCompletableFuture().get(2, TimeUnit.SECONDS);
+      assertEquals(ComputerGamePhase.FINISHED, state.phase());
+      assertEquals(GameResult.DRAW, state.result().orElseThrow());
+      assertEquals(GameTerminationReason.INSUFFICIENT_MATERIAL,
+          state.terminationReason().orElseThrow());
+      assertTrue(white.searches.isEmpty());
+      assertTrue(black.searches.isEmpty());
+    } finally {
+      service.closeAll();
+    }
+  }
+
   @Test
   void pondersDuringOpponentSearchAndPreservesIdentityForItsNextTurn() throws Exception {
     FakeEngine white = new FakeEngine("knightshade");

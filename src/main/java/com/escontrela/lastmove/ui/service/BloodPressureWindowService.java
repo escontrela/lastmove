@@ -45,6 +45,10 @@ public final class BloodPressureWindowService {
       "null / LMR", "aspiration retries", "mate confirmations", "evaluation cache", "workers", "qsearch", "stand-pat",
       "move lists", "quiet checks", "SEE", "search", "NPS", "stopReason", "stop counters",
       "ponder starts", "ponder hit rate", "ponder reused depth");
+  private static final List<String> LEFT_HIGHLIGHTS = List.of(
+      "depth", "mainNodes", "qNodes", "post-depth time (ms)", "post-depth nodes", "beta cutoff", "PVS re-search");
+  private static final List<String> RIGHT_HIGHLIGHTS = List.of(
+      "NPS", "time to depth (ms)", "TT hit / cutoff", "workers", "evaluation cache", "qsearch", "null / LMR");
 
   private final Stage primaryStage;
   private final ApplicationThemeService themeService;
@@ -175,6 +179,7 @@ public final class BloodPressureWindowService {
     title.getStyleClass().add("app-title");
     Label subtitle = new Label("Knightshade search telemetry");
     subtitle.getStyleClass().add("hero-support");
+    VBox titleBlock = new VBox(2, title, subtitle);
     javafx.scene.control.Button metricsToggle = new javafx.scene.control.Button();
     metricsToggle.getStyleClass().addAll("message-box-button", "message-box-additional-button");
     metricsToggle.getStyleClass().add("blood-pressure-metrics-toggle");
@@ -214,9 +219,11 @@ public final class BloodPressureWindowService {
       item.getStyleClass().add("blood-pressure-metric-item");
       if ("stop counters".equals(metric)) item.getStyleClass().add("blood-pressure-stop-counters-item");
       metricCards.put(metric, item);
-      liveMetrics.getChildren().add(item);
       boolean visible = telemetryService.visibleMetrics().contains(metric);
       item.setVisible(visible); item.setManaged(visible);
+      if (!LEFT_HIGHLIGHTS.contains(metric) && !RIGHT_HIGHLIGHTS.contains(metric)) {
+        liveMetrics.getChildren().add(item);
+      }
     }
     mainNodesChart = new GameStatisticsChartControl();
     configureChartHeight(mainNodesChart);
@@ -227,10 +234,6 @@ public final class BloodPressureWindowService {
     npsChart = new GameStatisticsChartControl();
     configureChartHeight(npsChart);
     npsChart.renderTelemetry(List.of(), "NPS");
-    Label liveTitle = new Label("Live metrics");
-    liveTitle.getStyleClass().add("card-title");
-    Label liveHint = new Label("Values appear when Knightshade is thinking. Ponder metrics update after the opponent replies; enable Ponder in Settings → Knightshade.");
-    liveHint.getStyleClass().add("hero-support");
     javafx.scene.control.Button export = new javafx.scene.control.Button("Export CSV");
     export.getStyleClass().addAll("message-box-button", "message-box-accept-button");
     export.setOnAction(event -> exportCsv());
@@ -240,7 +243,10 @@ public final class BloodPressureWindowService {
     exportSummary.setOnAction(event -> exportSearchSummaryCsv());
     exportSummary.disableProperty().bind(active.not());
     HBox actions = new HBox(10, metricsToggle, export, exportSummary);
-    actions.setAlignment(Pos.CENTER_LEFT);
+    actions.setAlignment(Pos.TOP_RIGHT);
+    HBox.setHgrow(titleBlock, javafx.scene.layout.Priority.ALWAYS);
+    HBox titleRow = new HBox(16, titleBlock, actions);
+    titleRow.setAlignment(Pos.TOP_LEFT);
     Label chartsTitle = new Label("Search progress");
     chartsTitle.getStyleClass().add("card-title");
     javafx.scene.control.ScrollPane metricsScroll = new javafx.scene.control.ScrollPane(liveMetrics);
@@ -253,11 +259,35 @@ public final class BloodPressureWindowService {
     VBox chartsPane = new VBox(10, chartsTitle, mainNodesChart, depthChart, npsChart);
     chartsPane.getStyleClass().add("blood-pressure-charts-pane");
     chartsPane.setMaxWidth(Double.MAX_VALUE);
-    VBox metricsPane = new VBox(8, liveTitle, liveHint, metricsScroll);
+    HBox.setHgrow(chartsPane, javafx.scene.layout.Priority.ALWAYS);
+    VBox leftHighlights = highlightColumn(LEFT_HIGHLIGHTS);
+    VBox rightHighlights = highlightColumn(RIGHT_HIGHLIGHTS);
+    VBox metricsPane = new VBox(metricsScroll);
     metricsPane.getStyleClass().add("blood-pressure-metrics-pane");
-    VBox.setVgrow(metricsPane, javafx.scene.layout.Priority.ALWAYS);
-    root.getChildren().addAll(title, subtitle, actions, new Separator(), chartsPane, metricsPane);
+    metricsPane.setMinHeight(165);
+    VBox.setVgrow(metricsScroll, javafx.scene.layout.Priority.ALWAYS);
+    HBox dashboard = new HBox(12, leftHighlights, chartsPane, rightHighlights);
+    dashboard.getStyleClass().add("blood-pressure-dashboard");
+    dashboard.setMinHeight(0);
+    VBox.setVgrow(dashboard, javafx.scene.layout.Priority.ALWAYS);
+    root.getChildren().addAll(titleRow, new Separator(), dashboard, metricsPane);
     return root;
+  }
+
+  private VBox highlightColumn(List<String> metricNames) {
+    VBox column = new VBox(8);
+    column.getStyleClass().add("blood-pressure-highlight-column");
+    column.setMinWidth(190);
+    column.setPrefWidth(205);
+    column.setMaxWidth(225);
+    for (String metric : metricNames) {
+      VBox card = metricCards.get(metric);
+      if (card != null) {
+        card.getStyleClass().add("blood-pressure-highlight-card");
+        column.getChildren().add(card);
+      }
+    }
+    return column;
   }
 
   private static void configureChartHeight(GameStatisticsChartControl chart) {

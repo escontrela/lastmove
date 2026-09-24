@@ -46,4 +46,10 @@ public interface ComputerEngineSettingsRepository {
   default void savePonderSettings(PonderSettings settings) {
     // Not persisted by default; repositories that retain these preferences override this method.
   }
+
+  /** Whether Knightshade's optional bitboard move generator is enabled. */
+  default boolean findKnightshadeBitboardsEnabled() { return false; }
+
+  /** Persists the Knightshade bitboard move-generator preference. */
+  default void saveKnightshadeBitboardsEnabled(boolean enabled) { }
 }

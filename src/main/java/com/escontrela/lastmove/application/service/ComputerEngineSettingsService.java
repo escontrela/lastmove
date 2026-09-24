@@ -148,6 +148,14 @@ public final class ComputerEngineSettingsService {
     return required;
   }
 
+  public boolean knightshadeBitboardsEnabled() {
+    return repository.findKnightshadeBitboardsEnabled();
+  }
+
+  public void updateKnightshadeBitboardsEnabled(boolean enabled) {
+    repository.saveKnightshadeBitboardsEnabled(enabled);
+  }
+
   private static Path parsePath(String value, String description) {
     String required =
         Objects.requireNonNull(value, "executablePath must not be null").trim();

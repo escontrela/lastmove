@@ -1,6 +1,7 @@
 package com.escontrela.lastmove.domain.game;
 
 import com.escontrela.lastmove.domain.common.PieceColor;
+import com.escontrela.lastmove.domain.common.PieceType;
 import com.escontrela.lastmove.domain.common.Square;
 import java.util.List;
 import java.util.Objects;
@@ -49,5 +50,13 @@ public record PositionSnapshot(
       boolean check,
       boolean mate) {
     this(pieces, activeColor, CastlingRights.none(), Optional.empty(), 0, 1, lastMove, check, mate, false);
+  }
+
+  /** Both sides have only a king, so neither can ever checkmate. */
+  public boolean hasOnlyKings() {
+    return pieces.size() == 2
+        && pieces.get(0).type() == PieceType.KING
+        && pieces.get(1).type() == PieceType.KING
+        && pieces.get(0).color() != pieces.get(1).color();
   }
 }

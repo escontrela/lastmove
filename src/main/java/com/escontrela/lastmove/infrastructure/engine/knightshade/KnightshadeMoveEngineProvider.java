@@ -30,26 +30,30 @@ public final class KnightshadeMoveEngineProvider implements ComputerMoveEnginePr
   private final FenService fenService;
   private final KnightshadeTelemetryService telemetryService;
   private final Supplier<PonderSettings> ponderSettings;
+  private final Supplier<Boolean> bitboardsEnabled;
 
   public KnightshadeMoveEngineProvider(FenService fenService) {
-    this(fenService, new KnightshadeTelemetryService(), PonderSettings::defaults);
+    this(fenService, new KnightshadeTelemetryService(), PonderSettings::defaults, () -> false);
   }
 
   public KnightshadeMoveEngineProvider(FenService fenService, KnightshadeTelemetryService telemetryService) {
-    this(fenService, telemetryService, PonderSettings::defaults);
+    this(fenService, telemetryService, PonderSettings::defaults, () -> false);
   }
 
   @Autowired
   public KnightshadeMoveEngineProvider(FenService fenService,
       KnightshadeTelemetryService telemetryService, ComputerEngineSettingsService settingsService) {
-    this(fenService, telemetryService, settingsService::ponderSettings);
+    this(fenService, telemetryService, settingsService::ponderSettings,
+        settingsService::knightshadeBitboardsEnabled);
   }
 
   private KnightshadeMoveEngineProvider(FenService fenService,
-      KnightshadeTelemetryService telemetryService, Supplier<PonderSettings> ponderSettings) {
+      KnightshadeTelemetryService telemetryService, Supplier<PonderSettings> ponderSettings,
+      Supplier<Boolean> bitboardsEnabled) {
     this.fenService = Objects.requireNonNull(fenService, "fenService must not be null");
     this.telemetryService = Objects.requireNonNull(telemetryService, "telemetryService must not be null");
     this.ponderSettings = Objects.requireNonNull(ponderSettings, "ponderSettings must not be null");
+    this.bitboardsEnabled = Objects.requireNonNull(bitboardsEnabled, "bitboardsEnabled must not be null");
   }
 
   @Override
@@ -59,7 +63,9 @@ public final class KnightshadeMoveEngineProvider implements ComputerMoveEnginePr
 
   @Override
   public ComputerMoveEngine create() {
-    return new KnightshadeMoveEngine(new KnightshadeEngine(), fenService, DESCRIPTOR,
+    int workers = Integer.getInteger("knightshade.threads",
+        Math.min(4, Runtime.getRuntime().availableProcessors()));
+    return new KnightshadeMoveEngine(new KnightshadeEngine(workers, bitboardsEnabled.get()), fenService, DESCRIPTOR,
         telemetryService, ponderSettings);
   }
 

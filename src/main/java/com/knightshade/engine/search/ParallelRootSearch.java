@@ -13,6 +13,8 @@ import com.knightshade.engine.board.Move;
 import com.knightshade.engine.evaluation.Evaluator;
 import com.knightshade.engine.evaluation.PositionalEvaluator;
 import com.knightshade.engine.movegen.LegalMoveGenerator;
+import com.knightshade.engine.movegen.BitboardMoveGenerator;
+import com.knightshade.engine.movegen.MoveGenerator;
 import com.knightshade.engine.ordering.HistoryTable;
 import com.knightshade.engine.ordering.KillerMoves;
 import com.knightshade.engine.ordering.MvvLvaMoveOrderer;
@@ -40,13 +42,26 @@ public final class ParallelRootSearch implements Search {
   private static final int MAX_THREADS = 32;
   private static final AtomicInteger POOL_IDS = new AtomicInteger();
   private final int threads;
+  private final boolean bitboards;
   private final Supplier<? extends Evaluator> evaluators;
   private final ThreadLocal<SearchTelemetryListener> telemetryListeners =
       ThreadLocal.withInitial(() -> SearchTelemetryListener.NONE);
   private final ThreadLocal<SearchTelemetryContext> telemetryContexts = new ThreadLocal<>();
 
   public ParallelRootSearch(int threads) {
-    this(threads, PositionalEvaluator::new);
+    this(threads, false);
+  }
+
+  public ParallelRootSearch(int threads, boolean bitboards) {
+    this(threads, bitboards, PositionalEvaluator::new);
+  }
+
+  private MoveGenerator moveGenerator() {
+    return bitboards ? new BitboardMoveGenerator() : new LegalMoveGenerator();
+  }
+
+  public List<Move> generateLegalMoves(Board board) {
+    return moveGenerator().generate(board);
   }
 
   public int threads() { return threads; }
@@ -57,7 +72,7 @@ public final class ParallelRootSearch implements Search {
     Objects.requireNonNull(root, "root must not be null");
     Objects.requireNonNull(positionOccurrences, "positionOccurrences must not be null");
     IterativeDeepeningSearch iterative =
-        new IterativeDeepeningSearch(new LegalMoveGenerator(), evaluators.get());
+        new IterativeDeepeningSearch(moveGenerator(), evaluators.get());
     return new ContinuationContext(iterative,
         iterative.newContext(root, positionOccurrences));
   }
@@ -119,10 +134,15 @@ public final class ParallelRootSearch implements Search {
 
   /** The supplier must return a fresh evaluator for each worker. */
   ParallelRootSearch(int threads, Supplier<? extends Evaluator> evaluators) {
+    this(threads, false, evaluators);
+  }
+
+  private ParallelRootSearch(int threads, boolean bitboards, Supplier<? extends Evaluator> evaluators) {
     if (threads < 1 || threads > MAX_THREADS) {
       throw new IllegalArgumentException("threads must be between 1 and " + MAX_THREADS);
     }
     this.threads = threads;
+    this.bitboards = bitboards;
     this.evaluators = Objects.requireNonNull(evaluators);
   }
 
@@ -155,7 +175,7 @@ public final class ParallelRootSearch implements Search {
     SearchTelemetryContext telemetryContext = telemetryContexts.get();
     boolean telemetryEnabled = telemetryListener != SearchTelemetryListener.NONE;
     if (threads == 1) {
-      IterativeDeepeningSearch sequential = new IterativeDeepeningSearch(new LegalMoveGenerator(), evaluators.get());
+      IterativeDeepeningSearch sequential = new IterativeDeepeningSearch(moveGenerator(), evaluators.get());
       return telemetryEnabled
           ? sequential.search(board.copy(), limits, stop, positionOccurrences, telemetryListener,
               threads, 1, telemetryContext)
@@ -163,7 +183,7 @@ public final class ParallelRootSearch implements Search {
     }
 
     Board root = board.copy();
-    List<Move> legal = new LegalMoveGenerator().generate(root);
+    List<Move> legal = moveGenerator().generate(root);
     if (legal.isEmpty()) {
       SearchResult result = new SearchResult(null, root.inCheck(root.sideToMove()) ? -Scores.MATE : 0,
           0, 0, elapsedMillis(started));
@@ -183,7 +203,7 @@ public final class ParallelRootSearch implements Search {
 
     int workerCount = Math.min(threads, legal.size());
     List<Worker> workers = new ArrayList<>();
-    workers.add(new Worker(root, positionOccurrences, evaluators.get(), telemetryEnabled, threads, workerCount));
+        workers.add(new Worker(root, positionOccurrences, evaluators.get(), telemetryEnabled, threads, workerCount, bitboards));
     ExecutorService executor = workerCount > 1
         ? Executors.newFixedThreadPool(workerCount - 1,
             Thread.ofPlatform().daemon(true)
@@ -196,7 +216,7 @@ public final class ParallelRootSearch implements Search {
         // own caches between subsequent depths and aspiration attempts in this invocation.
         if (depth == 3) {
           while (workers.size() < workerCount && !requestStop.shouldStop()) {
-            workers.add(new Worker(root, positionOccurrences, evaluators.get(), telemetryEnabled, threads, workerCount));
+            workers.add(new Worker(root, positionOccurrences, evaluators.get(), telemetryEnabled, threads, workerCount, bitboards));
           }
         }
         int delta = 25;
@@ -433,11 +453,11 @@ public final class ParallelRootSearch implements Search {
     private final IterativeDeepeningSearch search;
 
     private Worker(Board root, Map<Long, Integer> occurrences, Evaluator evaluator,
-        boolean telemetryEnabled, int requestedWorkers, int effectiveWorkers) {
+        boolean telemetryEnabled, int requestedWorkers, int effectiveWorkers, boolean bitboards) {
       board = root.copy();
       repetitions = new HashMap<>(occurrences);
       repetitions.putIfAbsent(board.zobristKey(), 1);
-      search = new IterativeDeepeningSearch(new LegalMoveGenerator(), evaluator);
+      search = new IterativeDeepeningSearch(bitboards ? new BitboardMoveGenerator() : new LegalMoveGenerator(), evaluator);
       if (telemetryEnabled) search.enableTelemetry(requestedWorkers, effectiveWorkers);
     }
 
