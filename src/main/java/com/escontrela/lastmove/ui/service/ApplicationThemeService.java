@@ -14,6 +14,8 @@ public class ApplicationThemeService {
 
     private static final String NIGHT_MODE_STYLE_CLASS = "night-mode";
     private static final String NIGHT_MODE_PREFERENCE = "night-mode";
+    private static final String LOOK_PREFERENCE = "application-look";
+    public enum Look { CLASSIC, MODERN }
 
     private final Preferences preferences = Preferences.userNodeForPackage(ApplicationThemeService.class);
     private final Set<Parent> registeredRoots =
@@ -25,6 +27,7 @@ public class ApplicationThemeService {
         }
         registeredRoots.add(root);
         applyTheme(root, currentThemeMode());
+        applyLook(root, currentLook());
     }
 
     public ApplicationThemeMode currentThemeMode() {
@@ -40,7 +43,18 @@ public class ApplicationThemeService {
 
     public void refreshRegisteredRoots() {
         ApplicationThemeMode themeMode = currentThemeMode();
-        registeredRoots.forEach(root -> applyTheme(root, themeMode));
+        Look look = currentLook();
+        registeredRoots.forEach(root -> { applyTheme(root, themeMode); applyLook(root, look); });
+    }
+
+    public Look currentLook() {
+        try { return Look.valueOf(preferences.get(LOOK_PREFERENCE, Look.CLASSIC.name())); }
+        catch (IllegalArgumentException ignored) { return Look.CLASSIC; }
+    }
+
+    public void setLook(Look look) {
+        preferences.put(LOOK_PREFERENCE, java.util.Objects.requireNonNull(look).name());
+        refreshRegisteredRoots();
     }
 
     private void applyTheme(Parent root, ApplicationThemeMode mode) {
@@ -48,5 +62,10 @@ public class ApplicationThemeService {
         if (mode.isNightMode()) {
             root.getStyleClass().add(NIGHT_MODE_STYLE_CLASS);
         }
+    }
+
+    private void applyLook(Parent root, Look look) {
+        root.getStyleClass().removeAll("look-classic", "look-modern");
+        root.getStyleClass().add(look == Look.MODERN ? "look-modern" : "look-classic");
     }
 }

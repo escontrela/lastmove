@@ -5,6 +5,7 @@ import javafx.stage.Window;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.Optional;
 
 /**
@@ -91,6 +92,30 @@ public class FileChooserFactory {
                 new FileChooser.ExtensionFilter("All Files", "*.*")
         );
         return Optional.ofNullable(chooser.showOpenDialog(owner));
+    }
+
+    /** Opens a save dialog to choose the SQLite database file, including a new destination. */
+    public Optional<File> chooseDatabaseFile(Window owner, Path currentPath) {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Choose LastMove database file");
+        chooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("SQLite database", "*.db"),
+                new FileChooser.ExtensionFilter("All files", "*.*"));
+        if (currentPath != null) {
+            Path parent = currentPath.toAbsolutePath().getParent();
+            if (parent != null && parent.toFile().isDirectory()) {
+                chooser.setInitialDirectory(parent.toFile());
+            }
+            chooser.setInitialFileName(currentPath.getFileName().toString());
+        } else {
+            chooser.setInitialFileName("lastmove.db");
+        }
+        return Optional.ofNullable(chooser.showSaveDialog(owner)).map(this::withDatabaseExtension);
+    }
+
+    private File withDatabaseExtension(File file) {
+        return file.getName().toLowerCase(java.util.Locale.ROOT).endsWith(".db")
+                ? file : new File(file.getAbsolutePath() + ".db");
     }
 
     private File withPgnExtension(File file) {

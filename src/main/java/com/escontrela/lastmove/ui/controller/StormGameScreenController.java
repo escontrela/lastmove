@@ -357,8 +357,7 @@ public final class StormGameScreenController implements UiScreenController {
   }
 
   private void stopStormSounds() {
-    // Only the ambient and urgent-clock clips are loops. Stopping every preloaded one-shot
-    // AudioClip on the JavaFX thread caused a noticeable UI stall when muting Storm.
+    // Only active loops need stopping when muting; one-shot effects finish naturally.
     stopBackgroundMusic();
     stopUrgentClockPulse();
     stopUrgentClockSound();

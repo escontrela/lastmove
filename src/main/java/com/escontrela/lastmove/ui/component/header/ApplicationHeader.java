@@ -7,7 +7,6 @@ import com.escontrela.lastmove.ui.service.FadeEffectsService;
 import java.util.Objects;
 import java.util.Optional;
 import javafx.collections.ListChangeListener;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -28,7 +27,7 @@ public final class ApplicationHeader extends HBox {
   private final ToolbarIconButton backButton =
       iconButton("Go home", "Home", "/images/home_35dp_000000.png", "/images/home_35dp_FFFFFF.png");
   private final HBox breadcrumbs = new HBox(8.0);
-  private final HBox contextActions = new HBox(8.0);
+  private final HBox contextActions = new HBox(4.0);
   private final ToolbarIconButton statisticsButton =
       iconButton(
           "Open statistics",
@@ -43,6 +42,8 @@ public final class ApplicationHeader extends HBox {
           "/images/dark_mode_35dp_FFFFFF.png");
   private final CurrentUserAvatarControl currentUserAvatar = new CurrentUserAvatarControl();
   private final TextField homeSearch = new TextField();
+  private final Region actionSeparator = new Region();
+  private final HBox actionBar = new HBox(4.0);
   private Timeline homeSearchWidthAnimation;
 
   public ApplicationHeader() {
@@ -73,6 +74,7 @@ public final class ApplicationHeader extends HBox {
     breadcrumbs.setMaxWidth(Double.MAX_VALUE);
     HBox.setHgrow(breadcrumbs, Priority.ALWAYS);
     contextActions.setAlignment(Pos.CENTER);
+    contextActions.getStyleClass().add("application-header-context-actions");
     homeSearch.setPromptText("Search");
     homeSearch.setVisible(false);
     homeSearch.setManaged(false);
@@ -80,9 +82,16 @@ public final class ApplicationHeader extends HBox {
     homeSearch.setMinWidth(190.0);
     homeSearch.setMaxWidth(340.0);
     homeSearch.getStyleClass().add("application-header-home-search");
-    HBox.setMargin(homeSearch, new Insets(0, 4, 0, 4));
+    homeSearch.setAccessibleText("Search home cards");
     homeSearch.focusedProperty().addListener((ignored, wasFocused, focused) ->
         animateHomeSearchWidth(focused ? 320.0 : 190.0));
+    actionSeparator.getStyleClass().add("application-header-action-separator");
+    actionSeparator.setManaged(false);
+    actionSeparator.setVisible(false);
+    actionBar.getStyleClass().add("application-header-action-bar");
+    actionBar.setAlignment(Pos.CENTER);
+    actionBar.getChildren()
+        .setAll(homeSearch, actionSeparator, statisticsButton, themeToggleButton, contextActions);
     Region spacer = new Region();
     HBox.setHgrow(spacer, Priority.ALWAYS);
 
@@ -94,11 +103,9 @@ public final class ApplicationHeader extends HBox {
             backButton,
             breadcrumbs,
             spacer,
-            homeSearch,
-            statisticsButton,
-            themeToggleButton,
-            contextActions,
+            actionBar,
             currentUserAvatar);
+    refreshActionBarVisibility();
     configure(HeaderConfiguration.builder().build());
   }
 
@@ -111,6 +118,7 @@ public final class ApplicationHeader extends HBox {
       homeSearchListener = (obs, oldValue, newValue) -> listener.accept(newValue);
       homeSearch.textProperty().addListener(homeSearchListener);
     }
+    refreshActionBarVisibility();
   }
 
   private javafx.beans.value.ChangeListener<String> homeSearchListener =
@@ -139,6 +147,7 @@ public final class ApplicationHeader extends HBox {
     currentUserAvatar.setDisplayName(configuration.currentUserName());
     currentUserAvatar.setPhoto(configuration.currentUserPhoto());
     currentUserAvatar.setOnAction(configuration.onAvatar());
+    refreshActionBarVisibility();
   }
 
   /**
@@ -259,6 +268,21 @@ public final class ApplicationHeader extends HBox {
                       return button;
                     })
                 .toList());
+    contextActions.setVisible(!actions.isEmpty());
+    contextActions.setManaged(!actions.isEmpty());
+    refreshActionBarVisibility();
+  }
+
+  private void refreshActionBarVisibility() {
+    boolean hasSearch = homeSearch.isManaged() && homeSearch.isVisible();
+    boolean hasActions = (statisticsButton.isManaged() && statisticsButton.isVisible())
+        || (themeToggleButton.isManaged() && themeToggleButton.isVisible())
+        || (contextActions.isManaged() && contextActions.isVisible());
+    actionSeparator.setManaged(hasSearch && hasActions);
+    actionSeparator.setVisible(hasSearch && hasActions);
+    boolean hasContent = hasSearch || hasActions;
+    actionBar.setManaged(hasContent);
+    actionBar.setVisible(hasContent);
   }
 
   private void configureAction(

@@ -1239,6 +1239,16 @@
 .home-knightshade-banner .knightshade-description,
 .home-knightshade-banner .knightshade-arena-activity { -fx-text-fill: #b5c2d2; }
 
+/* Modern application look: feature artwork is provided by the v4 card set. */
+.look-modern .home-analysis-card, .night-mode.look-modern .home-analysis-card { -fx-background-image: url("/images/card-background-v4-analysis.png"); }
+.look-modern .home-studies-card, .night-mode.look-modern .home-studies-card { -fx-background-image: url("/images/card-background-v4-studies.png"); }
+.look-modern .home-tactics-card, .night-mode.look-modern .home-tactics-card { -fx-background-image: url("/images/card-background-v4-tactics.png"); }
+.look-modern .home-computer-card, .night-mode.look-modern .home-computer-card { -fx-background-image: url("/images/card-background-v4-play.png"); }
+.look-modern .home-games-card, .night-mode.look-modern .home-games-card { -fx-background-image: url("/images/card-background-v4-games.png"); }
+.look-modern .home-position-card, .night-mode.look-modern .home-position-card { -fx-background-image: url("/images/card-background-v4-position-editor.png"); }
+.look-modern .home-storm-card, .night-mode.look-modern .home-storm-card { -fx-background-image: url("/images/card-background-v4-training-storm.png"); }
+.look-modern .home-knightshade-banner, .night-mode.look-modern .home-knightshade-banner { -fx-background-image: url("/images/card-background-v4-lichess-bot.png"); }
+
 .knightshade-kicker {
     -fx-font-size: 12px;
     -fx-font-weight: 800;
@@ -5008,3 +5018,102 @@
 .night-mode.blood-pressure-window .blood-pressure-metric-caption { -fx-text-fill: #e7c77e; }
 .night-mode.blood-pressure-window .blood-pressure-metric-current,
 .night-mode.blood-pressure-window .blood-pressure-metric-summary-value { -fx-text-fill: #f1f3f5; }
+
+/* Keep the selected v4 card artwork above the later legacy per-card rules.
+   These selectors cover both light and dark roots because look-modern is
+   applied independently of night-mode. */
+.look-modern .home-action-grid > .home-analysis-card { -fx-background-image: url("/images/card-background-v4-analysis.png"); }
+.look-modern .home-action-grid > .home-studies-card { -fx-background-image: url("/images/card-background-v4-studies.png"); }
+.look-modern .home-action-grid > .home-tactics-card { -fx-background-image: url("/images/card-background-v4-tactics.png"); }
+.look-modern .home-action-grid > .home-play-card { -fx-background-image: url("/images/card-background-v4-play.png"); }
+.look-modern .home-action-grid > .home-games-card { -fx-background-image: url("/images/card-background-v4-games.png"); }
+.look-modern .home-action-grid > .home-position-card { -fx-background-image: url("/images/card-background-v4-position-editor.png"); }
+.look-modern .home-action-grid > .home-vs-computer-card { -fx-background-image: url("/images/card-background-v4-computer-vs-computer.png"); }
+.look-modern .home-action-grid > .home-training-card { -fx-background-image: url("/images/card-background-v4-training-memory.png"); }
+.look-modern .home-action-grid > .home-storm-card { -fx-background-image: url("/images/card-background-v4-training-storm.png"); }
+.look-modern .home-action-grid > .home-knightshade-banner { -fx-background-image: url("/images/card-background-v4-lichess-bot.png"); }
+
+/* Unify the Home search and quick actions into one compact command bar. */
+.application-header-action-bar {
+    -fx-alignment: center;
+    -fx-spacing: 4px;
+    -fx-padding: 4px;
+    -fx-background-color: #e8edf3;
+    -fx-background-radius: 15px;
+    -fx-border-color: #d2dbe6;
+    -fx-border-width: 1px;
+    -fx-border-radius: 15px;
+    -fx-effect: dropshadow(gaussian, rgba(20, 33, 61, 0.09), 10, 0.12, 0, 2);
+}
+.application-header-action-bar .application-header-home-search {
+    -fx-background-color: transparent;
+    -fx-background-radius: 999px;
+    -fx-border-color: transparent;
+    -fx-border-radius: 999px;
+    -fx-padding: 8px 12px;
+    -fx-prompt-text-fill: #7a8798;
+    -fx-text-fill: #172033;
+}
+.application-header-action-bar .application-header-home-search:focused {
+    -fx-background-color: #f9fbfd;
+    -fx-border-color: rgba(212, 168, 95, 0.72);
+}
+.application-header-action-separator {
+    -fx-min-width: 1px;
+    -fx-pref-width: 1px;
+    -fx-max-width: 1px;
+    -fx-min-height: 22px;
+    -fx-pref-height: 22px;
+    -fx-max-height: 22px;
+    -fx-background-color: #dce2ea;
+}
+.application-header-action-bar > .toolbar-icon-button,
+.application-header-action-bar .application-header-context-actions > .toolbar-icon-button {
+    -fx-min-width: 34px;
+    -fx-pref-width: 34px;
+    -fx-max-width: 34px;
+    -fx-min-height: 34px;
+    -fx-pref-height: 34px;
+    -fx-max-height: 34px;
+    -fx-padding: 8px;
+    -fx-background-color: transparent;
+    -fx-background-radius: 10px;
+    -fx-border-color: transparent;
+    -fx-border-radius: 10px;
+    -fx-effect: none;
+}
+.application-header-action-bar > .toolbar-icon-button:hover,
+.application-header-action-bar .application-header-context-actions > .toolbar-icon-button:hover {
+    -fx-background-color: rgba(212, 168, 95, 0.24);
+    -fx-border-color: rgba(212, 168, 95, 0.42);
+    -fx-effect: none;
+}
+.application-header-action-bar > .toolbar-icon-button:pressed,
+.application-header-action-bar .application-header-context-actions > .toolbar-icon-button:pressed {
+    -fx-background-color: rgba(212, 168, 95, 0.42);
+    -fx-border-color: rgba(212, 168, 95, 0.62);
+}
+.night-mode .application-header-action-bar {
+    -fx-background-color: #263446;
+    -fx-border-color: #40546d;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.24), 10, 0.12, 0, 2);
+}
+.night-mode .application-header-action-bar .application-header-home-search {
+    -fx-prompt-text-fill: #9eafc1;
+    -fx-text-fill: #f4f7fb;
+}
+.night-mode .application-header-action-bar .application-header-home-search:focused {
+    -fx-background-color: #243243;
+    -fx-border-color: rgba(212, 168, 95, 0.78);
+}
+.night-mode .application-header-action-separator { -fx-background-color: #40516a; }
+.night-mode .application-header-action-bar > .toolbar-icon-button,
+.night-mode .application-header-action-bar .application-header-context-actions > .toolbar-icon-button {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+.night-mode .application-header-action-bar > .toolbar-icon-button:hover,
+.night-mode .application-header-action-bar .application-header-context-actions > .toolbar-icon-button:hover {
+    -fx-background-color: rgba(212, 168, 95, 0.25);
+    -fx-border-color: rgba(212, 168, 95, 0.48);
+}

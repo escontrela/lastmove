@@ -46,6 +46,9 @@
                         <Label styleClass="card-title" text="Night mode" />
                         <Label styleClass="card-copy" text="Use the dark LastMove workspace across every screen. This preference is saved for your next session." wrapText="true" />
                         <CheckBox fx:id="nightModeCheckBox" mnemonicParsing="false" styleClass="settings-check-box" text="Enable night mode" />
+                        <Label styleClass="card-title" text="Application look and feel" />
+                        <Label styleClass="card-copy" text="Choose the classic workspace or the modern workspace with the new v4 cards." wrapText="true" />
+                        <FlowPane fx:id="applicationLookChoices" hgap="10.0" prefWrapLength="410.0" vgap="10.0" styleClass="appearance-choice-grid" />
                         <Label styleClass="card-title" text="Board visual effects" />
                         <Label styleClass="card-copy" text="Add a soft halo around chess boards and a subtle gradient to their squares. Works in day and night mode." wrapText="true" />
                         <CheckBox fx:id="boardVisualEffectsCheckBox" mnemonicParsing="false" styleClass="settings-check-box" text="Enable board glow and square gradients" />
@@ -150,6 +153,18 @@
                         <Label styleClass="card-copy" text="Filters are shared by studies, tactic suites and saved games. The number beside each filter is its assigned asset count." wrapText="true" />
                         <FlowPane fx:id="settingsFilters" hgap="8.0" vgap="8.0" prefWrapLength="600.0" />
                         <Button mnemonicParsing="false" onAction="#manageFilters" styleClass="message-box-button, message-box-accept-button" text="Manage filters" />
+                    </VBox>
+                    <VBox fx:id="databaseGroup" maxWidth="760.0" spacing="12.0" styleClass="setup-card">
+                        <padding><Insets bottom="32.0" left="32.0" right="32.0" top="32.0" /></padding>
+                        <Label styleClass="eyebrow-label" text="Storage" />
+                        <Label styleClass="card-title" text="Database location" />
+                        <Label styleClass="card-copy" text="Choose where LastMove stores games, studies, profiles and settings data. The default is the current application folder. Close and reopen LastMove for a new location to take effect." wrapText="true" />
+                        <Label styleClass="settings-field-label" text="SQLite database file" />
+                        <HBox alignment="CENTER_LEFT" spacing="12.0">
+                            <TextField fx:id="databasePathField" maxWidth="Infinity" promptText="Path to lastmove.db" styleClass="settings-text-field" HBox.hgrow="ALWAYS" />
+                            <Button mnemonicParsing="false" onAction="#browseDatabasePath" styleClass="message-box-button, message-box-additional-button" text="Browse…" />
+                        </HBox>
+                        <Label fx:id="databasePathValidationLabel" maxWidth="Infinity" styleClass="settings-validation-message" wrapText="true" />
                     </VBox>
                     <VBox fx:id="navigationGroup" maxWidth="680.0" spacing="12.0" styleClass="setup-card">
                         <padding><Insets bottom="32.0" left="32.0" right="32.0" top="32.0" /></padding>

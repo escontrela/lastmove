@@ -14,7 +14,7 @@
 
     <groupId>com.escontrela</groupId>
     <artifactId>lastmove</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>1.0.0</version>
     <name>LastMove</name>
     <description>Open-source chess suite for playing, studying, analyzing, and replaying games.</description>
 

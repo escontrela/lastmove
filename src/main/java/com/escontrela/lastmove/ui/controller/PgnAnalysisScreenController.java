@@ -198,7 +198,6 @@ public class PgnAnalysisScreenController implements UiScreenController {
                     activeAnalysisSessionId,
                     new MoveCommand(
                         moveInput.fromSquare(), moveInput.toSquare(), moveInput.promotionPiece()));
-
             if (moveResult.accepted()) {
               renderBoard(moveResult.newSnapshot());
               refreshMoveList();
