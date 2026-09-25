@@ -26,6 +26,8 @@ import com.escontrela.lastmove.ui.screen.UiScreenId;
 import com.escontrela.lastmove.ui.service.ApplicationThemeService;
 import com.escontrela.lastmove.ui.service.BoardAppearancePreferencesService;
 import com.escontrela.lastmove.ui.service.StartupPreferencesService;
+import com.escontrela.lastmove.ui.service.DatabaseLocationPreferencesService;
+import com.escontrela.lastmove.ui.support.FileChooserFactory;
 import java.time.Duration;
 import java.util.List;
 import java.util.EnumMap;
@@ -52,6 +54,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.VBox;
+import javafx.stage.Window;
 import javafx.util.StringConverter;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -70,13 +73,15 @@ public class SetupScreenController implements UiScreenController {
     private final KnightshadeArenaSettingsService knightshadeArenaSettingsService;
     private final TagService tagService;
     private final KnightshadeTelemetryService telemetryService;
+    private final DatabaseLocationPreferencesService databaseLocationPreferencesService;
+    private final FileChooserFactory fileChooserFactory;
 
     @FXML
     private BorderPane root;
     @FXML private ScrollPane setupScrollPane;
     @FXML private SettingsNavigationControl settingsNavigation;
     @FXML private VBox setupContent, appearanceGroup, sunfishGroup, maiaGroup, knightshadeGroup,
-            arenaGroup, analysisGroup, filtersGroup, navigationGroup;
+            arenaGroup, analysisGroup, filtersGroup, databaseGroup, navigationGroup;
     @FXML private FlowPane settingsFilters;
     @FXML private FlowPane boardAppearanceChoices;
     @FXML private FlowPane chessPieceSetChoices;
@@ -135,6 +140,8 @@ public class SetupScreenController implements UiScreenController {
     private Button validateLichessAccountButton;
     @FXML
     private Label lichessValidationLabel;
+    @FXML private TextField databasePathField;
+    @FXML private Label databasePathValidationLabel;
 
     private static final List<Duration> THINKING_TIME_PRESETS = List.of(
             Duration.ofMillis(500),
@@ -198,6 +205,7 @@ public class SetupScreenController implements UiScreenController {
     private String savedAnalysisEngineDefaultId;
     private KnightshadeArenaSettings savedArenaSettings;
     private boolean arenaTokenChanged;
+    private String savedDatabasePath;
     private boolean loadingArenaToken;
     private final Map<BoardAppearancePreset, Button> boardChoiceButtons = new EnumMap<>(BoardAppearancePreset.class);
     private final Map<ChessPieceSet, Button> pieceSetChoiceButtons = new EnumMap<>(ChessPieceSet.class);
@@ -212,7 +220,9 @@ public class SetupScreenController implements UiScreenController {
             ComputerEngineHealthService computerEngineHealthService,
             PositionAnalysisService positionAnalysisService,
             KnightshadeArenaSettingsService knightshadeArenaSettingsService,
-            TagService tagService, KnightshadeTelemetryService telemetryService) {
+            TagService tagService, KnightshadeTelemetryService telemetryService,
+            DatabaseLocationPreferencesService databaseLocationPreferencesService,
+            FileChooserFactory fileChooserFactory) {
         this.uiFlowManager = uiFlowManager;
         this.themeService = themeService;
         this.startupPreferencesService = startupPreferencesService;
@@ -223,6 +233,8 @@ public class SetupScreenController implements UiScreenController {
         this.knightshadeArenaSettingsService = knightshadeArenaSettingsService;
         this.tagService = tagService;
         this.telemetryService = telemetryService;
+        this.databaseLocationPreferencesService = databaseLocationPreferencesService;
+        this.fileChooserFactory = fileChooserFactory;
     }
 
     @FXML
@@ -235,6 +247,7 @@ public class SetupScreenController implements UiScreenController {
         settingsNavigation.addItem("arena", "Knightshade Arena");
         settingsNavigation.addItem("analysis", "Analysis");
         settingsNavigation.addItem("filters", "Filters");
+        settingsNavigation.addItem("database", "Database");
         settingsNavigation.addItem("navigation", "Navigation");
         settingsNavigation.setOnItemSelected(key -> {
             switch (key) {
@@ -245,6 +258,7 @@ public class SetupScreenController implements UiScreenController {
                 case "arena" -> scrollToArena();
                 case "analysis" -> scrollToAnalysis();
                 case "filters" -> scrollToFilters();
+                case "database" -> scrollToDatabase();
                 case "navigation" -> scrollToNavigation();
                 default -> { }
             }
@@ -288,6 +302,12 @@ public class SetupScreenController implements UiScreenController {
         });
         maiaWeightsPathField.textProperty().addListener((ignored, oldValue, newValue) -> {
             clearMaiaValidation();
+            updateApplyButtonVisibility();
+        });
+        databasePathField.textProperty().addListener((ignored, oldValue, newValue) -> {
+            databasePathValidationLabel.setText("");
+            databasePathValidationLabel.getStyleClass().removeAll(
+                    "settings-validation-error", "settings-validation-success");
             updateApplyButtonVisibility();
         });
         knightshadeThinkingTimeCombo.setItems(FXCollections.observableArrayList(THINKING_TIME_PRESETS));
@@ -501,17 +521,17 @@ public class SetupScreenController implements UiScreenController {
         double range = setupContent.getHeight() - setupScrollPane.getViewportBounds().getHeight();
         double offset = range <= 0 ? 0 : setupScrollPane.getVvalue() * range;
         VBox selected = appearanceGroup;
-        for (VBox group : List.of(appearanceGroup, sunfishGroup, maiaGroup, knightshadeGroup, arenaGroup, analysisGroup, filtersGroup, navigationGroup)) {
+        for (VBox group : List.of(appearanceGroup, sunfishGroup, maiaGroup, knightshadeGroup, arenaGroup, analysisGroup, filtersGroup, databaseGroup, navigationGroup)) {
             if (group != null && group.getLayoutY() <= offset + 80) selected = group;
         }
         updateNavigationSelection(selected);
     }
 
     private void updateNavigationSelection(VBox selected) {
-        List<VBox> groups = List.of(appearanceGroup, sunfishGroup, maiaGroup, knightshadeGroup, arenaGroup, analysisGroup, filtersGroup, navigationGroup);
+        List<VBox> groups = List.of(appearanceGroup, sunfishGroup, maiaGroup, knightshadeGroup, arenaGroup, analysisGroup, filtersGroup, databaseGroup, navigationGroup);
         int index = groups.indexOf(selected);
         if (index >= 0) settingsNavigation.setSelectedKey(
-                List.of("appearance", "sunfish", "maia", "knightshade", "arena", "analysis", "filters", "navigation").get(index));
+                List.of("appearance", "sunfish", "maia", "knightshade", "arena", "analysis", "filters", "database", "navigation").get(index));
     }
 
     @Override
@@ -522,6 +542,7 @@ public class SetupScreenController implements UiScreenController {
         pendingLook = savedLook;
         refreshLookChoices();
         savedSplashScreen = startupPreferencesService.isSplashScreenEnabled();
+        savedDatabasePath = databaseLocationPreferencesService.currentDatabasePath().toString();
         savedBoardVisualEffects = boardAppearancePreferencesService.isBoardVisualEffectsEnabled();
         savedBoardAppearancePreset = boardAppearancePreferencesService.getBoardAppearancePreset();
         savedChessPieceSet = boardAppearancePreferencesService.getChessPieceSet();
@@ -548,6 +569,8 @@ public class SetupScreenController implements UiScreenController {
         sunfishExecutablePathField.setText(savedSunfishExecutablePath);
         maiaExecutablePathField.setText(savedMaiaExecutablePath);
         maiaWeightsPathField.setText(savedMaiaWeightsPath);
+        databasePathField.setText(savedDatabasePath);
+        databasePathValidationLabel.setText("");
         if (!knightshadeThinkingTimeCombo.getItems().contains(savedKnightshadeThinkingTime)) {
             knightshadeThinkingTimeCombo.getItems().add(savedKnightshadeThinkingTime);
         }
@@ -578,6 +601,13 @@ public class SetupScreenController implements UiScreenController {
 
     @FXML
     public void applySettings() {
+        java.nio.file.Path selectedDatabasePath;
+        try {
+            selectedDatabasePath = databaseLocationPreferencesService.validatePath(databasePathField.getText());
+        } catch (Exception exception) {
+            showDatabasePathValidation(exception.getMessage(), false);
+            return;
+        }
         try {
             savedSunfishExecutablePath = computerEngineSettingsService
                     .updateSunfishExecutable(sunfishExecutablePathField.getText())
@@ -609,6 +639,12 @@ public class SetupScreenController implements UiScreenController {
         boardAppearancePreferencesService.setBoardVisualEffectsEnabled(boardVisualEffectsCheckBox.isSelected());
         boardAppearancePreferencesService.setBoardAppearancePreset(boardAppearancePresetCombo.getValue());
         boardAppearancePreferencesService.setChessPieceSet(chessPieceSetCombo.getValue());
+        boolean databaseLocationChanged = !selectedDatabasePath.toString().equals(savedDatabasePath);
+        databaseLocationPreferencesService.save(selectedDatabasePath);
+        savedDatabasePath = selectedDatabasePath.toString();
+        if (databaseLocationChanged) {
+            showDatabasePathValidation("Database location saved. Close and reopen LastMove to use this database file.", true);
+        }
         savedNightMode = nightModeCheckBox.isSelected();
         savedLook = pendingLook;
         savedSplashScreen = showSplashCheckBox.isSelected();
@@ -739,6 +775,7 @@ public class SetupScreenController implements UiScreenController {
                 || !sunfishExecutablePathField.getText().trim().equals(savedSunfishExecutablePath)
                 || !trimmed(maiaExecutablePathField.getText()).equals(savedMaiaExecutablePath)
                 || !trimmed(maiaWeightsPathField.getText()).equals(savedMaiaWeightsPath)
+                || !trimmed(databasePathField.getText()).equals(savedDatabasePath)
                 || !Objects.equals(
                         knightshadeThinkingTimeCombo.getValue(), savedKnightshadeThinkingTime)
                 || knightshadeBitboardsCheckBox.isSelected() != savedKnightshadeBitboards
@@ -749,6 +786,23 @@ public class SetupScreenController implements UiScreenController {
                 || !Objects.equals(new KnightshadeArenaSettings(
                         arenaMaximumGamesSpinner.getValue(), arenaAutomaticAcceptanceCheckBox.isSelected(), arenaAutoReconnectCheckBox.isSelected()),
                         savedArenaSettings);
+    }
+
+    @FXML
+    public void browseDatabasePath() {
+        Window owner = root.getScene() == null ? null : root.getScene().getWindow();
+        fileChooserFactory.chooseDatabaseFile(owner, databaseLocationPreferencesService.currentDatabasePath())
+                .ifPresent(file -> databasePathField.setText(file.getAbsolutePath()));
+    }
+
+    private void scrollToDatabase() { scrollTo(databaseGroup); }
+
+    private void showDatabasePathValidation(String message, boolean successful) {
+        databasePathValidationLabel.setText(message == null ? "Could not save the database location." : message);
+        databasePathValidationLabel.getStyleClass().removeAll(
+                "settings-validation-error", "settings-validation-success");
+        databasePathValidationLabel.getStyleClass().add(
+                successful ? "settings-validation-success" : "settings-validation-error");
     }
 
     private void finishSunfishCheck(ComputerEngineHealth health, Throwable failure) {

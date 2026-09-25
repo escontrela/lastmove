@@ -1,7 +1,10 @@
 package com.escontrela.lastmove.bootstrap;
 
+import java.util.Map;
+import com.escontrela.lastmove.ui.service.DatabaseLocationPreferencesService;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.core.env.MapPropertySource;
 
 /**
  * Provides controlled access to the Spring {@link ConfigurableApplicationContext}.
@@ -20,6 +23,11 @@ public final class JavaFxSpringContext {
      * @return the running Spring context
      */
     public static ConfigurableApplicationContext initialise(String[] args) {
-        return SpringApplication.run(LastMoveApplication.class, args);
+        SpringApplication application = new SpringApplication(LastMoveApplication.class);
+        application.addInitializers(context -> context.getEnvironment().getPropertySources()
+                .addAfter("systemEnvironment", new MapPropertySource("lastmoveDatabaseLocation",
+                        Map.of("spring.datasource.url",
+                                DatabaseLocationPreferencesService.configuredJdbcUrl()))));
+        return application.run(args);
     }
 }
