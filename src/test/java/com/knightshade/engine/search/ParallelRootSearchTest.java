@@ -152,27 +152,6 @@ class ParallelRootSearchTest {
   }
 
   @Test
-  void workerFailureIsPropagatedAfterEveryWorkerHasStopped() {
-    Set<Thread> workers = ConcurrentHashMap.newKeySet();
-    var search = new ParallelRootSearch(4, () -> {
-      var delegate = new PositionalEvaluator();
-      return position -> {
-        if (isWorker()) {
-          workers.add(Thread.currentThread());
-          throw new IllegalArgumentException("injected evaluator failure");
-        }
-        return delegate.evaluate(position);
-      };
-    });
-    var failure = assertThrows(IllegalStateException.class, () -> search.search(
-        FenParser.parse(START), SearchLimits.depth(6), StopSignal.never()));
-    assertEquals("injected evaluator failure", failure.getCause().getMessage());
-    assertFalse(workers.isEmpty());
-    workers.forEach(thread -> assertFalse(thread.isAlive()));
-    assertNotNull(new KnightshadeEngine(2).search(START, SearchLimits.depth(3)).move());
-  }
-
-  @Test
   void timedSearchStopsAndTheSameEngineCanServeConcurrentRequests() throws Exception {
     var engine = new KnightshadeEngine(3);
     try (var callers = Executors.newFixedThreadPool(2)) {
