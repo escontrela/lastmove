@@ -25,6 +25,7 @@ import com.escontrela.lastmove.domain.analysis.AnalysisNodeId;
 import com.escontrela.lastmove.domain.analysis.AnalysisSessionId;
 import com.escontrela.lastmove.domain.common.PieceColor;
 import com.escontrela.lastmove.domain.game.MoveCommand;
+import com.escontrela.lastmove.domain.game.PositionSnapshot;
 import com.escontrela.lastmove.domain.notation.Fen;
 import com.escontrela.lastmove.domain.player.PlayerId;
 import com.escontrela.lastmove.domain.tactics.TacticExerciseId;
@@ -34,6 +35,7 @@ import com.escontrela.lastmove.domain.study.StudyId;
 import com.escontrela.lastmove.ui.component.board.ChessBoardControl;
 import com.escontrela.lastmove.ui.component.context.ContextualMenuPanel;
 import com.escontrela.lastmove.ui.component.message.TextInputModal;
+import com.escontrela.lastmove.ui.component.message.MessageBox;
 import com.escontrela.lastmove.ui.component.promotion.PromotionPickerControl;
 import com.escontrela.lastmove.ui.component.toolbar.ToolbarIconButton;
 import com.escontrela.lastmove.ui.component.tag.TagDisplayControl;
@@ -91,6 +93,8 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
   @FXML private ChessBoardControl chessBoard;
   @FXML private PromotionPickerControl promotionPicker;
   @FXML private TextInputModal textInputModal;
+  @FXML private MessageBox resetMovesConfirmation;
+  @FXML private MessageBox deleteExerciseConfirmation;
   @FXML private ContextualMenuPanel contextualMenuPanel;
   @FXML private ListView<TacticExerciseSummary> exerciseList;
   @FXML private Label suiteTitleLabel;
@@ -135,6 +139,7 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
   private StudyChapterId temporaryChapterId;
   private AnalysisSessionId temporaryAnalysisSessionId;
   private TacticWorkspace temporaryWorkspace;
+  private PositionSnapshot visiblePosition;
   /** Exercise whose initial orientation has been applied to the currently displayed board. */
   private TacticExerciseId orientedExerciseId;
   /** True after the user explicitly rotates the current exercise's board. */
@@ -505,6 +510,7 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
       resetBoardOrientationForExercise();
     }
     if (activeExerciseId == null) {
+      visiblePosition = null;
       exerciseTitleLabel.setText("No tactic selected");
       modeLabel.setText("Add a FEN position to begin");
       statusLabel.setText("This suite is empty.");
@@ -589,16 +595,72 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
     statusLabel.setText("Deleted tactic: " + exercise.title());
   }
 
+  private void confirmDeleteExercise(TacticExerciseSummary exercise) {
+    deleteExerciseConfirmation.setTitle("Delete tactic?");
+    deleteExerciseConfirmation.setMessage(
+        "Are you sure you want to delete \"" + exercise.title() + "\"? This cannot be undone.");
+    deleteExerciseConfirmation.setAcceptText("Delete tactic");
+    deleteExerciseConfirmation.setCancelText("Cancel");
+    deleteExerciseConfirmation.setOnAccept(event -> deleteExercise(exercise));
+    deleteExerciseConfirmation.show();
+  }
+
+  private void confirmResetMoves(TacticExerciseSummary exercise) {
+    resetMovesConfirmation.setTitle("Reset moves?");
+    resetMovesConfirmation.setMessage(
+        "Remove all solution moves from \"" + exercise.title()
+            + "\"? Its original starting position will be kept.");
+    resetMovesConfirmation.setAcceptText("Reset moves");
+    resetMovesConfirmation.setCancelText("Cancel");
+    resetMovesConfirmation.setOnAccept(event -> {
+      tacticService.resetExerciseMoves(
+          activeOwner().orElseThrow(), activeSuiteId, exercise.exerciseId());
+      activeExerciseId = exercise.exerciseId();
+      authoring = true;
+      authorParentNodeId = Optional.empty();
+      updateAuthoringToggleButton();
+      resetBoardOrientationForExercise();
+      chessBoard.clearHintSquare();
+      refreshSuite();
+      statusLabel.setText("Moves reset. Add the corrected solution from the original position.");
+    });
+    resetMovesConfirmation.show();
+  }
+
   private void showExerciseActions(TacticExerciseSummary exercise, double sceneX, double sceneY) {
     contextualMenuPanel.clearItems();
     contextualMenuPanel.addItem("Train tactic", "", event -> activate(exercise));
     contextualMenuPanel.addItem("Rename tactic…", "", event -> renameExercise(exercise));
+    contextualMenuPanel.addItem("Reset moves…", "", event -> confirmResetMoves(exercise));
+    contextualMenuPanel.addItem("Copy current FEN", "", event -> copyCurrentFen());
+    contextualMenuPanel.addItem("Open current position in analysis", "", event -> openCurrentPositionInAnalysis());
     contextualMenuPanel.addSeparator();
     contextualMenuPanel.addItem("Move tactic up", "↑", event -> moveExercise(exercise, -1));
     contextualMenuPanel.addItem("Move tactic down", "↓", event -> moveExercise(exercise, 1));
     contextualMenuPanel.addSeparator();
-    contextualMenuPanel.addItem("Delete tactic…", "", event -> deleteExercise(exercise));
+    contextualMenuPanel.addItem("Delete tactic…", "", event -> confirmDeleteExercise(exercise));
     contextualMenuPanel.showAtScene(sceneX, sceneY);
+  }
+
+  private void copyCurrentFen() {
+    if (visiblePosition == null) {
+      statusLabel.setText("No board position available to copy.");
+      return;
+    }
+    boolean copied = clipboardService.copyText(tacticService.fenForPosition(visiblePosition));
+    statusLabel.setText(copied ? "Current FEN copied to clipboard" : "Unable to copy FEN to clipboard");
+  }
+
+  private void openCurrentPositionInAnalysis() {
+    if (visiblePosition == null) {
+      statusLabel.setText("No board position available for analysis.");
+      return;
+    }
+    var session = analysisSessionService.createFenSession(
+        Fen.of(tacticService.fenForPosition(visiblePosition)));
+    uiEventBus.publish(new OpenAnalysisSessionEvent(
+        session.sessionId(), "Opened current tactic position for analysis"));
+    uiFlowManager.show(UiScreenId.PGN_ANALYSIS);
   }
 
   private void submitMove(BoardMoveInput input) {
@@ -848,6 +910,7 @@ public final class TacticsWorkspaceScreenController implements UiScreenControlle
   }
 
   private void renderBoard(com.escontrela.lastmove.domain.game.PositionSnapshot snapshot) {
+    visiblePosition = snapshot;
     chessBoard.setKingInCheck(snapshot.check() ? snapshot.activeColor() : null);
     chessBoard.renderPosition(snapshot);
   }

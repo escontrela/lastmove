@@ -30,6 +30,8 @@ import com.escontrela.lastmove.domain.game.MoveCommand;
 import com.escontrela.lastmove.domain.game.MoveDescriptor;
 import com.escontrela.lastmove.domain.game.MoveExecutionResult;
 import com.escontrela.lastmove.domain.game.Ply;
+import com.escontrela.lastmove.domain.game.PositionSnapshot;
+import com.escontrela.lastmove.domain.service.FenService;
 import com.escontrela.lastmove.domain.player.PlayerId;
 import com.escontrela.lastmove.domain.tactics.TacticExercise;
 import com.escontrela.lastmove.domain.tactics.TacticExerciseFactory;
@@ -59,6 +61,11 @@ public final class TacticService {
   private final PersistenceAvailability availability;
   private final Map<AttemptKey, Attempt> attempts = new HashMap<>();
   private final Map<UUID, Attempt> temporaryAttempts = new HashMap<>();
+
+  /** Converts the position currently shown by the tactic workspace to a complete FEN. */
+  public String fenForPosition(PositionSnapshot position) {
+    return new FenService().fromSnapshot(position).getValue();
+  }
 
   public TacticService(
       TacticRepository tacticRepository,
@@ -235,6 +242,17 @@ public final class TacticService {
     }
     attempts.remove(new AttemptKey(required.ownerId(), required.suiteId(), required.exerciseId()));
     tacticRepository.save(suite);
+  }
+
+  /** Clears the selected exercise's solution and training attempt, preserving its initial position. */
+  public void resetExerciseMoves(PlayerId ownerId, TacticSuiteId suiteId, TacticExerciseId exerciseId) {
+    assertAvailable();
+    TacticSuite suite = ownedSuite(ownerId, suiteId);
+    TacticExercise exercise = exercise(suite, exerciseId);
+    exercise.resetMoves();
+    suite.touch();
+    tacticRepository.save(suite);
+    resetExerciseAttempt(ownerId, suiteId, exerciseId);
   }
 
   /** Starts a fresh attempt, returning the initial position rather than a mutable domain object. */
