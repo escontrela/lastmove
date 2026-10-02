@@ -44,6 +44,42 @@ import org.junit.jupiter.api.Test;
 
 class TacticServiceTest {
 
+  @Test
+  void exportsFenForTheCurrentTacticPositionAfterAnAuthoredMove() {
+    var suite = service.createSuite(new CreateTacticSuiteCommand(owner, "FEN", Optional.empty()));
+    var exercise = service.createExerciseFromFen(new CreateTacticExerciseFromFenCommand(
+        owner, suite.suiteId(), "Position", Fen.startingPosition()));
+    var move = service.appendSolutionMove(new AppendTacticSolutionMoveCommand(
+        owner, suite.suiteId(), exercise.exerciseId(), Optional.empty(), move("e2", "e4")));
+
+    assertEquals("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+        service.fenForPosition(move.workspace().position()));
+  }
+
+  @Test
+  void resetsOnlySelectedTacticMovesAndKeepsItsStartingPosition() {
+    var suite = service.createSuite(new CreateTacticSuiteCommand(owner, "Corrections", Optional.empty()));
+    Fen start = Fen.of("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    var selected = service.createExerciseFromFen(
+        new CreateTacticExerciseFromFenCommand(owner, suite.suiteId(), "Selected", start));
+    var other = service.createExerciseFromFen(
+        new CreateTacticExerciseFromFenCommand(owner, suite.suiteId(), "Other", start));
+    for (var exercise : List.of(selected, other)) {
+      assertTrue(service.appendSolutionMove(new AppendTacticSolutionMoveCommand(
+          owner, suite.suiteId(), exercise.exerciseId(), Optional.empty(), move("e2", "e4"))).accepted());
+    }
+    var initialPosition = service.startExercise(owner, suite.suiteId(), selected.exerciseId()).position();
+
+    service.resetExerciseMoves(owner, suite.suiteId(), selected.exerciseId());
+
+    var reset = service.startExercise(owner, suite.suiteId(), selected.exerciseId());
+    assertEquals(initialPosition, reset.position());
+    assertFalse(reset.readyToSolve());
+    assertTrue(service.startExercise(owner, suite.suiteId(), other.exerciseId()).readyToSolve());
+    assertTrue(service.appendSolutionMove(new AppendTacticSolutionMoveCommand(
+        owner, suite.suiteId(), selected.exerciseId(), Optional.empty(), move("d2", "d4"))).accepted());
+  }
+
   private final PlayerId owner = PlayerId.of(1L);
   private final InMemoryAnalysisSessionRepository analysisSessions =
       new InMemoryAnalysisSessionRepository();

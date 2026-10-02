@@ -44,6 +44,14 @@ public final class TacticExercise {
     updatedAt = Instant.now();
   }
 
+  /** Clears every solution variation while retaining the original starting position. */
+  public void resetMoves() {
+    for (var root : solution.tree().roots()) {
+      solution.tree().removeBranch(root.id());
+    }
+    touch();
+  }
+
   public TacticExerciseId id() {
     return id;
   }
