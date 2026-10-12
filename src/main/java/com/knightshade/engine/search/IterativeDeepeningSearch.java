@@ -473,6 +473,7 @@ public final class IterativeDeepeningSearch implements Search {
     if (!nullBranch && board.halfmoveClock() >= 100) {
       return inCheck && !moveGenerator.hasLegalMove(board) ? -(Scores.MATE - ply) : 0;
     }
+    boolean pvNode = beta - alpha > 1;
     // No continuation can mate sooner than the current ply (or lose later than this bound).
     alpha = Math.max(alpha, -Scores.MATE + ply);
     beta = Math.min(beta, Scores.MATE - ply - 1);
@@ -568,13 +569,18 @@ public final class IterativeDeepeningSearch implements Search {
               && moveCount >= 4
               && !move.isCapture()
               && !move.isPromotion()
+              && !move.equals(ttMove)
               && !move.equals(killers.primary(ply))
               && !move.equals(killers.secondary(ply));
+      int reduction = reduce
+          ? LateMoveReductions.reduction(depth, moveCount, pvNode, history.get(board.sideToMove(), move))
+          : 0;
       board.make(move);
       long childKey = board.zobristKey();
       recordPosition(repetitions, childKey);
       boolean givesCheck = board.inCheck(board.sideToMove());
-      boolean reduced = reduce && !givesCheck;
+      if (givesCheck) reduction = 0;
+      boolean reduced = reduction > 0;
       if (telemetry != null && reduced) telemetry.lmrApplications++;
       int score;
       if (moveCount == 1) {
@@ -595,7 +601,7 @@ public final class IterativeDeepeningSearch implements Search {
         score =
             -pvSearch(
                 board,
-                reduced ? depth - 2 : depth - 1,
+                depth - 1 - reduction,
                 -alpha - 1,
                 -alpha,
                 ply + 1,

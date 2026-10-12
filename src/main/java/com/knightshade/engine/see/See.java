@@ -22,8 +22,12 @@ public final class See {
   /** Net material gain for the side making {@code move}, in centipawns. */
   public static int evaluate(Position position, Move move) {
     int[] board = new int[64];
+    int whiteKing = -1;
+    int blackKing = -1;
     for (int i = 0; i < 64; i++) {
       board[i] = position.pieceAt(i);
+      if (Piece.is(board[i], PieceColor.WHITE, PieceType.KING)) whiteKing = i;
+      if (Piece.is(board[i], PieceColor.BLACK, PieceType.KING)) blackKing = i;
     }
 
     int fromIndex = Position.indexOf(move.from());
@@ -43,12 +47,17 @@ public final class See {
     board[fromIndex] = Piece.NONE;
     board[toIndex] =
         Piece.of(mover, move.isPromotion() ? move.promotion() : Piece.type(movingPiece));
+    if (Piece.type(movingPiece) == PieceType.KING) {
+      if (mover == PieceColor.WHITE) whiteKing = toIndex;
+      else blackKing = toIndex;
+    }
 
     int promotionGain =
         move.isPromotion()
             ? PieceValues.of(move.promotion()) - PieceValues.PAWN
             : 0;
-    return capturedValue + promotionGain - seeCapture(board, move.to(), mover.opposite());
+    return capturedValue + promotionGain
+        - seeCapture(board, move.to(), mover.opposite(), whiteKing, blackKing);
   }
 
   /** Returns whether the exchange started by {@code move} gains at least {@code threshold}. */
@@ -56,8 +65,10 @@ public final class See {
     return evaluate(position, move) >= threshold;
   }
 
-  private static int seeCapture(int[] board, Square square, PieceColor side) {
-    int attackerIndex = leastValuableAttacker(board, square, side);
+  private static int seeCapture(int[] board, Square square, PieceColor side,
+      int whiteKing, int blackKing) {
+    int attackerIndex = leastValuableAttacker(board, square, side,
+        side == PieceColor.WHITE ? whiteKing : blackKing);
     if (attackerIndex == -1) {
       return 0;
     }
@@ -65,16 +76,22 @@ public final class See {
     int pieceOnSquare = board[squareIndex];
     int attacker = board[attackerIndex];
     int gain = PieceValues.of(Piece.type(pieceOnSquare));
+    // A legal king recapture ends the exchange: the destination has no enemy attackers.
+    if (Piece.type(attacker) == PieceType.KING) return gain;
+
+    boolean promotes = Piece.type(attacker) == PieceType.PAWN
+        && (square.getRank() == 0 || square.getRank() == 7);
+    if (promotes) gain += PieceValues.QUEEN - PieceValues.PAWN;
 
     board[attackerIndex] = Piece.NONE;
-    board[squareIndex] = attacker;
-    int value = Math.max(0, gain - seeCapture(board, square, side.opposite()));
+    board[squareIndex] = promotes ? Piece.of(side, PieceType.QUEEN) : attacker;
+    int value = Math.max(0, gain - seeCapture(board, square, side.opposite(), whiteKing, blackKing));
     board[attackerIndex] = attacker;
     board[squareIndex] = pieceOnSquare;
     return value;
   }
 
-  private static int leastValuableAttacker(int[] board, Square square, PieceColor side) {
+  private static int leastValuableAttacker(int[] board, Square square, PieceColor side, int kingSquare) {
     int bestIndex = -1;
     int bestValue = Integer.MAX_VALUE;
     for (int i = 0; i < 64; i++) {
@@ -83,14 +100,38 @@ public final class See {
         continue;
       }
       if (pieceAttacksSquare(board, i, square)) {
-        int value = PieceValues.of(Piece.type(piece));
-        if (value < bestValue) {
+        // Material evaluation assigns zero to kings, but they must be considered last in SEE.
+        int value = Piece.type(piece) == PieceType.KING ? Integer.MAX_VALUE - 1
+            : PieceValues.of(Piece.type(piece));
+        if (value < bestValue && legalRecapture(board, i, square, side, kingSquare)) {
           bestValue = value;
           bestIndex = i;
         }
       }
     }
     return bestIndex;
+  }
+
+  private static boolean legalRecapture(int[] board, int from, Square target,
+      PieceColor side, int kingSquare) {
+    int to = Position.indexOf(target);
+    int attacker = board[from];
+    int captured = board[to];
+    int resultingKing = Piece.type(attacker) == PieceType.KING ? to : kingSquare;
+    if (resultingKing < 0) return true; // Preserve support for material-only test positions.
+    board[from] = Piece.NONE;
+    board[to] = attacker;
+    try {
+      Square king = Position.squareOf(resultingKing);
+      for (int i = 0; i < 64; i++) {
+        if (board[i] != Piece.NONE && Piece.color(board[i]) != side
+            && pieceAttacksSquare(board, i, king)) return false;
+      }
+      return true;
+    } finally {
+      board[from] = attacker;
+      board[to] = captured;
+    }
   }
 
   private static boolean pieceAttacksSquare(int[] board, int fromIndex, Square target) {
