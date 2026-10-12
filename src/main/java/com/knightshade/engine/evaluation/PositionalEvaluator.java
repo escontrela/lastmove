@@ -11,13 +11,16 @@ import com.knightshade.engine.evaluation.term.MobilityTerm;
 import com.knightshade.engine.evaluation.term.PassedPawnTerm;
 import com.knightshade.engine.evaluation.term.PawnStructureTerm;
 import com.knightshade.engine.evaluation.term.RookActivityTerm;
+import com.knightshade.engine.evaluation.term.WeakPawnTerm;
+import com.knightshade.engine.evaluation.term.OutpostTerm;
 import java.util.List;
 
 /**
  * Positional evaluator: a composition of positional terms, White minus Black.
  *
  * <p>Material + piece-square tables form the base; mobility, king safety, development, center
- * control, pawn structure, passed pawns, the bishop pair and rook activity are added on top. Each term is an
+ * control, pawn structure, passed pawns, the bishop pair, rook activity, weak-pawn pressure and
+ * minor-piece outposts are added on top. Each term is an
  * independent {@link PositionalTerm} so features can be tested and tuned in isolation.
  */
 public final class PositionalEvaluator implements Evaluator {
@@ -43,7 +46,9 @@ public final class PositionalEvaluator implements Evaluator {
           new PawnStructureTerm(),
           new PassedPawnTerm(),
           new BishopPairTerm(),
-          new RookActivityTerm());
+          new RookActivityTerm(),
+          new WeakPawnTerm(),
+          new OutpostTerm());
 
   @Override
   public int evaluate(Position position) {
@@ -75,6 +80,8 @@ public final class PositionalEvaluator implements Evaluator {
       score += switch (term) {
         case MobilityTerm mobility -> mobility.evaluate(position, attacks);
         case KingSafetyTerm safety -> safety.evaluate(position, attacks);
+        case WeakPawnTerm pawns -> pawns.evaluate(position, attacks);
+        case OutpostTerm outposts -> outposts.evaluate(position, attacks);
         default -> term.evaluate(position);
       };
     }

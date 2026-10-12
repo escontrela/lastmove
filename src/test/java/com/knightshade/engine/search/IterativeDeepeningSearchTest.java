@@ -14,12 +14,37 @@ import com.knightshade.engine.board.Move;
 import com.escontrela.lastmove.domain.common.Square;
 import com.knightshade.engine.evaluation.PieceSquareEvaluator;
 import com.knightshade.engine.movegen.LegalMoveGenerator;
+import com.knightshade.engine.ordering.HistoryTable;
+import com.knightshade.engine.ordering.KillerMoves;
+import com.knightshade.engine.transposition.TranspositionTable;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 class IterativeDeepeningSearchTest {
+
+  @Test
+  void anotherWorkerReusesACompletedSearchFromTheSharedTable() {
+    String fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    var board = FenParser.parse(fen);
+    var shared = new TranspositionTable();
+    var first = new IterativeDeepeningSearch(new LegalMoveGenerator(), new PieceSquareEvaluator(), shared);
+    var second = new IterativeDeepeningSearch(new LegalMoveGenerator(), position -> {
+      throw new AssertionError("the second worker should reuse the first worker's exact score");
+    }, shared);
+    Move move = move(board, "e2e4");
+    int expected = first.searchRootMove(board, move, 4, -Scores.INF, Scores.INF, false,
+        new KillerMoves(), new HistoryTable(), new HashMap<>(Map.of(board.zobristKey(), 1)),
+        StopSignal.never());
+    int actual = second.searchRootMove(board, move, 4, -Scores.INF, Scores.INF, false,
+        new KillerMoves(), new HistoryTable(), new HashMap<>(Map.of(board.zobristKey(), 1)),
+        StopSignal.never());
+    assertEquals(expected, actual);
+    assertEquals(1, second.nodesVisited());
+    assertEquals(fen, board.toFen());
+  }
 
   @Test
   void cancellationRestoresTheBoardAndNeverPublishesAPartialIteration() {

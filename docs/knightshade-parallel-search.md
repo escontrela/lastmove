@@ -43,16 +43,46 @@ modo secuencial: no se garantiza identidad bit a bit con varios participantes.
 | Estado | Propiedad / sincronización |
 | --- | --- |
 | Board, pila Undo y casillas de reyes | Copia independiente por trabajador |
-| TT y caché del evaluador | Privadas por trabajador; persisten entre iteraciones de la solicitud |
+| TT | Compartida por los trabajadores de una solicitud; entradas inmutables publicadas mediante CAS |
+| Caché del evaluador | Privada por trabajador; persiste entre iteraciones de la solicitud |
 | Repeticiones, killers e historial | Privados por trabajador |
 | Siguiente alternativa y alpha | Atómicos |
 | Mejor jugada y puntuación raíz | Publicación sincronizada |
 | Corte del intento y cancelación de la solicitud | Banderas atómicas distintas |
 | Contadores de nodos | Privados, sumados tras esperar a los trabajadores |
 
-No se comparte la TT en esta versión. Se evita así que otra variante publique una clave o
-puntuación mientras un trabajador la lee, a costa de memoria adicional y menor reutilización
-de transposiciones entre variantes. La memoria crece con el número de participantes.
+Desde la revisión del 2026-10-02, los trabajadores comparten una TT de 262144 entradas por
+solicitud. La clave, jugada, profundidad, puntuación y tipo de cota se publican juntos en una
+entrada inmutable mediante `AtomicReferenceArray`. Los lectores verifican la clave completa;
+una escritura usa CAS sobre la entrada observada y se descarta si otro trabajador la cambió.
+No hay un bloqueo global ni reintentos ilimitados. Se siguen priorizando profundidad y cotas
+exactas. Las inserciones simultáneas pueden dejar claves duplicadas en un bucket; la consulta
+elige la entrada más profunda y, a igual profundidad, la exacta.
+
+Los trabajadores incorporados en profundidad 3 reciben la misma tabla ya poblada por el
+coordinador. No la limpian al incorporarse. La tabla se descarta al acabar la solicitud, sin
+compartir resultados entre partidas o historiales raíz distintos. El modo de un participante
+y las continuaciones ponder conservan una tabla propia. El contador de cincuenta jugadas sigue
+formando parte de la clave, y las ramas nulas y posiciones repetidas mantienen sus exclusiones.
+
+## Reducciones de jugadas tardías
+
+La misma revisión sustituye la reducción fija de un nivel por una tabla precalculada en función
+de profundidad y orden de jugada: `floor(log(depth) * log(moveNumber) / 2.25)`, con base mínima 1.
+Se reduce un nivel menos en nodos de variante principal y otro menos cuando el historial de la
+jugada alcanza 4096. En nodos de ventana nula, un historial de -4096 o inferior añade un nivel.
+La reducción final está entre 0 y 4 y deja al menos un nivel de búsqueda principal.
+
+Solo son candidatas las jugadas tranquilas desde la cuarta alternativa, con profundidad mínima 3.
+Se excluyen capturas, promociones, evasiones de jaque, jugadas que dan jaque, la jugada de la TT
+y las dos killers. Una búsqueda reducida que supera alpha se repite a profundidad completa;
+si la búsqueda de ventana nula confirma una mejora dentro de la ventana, se repite con ventana
+completa. Los parámetros son una primera configuración pendiente de validación mediante partidas.
+
+No se han ejecutado benchmarks para esta revisión, por petición del usuario. Las cifras de
+septiembre que aparecen más abajo corresponden a versiones anteriores y no describen estas
+modificaciones. La ganancia de profundidad, tiempo y fuerza queda pendiente de sus partidas
+contra Stockfish 7.
 
 ## Parada y errores
 
@@ -83,7 +113,9 @@ profundidad, mate/ahogado, repetición, reserva legal, solicitudes concurrentes 
 tiempo. Mediante barreras fuerza a dos trabajadores a estar activos a la vez para comprobar
 cancelación e interrupción durante la tercera profundidad. También inyecta un fallo y verifica
 que los hilos observados han terminado antes de devolver el control. Las regresiones existentes
-de sacrificios de dama se ejecutan con el motor paralelo por defecto.
+de sacrificios de dama se ejecutan con el motor paralelo por defecto. Las pruebas adicionales
+cubren colisiones concurrentes de TT sin mezclar claves y puntuaciones, reutilización de un
+resultado por otro trabajador y límites/protecciones de la reducción adaptativa.
 
 La preparación especulativa y su transferencia se cubren en `PonderSearchContextTest` y
 `KnightshadeMoveEngineTest`: validación de raíz e historial, continuación completa, respuesta

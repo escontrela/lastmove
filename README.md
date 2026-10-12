@@ -87,8 +87,17 @@ Knightshade searches root alternatives in parallel with up to four participants 
 (including the coordinating thread, capped by the processors available to Java). Set the JVM
 option `-Dknightshade.threads=1` to use the sequential reference search, or a value from 2 to 32
 to choose the parallel participant count. The thinking-time limit is shared by all participants.
-Each request joins its workers before returning. See [parallel search](docs/knightshade-parallel-search.md)
+Workers share an atomic transposition table within each request to reuse positions searched by
+other participants. Late quiet moves receive depth- and move-order-dependent reductions, with
+full-depth confirmation when a reduced search improves alpha. Each request joins its workers
+before returning. See [parallel search](docs/knightshade-parallel-search.md)
 for synchronization details and headless benchmark commands.
+
+Knightshade also evaluates positional targets: pressure on pawns without pawn support,
+backward pawns, and pawn-supported knight/bishop outposts that enemy pawns cannot challenge
+by advancing. Small bonuses guide pieces toward reachable safe outposts. These terms complement
+material and king safety; their initial weights still need playing validation. See
+[positional weaknesses](docs/knightshade-positional-weaknesses.md) for the criteria.
 
 The optional Knightshade bitboard move generator is controlled in **Settings → Knightshade** and
 is off by default. The preference is saved on this device and applies to new games and ponder

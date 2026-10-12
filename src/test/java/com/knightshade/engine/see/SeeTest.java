@@ -14,6 +14,44 @@ import org.junit.jupiter.api.Test;
 class SeeTest {
 
   @Test
+  void doesNotCountAKingRecaptureOntoAnAttackedSquare() {
+    var board = FenParser.parse("8/8/4k3/3p4/5N2/8/8/K2R4 w - - 0 1");
+    Move move = new Move(Square.of("f4"), Square.of("d5"), null, MoveFlag.NORMAL, PieceType.PAWN);
+    assertEquals(100, See.evaluate(board, move));
+  }
+
+  @Test
+  void doesNotCountARecaptureThatExposesTheDefendersKing() {
+    var board = FenParser.parse("4k3/8/8/3pr3/5N2/8/8/K3R3 w - - 0 1");
+    Move move = new Move(Square.of("f4"), Square.of("d5"), null, MoveFlag.NORMAL, PieceType.PAWN);
+    assertEquals(100, See.evaluate(board, move));
+  }
+
+  @Test
+  void stillCountsALegalKingRecapture() {
+    var board = FenParser.parse("8/8/4k3/3p4/5N2/8/8/K7 w - - 0 1");
+    Move move = new Move(Square.of("f4"), Square.of("d5"), null, MoveFlag.NORMAL, PieceType.PAWN);
+    assertEquals(-220, See.evaluate(board, move));
+  }
+
+  @Test
+  void aPinnedDefenderCanRecaptureAlongThePinLine() {
+    var board = FenParser.parse("4k3/8/4r3/4p3/8/2Q5/8/K3R3 w - - 0 1");
+    Move move = new Move(Square.of("c3"), Square.of("e5"), null, MoveFlag.NORMAL, PieceType.PAWN);
+    // ...Rxe5 stays on the pin line, then Rxe5: White loses a queen for rook and pawn.
+    assertEquals(-300, See.evaluate(board, move));
+  }
+
+  @Test
+  void includesPromotionDuringARecapture() {
+    var board = FenParser.parse("7K/8/7k/8/8/8/pR6/1q6 w - - 0 1");
+    String original = board.toFen();
+    Move move = new Move(Square.of("b2"), Square.of("b1"), null, MoveFlag.NORMAL, PieceType.QUEEN);
+    assertEquals(-400, See.evaluate(board, move));
+    assertEquals(original, board.toFen());
+  }
+
+  @Test
   void winningCaptureGainsTheCapturedPieceValue() {
     var board = FenParser.parse("7k/8/8/3q4/4P3/8/8/7K w - - 0 1");
     Move move = new Move(Square.of("e4"), Square.of("d5"), null, MoveFlag.NORMAL, PieceType.QUEEN);

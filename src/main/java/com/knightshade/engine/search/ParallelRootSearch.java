@@ -19,6 +19,7 @@ import com.knightshade.engine.ordering.HistoryTable;
 import com.knightshade.engine.ordering.KillerMoves;
 import com.knightshade.engine.ordering.MvvLvaMoveOrderer;
 import com.knightshade.engine.ordering.OrderingContext;
+import com.knightshade.engine.transposition.TranspositionTable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -35,8 +36,8 @@ import java.util.function.Supplier;
 
 /**
  * Root PVS splitting: search the first move before releasing the remaining alternatives.
- * Only root bounds and cancellation are shared. Every worker owns its board, repetition map,
- * evaluator, transposition table, killers and history. All state is scoped to one invocation.
+ * Root bounds, cancellation and an atomic transposition table are shared. Every worker owns
+ * its board, repetition map, evaluator, killers and history. All state is scoped to one invocation.
  */
 public final class ParallelRootSearch implements Search {
   private static final int MAX_THREADS = 32;
@@ -202,8 +203,9 @@ public final class ParallelRootSearch implements Search {
     }
 
     int workerCount = Math.min(threads, legal.size());
+    TranspositionTable transpositions = new TranspositionTable();
     List<Worker> workers = new ArrayList<>();
-        workers.add(new Worker(root, positionOccurrences, evaluators.get(), telemetryEnabled, threads, workerCount, bitboards));
+    workers.add(new Worker(root, positionOccurrences, evaluators.get(), telemetryEnabled, threads, workerCount, bitboards, transpositions));
     ExecutorService executor = workerCount > 1
         ? Executors.newFixedThreadPool(workerCount - 1,
             Thread.ofPlatform().daemon(true)
@@ -213,10 +215,10 @@ public final class ParallelRootSearch implements Search {
       int maxDepth = limits.maxDepth() > 0 ? limits.maxDepth() : 64;
       for (int depth = 1; depth <= maxDepth && !requestStop.shouldStop(); depth++) {
         // Small iterations stay on the caller to avoid dispatch overhead. Workers retain their
-        // own caches between subsequent depths and aspiration attempts in this invocation.
+        // private evaluation caches and the shared TT between depths and aspiration attempts.
         if (depth == 3) {
           while (workers.size() < workerCount && !requestStop.shouldStop()) {
-            workers.add(new Worker(root, positionOccurrences, evaluators.get(), telemetryEnabled, threads, workerCount, bitboards));
+            workers.add(new Worker(root, positionOccurrences, evaluators.get(), telemetryEnabled, threads, workerCount, bitboards, transpositions));
           }
         }
         int delta = 25;
@@ -453,11 +455,13 @@ public final class ParallelRootSearch implements Search {
     private final IterativeDeepeningSearch search;
 
     private Worker(Board root, Map<Long, Integer> occurrences, Evaluator evaluator,
-        boolean telemetryEnabled, int requestedWorkers, int effectiveWorkers, boolean bitboards) {
+        boolean telemetryEnabled, int requestedWorkers, int effectiveWorkers, boolean bitboards,
+        TranspositionTable transpositions) {
       board = root.copy();
       repetitions = new HashMap<>(occurrences);
       repetitions.putIfAbsent(board.zobristKey(), 1);
-      search = new IterativeDeepeningSearch(bitboards ? new BitboardMoveGenerator() : new LegalMoveGenerator(), evaluator);
+      search = new IterativeDeepeningSearch(
+          bitboards ? new BitboardMoveGenerator() : new LegalMoveGenerator(), evaluator, transpositions);
       if (telemetryEnabled) search.enableTelemetry(requestedWorkers, effectiveWorkers);
     }
 
